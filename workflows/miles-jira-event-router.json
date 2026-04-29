@@ -1,0 +1,430 @@
+{
+  "name": "[MILES] Jira Events Router",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "jira-events",
+        "options": {}
+      },
+      "id": "3dba2bc1-d251-4c72-b630-3bacfaa5972b",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        9760,
+        6768
+      ],
+      "webhookId": "d33e0677-7480-45ed-8232-ddb25a5c10f6"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "routing_key",
+              "value": "={{ $json.body.board + '.' + $json.body.event_type }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "board",
+              "value": "={{ $json.body.board }}",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "event_type",
+              "value": "={{ $json.body.event_type }}",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "triggeredAt",
+              "value": "={{ $json.body.triggeredAt }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5a94b3cb-e07f-4a45-9cee-fe07ce66910a",
+      "name": "Set Routing Key",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        9984,
+        6768
+      ]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.routing_key }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "PRODUCTS.req_promoted_to_dev"
+            },
+            {
+              "value2": "PRODUCTS.req_promoted_to_done",
+              "output": 1
+            },
+            {
+              "value2": "MAIN.story_in_progress",
+              "output": 2
+            },
+            {
+              "value2": "MAIN.story_done",
+              "output": 3
+            }
+          ]
+        }
+      },
+      "id": "04400cd9-bcce-4c7e-bf20-3c1eb8d0fb7b",
+      "name": "Event Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        10208,
+        6736
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const wb    = $('Webhook').first().json.body;\nconst req   = wb?.req   || {};\nconst story = wb?.story || {};\n\nconst reqLink   = `<${req.issueUrl}|${req.issueKey}>`;\nconst storyKey  = story.issueKey || '—';\nconst storyUrl  = `https://arduasolutions.atlassian.net/browse/${storyKey}`;\nconst storyLink = story.issueKey ? `<${storyUrl}|${storyKey}>` : '—';\n\nconst slack_message =\n  `🚀 Nuevo requerimiento listo para desarrollo\\n\\n` +\n  `*${req.summary}*\\n` +\n  `REQ: ${reqLink} → MAIN: ${storyLink}\\n\\n` +\n  `Este requerimiento fue aprobado por Producto y ya tiene una historia creada en el tablero.\\n` +\n  `Cualquier consulta o duda sobre el alcance, no duden en responder este mensaje. 🤝`;\n\nreturn [{ json: {\n  channel_id:    'C0ADKPUS83B',\n  slack_message\n} }];"
+      },
+      "id": "ffc00571-e42f-4f95-9799-d567513c61cb",
+      "name": "Format: req_promoted_to_dev",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10480,
+        6336
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const wb    = $('Webhook').first().json.body;\nconst req   = wb?.req || {};\n\nconst areaToChannel = {\n  'Finance & Accounting': 'C0AJ2599DA6',\n  'Legal & Compliance':   'C0AJ67HK0ES',\n  'Operations':           'C0AK2PW5BGQ',\n  'Sales & Partnerships': 'C0AKNPCNNSU',\n  'Trading Desk':         'C0AJMRFP0TD',\n  'Management':           'C0ARDGP8134'\n};\n\nconst channelId = areaToChannel[req.area] || 'C0AS1BPV9QU';\nconst reqLink   = `<${req.issueUrl}|${req.issueKey}>`;\n\nconst slack_message =\n  `🎉 Requerimiento completado y disponible para pruebas\\n\\n` +\n  `*${req.summary}*\\n` +\n  `REQ: ${reqLink} · ${req.status || 'Done'}\\n\\n` +\n  `Este requerimiento fue desarrollado y ya está disponible en el sistema.\\n` +\n  `Pueden probarlo y ante cualquier duda o feedback, no duden en responder este mensaje. 🤝`;\n\nreturn [{ json: { channel_id: channelId, slack_message } }];"
+      },
+      "id": "9a0ad0c5-e5de-4754-9b81-1c539160f46f",
+      "name": "Format: req_promoted_to_done",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10480,
+        6560
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://arduasolutions.atlassian.net/rest/api/3/issue/' + $('Webhook').first().json.body.story.issueKey + '?fields=issuelinks' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {}
+      },
+      "id": "25b449b5-06f6-4f3e-bd30-1d2bc7f84632",
+      "name": "Fetch Story: story_in_progress",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10480,
+        6784
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "S3p1Xv6Sya0RMRAH",
+          "name": "Atlassian API — Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const wb = $('Webhook').first().json.body;\nconst jiraIssue = $input.first().json;\n\nconst linkedIssues = (jiraIssue.fields?.issuelinks || [])\n  .map(link => {\n    const isInward = !!link.inwardIssue;\n    const issue    = link.inwardIssue || link.outwardIssue;\n    if (!issue) return null;\n    return {\n      issueKey: issue.key,\n      summary:  issue.fields?.summary || '',\n      status:   issue.fields?.status?.name || '',\n      linkType: isInward ? link.type.inward : link.type.outward,\n      issueUrl: `https://arduasolutions.atlassian.net/browse/${issue.key}`\n    };\n  })\n  .filter(Boolean);\n\nconst reqFromLinks = linkedIssues.find(l => l.linkType === 'is caused by') || {};\nconst req = {\n  issueKey: wb?.req?.issueKey || reqFromLinks.issueKey || '',\n  summary:  reqFromLinks.summary || '',\n  area:     wb?.req?.area || '',\n  issueUrl: wb?.req?.issueUrl || reqFromLinks.issueUrl || ''\n};\n\nconst story   = wb?.story || {};\nconst message = `${story.issueKey} en progreso \\u2014 ${story.summary}`;\n\nreturn [{ json: { story, req, linkedIssues, channel_id: 'C0AS1BPV9QU', slack_message: message } }];"
+      },
+      "id": "4a4ff334-6c66-4048-be4b-8e6348868e59",
+      "name": "Build: story_in_progress",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10720,
+        6784
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://arduasolutions.atlassian.net/rest/api/3/issue/' + $('Webhook').first().json.body.story.issueKey + '?fields=issuelinks' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {}
+      },
+      "id": "8133e2e6-8ee8-4a06-ac39-98b4a0d32f12",
+      "name": "Fetch Story: story_done",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10480,
+        7008
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "S3p1Xv6Sya0RMRAH",
+          "name": "Atlassian API — Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const wb = $('Webhook').first().json.body;\nconst jiraIssue = $input.first().json;\n\nconst linkedIssues = (jiraIssue.fields?.issuelinks || [])\n  .map(link => {\n    const isInward = !!link.inwardIssue;\n    const issue    = link.inwardIssue || link.outwardIssue;\n    if (!issue) return null;\n    return {\n      issueKey: issue.key,\n      summary:  issue.fields?.summary || '',\n      status:   issue.fields?.status?.name || '',\n      linkType: isInward ? link.type.inward : link.type.outward,\n      issueUrl: `https://arduasolutions.atlassian.net/browse/${issue.key}`\n    };\n  })\n  .filter(Boolean);\n\nconst reqFromLinks = linkedIssues.find(l => l.linkType === 'is caused by') || {};\nconst req = {\n  issueKey: wb?.req?.issueKey || reqFromLinks.issueKey || '',\n  summary:  reqFromLinks.summary || '',\n  area:     wb?.req?.area || '',\n  issueUrl: wb?.req?.issueUrl || reqFromLinks.issueUrl || ''\n};\n\nconst story   = wb?.story || {};\nconst message = `${story.issueKey} completado \\u2014 ${story.summary}`;\n\nreturn [{ json: { story, req, linkedIssues, channel_id: 'C0AS1BPV9QU', slack_message: message } }];"
+      },
+      "id": "e587f198-0a79-4597-affe-9ed1acba61ab",
+      "name": "Build: story_done",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10720,
+        7008
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel_id, text: $json.slack_message, mrkdwn: true }) }}",
+        "options": {}
+      },
+      "id": "971c7917-f83b-405f-913f-3b6b38b042e5",
+      "name": "Post to Slack: Product Notifications Channel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10912,
+        6896
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MX2QZHGzOYBtt41s",
+          "name": "Slack Bot Token — Miles"
+        },
+        "slackApi": {
+          "id": "BCycvSbTaX6nUIo1",
+          "name": "Slack API — Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel_id, text: $json.slack_message, mrkdwn: true }) }}",
+        "options": {}
+      },
+      "id": "5c1956a2-5f6a-47cf-8d5b-0954d03fa45d",
+      "name": "Post to Slack: Product & Technology Sync Channel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10720,
+        6336
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MX2QZHGzOYBtt41s",
+          "name": "Slack Bot Token — Miles"
+        },
+        "slackApi": {
+          "id": "BCycvSbTaX6nUIo1",
+          "name": "Slack API — Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $json.channel_id, text: $json.slack_message, mrkdwn: true }) }}",
+        "options": {}
+      },
+      "id": "386cc9a6-b8f8-484f-b0ff-c47564a94365",
+      "name": "Post to Slack: Business Area Channel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10720,
+        6560
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MX2QZHGzOYBtt41s",
+          "name": "Slack Bot Token — Miles"
+        },
+        "slackApi": {
+          "id": "BCycvSbTaX6nUIo1",
+          "name": "Slack API — Miles"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Set Routing Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Routing Key": {
+      "main": [
+        [
+          {
+            "node": "Event Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Event Router": {
+      "main": [
+        [
+          {
+            "node": "Format: req_promoted_to_dev",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format: req_promoted_to_done",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Story: story_in_progress",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Story: story_done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format: req_promoted_to_dev": {
+      "main": [
+        [
+          {
+            "node": "Post to Slack: Product & Technology Sync Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format: req_promoted_to_done": {
+      "main": [
+        [
+          {
+            "node": "Post to Slack: Business Area Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Story: story_in_progress": {
+      "main": [
+        [
+          {
+            "node": "Build: story_in_progress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build: story_in_progress": {
+      "main": [
+        [
+          {
+            "node": "Post to Slack: Product Notifications Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Story: story_done": {
+      "main": [
+        [
+          {
+            "node": "Build: story_done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build: story_done": {
+      "main": [
+        [
+          {
+            "node": "Post to Slack: Product Notifications Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "fa0adc9f-009f-4820-a4fb-8f27aef5da10",
+  "meta": {
+    "instanceId": "95944be45d5aa5e5565d656a14e718ed8b92e30102ad1bd3fcad4cf1b1c2f383"
+  },
+  "id": "TJkEk7gl6bLiXyow",
+  "tags": [
+    {
+      "updatedAt": "2026-04-01T15:49:24.440Z",
+      "createdAt": "2026-04-01T15:49:24.440Z",
+      "id": "PUW9bm4KdcIVVs8y",
+      "name": "product-manager-app"
+    },
+    {
+      "updatedAt": "2026-03-25T20:09:56.359Z",
+      "createdAt": "2026-03-25T20:09:56.359Z",
+      "id": "m3quhhGHST3hiHGb",
+      "name": "miles"
+    }
+  ]
+}

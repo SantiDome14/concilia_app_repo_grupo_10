@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TRD – Proveedores de Liquidez · Prototipo v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#11113A;--navy-light:#1a1a52;--violet:#7326F1;--violet-soft:rgba(115,38,241,.1);
+  --lime:#CFF80A;--gray-50:#f9fafb;--gray-100:#f3f4f6;--gray-200:#e5e7eb;
+  --gray-400:#9ca3af;--gray-600:#6b7280;--gray-800:#1f2937;--text:#111827;--border:#e5e7eb;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--gray-50);height:100vh;overflow:hidden}
+.app{display:flex;height:100vh;width:100vw;overflow:hidden}
+.sidebar{width:216px;flex-shrink:0;background:var(--navy);display:flex;flex-direction:column}
+.sb-header{padding:20px 16px 16px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sb-logo{display:flex;align-items:center;gap:10px}
+.logo-mark{width:34px;height:34px;background:var(--violet);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-mark svg{width:16px;height:16px}
+.logo-text{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#fff;line-height:1.2}
+.logo-sub{font-size:11px;color:rgba(255,255,255,.35);margin-top:1px}
+.sb-nav{padding:10px;flex:1}
+.nav-section{font-size:10px;font-weight:600;color:rgba(255,255,255,.25);letter-spacing:.08em;text-transform:uppercase;padding:10px 8px 6px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:12.5px;color:rgba(255,255,255,.5);font-weight:500;transition:all .15s;margin-bottom:1px;user-select:none}
+.nav-item:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.85)}
+.nav-item.active{background:var(--violet);color:#fff}
+.nav-item svg{width:15px;height:15px;flex-shrink:0}
+.sb-footer{padding:12px 16px;border-top:1px solid rgba(255,255,255,.07)}
+.sb-user{display:flex;align-items:center;gap:9px}
+.sb-avatar{width:28px;height:28px;border-radius:50%;background:var(--lime);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--navy);flex-shrink:0}
+.sb-uname{font-size:11.5px;color:rgba(255,255,255,.55);font-weight:500}
+.main{flex:1;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.topbar{height:52px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:#fff;flex-shrink:0}
+.topbar-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--navy)}
+.content{flex:1;overflow-y:auto;padding:20px 24px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:12.5px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--gray-800);transition:all .15s;white-space:nowrap;font-family:'DM Sans',sans-serif}
+.btn:hover{background:var(--gray-50)}
+.btn-primary{background:var(--navy);color:#fff;border-color:var(--navy)}
+.btn-primary:hover{background:var(--navy-light)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.page-title{font-family:'Syne',sans-serif;font-size:19px;font-weight:700;color:var(--navy)}
+.page-sub{font-size:12px;color:var(--gray-400);margin-top:2px}
+.summary-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}
+.scard{background:#fff;border:1px solid var(--border);border-radius:10px;padding:13px 15px}
+.scard-label{font-size:10.5px;color:var(--gray-400);font-weight:500;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px}
+.scard-value{font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:500;color:var(--navy)}
+.scard-value.warn{color:#c2410c}
+.scard-value.ok{color:#15803d}
+.scard-value.accent{color:var(--violet)}
+.scard-sub{font-size:11px;color:var(--gray-400);margin-top:3px}
+.prov-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.chip-label{font-size:11px;color:var(--gray-400);font-weight:500;margin-right:2px}
+.chip{padding:4px 10px;border-radius:20px;font-size:11.5px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--gray-600);transition:all .15s;user-select:none}
+.chip:hover{border-color:var(--violet);color:var(--violet)}
+.chip.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.chip.pending{border-color:#fed7aa;background:#fff7ed;color:#c2410c}
+.chip.pending.active{background:#c2410c;color:#fff;border-color:#c2410c}
+.tcard{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.tcard-header{padding:13px 16px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.tcard-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--navy)}
+.filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.input-sm{padding:6px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;color:var(--text);background:#fff;outline:none;font-family:'DM Sans',sans-serif}
+.input-sm:focus{border-color:var(--violet);box-shadow:0 0 0 2px var(--violet-soft)}
+.table-wrap{overflow-x:auto}
+.table{width:100%;border-collapse:collapse;font-size:12.5px}
+.table th{padding:9px 14px;text-align:left;color:var(--gray-600);font-weight:500;border-bottom:1px solid var(--gray-100);background:var(--gray-50);white-space:nowrap;font-size:11.5px}
+.table td{padding:9px 14px;border-bottom:1px solid var(--gray-50);color:var(--gray-800);vertical-align:middle}
+.table td.mono{font-family:'IBM Plex Mono',monospace;font-size:12px}
+.table tr:last-child td{border-bottom:none}
+.table tbody tr:hover td{background:#fafbff;cursor:pointer}
+.empty-row td{text-align:center;padding:40px;color:var(--gray-400);font-style:italic}
+.prov-tag{font-family:'Syne',sans-serif;font-size:11.5px;font-weight:700;color:var(--navy)}
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.badge-pendiente{background:#fff7ed;color:#c2410c}
+.badge-recibido{background:#f0fdf4;color:#15803d}
+.badge-compra{background:#eff6ff;color:#1d4ed8}
+.badge-venta{background:#fdf2f8;color:#9d174d}
+.badge-t0{background:var(--gray-100);color:var(--gray-600)}
+.badge-t1{background:#fef9c3;color:#a16207}
+.badge-t2{background:#fff7ed;color:#c2410c}
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(2px)}
+.modal{background:#fff;border-radius:14px;width:540px;max-height:88vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-header{padding:18px 22px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.modal-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.modal-body{flex:1;overflow-y:auto;padding:20px 22px}
+.modal-footer{padding:14px 22px;border-top:1px solid var(--gray-100);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;letter-spacing:.04em}
+.form-input{padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:#fff;outline:none;font-family:'DM Sans',sans-serif;width:100%;transition:border-color .15s}
+.form-input:focus{border-color:var(--violet);box-shadow:0 0 0 3px var(--violet-soft)}
+.form-input.computed{background:#f8f7ff;border-color:#ede9fe;color:var(--violet);font-family:'IBM Plex Mono',monospace}
+.close-btn{width:28px;height:28px;border-radius:6px;border:1px solid var(--gray-200);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray-400);font-size:16px;transition:all .15s}
+.close-btn:hover{background:var(--gray-100)}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.detail-item label{font-size:10px;color:var(--gray-400);font-weight:600;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px}
+.detail-item p{font-size:13px;color:var(--text);font-weight:500}
+.detail-item p.mono{font-family:'IBM Plex Mono',monospace;font-size:12.5px}
+.detail-section{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--gray-100)}
+.alert-box{background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:11px 13px;font-size:12px;color:#c2410c;display:flex;align-items:center;gap:8px}
+.placeholder-view{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--gray-400);gap:12px}
+.placeholder-view svg{width:36px;height:36px;opacity:.2}
+.placeholder-view strong{font-family:'Syne',sans-serif;color:var(--navy);font-size:14px}
+.placeholder-view p{font-size:12.5px;text-align:center;max-width:280px}
+.placeholder-tag{background:var(--gray-100);border-radius:20px;padding:4px 12px;font-size:11px;color:var(--gray-600)}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="sidebar">
+  <div class="sb-header">
+    <div class="sb-logo">
+      <div class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#CFF80A" stroke-width="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></div>
+      <div><div class="logo-text">TRD · Ardua</div><div class="logo-sub">Mesa de Trading</div></div>
+    </div>
+  </div>
+  <div class="sb-nav">
+    <div class="nav-section">Operaciones</div>
+    <div class="nav-item" onclick="setPage('quotes')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Quotes</div>
+    <div class="nav-item active" onclick="setPage('proveedores')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Proveedores</div>
+    <div class="nav-item" onclick="setPage('bots')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg>Bots</div>
+    <div class="nav-section">Gestión</div>
+    <div class="nav-item" onclick="setPage('clientes')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Clientes</div>
+    <div class="nav-item" onclick="setPage('alertas')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Alertas</div>
+  </div>
+  <div class="sb-footer"><div class="sb-user"><div class="sb-avatar">FV</div><div class="sb-uname">Facundo Vasques</div></div></div>
+</div>
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="topbar-title">Proveedores de Liquidez</div>
+  </div>
+  <div class="content" id="page-content"></div>
+</div>
+</div>
+<script>
+var PROVEEDORES=['ADCAP','BULL','FIWIND','PERC','IVSA','CONOSUR','CUCCHIARA','INVIU','COHEN'];
+var OPS=[
+  {id:'OP-001',prov:'ADCAP',fecha:'2026-03-25',tipo:'COMPRA',instrumento:'CABLE',ars:120000000,tc:1200,usdc:100000,plazo:'T1',fecha_liq:'2026-03-26',status:'RECIBIDO',empresa:'Circuit Pay',notas:''},
+  {id:'OP-002',prov:'ADCAP',fecha:'2026-03-26',tipo:'COMPRA',instrumento:'CABLE',ars:179325000,tc:1195.5,usdc:150000,plazo:'T1',fecha_liq:'2026-03-27',status:'RECIBIDO',empresa:'Circuit Pay',notas:''},
+  {id:'OP-003',prov:'ADCAP',fecha:'2026-03-28',tipo:'COMPRA',instrumento:'CABLE',ars:299250000,tc:1197,usdc:250000,plazo:'T2',fecha_liq:'2026-03-31',status:'PENDIENTE',empresa:'Ardua Solutions Corp',notas:'Pendiente confirmación'},
+  {id:'OP-004',prov:'BULL',fecha:'2026-03-26',tipo:'COMPRA',instrumento:'CABLE',ars:119500000,tc:1195,usdc:100000,plazo:'T1',fecha_liq:'2026-03-27',status:'RECIBIDO',empresa:'Circuit Pay',notas:''},
+  {id:'OP-005',prov:'BULL',fecha:'2026-03-28',tipo:'COMPRA',instrumento:'CABLE',ars:239000000,tc:1195,usdc:200000,plazo:'T1',fecha_liq:'2026-03-29',status:'PENDIENTE',empresa:'Haz Pagos',notas:''},
+  {id:'OP-006',prov:'FIWIND',fecha:'2026-03-25',tipo:'COMPRA',instrumento:'CABLE',ars:178800000,tc:1192,usdc:150000,plazo:'T1',fecha_liq:'2026-03-26',status:'RECIBIDO',empresa:'Circuit Pay',notas:''},
+  {id:'OP-007',prov:'FIWIND',fecha:'2026-03-27',tipo:'COMPRA',instrumento:'CABLE',ars:119250000,tc:1192.5,usdc:100000,plazo:'T0',fecha_liq:'2026-03-27',status:'RECIBIDO',empresa:'Circuit Pay',notas:''},
+  {id:'OP-008',prov:'PERC',fecha:'2026-03-28',tipo:'COMPRA',instrumento:'CABLE',ars:357000000,tc:1190,usdc:300000,plazo:'T2',fecha_liq:'2026-03-31',status:'PENDIENTE',empresa:'Ardua Solutions Corp',notas:'Confirmado vía WhatsApp'},
+  {id:'OP-009',prov:'IVSA',fecha:'2026-03-27',tipo:'COMPRA',instrumento:'CABLE',ars:178800000,tc:1192,usdc:150000,plazo:'T1',fecha_liq:'2026-03-28',status:'RECIBIDO',empresa:'Circuit Pay',notas:''},
+  {id:'OP-010',prov:'CONOSUR',fecha:'2026-03-25',tipo:'COMPRA',instrumento:'CABLE',ars:591000000,tc:1182,usdc:500000,plazo:'T1',fecha_liq:'2026-03-26',status:'RECIBIDO',empresa:'Haz Pagos',notas:''},
+  {id:'OP-011',prov:'CONOSUR',fecha:'2026-03-27',tipo:'COMPRA',instrumento:'CABLE',ars:237700000,tc:1188.5,usdc:200000,plazo:'T1',fecha_liq:'2026-03-28',status:'RECIBIDO',empresa:'Haz Pagos',notas:''},
+  {id:'OP-012',prov:'CUCCHIARA',fecha:'2026-03-28',tipo:'COMPRA',instrumento:'CABLE',ars:298750000,tc:1195,usdc:250000,plazo:'T1',fecha_liq:'2026-03-29',status:'PENDIENTE',empresa:'Circuit Pay',notas:''},
+  {id:'OP-013',prov:'INVIU',fecha:'2026-03-27',tipo:'COMPRA',instrumento:'CABLE',ars:117300000,tc:1173,usdc:100000,plazo:'T1',fecha_liq:'2026-03-28',status:'RECIBIDO',empresa:'Circuit Pay',notas:''},
+  {id:'OP-014',prov:'COHEN',fecha:'2026-03-26',tipo:'COMPRA',instrumento:'CABLE',ars:119200000,tc:1192,usdc:100000,plazo:'T1',fecha_liq:'2026-03-27',status:'RECIBIDO',empresa:'Haz Pagos',notas:''},
+];
+var state={page:'proveedores',selectedOp:null,showNewOp:false,filterProv:'',filterStatus:'',filterPlazo:''};
+function fmt(n){return new Intl.NumberFormat('es-AR').format(n)}
+function fmtARS(n){return '$'+new Intl.NumberFormat('es-AR').format(n)}
+function fmtDate(d){var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0].slice(2)}
+function sBadge(s){return'<span class="badge badge-'+s.toLowerCase()+'">'+s+'</span>'}
+function tBadge(t){return'<span class="badge badge-'+t.toLowerCase()+'">'+t+'</span>'}
+function pBadge(p){return'<span class="badge badge-'+p.toLowerCase()+'">'+p+'</span>'}
+function hasPending(prov){return OPS.some(function(o){return o.prov===prov&&o.status==='PENDIENTE'})}
+function filtered(){return OPS.filter(function(o){return(!state.filterProv||o.prov===state.filterProv)&&(!state.filterStatus||o.status===state.filterStatus)&&(!state.filterPlazo||o.plazo===state.filterPlazo)})}
+function setPage(p){
+  state.page=p;state.selectedOp=null;state.showNewOp=false;
+  document.querySelectorAll('.nav-item').forEach(function(el){el.classList.remove('active')});
+  var idx={quotes:0,proveedores:1,bots:2,clientes:3,alertas:4};
+  document.querySelectorAll('.nav-item')[idx[p]||1].classList.add('active');
+  var t={quotes:'Quotes',proveedores:'Proveedores de Liquidez',bots:'Bots',clientes:'Clientes',alertas:'Alertas'};
+  document.getElementById('topbar-title').textContent=t[p]||p;
+  render();
+}
+function renderProveedores(){
+  var all=OPS,ops=filtered();
+  var totalUSDC=all.reduce(function(a,o){return a+o.usdc},0);
+  var totalARS=all.reduce(function(a,o){return a+o.ars},0);
+  var pend=all.filter(function(o){return o.status==='PENDIENTE'}).length;
+  var rec=all.filter(function(o){return o.status==='RECIBIDO'}).length;
+  var summary='<div class="summary-row">'+
+    '<div class="scard"><div class="scard-label">Operaciones</div><div class="scard-value">'+all.length+'</div><div class="scard-sub">en todos los proveedores</div></div>'+
+    '<div class="scard"><div class="scard-label">USDC total</div><div class="scard-value accent">'+fmt(totalUSDC)+'</div><div class="scard-sub">acumulado del período</div></div>'+
+    '<div class="scard"><div class="scard-label">ARS total</div><div class="scard-value" style="font-size:13px">'+fmtARS(totalARS)+'</div><div class="scard-sub">acumulado del período</div></div>'+
+    '<div class="scard"><div class="scard-label">Pendientes</div><div class="scard-value warn">'+pend+'</div><div class="scard-sub">sin confirmar recepción</div></div>'+
+    '<div class="scard"><div class="scard-label">Recibidos</div><div class="scard-value ok">'+rec+'</div><div class="scard-sub">liquidaciones confirmadas</div></div>'+
+  '</div>';
+  var chips='';
+  var rows=ops.length===0
+    ?'<tr class="empty-row"><td colspan="9">No hay operaciones para los filtros seleccionados</td></tr>'
+    :ops.map(function(o){
+      return'<tr onclick="openOp(\''+o.id+'\')">'+
+        '<td>'+fmtDate(o.fecha)+'</td>'+
+        '<td><span class="prov-tag">'+o.prov+'</span></td>'+
+        '<td>'+tBadge(o.tipo)+' <span style="color:var(--gray-600);font-size:12px">'+o.instrumento+'</span></td>'+
+        '<td class="mono">'+fmtARS(o.ars)+'</td>'+
+        '<td class="mono">$'+fmt(o.tc)+'</td>'+
+        '<td class="mono" style="color:var(--violet);font-weight:600">'+fmt(o.usdc)+' USDC</td>'+
+        '<td>'+pBadge(o.plazo)+'</td>'+
+        '<td>'+fmtDate(o.fecha_liq)+'</td>'+
+        '<td>'+sBadge(o.status)+'</td>'+
+      '</tr>';
+    }).join('');
+  var table='<div class="tcard">'+
+    '<div class="tcard-header">'+
+      '<div class="tcard-title">Operaciones &nbsp;<span style="font-family:\'DM Sans\';font-size:12px;color:var(--gray-400);font-weight:400">'+ops.length+' resultado'+(ops.length!==1?'s':'')+'</span></div>'+
+      '<div class="filters">'+
+        '<select class="input-sm" onchange="state.filterProv=this.value;render()">'+
+          '<option value="">Todos los proveedores</option>'+
+          PROVEEDORES.map(function(p){return'<option value="'+p+'"'+(state.filterProv===p?' selected':'')+'>'+p+'</option>'}).join('')+
+        '</select>'+
+        '<select class="input-sm" onchange="state.filterStatus=this.value;render()">'+
+          '<option value="">Todos los estados</option>'+
+          '<option value="PENDIENTE"'+(state.filterStatus==='PENDIENTE'?' selected':'')+'>Pendiente</option>'+
+          '<option value="RECIBIDO"'+(state.filterStatus==='RECIBIDO'?' selected':'')+'>Recibido</option>'+
+        '</select>'+
+        '<select class="input-sm" onchange="state.filterPlazo=this.value;render()">'+
+          '<option value="">Todos los plazos</option>'+
+          '<option value="T0"'+(state.filterPlazo==='T0'?' selected':'')+'>T0</option>'+
+          '<option value="T1"'+(state.filterPlazo==='T1'?' selected':'')+'>T1</option>'+
+          '<option value="T2"'+(state.filterPlazo==='T2'?' selected':'')+'>T2</option>'+
+        '</select>'+
+
+      '</div>'+
+    '</div>'+
+    '<div class="table-wrap"><table class="table">'+
+      '<thead><tr><th>Fecha</th><th>Proveedor</th><th>Tipo</th><th>ARS</th><th>TC</th><th>USDC</th><th>Plazo</th><th>Fecha liq.</th><th>Status</th></tr></thead>'+
+      '<tbody>'+rows+'</tbody>'+
+    '</table></div></div>';
+  var overlay=state.selectedOp?renderOpModal():(state.showNewOp?renderNewOpModal():'');
+  return'<div class="page-header">'+
+    '<div><div class="page-title">Proveedores de Liquidez</div><div class="page-sub">Compras y ventas de liquidez a brokers externos</div></div>'+
+    '<button class="btn btn-primary" onclick="state.showNewOp=true;render()">'+
+      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Nueva operación'+
+    '</button></div>'+
+  summary+chips+table+overlay;
+}
+function openOp(id){state.selectedOp=id;render()}
+function closeOp(){state.selectedOp=null;render()}
+function renderOpModal(){
+  var o=OPS.find(function(x){return x.id===state.selectedOp});
+  if(!o)return'';
+  return'<div class="modal-backdrop" onclick="if(event.target===this)closeOp()">'+
+    '<div class="modal" onclick="event.stopPropagation()">'+
+      '<div class="modal-header">'+
+        '<div class="modal-title">'+o.id+' &nbsp;'+tBadge(o.tipo)+' '+o.instrumento+'&nbsp;'+sBadge(o.status)+'</div>'+
+        '<button class="close-btn" onclick="closeOp()">×</button>'+
+      '</div>'+
+      '<div class="modal-body">'+
+        '<div class="detail-section">Detalle de la operación</div>'+
+        '<div class="detail-grid">'+
+          '<div class="detail-item"><label>Proveedor</label><p>'+o.prov+'</p></div>'+
+          '<div class="detail-item"><label>Empresa Ardua</label><p>'+o.empresa+'</p></div>'+
+          '<div class="detail-item"><label>Fecha operación</label><p>'+fmtDate(o.fecha)+'</p></div>'+
+          '<div class="detail-item"><label>Fecha liquidación</label><p>'+fmtDate(o.fecha_liq)+' &nbsp;'+pBadge(o.plazo)+'</p></div>'+
+          '<div class="detail-item"><label>ARS</label><p class="mono">'+fmtARS(o.ars)+'</p></div>'+
+          '<div class="detail-item"><label>Tipo de cambio</label><p class="mono">$'+fmt(o.tc)+'</p></div>'+
+          '<div class="detail-item" style="grid-column:1/-1"><label>USDC</label><p class="mono" style="color:var(--violet);font-size:16px;font-weight:600">'+fmt(o.usdc)+' USDC</p></div>'+
+          (o.notas?'<div class="detail-item" style="grid-column:1/-1"><label>Notas</label><p>'+o.notas+'</p></div>':'')+
+        '</div>'+
+        (o.status==='PENDIENTE'?'<div class="alert-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Operación pendiente de confirmación de recepción.</div>':'')+
+      '</div>'+
+      '<div class="modal-footer">'+
+        (o.status==='PENDIENTE'?'<button class="btn btn-primary" onclick="markRecibido(\''+o.id+'\')">Confirmar recepción</button>':'')+
+        '<button class="btn" onclick="closeOp()">Cerrar</button>'+
+      '</div>'+
+    '</div></div>';
+}
+function markRecibido(id){var o=OPS.find(function(x){return x.id===id});if(o)o.status='RECIBIDO';state.selectedOp=null;render()}
+function renderNewOpModal(){
+  var opts=PROVEEDORES.map(function(p){return'<option'+(state.filterProv===p?' selected':'')+'>'+p+'</option>'}).join('');
+  return'<div class="modal-backdrop" onclick="if(event.target===this){state.showNewOp=false;render()}">'+
+    '<div class="modal" onclick="event.stopPropagation()">'+
+      '<div class="modal-header"><div class="modal-title">Nueva operación</div><button class="close-btn" onclick="state.showNewOp=false;render()">×</button></div>'+
+      '<div class="modal-body"><div class="form-grid">'+
+        '<div class="form-group"><label class="form-label">Proveedor *</label><select class="form-input">'+opts+'</select></div>'+
+        '<div class="form-group"><label class="form-label">Empresa Ardua *</label><select class="form-input"><option>Circuit Pay</option><option>Haz Pagos</option><option>Ardua Solutions Corp</option></select></div>'+
+        '<div class="form-group"><label class="form-label">Fecha operación *</label><input type="date" class="form-input" value="2026-03-30"></div>'+
+        '<div class="form-group"><label class="form-label">Tipo *</label><select class="form-input"><option>COMPRA</option><option>VENTA</option></select></div>'+
+        '<div class="form-group"><label class="form-label">Instrumento *</label><select class="form-input"><option>CABLE</option><option>MEP</option></select></div>'+
+        '<div class="form-group"><label class="form-label">Plazo *</label><select class="form-input"><option>T0</option><option selected>T1</option><option>T2</option></select></div>'+
+        '<div class="form-group"><label class="form-label">ARS *</label><input type="number" id="n-ars" class="form-input" placeholder="0" oninput="calcUSDC()"></div>'+
+        '<div class="form-group"><label class="form-label">TC *</label><input type="number" id="n-tc" class="form-input" placeholder="0.00" oninput="calcUSDC()"></div>'+
+        '<div class="form-group full"><label class="form-label">USDC <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--gray-400)">(calculado · editable)</span></label><input type="number" id="n-usdc" class="form-input computed" placeholder="0.00"></div>'+
+        '<div class="form-group"><label class="form-label">Fecha liquidación *</label><input type="date" class="form-input" value="2026-03-31"></div>'+
+        '<div class="form-group"><label class="form-label">Status *</label><select class="form-input"><option>PENDIENTE</option><option>RECIBIDO</option></select></div>'+
+        '<div class="form-group full"><label class="form-label">Notas</label><textarea class="form-input" rows="2" placeholder="Observaciones opcionales..."></textarea></div>'+
+      '</div></div>'+
+      '<div class="modal-footer"><button class="btn" onclick="state.showNewOp=false;render()">Cancelar</button><button class="btn btn-primary" onclick="state.showNewOp=false;render()">Registrar operación</button></div>'+
+    '</div></div>';
+}
+function calcUSDC(){var a=parseFloat((document.getElementById('n-ars')||{}).value)||0,t=parseFloat((document.getElementById('n-tc')||{}).value)||0,o=document.getElementById('n-usdc');if(o&&t>0)o.value=(a/t).toFixed(2)}
+function placeholder(icon,title,sub){
+  return'<div class="placeholder-view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">'+icon+'</svg><strong>'+title+'</strong><p>'+sub+'</p><span class="placeholder-tag">Sin cambios en este alcance</span></div>';
+}
+function render(){
+  var pc=document.getElementById('page-content');
+  if(state.page==='quotes')pc.innerHTML=placeholder('<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>','Quotes','Flujo actual sin cambios.');
+  else if(state.page==='bots')pc.innerHTML=placeholder('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>','Bots','Gestión de estrategias sin cambios.');
+  else if(state.page==='clientes')pc.innerHTML=placeholder('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>','Clientes','Catálogo de clientes sin cambios.');
+  else if(state.page==='alertas')pc.innerHTML=placeholder('<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>','Alertas','Configuración sin cambios.');
+  else pc.innerHTML=renderProveedores();
+}
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CLP — RFQ + Quotes · v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#131313;--card:#1A1A1A;--card2:#1E1E1E;--border:#292929;--border2:#333333;--borderh:#404040;
+  --text:#FFFFFF;--text2:#E7E7E7;--text3:#D9D9D9;--muted:#8A8A8A;--faint:#595959;
+  --green:#22BE81;--gdim:rgba(34,190,129,0.1);--gdim2:rgba(34,190,129,0.15);--gring:rgba(34,190,129,0.25);
+  --red:#F31E1F;--rdim:rgba(243,30,31,0.1);--rring:rgba(243,30,31,0.3);
+  --amber:#F3811E;--adim:rgba(243,129,30,0.1);--aring:rgba(243,129,30,0.3);
+  --blue:#4A9FFF;--bdim:rgba(74,159,255,0.1);--bring:rgba(74,159,255,0.3);
+  --violet:#9b58ff;--vdim:rgba(155,88,255,0.1);--vring:rgba(155,88,255,0.3);
+  --sbw:240px;--sbwc:80px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{height:100vh;overflow:hidden;display:flex;background:var(--bg);font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;-webkit-font-smoothing:antialiased;color:var(--text);}
+#sidebar{width:var(--sbw);height:100vh;flex-shrink:0;background:var(--card2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:width .28s cubic-bezier(.4,0,.2,1);position:relative;}
+#sidebar.collapsed{width:var(--sbwc);}
+.sb-top{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:60px;border-bottom:1px solid var(--border);flex-shrink:0;overflow:hidden;}
+.sb-logo-left{display:flex;align-items:center;gap:10px;min-width:0;}
+.sb-logo-text{overflow:hidden;transition:opacity .2s,width .28s;white-space:nowrap;width:140px;}
+#sidebar.collapsed .sb-logo-text{opacity:0;width:0;}
+.sb-logo-title{font-size:14px;font-weight:600;color:#fff;display:block;}
+.sb-logo-sub{font-size:11px;color:var(--muted);display:block;}
+.sb-toggle{width:26px;height:26px;border:none;background:transparent;cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--muted);flex-shrink:0;transition:background .15s,color .15s;}
+.sb-toggle:hover{background:var(--border2);color:#fff;}
+.sb-toggle svg{width:16px;height:16px;transition:transform .28s;}
+#sidebar.collapsed .sb-toggle svg{transform:rotate(180deg);}
+#sidebar.collapsed .sb-top{justify-content:center;padding:0;}
+#sidebar.collapsed .sb-logo-left{gap:0;}
+#sidebar.collapsed .sb-toggle{position:absolute;right:6px;top:17px;}
+.sb-nav{flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:2px;overflow:hidden;}
+.sb-section{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);padding:10px 8px 4px;white-space:nowrap;overflow:hidden;transition:opacity .2s;}
+#sidebar.collapsed .sb-section{opacity:0;height:0;padding:0;}
+.nav-btn{width:100%;height:40px;border:none;background:transparent;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:10px;padding:0 10px;color:var(--muted);transition:background .15s,color .15s;white-space:nowrap;overflow:hidden;position:relative;}
+.nav-btn:hover{background:#252525;color:var(--text3);}
+.nav-btn.active{background:var(--border2);color:#fff;}
+.nav-btn svg{width:18px;height:18px;flex-shrink:0;}
+.nav-label{font-size:13px;font-weight:500;transition:opacity .2s,width .28s;overflow:hidden;white-space:nowrap;}
+#sidebar.collapsed .nav-label{opacity:0;width:0;}
+.new-badge{margin-left:auto;font-size:9px;font-weight:600;padding:2px 6px;border-radius:99px;background:rgba(34,190,129,.12);border:1px solid rgba(34,190,129,.25);color:var(--green);transition:opacity .2s;flex-shrink:0;}
+#sidebar.collapsed .new-badge{opacity:0;width:0;padding:0;border:none;margin:0;}
+.new-dot{position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--green);border:1.5px solid var(--card2);transition:opacity .2s;}
+#sidebar:not(.collapsed) .new-dot{opacity:0;}
+.sb-bottom{padding:10px 10px 16px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:2px;}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+#header{height:58px;flex-shrink:0;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;background:var(--bg);}
+#header-title{font-size:13px;color:var(--text3);font-weight:400;}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--border);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted);font-weight:500;}
+.view{flex:1;overflow-y:auto;display:none;flex-direction:column;align-items:center;}
+.view.active{display:flex;}
+#view-rfq{background:var(--bg);}
+.scene-bar{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:99;background:var(--card);border:1px solid var(--border2);border-radius:99px;padding:6px 10px;display:flex;align-items:center;gap:6px;}
+.scene-btn{font-size:10.5px;font-weight:500;padding:4px 10px;border-radius:99px;border:none;cursor:pointer;font-family:inherit;background:transparent;color:var(--muted);transition:all .15s;}
+.scene-btn:hover{background:var(--border2);color:var(--text3);}
+.scene-btn.active{background:var(--border2);color:#fff;}
+.scene-label{font-size:10px;color:var(--faint);padding:0 6px 0 4px;border-right:1px solid var(--border2);}
+.rfq-wrap{width:100%;padding:40px 20px 100px;display:flex;flex-direction:column;align-items:center;min-height:100%;}
+.rfq-card{width:100%;max-width:480px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px;animation:fadeIn .2s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.rfq-title{font-size:22px;font-weight:600;margin-bottom:4px;}
+.rfq-sub{font-size:13px;color:var(--muted);margin-bottom:28px;}
+.f-label{display:block;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);margin-bottom:10px;}
+.pair-badge{display:inline-flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;margin-bottom:24px;width:100%;color:var(--text2);}
+.pair-dot{width:8px;height:8px;background:var(--green);border-radius:50%;box-shadow:0 0 5px rgba(34,190,129,.5);animation:pulse 2s ease infinite;flex-shrink:0;}
+.pair-label{margin-left:auto;color:var(--faint);font-weight:400;font-size:12px;}
+.side-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px;}
+.side-btn{padding:12px 14px;border-radius:8px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;text-align:center;transition:all .15s;border:1px solid var(--border);background:transparent;color:var(--muted);}
+.side-btn-sub{display:block;font-size:11px;font-weight:400;margin-top:2px;opacity:.7;}
+.amount-wrap{margin-bottom:24px;}
+.rfq-input{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:15px;font-weight:500;padding:13px 16px;outline:none;transition:border-color .15s;}
+.rfq-input::placeholder{color:var(--faint);}
+.rfq-input:focus{border-color:var(--borderh);}
+.input-hint{font-size:12px;color:var(--muted);margin-top:6px;display:block;}
+.input-err{font-size:12px;color:var(--red);margin-top:6px;display:block;}
+.btn-cta{width:100%;padding:13px;border:none;border-radius:8px;background:var(--text);color:var(--bg);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-cta:hover:not(:disabled){background:var(--text2);}
+.btn-cta:disabled{opacity:.35;cursor:not-allowed;}
+.btn-secondary{width:100%;padding:12px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;margin-top:10px;}
+.btn-secondary:hover{border-color:var(--borderh);color:var(--text3);}
+.pq-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;}
+.pq-label{font-size:10px;font-weight:500;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;}
+.pq-side{font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;}
+.coverage-box{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px;}
+.coverage-label{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin-bottom:10px;}
+.coverage-row{display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;}
+.coverage-key{color:var(--muted);}
+.coverage-val{font-weight:600;font-variant-numeric:tabular-nums;}
+.coverage-bar-wrap{margin:10px 0 6px;}
+.coverage-bar{height:6px;border-radius:3px;background:var(--border2);overflow:hidden;}
+.coverage-fill{height:100%;background:var(--green);border-radius:3px;transition:width .3s;}
+.coverage-warn{font-size:12px;color:var(--amber);margin-top:8px;display:flex;align-items:flex-start;gap:5px;}
+.pq-price-block{text-align:center;padding:24px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:20px;}
+.pq-price-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;}
+.pq-price-val{font-size:38px;font-weight:600;letter-spacing:-.5px;line-height:1.1;}
+.pq-price-unit{font-size:13px;color:var(--muted);margin-top:4px;}
+.pq-price-amt{font-size:13px;color:var(--muted);margin-top:6px;}
+.pq-price-amt strong{color:var(--text2);}
+.pq-ttl{margin:16px 0;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;}
+.pq-ttl-label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;}
+.pq-ttl-dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 1s ease infinite;}
+.ttl-arc-wrap{display:flex;align-items:center;gap:12px;}
+.ttl-arc{position:relative;width:44px;height:44px;}
+.ttl-arc svg{position:absolute;top:0;left:0;transform:rotate(-90deg);}
+.ttl-arc-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;}
+.pq-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;}
+.btn-accept{padding:13px;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;background:var(--green);color:#131313;transition:opacity .15s;}
+.btn-accept:hover:not(:disabled){opacity:.88;}
+.btn-accept:disabled{opacity:.35;cursor:not-allowed;}
+.btn-reject{padding:13px;background:transparent;color:var(--red);border:1px solid var(--rring);border-radius:8px;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;transition:all .15s;}
+.btn-reject:hover:not(:disabled){background:var(--rdim);}
+.btn-reject:disabled{opacity:.35;cursor:not-allowed;}
+.as-icon{width:52px;height:52px;background:var(--gdim);border:1px solid var(--gring);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;margin:0 auto 18px;}
+.as-title{text-align:center;font-size:19px;font-weight:600;margin-bottom:6px;}
+.as-sub{text-align:center;font-size:13px;color:var(--muted);margin-bottom:26px;line-height:1.6;}
+.as-ref-box{background:var(--gdim);border:1px solid var(--gring);border-radius:10px;padding:18px;text-align:center;margin-bottom:18px;}
+.as-ref-label{font-size:10px;font-weight:500;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;}
+.as-ref-num{font-size:20px;font-weight:600;color:var(--green);letter-spacing:.04em;font-variant-numeric:tabular-nums;}
+.as-summary{border-top:1px solid var(--border);padding-top:14px;margin-bottom:14px;}
+.as-row{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;}
+.as-key{color:var(--muted);}
+.as-val{font-weight:500;color:var(--text2);}
+.info-box{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:16px;display:flex;gap:8px;}
+.info-icon{flex-shrink:0;margin-top:1px;}
+.ss-icon{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;margin:0 auto 16px;}
+.ss-title{text-align:center;font-size:18px;font-weight:600;margin-bottom:6px;}
+.ss-msg{text-align:center;font-size:13px;color:var(--muted);margin-bottom:10px;line-height:1.6;}
+.ss-detail{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:12.5px;color:var(--text3);margin:14px 0;text-align:left;line-height:1.7;}
+.err-icon{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 16px;}
+.err-title{text-align:center;font-size:18px;font-weight:600;margin-bottom:8px;}
+.err-code{text-align:center;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:4px 12px;border-radius:99px;display:inline-block;margin:0 auto 16px;}
+.err-msg{text-align:center;font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6;}
+.maint-icon{width:56px;height:56px;background:rgba(155,88,255,.1);border:1px solid var(--vring);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 18px;}
+.loading-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 0;gap:16px;}
+.spinner{width:34px;height:34px;border:2.5px solid var(--border);border-top-color:var(--text3);border-radius:50%;animation:spin .7s linear infinite;}
+.loading-text{font-size:13px;color:var(--muted);}
+.screen{display:none;}
+.screen.active{display:block;}
+.ph-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;user-select:none;}
+.ph-pill{padding:6px 16px;background:var(--card);border:1px solid var(--border);border-radius:99px;font-size:12px;color:var(--faint);}
+.proto-badge{position:fixed;bottom:52px;right:14px;z-index:99;font-size:10px;color:var(--faint);background:var(--card);border:1px solid var(--border);padding:4px 10px;border-radius:99px;pointer-events:none;}
+
+/* ── QUOTES MODULE ─────────────────────────────── */
+.qt-wrap{width:100%;padding:32px 28px 100px;display:flex;flex-direction:column;align-items:center;min-height:100%;}
+.qt-content{width:100%;max-width:1200px;}
+.qt-header{margin-bottom:20px;}
+.qt-title{font-size:22px;font-weight:600;margin-bottom:4px;}
+.qt-sub{font-size:13px;color:var(--muted);}
+.qt-summary{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
+.qt-stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 16px;flex:1;min-width:140px;}
+.qt-stat-label{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin-bottom:4px;}
+.qt-stat-val{font-size:20px;font-weight:600;}
+.qt-stat-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.qt-select{background:var(--card2);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-family:inherit;font-size:12px;padding:5px 10px;outline:none;cursor:pointer;transition:border-color .15s;}
+.qt-select:hover{border-color:var(--borderh);}
+.qt-table-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.qt-card-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--card2);}
+.qt-card-title{font-size:13px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:8px;}
+.qt-total-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:99px;background:var(--border2);color:var(--muted);}
+.qt-card-filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.qt-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.qt-table th{padding:10px 14px;text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);border-bottom:1px solid var(--border);background:var(--card2);white-space:nowrap;}
+.qt-table td{padding:10px 14px;border-bottom:1px solid #222;color:var(--text2);vertical-align:middle;}
+.qt-table tr:last-child td{border-bottom:none;}
+.qt-table tbody tr{cursor:pointer;transition:background .12s;}
+.qt-table tbody tr:hover td{background:#222;}
+.qt-status{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap;}
+.qt-status-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.qt-op-buy{color:var(--green);font-size:11px;font-weight:600;}
+.qt-op-sell{color:var(--red);font-size:11px;font-weight:600;}
+.qt-origin-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:99px;border:1px solid;}
+.qt-source-rfq{background:rgba(155,88,255,.1);border-color:rgba(155,88,255,.3);color:var(--violet);}
+.qt-source-manual{background:rgba(74,159,255,.08);border-color:rgba(74,159,255,.25);color:var(--blue);}
+.qt-empty{padding:60px 20px;text-align:center;color:var(--faint);}
+.qt-empty p{font-size:14px;color:rgba(255,255,255,.4);margin-bottom:4px;margin-top:14px;}
+.qt-empty span{font-size:12px;color:var(--faint);}
+.mono-n{font-variant-numeric:tabular-nums;}
+.qt-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
+.qt-modal-bg.open{display:flex;}
+.qt-modal{background:#1C1C1C;border:1px solid var(--border2);border-radius:16px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;margin:16px;}
+.qt-modal-header{padding:20px 22px 0;display:flex;align-items:flex-start;justify-content:space-between;}
+.qt-modal-title{font-size:16px;font-weight:600;}
+.qt-modal-close{width:28px;height:28px;border:none;background:var(--card2);border-radius:6px;cursor:pointer;color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .15s;}
+.qt-modal-close:hover{background:var(--border2);color:#fff;}
+.qt-modal-body{padding:20px 22px 24px;}
+.qt-modal-row{display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid #252525;font-size:13px;}
+.qt-modal-row:last-child{border-bottom:none;}
+.qt-modal-key{color:var(--muted);}
+.qt-modal-val{font-weight:500;color:var(--text2);text-align:right;}
+.qt-origin-box{background:rgba(155,88,255,.06);border:1px solid rgba(155,88,255,.18);border-radius:10px;padding:14px 16px;margin-top:16px;}
+.qt-origin-header{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--violet);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.qt-origin-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;}
+.qt-origin-key{color:var(--muted);}
+.qt-origin-val{font-weight:500;color:var(--text3);}
+.qt-origin-note{font-size:12px;color:var(--faint);margin-top:10px;line-height:1.5;border-top:1px solid rgba(155,88,255,.12);padding-top:10px;}
+.qt-otc-box{background:rgba(74,159,255,.04);border:1px solid rgba(74,159,255,.15);border-radius:10px;padding:14px 16px;margin-top:16px;font-size:12px;color:var(--muted);}
+.nav-count{margin-left:auto;font-size:9.5px;font-weight:700;padding:1px 7px;border-radius:99px;background:rgba(74,159,255,.15);border:1px solid rgba(74,159,255,.3);color:#4A9FFF;transition:opacity .2s;flex-shrink:0;}
+#sidebar.collapsed .nav-count{opacity:0;width:0;padding:0;border:none;margin:0;}
+</style>
+</head>
+<body>
+<aside id="sidebar">
+  <div class="sb-top">
+    <div class="sb-logo-left">
+      <svg width="26" height="22" viewBox="0 0 134 118" fill="none" style="flex-shrink:0">
+        <path d="M52.5 97.4L44.9 117.6H17.4L61.6 0H89.5L133.6 117.6H106.7L98.6 97.4L75.6 35.9" fill="white"/>
+        <path d="M106.7 117.6L90.6 76.1L40 45.1L21.4 34.1L0 51.3L106.7 117.6Z" fill="url(#lg2)"/>
+        <defs><linearGradient id="lg2" x1="0" y1="75.9" x2="106.7" y2="75.9" gradientUnits="userSpaceOnUse"><stop offset=".17" stop-color="#8C52FF"/><stop offset=".54" stop-color="#5943A1"/><stop offset=".81" stop-color="#1B1B64"/></linearGradient></defs>
+      </svg>
+      <div class="sb-logo-text">
+        <span class="sb-logo-title">Client Portal</span>
+        <span class="sb-logo-sub">Ardua Solutions</span>
+      </div>
+    </div>
+    <button class="sb-toggle" onclick="toggleSidebar()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+  </div>
+  <nav class="sb-nav">
+    <span class="sb-section">Principal</span>
+    <button class="nav-btn" id="nb-dashboard" onclick="switchView('dashboard')" title="Dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span class="nav-label">Dashboard</span>
+    </button>
+    <button class="nav-btn active" id="nb-rfq" onclick="switchView('rfq')" title="RFQ">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span class="nav-label">RFQ</span>
+      <span class="new-badge">NEW</span>
+      <span class="new-dot"></span>
+    </button>
+    <button class="nav-btn" id="nb-mis-cotizaciones" onclick="switchView('mis-cotizaciones')" title="Quotes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg>
+      <span class="nav-label">Quotes</span>
+      <span class="nav-count" id="nav-qt-count">2</span>
+      <span class="new-dot" style="background:#4A9FFF"></span>
+    </button>
+  </nav>
+  <div class="sb-bottom">
+    <button class="nav-btn" id="nb-settings" onclick="switchView('settings')" title="Configuracion">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span class="nav-label">Configuracion</span>
+    </button>
+  </div>
+</aside>
+<div id="main">
+  <header id="header">
+    <span id="header-title">RFQ</span>
+    <div class="avatar">NC</div>
+  </header>
+  <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;">
+    <div id="view-dashboard" class="view" style="justify-content:center;align-items:center;">
+      <div class="ph-wrap">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1.4"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <div><p style="font-size:16px;font-weight:600;color:rgba(255,255,255,0.75);margin-bottom:5px;">Dashboard</p><p style="font-size:13px;color:var(--faint);">Flujo actual sin cambios.</p></div>
+        <div class="ph-pill">Sin cambios en este alcance</div>
+      </div>
+    </div>
+    <div id="view-rfq" class="view active">
+      <div class="rfq-wrap">
+        <div id="sc-form" class="screen active rfq-card">
+          <h1 class="rfq-title">Solicitar cotizacion</h1>
+          <p class="rfq-sub">Precio en tiempo real · Valido por 30 segundos</p>
+          <div class="pair-badge"><span class="pair-dot"></span><strong>USDT / ARS</strong><span class="pair-label">Unico par disponible</span></div>
+          <label class="f-label">Operacion</label>
+          <div class="side-grid">
+            <button id="btn-buy" class="side-btn" onclick="selectSide('BUY')" style="border-color:rgba(34,190,129,0.4);background:rgba(34,190,129,0.08);color:var(--green);">Comprar USDT<span class="side-btn-sub">Pago en ARS</span></button>
+            <button id="btn-sell" class="side-btn" onclick="selectSide('SELL')">Vender USDT<span class="side-btn-sub">Recibo ARS</span></button>
+          </div>
+          <div class="amount-wrap">
+            <label class="f-label" for="amt">Monto (USDT)</label>
+            <input id="amt" class="rfq-input" type="number" placeholder="Ej: 10,000" min="0" step="any" oninput="validateAmt()" onkeydown="if(event.key==='Enter')submitQuote()">
+            <span id="amt-hint" class="input-hint">USDT a comprar</span>
+            <span id="amt-err" class="input-err" style="display:none"></span>
+          </div>
+          <button id="cta-btn" class="btn-cta" onclick="submitQuote()" disabled>Obtener cotizacion</button>
+        </div>
+        <div id="sc-loading" class="screen rfq-card">
+          <div class="loading-wrap"><div class="spinner"></div><span class="loading-text">Calculando el mejor precio disponible...</span></div>
+        </div>
+        <div id="sc-prequote" class="screen rfq-card">
+          <div class="pq-header"><span class="pq-label">Pre-cotizacion · USDT/ARS</span><span id="pq-side" class="pq-side" style="background:rgba(34,190,129,0.12);border:1px solid rgba(34,190,129,0.25);color:var(--green);">COMPRA</span></div>
+          <div class="pq-price-block"><p class="pq-price-label">Precio final</p><p id="pq-price" class="pq-price-val">-</p><p class="pq-price-unit">ARS por USDT</p><p id="pq-amt-line" class="pq-price-amt"></p></div>
+          <div class="pq-ttl">
+            <span class="pq-ttl-label"><span class="pq-ttl-dot"></span>Cotizacion valida por</span>
+            <div class="ttl-arc-wrap">
+              <div class="ttl-arc">
+                <svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="var(--border2)" stroke-width="3"/><circle id="ttl-arc-circle" cx="22" cy="22" r="18" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-dasharray="113.1" stroke-dashoffset="0" style="transition:stroke-dashoffset .9s linear,stroke .3s"/></svg>
+                <span id="ttl-counter" class="ttl-arc-num" style="color:var(--text)">30</span>
+              </div>
+              <span style="font-size:12px;color:var(--muted)">seg</span>
+            </div>
+          </div>
+          <div class="pq-actions">
+            <button id="btn-accept" class="btn-accept" onclick="acceptQuote()">Aceptar</button>
+            <button id="btn-reject" class="btn-reject" onclick="rejectQuote()">Rechazar</button>
+          </div>
+        </div>
+        <div id="sc-partial" class="screen rfq-card">
+          <div class="pq-header"><span class="pq-label">Pre-cotizacion parcial · USDT/ARS</span><span id="pp-side" class="pq-side" style="background:rgba(243,129,30,0.12);border:1px solid rgba(243,129,30,0.3);color:var(--amber);">COBERTURA PARCIAL</span></div>
+          <div class="coverage-box">
+            <p class="coverage-label">Cobertura disponible</p>
+            <div class="coverage-row"><span class="coverage-key">Monto solicitado</span><span id="pp-requested" class="coverage-val">-</span></div>
+            <div class="coverage-row"><span class="coverage-key">Monto cubierto</span><span id="pp-covered" class="coverage-val" style="color:var(--green)">-</span></div>
+            <div class="coverage-row"><span class="coverage-key">Monto pendiente</span><span id="pp-pending" class="coverage-val" style="color:var(--amber)">-</span></div>
+            <div class="coverage-bar-wrap"><div class="coverage-bar"><div id="pp-bar" class="coverage-fill"></div></div></div>
+            <div id="pp-pct" style="font-size:12px;color:var(--muted);text-align:right"></div>
+            <p class="coverage-warn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Liquidez parcial. Podes aceptar o rechazar para solicitar un nuevo monto.</p>
+          </div>
+          <div class="pq-price-block" style="padding:16px 0"><p class="pq-price-label">Precio final</p><p id="pp-price" class="pq-price-val">-</p><p class="pq-price-unit">ARS por USDT</p></div>
+          <div class="pq-ttl">
+            <span class="pq-ttl-label"><span class="pq-ttl-dot" style="background:var(--amber)"></span>Cotizacion valida por</span>
+            <div class="ttl-arc-wrap">
+              <div class="ttl-arc">
+                <svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="var(--border2)" stroke-width="3"/><circle id="ttl-arc2" cx="22" cy="22" r="18" fill="none" stroke="var(--amber)" stroke-width="3" stroke-linecap="round" stroke-dasharray="113.1" stroke-dashoffset="0" style="transition:stroke-dashoffset .9s linear,stroke .3s"/></svg>
+                <span id="ttl2" class="ttl-arc-num" style="color:var(--text)">30</span>
+              </div>
+              <span style="font-size:12px;color:var(--muted)">seg</span>
+            </div>
+          </div>
+          <div class="pq-actions">
+            <button id="pp-accept" class="btn-accept" onclick="acceptPartial()">Aceptar cobertura parcial</button>
+            <button class="btn-reject" onclick="rejectQuote()">Rechazar</button>
+          </div>
+        </div>
+        <div id="sc-accepted" class="screen rfq-card">
+          <div class="as-icon">✓</div>
+          <h2 class="as-title">Cotizacion confirmada</h2>
+          <p class="as-sub">Operacion registrada. La Mesa te contactara para coordinar la liquidacion.</p>
+          <div class="as-ref-box">
+            <p class="as-ref-label">Quote ID · Numero de referencia</p>
+            <p id="as-ref" class="as-ref-num">-</p>
+          </div>
+          <div class="as-summary" id="as-summary"></div>
+          <div class="info-box"><svg class="info-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>La liquidacion fisica se ejecuta durante el horario habil. La Mesa te contactara para coordinar los detalles.</span></div>
+          <button class="btn-cta" onclick="newQuote()" style="margin-top:4px">Nueva cotizacion</button>
+          <button class="btn-secondary" onclick="switchView('mis-cotizaciones')" style="margin-top:8px">Ver mis Quotes</button>
+        </div>
+        <div id="sc-status" class="screen rfq-card">
+          <div id="ss-icon" class="ss-icon"></div><h2 id="ss-title" class="ss-title">-</h2><p id="ss-msg" class="ss-msg">-</p>
+          <div id="ss-detail" class="ss-detail" style="display:none"></div>
+          <button class="btn-cta" onclick="newQuote()" style="margin-top:4px">Solicitar nueva cotizacion</button>
+        </div>
+        <div id="sc-error" class="screen rfq-card" style="text-align:center;">
+          <div id="err-icon" class="err-icon"></div><h2 id="err-title" class="err-title">-</h2>
+          <div style="display:flex;justify-content:center;margin-bottom:16px;"><span id="err-code" class="err-code">-</span></div>
+          <p id="err-msg" class="err-msg">-</p>
+          <div id="err-detail" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:12.5px;color:var(--text3);margin:0 0 20px;text-align:left;line-height:1.7;display:none"></div>
+          <button class="btn-cta" onclick="newQuote()">Intentar nuevamente</button>
+        </div>
+        <div id="sc-maintenance" class="screen rfq-card" style="text-align:center;">
+          <div class="maint-icon">🔧</div>
+          <h2 style="font-size:19px;font-weight:600;margin-bottom:8px;">Servicio no disponible</h2>
+          <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:20px;">El modulo se encuentra en mantenimiento programado.</p>
+          <div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;font-size:13px;color:var(--text3);margin-bottom:20px;">
+            <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12.5px"><span style="color:var(--muted)">Ventana de mantenimiento</span><span>Sab. 02:00 - 06:00 (AR)</span></div>
+            <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12.5px"><span style="color:var(--muted)">Tiempo estimado</span><span>~2 horas</span></div>
+            <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12.5px"><span style="color:var(--muted)">Estado</span><span style="color:var(--amber);font-weight:600">En progreso</span></div>
+          </div>
+          <button class="btn-secondary" onclick="switchView('dashboard')">Ir al Dashboard</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── QUOTES VIEW ────────────────────────────── -->
+    <div id="view-mis-cotizaciones" class="view">
+      <div class="qt-wrap">
+        <div class="qt-content">
+          <div class="qt-header">
+            <h1 class="qt-title">Quotes</h1>
+            <p class="qt-sub">Historial de cotizaciones confirmadas via RFQ y OTC</p>
+          </div>
+          <div class="qt-summary" id="qt-summary"></div>
+          <div class="qt-table-wrap">
+            <div class="qt-card-header">
+              <div class="qt-card-title">
+                Operaciones
+                <span class="qt-total-badge" id="qt-total-badge">0</span>
+              </div>
+              <div class="qt-card-filters">
+                <select class="qt-select" id="qt-filter-status" onchange="renderQtTable()">
+                  <option value="">Todos los estados</option>
+                  <option value="PENDING">En proceso</option>
+                  <option value="ACCEPTED">Confirmada</option>
+                  <option value="COMPLETED">Liquidada</option>
+                  <option value="CANCELLED">Cancelada</option>
+                </select>
+                <select class="qt-select" id="qt-filter-source" onchange="renderQtTable()">
+                  <option value="">Todos los origenes</option>
+                  <option value="RFQ">RFQ</option>
+                  <option value="OTC">OTC</option>
+                </select>
+              </div>
+            </div>
+            <div id="qt-table-area"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="view-settings" class="view" style="justify-content:center;align-items:center;">
+      <div class="ph-wrap">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1.4"><circle cx="12" cy="12" r="3"/></svg>
+        <div><p style="font-size:16px;font-weight:600;color:rgba(255,255,255,0.75);margin-bottom:5px;">Configuracion</p><p style="font-size:13px;color:var(--faint);">Flujo actual sin cambios.</p></div>
+        <div class="ph-pill">Sin cambios en este alcance</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="scene-bar">
+  <span class="scene-label">Escena</span>
+  <button class="scene-btn active" onclick="loadScene('form')">Formulario</button>
+  <button class="scene-btn" onclick="loadScene('loading')">Cargando</button>
+  <button class="scene-btn" onclick="loadScene('prequote')">Pre-cotizacion</button>
+  <button class="scene-btn" onclick="loadScene('partial')">Cobertura parcial</button>
+  <button class="scene-btn" onclick="loadScene('accepted')">Confirmada</button>
+  <button class="scene-btn" onclick="loadScene('rejected')">Rechazada</button>
+  <button class="scene-btn" onclick="loadScene('expired')">Vencida</button>
+  <button class="scene-btn" onclick="loadScene('no_liquidity')">Sin liquidez</button>
+  <button class="scene-btn" onclick="loadScene('exposure')">Limite exposicion</button>
+  <button class="scene-btn" onclick="loadScene('ref_price')">Precio fuera rango</button>
+  <button class="scene-btn" onclick="loadScene('requote')">REQUOTE</button>
+  <button class="scene-btn" onclick="loadScene('rate_limit')">Rate limit</button>
+  <button class="scene-btn" onclick="loadScene('maintenance')">Mantenimiento</button>
+</div>
+<div class="proto-badge">Prototipo · REQ-8 v3 · CLP — RFQ + Quotes</div>
+
+<!-- ── QUOTES DETAIL MODAL ────────────────────────── -->
+<div class="qt-modal-bg" id="qt-modal-bg" onclick="if(event.target===this)closeQtModal()">
+  <div class="qt-modal" onclick="event.stopPropagation()">
+    <div class="qt-modal-header">
+      <div>
+        <div class="qt-modal-title" id="qtm-id">-</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:6px" id="qtm-badges"></div>
+      </div>
+      <button class="qt-modal-close" onclick="closeQtModal()">x</button>
+    </div>
+    <div class="qt-modal-body">
+      <div id="qtm-rows"></div>
+      <div id="qtm-origin"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── RFQ MODULE ─────────────────────────────────────────────────────────────
+const PRICES={BUY:1183.50,SELL:1168.75};
+let curSide='BUY',ttlTimer=null,ttlSecs=30,ttlTimer2=null,ttl2Secs=30,quoteData={};
+const CIRC=113.1;
+function fmt(n){return n.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function genRef(){const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';const s=n=>Array.from({length:n},()=>c[Math.floor(Math.random()*c.length)]).join('');return 'Q-'+s(4)+'-'+s(4);}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('collapsed');}
+function switchView(v){
+  ['dashboard','rfq','mis-cotizaciones','settings'].forEach(id=>{
+    document.getElementById('view-'+id).classList.toggle('active',id===v);
+    const b=document.getElementById('nb-'+id);
+    if(b)b.classList.toggle('active',id===v);
+  });
+  const titles={'dashboard':'Dashboard','rfq':'RFQ','mis-cotizaciones':'Quotes','settings':'Configuracion'};
+  document.getElementById('header-title').textContent=titles[v]||v;
+  document.querySelector('.scene-bar').style.display=v==='rfq'?'flex':'none';
+  if(v==='mis-cotizaciones')initMisCotizaciones();
+}
+function showScreen(id){['sc-form','sc-loading','sc-prequote','sc-partial','sc-accepted','sc-status','sc-error','sc-maintenance'].forEach(s=>document.getElementById(s).classList.toggle('active',s===id));}
+function updateSceneBtns(scene){document.querySelectorAll('.scene-btn').forEach(b=>b.classList.remove('active'));const m={form:'Formulario',loading:'Cargando',prequote:'Pre-cotizacion',partial:'Cobertura parcial',accepted:'Confirmada',rejected:'Rechazada',expired:'Vencida',no_liquidity:'Sin liquidez',exposure:'Limite exposicion',ref_price:'Precio fuera rango',requote:'REQUOTE','rate_limit':'Rate limit',maintenance:'Mantenimiento'};document.querySelectorAll('.scene-btn').forEach(b=>{if(b.textContent===m[scene])b.classList.add('active');});}
+function loadScene(scene){stopTimers();updateSceneBtns(scene);quoteData={amount:10000,isBuy:true,price:1183.50,total:11835000,ref:genRef()};switch(scene){case 'form':showScreen('sc-form');break;case 'loading':showScreen('sc-loading');break;case 'prequote':buildPrequote();showScreen('sc-prequote');startTTL(false);break;case 'partial':buildPartial();showScreen('sc-partial');startTTL(true);break;case 'accepted':buildAccepted();showScreen('sc-accepted');break;case 'rejected':showStatus('x','rgba(243,30,31,0.08)','rgba(243,30,31,0.2)','Cotizacion rechazada','No hay problema. Podes solicitar una nueva cotizacion cuando quieras.',null);break;case 'expired':showStatus('T','rgba(243,129,30,0.1)','rgba(243,129,30,0.3)','Cotizacion vencida','El tiempo de 30 segundos vencio antes de que pudieras aceptar.',null);break;case 'no_liquidity':showError('!','#fd7e14','Sin liquidez disponible','NO_LIQUIDITY_AVAILABLE','No hay disponibilidad suficiente para cubrir tu solicitud en este momento.','Intentar con un monto menor o reintentar en unos minutos.');break;case 'exposure':showError('L','#9b58ff','Limite de exposicion alcanzado','EXPOSURE_LIMIT_EXCEEDED','Tenes capital en operaciones activas que supera tu limite de exposicion configurado.','<strong>Exposicion actual:</strong> 48,200 USDT<br><strong>Limite configurado:</strong> 50,000 USDT');break;case 'ref_price':showError('$','#4A9FFF','Precio fuera del rango de referencia','INVALID_REFERENCE_PRICE','El precio calculado se desvio mas de lo permitido respecto al precio de referencia.','Las condiciones de mercado cambiaron durante el calculo. Esto suele resolverse en segundos.');break;case 'requote':showError('R','#22BE81','Cotizacion no procesada','REQUOTE_REQUIRED','Hubo un conflicto al procesar tu solicitud. La operacion no fue confirmada y tu capital no fue afectado.','Solicita una nueva cotizacion para obtener un precio actualizado.');break;case 'rate_limit':showError('!','#F3811E','Demasiadas solicitudes','RATE_LIMIT_EXCEEDED','Superaste el limite de solicitudes permitidas. Espera unos segundos antes de intentar nuevamente.',null);break;case 'maintenance':showScreen('sc-maintenance');break;}}
+function selectSide(side){curSide=side;const buy=document.getElementById('btn-buy');const sell=document.getElementById('btn-sell');if(side==='BUY'){buy.style.cssText='border-color:rgba(34,190,129,0.4);background:rgba(34,190,129,0.08);color:var(--green);';sell.style.cssText='border-color:var(--border);background:transparent;color:var(--muted);';}else{sell.style.cssText='border-color:rgba(243,30,31,0.35);background:rgba(243,30,31,0.08);color:var(--red);';buy.style.cssText='border-color:var(--border);background:transparent;color:var(--muted);';}document.getElementById('amt-hint').textContent='USDT a '+(side==='BUY'?'comprar':'vender');}
+function validateAmt(){const v=parseFloat(document.getElementById('amt').value);const err=document.getElementById('amt-err');const cta=document.getElementById('cta-btn');const hint=document.getElementById('amt-hint');if(v>0&&v<100){err.textContent='El monto minimo es 100 USDT.';err.style.display='block';hint.style.display='none';cta.disabled=true;return;}err.style.display='none';hint.style.display='block';cta.disabled=!v||v<=0;}
+function submitQuote(){const amt=parseFloat(document.getElementById('amt').value);if(!amt||amt<100)return;quoteData={amount:amt,isBuy:curSide==='BUY',price:PRICES[curSide],total:PRICES[curSide]*amt,ref:genRef()};showScreen('sc-loading');setTimeout(()=>{buildPrequote();showScreen('sc-prequote');startTTL(false);updateSceneBtns('prequote');},1600);}
+function buildPrequote(){const isBuy=quoteData.isBuy;const badge=document.getElementById('pq-side');if(isBuy){badge.textContent='COMPRA';badge.style.cssText='background:rgba(34,190,129,0.12);border:1px solid rgba(34,190,129,0.25);color:var(--green)';}else{badge.textContent='VENTA';badge.style.cssText='background:rgba(243,30,31,0.1);border:1px solid rgba(243,30,31,0.3);color:var(--red)';}document.getElementById('pq-price').textContent=fmt(quoteData.price);document.getElementById('pq-amt-line').innerHTML='<strong>'+fmt(quoteData.amount)+' USDT</strong> '+(isBuy?'por':'a')+' <strong>ARS '+fmt(quoteData.total)+'</strong>';}
+function buildPartial(){const total=quoteData.amount||10000;const covered=Math.round(total*0.2275);const pending=total-covered;const pct=22.75;document.getElementById('pp-side').textContent='COMPRA';document.getElementById('pp-requested').textContent=fmt(total)+' USDT';document.getElementById('pp-covered').textContent=fmt(covered)+' USDT';document.getElementById('pp-pending').textContent=fmt(pending)+' USDT';document.getElementById('pp-bar').style.width=pct+'%';document.getElementById('pp-pct').textContent=pct.toFixed(2)+'% de cobertura';document.getElementById('pp-price').textContent=fmt(1184.74);quoteData.covered=covered;}
+function buildAccepted(){document.getElementById('as-ref').textContent=quoteData.ref||genRef();const rows=[['Par','USDT / ARS'],['Operacion',quoteData.isBuy!==false?'Compra de USDT':'Venta de USDT'],['Precio final',fmt(quoteData.price||1183.50)+' ARS'],['Monto',fmt(quoteData.covered||quoteData.amount||10000)+' USDT'],['Estado','Confirmada - Pendiente de liquidacion']];document.getElementById('as-summary').innerHTML=rows.map(([k,v])=>'<div class="as-row"><span class="as-key">'+k+'</span><span class="as-val">'+v+'</span></div>').join('');}
+function startTTL(isPartial){const counterId=isPartial?'ttl2':'ttl-counter';const arcId=isPartial?'ttl-arc2':'ttl-arc-circle';const acceptBtnId=isPartial?'pp-accept':'btn-accept';let secs=30;function tick(){secs--;const el=document.getElementById(counterId);const arc=document.getElementById(arcId);const accept=document.getElementById(acceptBtnId);if(!el)return;el.textContent=secs;if(arc)arc.style.strokeDashoffset=CIRC*(1-secs/30);if(secs<=5){el.style.color='var(--red)';if(arc)arc.style.stroke='var(--red)';if(accept)accept.disabled=true;}else if(secs<=15){el.style.color='var(--amber)';if(arc)arc.style.stroke='var(--amber)';}if(secs<=0){clearInterval(tmr);showStatus('T','rgba(243,129,30,0.1)','rgba(243,129,30,0.3)','Cotizacion vencida','El tiempo vencio antes de confirmar.',null);updateSceneBtns('expired');}}const tmr=setInterval(tick,1000);if(isPartial)ttlTimer2=tmr;else ttlTimer=tmr;}
+function stopTimers(){if(ttlTimer)clearInterval(ttlTimer);if(ttlTimer2)clearInterval(ttlTimer2);ttlTimer=ttlTimer2=null;}
+function acceptQuote(){stopTimers();quoteData.ref=genRef();buildAccepted();showScreen('sc-accepted');updateSceneBtns('accepted');}
+function acceptPartial(){stopTimers();quoteData.ref=genRef();buildAccepted();showScreen('sc-accepted');updateSceneBtns('accepted');}
+function rejectQuote(){stopTimers();showStatus('x','rgba(243,30,31,0.08)','rgba(243,30,31,0.2)','Cotizacion rechazada','No hay problema. Podes solicitar una nueva cotizacion cuando quieras.',null);updateSceneBtns('rejected');}
+function showStatus(emoji,bg,border,title,msg,detail){const icon=document.getElementById('ss-icon');icon.textContent=emoji;icon.style.background=bg;icon.style.border='1px solid '+border;document.getElementById('ss-title').textContent=title;document.getElementById('ss-msg').textContent=msg;const det=document.getElementById('ss-detail');if(detail){det.innerHTML=detail;det.style.display='block';}else{det.style.display='none';}showScreen('sc-status');}
+function showError(emoji,color,title,code,msg,detail){const icon=document.getElementById('err-icon');icon.textContent=emoji;icon.style.background=color+'18';icon.style.border='1px solid '+color+'40';document.getElementById('err-title').textContent=title;const codeEl=document.getElementById('err-code');codeEl.textContent=code;codeEl.style.background=color+'18';codeEl.style.color=color;codeEl.style.border='1px solid '+color+'35';document.getElementById('err-msg').textContent=msg;const det=document.getElementById('err-detail');if(detail){det.innerHTML=detail;det.style.display='block';}else{det.style.display='none';}showScreen('sc-error');}
+function newQuote(){stopTimers();document.getElementById('amt').value='';document.getElementById('cta-btn').disabled=true;showScreen('sc-form');updateSceneBtns('form');}
+loadScene('form');
+
+// ── QUOTES MODULE ──────────────────────────────────────────────────────────
+const MY_QUOTES = [
+  {id:'QT-0081',op:'BUY',pair:'USDT/ARS',originAmt:26274,originCcy:'USDT',destAmt:31134800,destCcy:'ARS',tc:1184.74,term:'24hs',status:'PENDING',source:'RFQ',preQuoteId:'PQ-K3A-LM4X',at:'2026-04-09T14:32:11Z'},
+  {id:'QT-0079',op:'BUY',pair:'USDT/ARS',originAmt:12500,originCcy:'USDT',destAmt:14780500,destCcy:'ARS',tc:1182.44,term:'24hs',status:'ACCEPTED',source:'RFQ',preQuoteId:'PQ-B9N-WK6J',at:'2026-04-09T12:22:05Z'},
+  {id:'QT-0077',op:'SELL',pair:'USDT/ARS',originAmt:30000,originCcy:'USDT',destAmt:35280000,destCcy:'ARS',tc:1176.00,term:'24hs',status:'COMPLETED',source:'RFQ',preQuoteId:'PQ-R4H-CX9L',at:'2026-04-09T10:08:57Z'},
+  {id:'QT-0076',op:'BUY',pair:'USDC/ARS',originAmt:20000,originCcy:'USDC',destAmt:23660000,destCcy:'ARS',tc:1183.00,term:'24hs',status:'COMPLETED',source:'OTC',preQuoteId:null,at:'2026-04-09T09:30:00Z'},
+  {id:'QT-0075',op:'SELL',pair:'USDT/ARS',originAmt:15000,originCcy:'USDT',destAmt:17647500,destCcy:'ARS',tc:1176.50,term:'24hs',status:'CANCELLED',source:'OTC',preQuoteId:null,at:'2026-04-08T16:00:00Z'},
+  {id:'QT-0068',op:'BUY',pair:'USDT/ARS',originAmt:50000,originCcy:'USDT',destAmt:58925000,destCcy:'ARS',tc:1178.50,term:'48hs',status:'COMPLETED',source:'RFQ',preQuoteId:'PQ-X9M-GH3K',at:'2026-04-07T11:00:00Z'},
+];
+const QT_STATUS = {
+  PENDING:{label:'En proceso',bg:'rgba(74,159,255,.1)',border:'rgba(74,159,255,.3)',color:'#4A9FFF',dot:'#4A9FFF'},
+  ACCEPTED:{label:'Confirmada',bg:'rgba(34,190,129,.1)',border:'rgba(34,190,129,.25)',color:'#22BE81',dot:'#22BE81'},
+  COMPLETED:{label:'Liquidada',bg:'rgba(138,138,138,.1)',border:'rgba(138,138,138,.2)',color:'#8A8A8A',dot:'#595959'},
+  CANCELLED:{label:'Cancelada',bg:'rgba(243,30,31,.08)',border:'rgba(243,30,31,.25)',color:'#F31E1F',dot:'#F31E1F'},
+};
+function fmtQN(n,d){if(d===undefined)d=2;return n==null?'-':new Intl.NumberFormat('es-AR',{minimumFractionDigits:d,maximumFractionDigits:d}).format(n);}
+function fmtQDate(s){const d=new Date(s);return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});}
+function renderQtSummary(){
+  const active=MY_QUOTES.filter(function(q){return q.status==='PENDING'||q.status==='ACCEPTED';});
+  const completed=MY_QUOTES.filter(function(q){return q.status==='COMPLETED';});
+  document.getElementById('nav-qt-count').textContent=active.length;
+  document.getElementById('qt-summary').innerHTML=
+    '<div class="qt-stat"><div class="qt-stat-label">Activas</div><div class="qt-stat-val" style="color:#4A9FFF">'+active.length+'</div><div class="qt-stat-sub">en proceso o confirmadas</div></div>'+
+    '<div class="qt-stat"><div class="qt-stat-label">Liquidadas</div><div class="qt-stat-val" style="color:#22BE81">'+completed.length+'</div><div class="qt-stat-sub">operaciones completadas</div></div>'+
+    '<div class="qt-stat"><div class="qt-stat-label">Total</div><div class="qt-stat-val">'+MY_QUOTES.length+'</div><div class="qt-stat-sub">cotizaciones registradas</div></div>';
+}
+function renderQtTable(){
+  const statusFilter=document.getElementById('qt-filter-status').value;
+  const sourceFilter=document.getElementById('qt-filter-source').value;
+  let pool=MY_QUOTES.slice();
+  if(statusFilter)pool=pool.filter(function(q){return q.status===statusFilter;});
+  if(sourceFilter)pool=pool.filter(function(q){return q.source===sourceFilter;});
+  const badge=document.getElementById('qt-total-badge');
+  if(badge)badge.textContent=pool.length;
+  const area=document.getElementById('qt-table-area');
+  if(pool.length===0){
+    area.innerHTML='<div class="qt-empty"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/></svg><p>Sin resultados para los filtros seleccionados</p><span>Cambia los filtros o usa RFQ para solicitar una nueva operacion</span></div>';
+    return;
+  }
+  const rows=pool.map(function(q){
+    const st=QT_STATUS[q.status]||QT_STATUS.PENDING;
+    const stBadge='<span class="qt-status" style="background:'+st.bg+';border:1px solid '+st.border+';color:'+st.color+'"><span class="qt-status-dot" style="background:'+st.dot+'"></span>'+st.label+'</span>';
+    const opBadge=q.op==='BUY'?'<span class="qt-op-buy">Compra</span>':'<span class="qt-op-sell">Venta</span>';
+    const srcBadge=q.source==='RFQ'?'<span class="qt-origin-badge qt-source-rfq">RFQ</span>':'<span class="qt-origin-badge qt-source-manual">OTC</span>';
+    return '<tr onclick="openQtModal(this.dataset.id)" data-id="'+q.id+'" style="cursor:pointer">'+
+      '<td class="mono-n" style="font-size:11.5px;color:var(--faint)">'+q.id+'</td>'+
+      '<td>'+stBadge+'</td>'+
+      '<td style="font-weight:500;color:#fff">'+q.pair+'</td>'+
+      '<td>'+opBadge+'</td>'+
+      '<td class="mono-n" style="color:#fff;font-weight:500">'+fmtQN(q.originAmt)+' <span style="color:var(--faint);font-size:11px">'+q.originCcy+'</span></td>'+
+      '<td class="mono-n" style="font-weight:600;color:#fff">'+fmtQN(q.tc)+'</td>'+
+      '<td class="mono-n" style="color:var(--muted)">'+fmtQN(q.destAmt)+' <span style="font-size:11px">'+q.destCcy+'</span></td>'+
+      '<td style="color:var(--muted);white-space:nowrap;font-size:12px">'+fmtQDate(q.at)+'</td>'+
+      '<td>'+srcBadge+'</td>'+
+    '</tr>';
+  }).join('');
+  area.innerHTML='<table class="qt-table"><thead><tr><th>ID</th><th>Estado</th><th>Par</th><th>Op.</th><th>Monto</th><th>TC</th><th>Calculado</th><th>Fecha</th><th>Origen</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+function openQtModal(id){
+  const q=MY_QUOTES.find(function(x){return x.id===id;});if(!q)return;
+  const st=QT_STATUS[q.status]||QT_STATUS.PENDING;
+  document.getElementById('qtm-id').textContent=q.id;
+  const stBadge='<span class="qt-status" style="background:'+st.bg+';border:1px solid '+st.border+';color:'+st.color+'"><span class="qt-status-dot" style="background:'+st.dot+'"></span>'+st.label+'</span>';
+  const srcBadge=q.source==='RFQ'?'<span class="qt-origin-badge qt-source-rfq">RFQ Gateway</span>':'<span class="qt-origin-badge qt-source-manual">OTC</span>';
+  document.getElementById('qtm-badges').innerHTML=stBadge+' '+srcBadge;
+  const opLabel=q.op==='BUY'?'Compra de '+q.originCcy:'Venta de '+q.originCcy;
+  const rows=[
+    ['Par',q.pair],['Operacion',opLabel],
+    ['Monto',fmtQN(q.originAmt)+' '+q.originCcy],
+    ['Tipo de cambio',fmtQN(q.tc)+' ARS por '+q.originCcy],
+    ['Monto calculado',fmtQN(q.destAmt)+' '+q.destCcy],
+    ['Plazo',q.term],['Fecha y hora',fmtQDate(q.at)],
+  ];
+  document.getElementById('qtm-rows').innerHTML=rows.map(function(r){return '<div class="qt-modal-row"><span class="qt-modal-key">'+r[0]+'</span><span class="qt-modal-val">'+r[1]+'</span></div>';}).join('');
+  let originHtml='';
+  if(q.source==='RFQ'){
+    originHtml='<div class="qt-origin-box">'+
+      '<div class="qt-origin-header"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Origen RFQ Gateway</div>'+
+      '<div class="qt-origin-row"><span class="qt-origin-key">ID Pre-cotizacion</span><span class="qt-origin-val" style="font-family:monospace;color:var(--violet)">'+q.preQuoteId+'</span></div>'+
+      '<div class="qt-origin-row"><span class="qt-origin-key">Canal</span><span class="qt-origin-val">Client Portal</span></div>'+
+      '<div class="qt-origin-note">Esta operacion fue generada al aceptar la pre-cotizacion solicitada desde el modulo RFQ.</div>'+
+    '</div>';
+  } else {
+    originHtml='<div class="qt-otc-box"><div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--blue);margin-bottom:8px;display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Origen OTC</div>Operacion coordinada directamente con la Mesa de Trading.</div>';
+  }
+  document.getElementById('qtm-origin').innerHTML=originHtml;
+  document.getElementById('qt-modal-bg').classList.add('open');
+}
+function closeQtModal(){document.getElementById('qt-modal-bg').classList.remove('open');}
+function initMisCotizaciones(){renderQtSummary();renderQtTable();}
+</script>
+</body>
+</html>

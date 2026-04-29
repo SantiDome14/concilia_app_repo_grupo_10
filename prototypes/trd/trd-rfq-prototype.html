@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TRD - RFQ Gateway - Prototipo REQ-9 v5</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#11113A;--navy2:#1a1a52;--violet:#7326F1;--vs:rgba(115,38,241,.1);--lime:#CFF80A;
+  --g50:#f9fafb;--g100:#f3f4f6;--g200:#e5e7eb;--g300:#d1d5db;--g400:#9ca3af;--g600:#6b7280;--g800:#1f2937;
+  --text:#111827;--border:#e5e7eb;
+  --green:#15803d;--gbg:#f0fdf4;--gring:#bbf7d0;
+  --amber:#a16207;--abg:#fef9c3;--aring:#fde68a;
+  --red:#b91c1c;--rbg:#fef2f2;--rring:#fecaca;
+  --blue:#1d4ed8;--bbg:#eff6ff;--bring:#bfdbfe;
+  --orange:#c2410c;--obg:#fff7ed;--oring:#fed7aa;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--g50);height:100vh;overflow:hidden}
+.app{display:flex;height:100vh;width:100vw;overflow:hidden}
+.sidebar{width:216px;flex-shrink:0;background:var(--navy);display:flex;flex-direction:column}
+.sb-header{padding:20px 16px 16px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sb-logo{display:flex;align-items:center;gap:10px}
+.logo-mark{width:34px;height:34px;background:var(--violet);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-text{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#fff;line-height:1.2}
+.logo-sub{font-size:11px;color:rgba(255,255,255,.35);margin-top:1px}
+.sb-nav{padding:10px;flex:1;overflow-y:auto}
+.nav-section{font-size:10px;font-weight:600;color:rgba(255,255,255,.25);letter-spacing:.08em;text-transform:uppercase;padding:10px 8px 6px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:12.5px;color:rgba(255,255,255,.5);font-weight:500;transition:all .15s;margin-bottom:1px;user-select:none}
+.nav-item:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.85)}
+.nav-item.active{background:var(--violet);color:#fff}
+.nav-item svg{width:15px;height:15px;flex-shrink:0}
+.nav-new-badge{margin-left:auto;font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px;background:rgba(207,248,10,.15);border:1px solid rgba(207,248,10,.3);color:var(--lime);white-space:nowrap}
+.nav-item.active .nav-new-badge{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff}
+.sb-footer{padding:12px 16px;border-top:1px solid rgba(255,255,255,.07)}
+.sb-user{display:flex;align-items:center;gap:9px}
+.sb-avatar{width:28px;height:28px;border-radius:50%;background:var(--lime);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--navy);flex-shrink:0}
+.sb-uname{font-size:11.5px;color:rgba(255,255,255,.55);font-weight:500}
+.sb-role{font-size:10px;color:rgba(255,255,255,.3);margin-top:2px}
+.sb-hint{font-size:9.5px;color:rgba(255,255,255,.18);margin-top:3px;display:none}
+.sb-footer:hover .sb-hint{display:block}
+.main{flex:1;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.topbar{height:52px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;background:#fff;flex-shrink:0}
+.topbar-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--navy)}
+.content{flex:1;overflow-y:auto;padding:20px 24px}
+.subtabs{display:flex;gap:2px;background:var(--g100);border-radius:10px;padding:4px;margin-bottom:20px;width:fit-content;border:1px solid var(--border)}
+.stab{padding:6px 16px;border-radius:7px;font-size:12.5px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--g600);transition:all .15s;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px}
+.stab.active{background:#fff;color:var(--navy);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.stab-badge{font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px}
+.stab-badge.red{background:rgba(185,28,28,.1);color:var(--red)}
+.stab-badge.blue{background:var(--bbg);color:var(--blue)}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.page-title{font-family:'Syne',sans-serif;font-size:19px;font-weight:700;color:var(--navy)}
+.page-sub{font-size:12px;color:var(--g400);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.kpi{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.kpi-label{font-size:10.5px;color:var(--g400);font-weight:500;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.kpi-val{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:500;color:var(--navy)}
+.kpi-val.green{color:var(--green)}.kpi-val.amber{color:var(--amber)}.kpi-val.violet{color:var(--violet)}
+.kpi-sub{font-size:11px;color:var(--g400);margin-top:3px}
+.alert-banner{background:var(--abg);border:1px solid var(--aring);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:background .15s}
+.alert-banner:hover{background:#fef3c7}
+.alert-banner-left{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--amber);font-weight:500}
+.alert-banner-count{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:14px}
+.alert-banner-link{font-size:12px;color:var(--g600)}
+.tcard{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.tcard-header{padding:13px 16px;border-bottom:1px solid var(--g100);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.tcard-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:8px}
+.filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.input-sm{padding:6px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;color:var(--text);background:#fff;outline:none;font-family:'DM Sans',sans-serif}
+.input-sm:focus{border-color:var(--violet)}
+.table-wrap{overflow-x:auto}
+.table{width:100%;border-collapse:collapse;font-size:12.5px}
+.table th{padding:9px 14px;text-align:left;color:var(--g600);font-weight:500;border-bottom:1px solid var(--g100);background:var(--g50);white-space:nowrap;font-size:11.5px}
+.table td{padding:9px 14px;border-bottom:1px solid var(--g50);color:var(--g800);vertical-align:middle}
+.table tr:last-child td{border-bottom:none}
+.table tbody tr:hover td{background:#fafbff;cursor:pointer}
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;gap:4px}
+.badge-gps{background:rgba(115,38,241,.1);color:var(--violet);border:1px solid rgba(115,38,241,.2)}
+.badge-pps{background:var(--bbg);color:var(--blue);border:1px solid var(--bring)}
+.badge-active{background:var(--gbg);color:var(--green);border:1px solid var(--gring)}
+.badge-suspended{background:var(--abg);color:var(--amber);border:1px solid var(--aring)}
+.badge-closed{background:var(--g100);color:var(--g600);border:1px solid var(--g200)}
+.badge-buy{background:var(--gbg);color:var(--green)}.badge-sell{background:#fdf2f8;color:#9d174d}
+.badge-excluido{background:var(--rbg);color:var(--red);border:1px solid var(--rring);font-size:10px}
+.snap-bar{display:flex;height:7px;border-radius:4px;overflow:hidden;width:120px;background:var(--g200)}
+.snap-seg{height:100%}
+.snap-seg.avail{background:var(--violet)}.snap-seg.resv{background:#fb923c}.snap-seg.exec{background:var(--g300)}
+.snap-row{display:flex;flex-direction:column;gap:4px}
+.snap-nums{display:flex;gap:6px;font-size:10px;font-family:'IBM Plex Mono',monospace}
+.snap-num{display:flex;align-items:center;gap:3px}
+.snap-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.util-badge{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px}
+.util-normal{color:var(--green);background:var(--gbg)}.util-medium{color:var(--amber);background:var(--abg)}
+.util-high{color:var(--orange);background:var(--obg)}.util-critical{color:var(--red);background:var(--rbg)}
+.prov-wrap{display:flex;align-items:center;gap:5px}
+.prov-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.prov-dot.online{background:#22c55e}.prov-dot.offline{background:var(--red)}
+.prov-name{font-size:12.5px;font-weight:500}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:12.5px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--g800);transition:all .15s;white-space:nowrap;font-family:'DM Sans',sans-serif}
+.btn:hover{background:var(--g50)}
+.btn-primary{background:var(--navy);color:#fff;border-color:var(--navy)}.btn-primary:hover{background:var(--navy2)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-success{background:var(--gbg);color:var(--green);border-color:var(--gring)}.btn-success:hover{background:#dcfce7}
+.btn-danger{background:var(--rbg);color:var(--red);border-color:var(--rring)}.btn-danger:hover{background:#fee2e2}
+.btn-amber{background:var(--abg);color:var(--amber);border-color:var(--aring)}.btn-amber:hover{background:#fef3c7}
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(2px)}
+.modal{background:#fff;border-radius:14px;width:560px;max-width:92vw;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-wide{width:660px}
+.modal-header{padding:18px 22px;border-bottom:1px solid var(--g100);display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0}
+.modal-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--navy)}
+.modal-sub{font-size:12px;color:var(--g400);margin-top:2px}
+.modal-body{flex:1;overflow-y:auto;padding:20px 22px}
+.modal-footer{padding:14px 22px;border-top:1px solid var(--g100);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+.close-btn{width:28px;height:28px;border-radius:6px;border:1px solid var(--g200);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--g400);font-size:16px;transition:all .15s}
+.close-btn:hover{background:var(--g100)}
+.modal-tabs{display:flex;gap:0;border-bottom:1px solid var(--g100);padding:0 22px;flex-shrink:0}
+.modal-tab{padding:10px 14px;font-size:12.5px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;color:var(--g600);transition:all .15s;margin-bottom:-1px}
+.modal-tab.active{color:var(--violet);border-bottom-color:var(--violet);font-weight:600}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-size:11px;font-weight:600;color:var(--g600);text-transform:uppercase;letter-spacing:.04em}
+.form-input{padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:#fff;outline:none;font-family:'DM Sans',sans-serif;width:100%;transition:border-color .15s}
+.form-input:focus{border-color:var(--violet);box-shadow:0 0 0 3px var(--vs)}
+.form-hint{font-size:11px;color:var(--g400);margin-top:3px}
+.save-fb{font-size:12px;padding:7px 10px;border-radius:6px}
+.save-fb.ok{color:var(--green);background:var(--gbg)}.save-fb.err{color:var(--red);background:var(--rbg)}
+.warn-box{background:var(--abg);border:1px solid var(--aring);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--amber);margin:10px 0;display:flex;align-items:flex-start;gap:7px}
+.block-box{background:var(--rbg);border:1px solid var(--rring);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.block-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--red);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.block-msg{font-size:12.5px;color:var(--g800);line-height:1.6;margin-bottom:10px}
+.block-steps{font-size:12px;color:var(--g600);padding-left:16px;line-height:1.8}
+.detail-section{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--g100)}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.di label{font-size:10px;color:var(--g400);font-weight:600;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px}
+.di p{font-size:13px;color:var(--text);font-weight:500}
+.di p.mono{font-family:'IBM Plex Mono',monospace;font-size:12.5px}
+.di p.violet{color:var(--violet);font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600}
+.snap-detail-bar{height:12px;border-radius:6px;overflow:hidden;display:flex;width:100%;background:var(--g200);margin:10px 0}
+.snap-detail-leg{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+.snap-leg-item{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--g600)}
+.snap-leg-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.alert-card{border-radius:10px;border:1px solid;padding:14px 16px;margin-bottom:10px}
+.alert-underfunded{background:#fffbeb;border-color:var(--aring)}
+.alert-provider{background:var(--rbg);border-color:var(--rring)}
+.alert-high_util{background:var(--obg);border-color:var(--oring)}
+.alert-reject_rate{background:var(--rbg);border-color:var(--rring)}
+.alert-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.alert-card-title{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+.alert-card-msg{font-size:12px;color:var(--g600);line-height:1.5;margin-bottom:10px}
+.alert-card-action{font-size:11.5px;font-weight:600;padding:5px 12px;border-radius:6px;border:1px solid;cursor:pointer;background:transparent;font-family:'DM Sans',sans-serif;transition:all .15s}
+.exp-bar-wrap{display:flex;flex-direction:column;gap:3px}
+.exp-bar{height:4px;border-radius:2px;overflow:hidden;background:var(--g200);width:80px}
+.exp-bar-fill{height:100%;border-radius:2px;background:var(--violet)}
+.exp-bar-fill.warn{background:var(--amber)}.exp-bar-fill.danger{background:var(--red)}
+.exp-nums{font-size:10.5px;color:var(--g400);font-family:'IBM Plex Mono',monospace}
+.exp-current{font-size:12px;font-weight:600;color:var(--text);font-family:'IBM Plex Mono',monospace}
+.src-badge{font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:4px}
+.src-client{background:rgba(115,38,241,.1);color:var(--violet)}.src-group{background:var(--bbg);color:var(--blue)}
+.src-undef{background:var(--g100);color:var(--g400)}.src-none{background:var(--g100);color:var(--g400)}
+.td-mono{font-family:'IBM Plex Mono',monospace}
+.placeholder-view{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--g400);gap:12px;padding-bottom:40px}
+.placeholder-view svg{width:40px;height:40px;opacity:.18}
+.placeholder-view strong{font-family:'Syne',sans-serif;color:var(--navy);font-size:15px}
+.placeholder-tag{background:var(--g100);border-radius:20px;padding:5px 14px;font-size:11.5px;color:var(--g600)}
+.proto-badge{position:fixed;bottom:14px;right:14px;z-index:99;font-size:10px;color:var(--g400);background:#fff;border:1px solid var(--border);padding:4px 10px;border-radius:99px;pointer-events:none}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="sidebar">
+  <div class="sb-header">
+    <div class="sb-logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 134 118" fill="none" width="18" height="16">
+          <path d="M52.5 97.4L44.9 117.6H17.4L61.6 0H89.5L133.6 117.6H106.7L98.6 97.4L75.6 35.9" fill="white"/>
+          <path d="M106.7 117.6L90.6 76.1L40 45.1L21.4 34.1L0 51.3L106.7 117.6Z" fill="url(#lg)"/>
+          <defs><linearGradient id="lg" x1="0" y1="75.9" x2="106.7" y2="75.9" gradientUnits="userSpaceOnUse"><stop offset=".17" stop-color="#8C52FF"/><stop offset=".54" stop-color="#5943A1"/><stop offset=".81" stop-color="#1B1B64"/></linearGradient></defs>
+        </svg>
+      </div>
+      <div><div class="logo-text">TRD - Ardua</div><div class="logo-sub">Mesa de Trading</div></div>
+    </div>
+  </div>
+  <div class="sb-nav">
+    <div class="nav-section">Operaciones</div>
+    <div class="nav-item" onclick="setPage('quotes')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Quotes
+    </div>
+    <div class="nav-item active" onclick="setPage('rfq')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      RFQ <span class="nav-new-badge">NEW</span>
+    </div>
+    <div class="nav-section">Gestion</div>
+    <div class="nav-item" onclick="setPage('clientes')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Clientes
+    </div>
+    <div class="nav-item" onclick="setPage('bots')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg>
+      Bots
+    </div>
+  </div>
+  <div class="sb-footer" onclick="switchUser()" style="cursor:pointer" onmouseover="this.style.background='rgba(255,255,255,.05)'" onmouseout="this.style.background=''">
+    <div class="sb-user">
+      <div class="sb-avatar" id="sb-avatar">FV</div>
+      <div>
+        <div class="sb-uname" id="sb-uname">Facundo Vasques</div>
+        <div class="sb-role" id="sb-role">Mesa Supervisor</div>
+        <div class="sb-hint">Clic para cambiar usuario</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="main">
+  <div class="topbar"><div class="topbar-title" id="topbar-title">RFQ Gateway</div></div>
+  <div class="content" id="page-content"></div>
+</div>
+</div>
+<div class="proto-badge">Prototipo v5 - TRD RFQ + Quotes</div>
+<script>
+var USERS=[
+  {id:'FV',name:'Facundo Vasques',initials:'FV',rol:'MESA_SUPERVISOR',rolLabel:'Mesa Supervisor'},
+  {id:'JR',name:'Juan Ramirez',initials:'JR',rol:'MESA_TRADER',rolLabel:'Mesa Trader'},
+];
+var currentUserId='FV';
+function getCurrentUser(){return USERS.find(function(u){return u.id===currentUserId;})||USERS[0];}
+function switchUser(){var idx=USERS.findIndex(function(u){return u.id===currentUserId;});currentUserId=USERS[(idx+1)%USERS.length].id;var u=getCurrentUser();document.getElementById('sb-avatar').textContent=u.initials;document.getElementById('sb-uname').textContent=u.name;document.getElementById('sb-role').textContent=u.rolLabel;render();}
+
+var LOTS=[
+  {id:'GPS-001',ctx:'GPS',name:'USDT/ARS - Fix Ardua',pair:'USDT/ARS',provider:'ARDUA',ps:null,status:'ACTIVE',available:285000,reserved:45000,executed:120000,maxCap:500000,threshold:50000,dVol:87500,dLim:200000,price:1183.50},
+  {id:'GPS-002',ctx:'GPS',name:'USD/ARS - Fix Ardua',pair:'USD/ARS',provider:'ARDUA',ps:null,status:'SUSPENDED',available:12000,reserved:15000,executed:95000,maxCap:200000,threshold:30000,dVol:0,dLim:80000,price:1175.00},
+  {id:'PPS-001',ctx:'PPS',name:'USDT/ARS - Binance',pair:'USDT/ARS',provider:'BINANCE',ps:'online',status:'ACTIVE',available:180000,reserved:22000,executed:98000,maxCap:300000,threshold:30000,dVol:45200,dLim:150000,price:null},
+  {id:'PPS-002',ctx:'PPS',name:'USDT/ARS - Bitso',pair:'USDT/ARS',provider:'BITSO',ps:'online',status:'ACTIVE',available:12000,reserved:8000,executed:67000,maxCap:200000,threshold:25000,dVol:32100,dLim:100000,price:null},
+  {id:'PPS-003',ctx:'PPS',name:'AL30/AL30D - BYMA',pair:'AL30/AL30D',provider:'BYMA',ps:'offline',status:'ACTIVE',available:0,reserved:0,executed:0,maxCap:100000,threshold:10000,dVol:0,dLim:50000,price:null},
+  {id:'GPS-003',ctx:'GPS',name:'USDC/ARS - Fix Ardua',pair:'USDC/ARS',provider:'ARDUA',ps:null,status:'CLOSED',available:0,reserved:0,executed:250000,maxCap:250000,threshold:25000,dVol:0,dLim:100000,price:1183.00},
+];
+var ALERTS=[
+  {id:'a1',type:'high_util',lotId:'GPS-001',title:'Alta utilizacion',desc:'Ardua USDT/ARS Fix al 91% de capacidad. Considerar fondeo adicional.',action:'Fondear lote',color:'alert-high_util',titleColor:'#c2410c'},
+  {id:'a2',type:'underfunded',lotId:'PPS-002',title:'Fondeo insuficiente',desc:'Bitso USDT/ARS tiene disponibilidad por debajo del umbral minimo (48%). Los clientes pueden recibir cobertura parcial.',action:'Fondear lote',color:'alert-underfunded',titleColor:'#a16207'},
+  {id:'a3',type:'provider_down',lotId:'PPS-003',title:'Provider no disponible',desc:'BYMA no esta respondiendo. El lote AL30/AL30D esta excluido de allocations.',action:'Ver lote',color:'alert-provider',titleColor:'#b91c1c'},
+  {id:'a4',type:'reject_rate',lotId:'GPS-001',title:'Alta tasa de rechazo por liquidez',desc:'El sistema rechazo el 68% de solicitudes en los ultimos 15 minutos por liquidez insuficiente.',action:'Fondear lote',color:'alert-reject_rate',titleColor:'#b91c1c'},
+];
+var CLIENTS=[
+  {id:'CLI-001',name:'Nexus Capital SA',legajo:'NCX-0042',group:'Premium',bps:20,bpsS:'CLIENT',expMax:100000,expCur:45200,expS:'CLIENT'},
+  {id:'CLI-002',name:'Torino Trading LLC',legajo:'TTL-0087',group:'Premium',bps:null,bpsS:'GROUP',expMax:100000,expCur:12800,expS:'GROUP'},
+  {id:'CLI-003',name:'Andino Partners',legajo:'ANP-0031',group:'Standard',bps:null,bpsS:'GROUP',expMax:50000,expCur:0,expS:'GROUP'},
+  {id:'CLI-004',name:'Delta Ventures Corp',legajo:'DVC-0119',group:null,bps:null,bpsS:'UNDEFINED',expMax:null,expCur:87500,expS:'NONE'},
+  {id:'CLI-005',name:'Meridian FX SA',legajo:'MFX-0055',group:'Standard',bps:15,bpsS:'CLIENT',expMax:75000,expCur:23100,expS:'CLIENT'},
+  {id:'CLI-006',name:'Atlas Fintech SA',legajo:'AFT-0008',group:'Standard',bps:null,bpsS:'GROUP',expMax:50000,expCur:0,expS:'GROUP'},
+];
+var GROUPS=[
+  {id:'GRP-001',name:'Premium',bps:25,expMax:100000,members:2},
+  {id:'GRP-002',name:'Standard',bps:30,expMax:50000,members:3},
+];
+var QUOTES_DATA=[
+  {id:'QT-0081',cid:'CLI-001',name:'Nexus Capital SA',legajo:'NCX-0042',op:'BUY',pair:'USDT/ARS',originAmt:26274,originCcy:'USDT',destAmt:31134800,destCcy:'ARS',tc:1184.74,term:'24hs',status:'PENDING',source:'RFQ',preQuoteId:'PQ-K3A-LM4X',at:'2026-04-09T14:32:11Z'},
+  {id:'QT-0080',cid:'CLI-002',name:'Torino Trading LLC',legajo:'TTL-0087',op:'SELL',pair:'USDT/ARS',originAmt:45000,originCcy:'USDT',destAmt:52940700,destCcy:'ARS',tc:1176.46,term:'24hs',status:'PENDING',source:'RFQ',preQuoteId:'PQ-M7P-QX2R',at:'2026-04-09T13:51:44Z'},
+  {id:'QT-0079',cid:'CLI-003',name:'Andino Partners',legajo:'ANP-0031',op:'BUY',pair:'USDT/ARS',originAmt:12500,originCcy:'USDT',destAmt:14780500,destCcy:'ARS',tc:1182.44,term:'24hs',status:'ACCEPTED',source:'RFQ',preQuoteId:'PQ-B9N-WK6J',at:'2026-04-09T12:22:05Z'},
+  {id:'QT-0078',cid:'CLI-004',name:'Delta Ventures Corp',legajo:'DVC-0119',op:'BUY',pair:'USD/ARS',originAmt:50000,originCcy:'USD',destAmt:58750000,destCcy:'ARS',tc:1175.00,term:'48hs',status:'PENDING',source:'MANUAL',preQuoteId:null,at:'2026-04-09T11:05:00Z'},
+  {id:'QT-0077',cid:'CLI-005',name:'Meridian FX SA',legajo:'MFX-0055',op:'SELL',pair:'USDT/ARS',originAmt:30000,originCcy:'USDT',destAmt:35280000,destCcy:'ARS',tc:1176.00,term:'24hs',status:'COMPLETED',source:'RFQ',preQuoteId:'PQ-R4H-CX9L',at:'2026-04-09T10:08:57Z'},
+  {id:'QT-0076',cid:'CLI-006',name:'Atlas Fintech SA',legajo:'AFT-0008',op:'BUY',pair:'USDC/ARS',originAmt:20000,originCcy:'USDC',destAmt:23660000,destCcy:'ARS',tc:1183.00,term:'24hs',status:'COMPLETED',source:'MANUAL',preQuoteId:null,at:'2026-04-09T09:30:00Z'},
+  {id:'QT-0075',cid:'CLI-001',name:'Nexus Capital SA',legajo:'NCX-0042',op:'SELL',pair:'USDT/ARS',originAmt:15000,originCcy:'USDT',destAmt:17647500,destCcy:'ARS',tc:1176.50,term:'24hs',status:'CANCELLED',source:'MANUAL',preQuoteId:null,at:'2026-04-08T16:00:00Z'},
+  {id:'QT-0074',cid:'CLI-002',name:'Torino Trading LLC',legajo:'TTL-0087',op:'BUY',pair:'USD/ARS',originAmt:100000,originCcy:'USD',destAmt:117500000,destCcy:'ARS',tc:1175.00,term:'48hs',status:'COMPLETED',source:'MANUAL',preQuoteId:null,at:'2026-04-08T14:20:00Z'},
+];
+var S_QUOTES={quotesTab:'activos',filterStatus:'',filterSource:'',selectedQuote:null};
+var S={page:'rfq',rfqTab:'lotes',selectedLot:null,lotModalTab:'overview',lotAction:null,filterCtx:'',filterStatus:'',clientTab:'clientes',editClient:null,feedback:'',fbType:'',createLotCtx:'GPS',lotTxFilter:'',editGroup:null};
+
+function fmt(n){return n==null?'-':new Intl.NumberFormat('es-AR').format(Math.round(n));}
+function fmtP(n){return n==null?'-':n.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtDT(s){var d=new Date(s);return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});}
+function util(l){var t=l.available+l.reserved+l.executed;return t>0?Math.round((l.reserved+l.executed)/t*100):0;}
+function utilClass(u){return u>=95?'util-critical':u>=85?'util-high':u>=70?'util-medium':'util-normal';}
+function snapBar(l,w){var t=l.available+l.reserved+l.executed||1;var av=l.available/t*100,rs=l.reserved/t*100,ex=l.executed/t*100;return '<div class="snap-bar" style="width:'+(w||120)+'px"><div class="snap-seg avail" style="width:'+av+'%"></div><div class="snap-seg resv" style="width:'+rs+'%"></div><div class="snap-seg exec" style="width:'+ex+'%"></div></div>';}
+
+function setPage(p){S.page=p;S.selectedLot=null;S.lotAction=null;document.querySelectorAll('.nav-item').forEach(function(e){e.classList.remove('active');});var map={quotes:0,rfq:1,clientes:2,bots:3};var items=document.querySelectorAll('.nav-item');if(map[p]!==undefined)items[map[p]].classList.add('active');document.getElementById('topbar-title').textContent={quotes:'Quotes',rfq:'RFQ Gateway',clientes:'Clientes',bots:'Bots'}[p]||p;render();}
+function setRfqTab(t){S.rfqTab=t;S.selectedLot=null;S.lotAction=null;render();}
+function setClientTab(t){S.clientTab=t;render();}
+function placeholder(i,t,s){return '<div class="placeholder-view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">'+i+'</svg><strong>'+t+'</strong><p>'+s+'</p><span class="placeholder-tag">Sin cambios en este alcance</span></div>';}
+
+/* QUOTES MODULE */
+var STATUS_COLORS={
+  PENDING:{bg:'var(--bbg)',color:'var(--blue)',border:'var(--bring)',label:'Pendiente'},
+  ACCEPTED:{bg:'rgba(115,38,241,.08)',color:'var(--violet)',border:'rgba(115,38,241,.2)',label:'Aceptada'},
+  COMPLETED:{bg:'var(--gbg)',color:'var(--green)',border:'var(--gring)',label:'Completada'},
+  CANCELLED:{bg:'var(--g100)',color:'var(--g600)',border:'var(--g200)',label:'Cancelada'},
+};
+function fmtAmt(n,ccy){return ccy+' '+new Intl.NumberFormat('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n);}
+function fmtTime(s){var d=new Date(s);return d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});}
+function fmtDate(s){var d=new Date(s);return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'});}
+function openQuote(id){S_QUOTES.selectedQuote=id;render();}
+function closeQuote(){S_QUOTES.selectedQuote=null;render();}
+function renderQuoteStatusBadge(status){var sc=STATUS_COLORS[status]||{bg:'var(--g100)',color:'var(--g600)',border:'var(--g200)',label:status};return '<span class="badge" style="background:'+sc.bg+';color:'+sc.color+';border:1px solid '+sc.border+'">'+sc.label+'</span>';}
+function renderSourceBadge(source){if(source==='RFQ')return '<span class="badge" style="background:rgba(115,38,241,.08);color:var(--violet);border:1px solid rgba(115,38,241,.2);font-size:10px">RFQ Gateway</span>';return '<span class="badge" style="background:var(--g100);color:var(--g600);border:1px solid var(--g200);font-size:10px">Manual</span>';}
+
+function renderQuoteModal(){
+  var q=QUOTES_DATA.find(function(x){return x.id===S_QUOTES.selectedQuote;});
+  if(!q)return '';
+  var rfqSection=q.source==='RFQ'?
+    '<div style="background:rgba(115,38,241,.04);border:1px solid rgba(115,38,241,.15);border-radius:10px;padding:14px 16px;margin-top:4px">'+
+      '<div style="font-size:11px;font-weight:700;color:var(--violet);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;display:flex;align-items:center;gap:6px">'+
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Origen RFQ Gateway'+
+      '</div>'+
+      '<div class="detail-grid">'+
+        '<div class="di"><label>Pre-Quote ID</label><p class="mono" style="color:var(--violet)">'+q.preQuoteId+'</p></div>'+
+        '<div class="di"><label>Canal</label><p>Client Portal (CLP)</p></div>'+
+      '</div>'+
+      '<div style="font-size:12px;color:var(--g600);margin-top:4px">Esta cotizacion fue generada automaticamente al aceptar la pre-cotizacion en el portal del cliente. La pre-quote queda persistida con referencia a esta Quote.</div>'+
+    '</div>':
+    '<div style="background:var(--g50);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-top:4px;font-size:12px;color:var(--g600)">Cotizacion creada manualmente por la Mesa.</div>';
+  return '<div class="modal-backdrop" onclick="if(event.target===this)closeQuote()"><div class="modal modal-wide" onclick="event.stopPropagation()">'+
+    '<div class="modal-header"><div>'+
+      '<div class="modal-title">'+q.id+'</div>'+
+      '<div style="display:flex;align-items:center;gap:6px;margin-top:4px">'+renderQuoteStatusBadge(q.status)+renderSourceBadge(q.source)+'</div>'+
+    '</div><button class="close-btn" onclick="closeQuote()">x</button></div>'+
+    '<div class="modal-body"><div class="detail-section">Operacion</div>'+
+    '<div class="detail-grid">'+
+      '<div class="di"><label>Cliente</label><p>'+q.name+'</p></div>'+
+      '<div class="di"><label>Legajo</label><p class="mono">'+q.legajo+'</p></div>'+
+      '<div class="di"><label>Par</label><p class="mono">'+q.pair+'</p></div>'+
+      '<div class="di"><label>Operacion</label><p><span class="badge '+(q.op==='BUY'?'badge-buy':'badge-sell')+'">'+q.op+'</span></p></div>'+
+      '<div class="di"><label>Monto origen</label><p class="mono">'+fmtAmt(q.originAmt,q.originCcy)+'</p></div>'+
+      '<div class="di"><label>Monto destino</label><p class="mono">'+fmtAmt(q.destAmt,q.destCcy)+'</p></div>'+
+      '<div class="di"><label>Tipo de cambio</label><p class="violet">'+fmtP(q.tc)+'</p></div>'+
+      '<div class="di"><label>Term</label><p>'+q.term+'</p></div>'+
+      '<div class="di"><label>Fecha</label><p>'+fmtDate(q.at)+'</p></div>'+
+      '<div class="di"><label>Hora</label><p>'+fmtTime(q.at)+'</p></div>'+
+    '</div>'+rfqSection+'</div>'+
+    '<div class="modal-footer">'+
+      (q.status==='PENDING'?'<button class="btn btn-primary" onclick="updateQuoteStatus(\''+q.id+'\',\'ACCEPTED\')">Aceptar</button>':'')+
+      (q.status==='ACCEPTED'?'<button class="btn btn-success" onclick="updateQuoteStatus(\''+q.id+'\',\'COMPLETED\')">Marcar completada</button>':'')+
+      (q.status==='PENDING'||q.status==='ACCEPTED'?'<button class="btn btn-danger" onclick="updateQuoteStatus(\''+q.id+'\',\'CANCELLED\')" style="margin-right:auto">Cancelar</button>':'')+
+      '<button class="btn" onclick="closeQuote()">Cerrar</button>'+
+    '</div></div></div>';
+}
+
+function updateQuoteStatus(id,ns){var q=QUOTES_DATA.find(function(x){return x.id===id;});if(q)q.status=ns;S_QUOTES.selectedQuote=null;render();}
+
+function renderQuotesPage(){
+  var activeQ=QUOTES_DATA.filter(function(q){return q.status==='PENDING'||q.status==='ACCEPTED';});
+  var histQ=QUOTES_DATA.filter(function(q){return q.status==='COMPLETED'||q.status==='CANCELLED';});
+  var filterArr=function(arr){if(S_QUOTES.filterStatus)arr=arr.filter(function(q){return q.status===S_QUOTES.filterStatus;});if(S_QUOTES.filterSource)arr=arr.filter(function(q){return q.source===S_QUOTES.filterSource;});return arr;};
+  var dispActive=filterArr(activeQ);var dispHist=filterArr(histQ);
+  var rfqCount=activeQ.filter(function(q){return q.source==='RFQ';}).length;
+  var subtabs='<div class="subtabs">'+
+    '<button class="stab'+(S_QUOTES.quotesTab==='activos'?' active':'')+'" onclick="S_QUOTES.quotesTab=\'activos\';render()">Quotes Activos'+(activeQ.length>0?' <span class="stab-badge blue">'+activeQ.length+'</span>':'')+
+    '</button><button class="stab'+(S_QUOTES.quotesTab==='historial'?' active':'')+'" onclick="S_QUOTES.quotesTab=\'historial\';render()">Historial de Trades</button></div>';
+  var filters='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px">'+
+    '<select class="input-sm" onchange="S_QUOTES.filterStatus=this.value;render()">'+
+      '<option value="">Todos los estados</option>'+
+      '<option value="PENDING"'+(S_QUOTES.filterStatus==='PENDING'?' selected':'')+'>Pendiente</option>'+
+      '<option value="ACCEPTED"'+(S_QUOTES.filterStatus==='ACCEPTED'?' selected':'')+'>Aceptada</option>'+
+      '<option value="COMPLETED"'+(S_QUOTES.filterStatus==='COMPLETED'?' selected':'')+'>Completada</option>'+
+      '<option value="CANCELLED"'+(S_QUOTES.filterStatus==='CANCELLED'?' selected':'')+'>Cancelada</option>'+
+    '</select>'+
+    '<select class="input-sm" onchange="S_QUOTES.filterSource=this.value;render()">'+
+      '<option value="">Todos los origenes</option>'+
+      '<option value="RFQ"'+(S_QUOTES.filterSource==='RFQ'?' selected':'')+'>RFQ Gateway</option>'+
+      '<option value="MANUAL"'+(S_QUOTES.filterSource==='MANUAL'?' selected':'')+'>Manual</option>'+
+    '</select>'+
+    (rfqCount>0&&S_QUOTES.quotesTab==='activos'?'<div style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--violet);background:rgba(115,38,241,.06);border:1px solid rgba(115,38,241,.15);border-radius:8px;padding:5px 10px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>'+rfqCount+' quote'+(rfqCount===1?'':'s')+' via RFQ</div>':'')+
+    '<button class="btn btn-primary btn-sm" style="margin-left:'+(rfqCount>0&&S_QUOTES.quotesTab==='activos'?'0':'auto')+'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Crear Quote</button>'+
+  '</div>';
+  var makeTable=function(arr,empty){
+    if(arr.length===0)return '<div style="text-align:center;padding:40px;color:var(--g400)"><p style="font-size:14px">'+empty+'</p></div>';
+    var rows=arr.map(function(q){return '<tr onclick="openQuote(\''+q.id+'\')" style="cursor:pointer">'+
+      '<td><div style="font-size:12.5px;font-weight:500">'+q.name+'</div><div class="td-mono" style="font-size:11px;color:var(--g400)">'+q.legajo+'</div></td>'+
+      '<td><span class="badge badge-'+(q.op==='BUY'?'gps':'pps')+'" style="font-size:10.5px">'+q.pair+'</span></td>'+
+      '<td><span class="badge '+(q.op==='BUY'?'badge-buy':'badge-sell')+'">'+q.op+'</span></td>'+
+      '<td style="font-size:12px;color:var(--g600)">'+q.term+'</td>'+
+      '<td class="td-mono" style="font-size:12px;font-weight:600">'+fmtAmt(q.originAmt,q.originCcy)+'</td>'+
+      '<td class="td-mono" style="font-size:12px;font-weight:600;color:var(--violet)">'+fmtP(q.tc)+'</td>'+
+      '<td class="td-mono" style="font-size:12px">'+fmtAmt(q.destAmt,q.destCcy)+'</td>'+
+      '<td>'+renderSourceBadge(q.source)+'</td>'+
+      '<td style="font-size:12px;color:var(--g600)">'+fmtTime(q.at)+'</td>'+
+      '<td>'+renderQuoteStatusBadge(q.status)+'</td>'+
+    '</tr>';}).join('');
+    return '<div class="tcard"><div class="table-wrap"><table class="table"><thead><tr><th>Cliente</th><th>Par</th><th>Op.</th><th>Term</th><th>Monto</th><th>TC</th><th>Calculado</th><th>Origen</th><th>Hora</th><th>Estado</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+  };
+  var content=S_QUOTES.quotesTab==='activos'?makeTable(dispActive,'Sin quotes activos'):makeTable(dispHist,'Sin operaciones en el historial');
+  var modal=S_QUOTES.selectedQuote?renderQuoteModal():'';
+  return '<div class="page-header"><div><div class="page-title">Quotes</div><div class="page-sub">Gestion de cotizaciones - Activos e historial</div></div></div>'+subtabs+filters+content+modal;
+}
+
+/* RFQ LOTES */
+function renderLotes(){
+  var lots=LOTS.filter(function(l){return(!S.filterCtx||l.ctx===S.filterCtx)&&(!S.filterStatus||l.status===S.filterStatus);});
+  var totalAvail=LOTS.reduce(function(a,l){return a+(l.status==='ACTIVE'?l.available:0);},0);
+  var totalResv=LOTS.reduce(function(a,l){return a+l.reserved;},0);
+  var totalExec=LOTS.reduce(function(a,l){return a+l.executed;},0);
+  var activeCount=LOTS.filter(function(l){return l.status==='ACTIVE';}).length;
+  var kpis='<div class="kpi-row">'+
+    '<div class="kpi"><div class="kpi-label">Disponible Total</div><div class="kpi-val violet">'+fmt(totalAvail)+'</div><div class="kpi-sub">USDT en lotes activos</div></div>'+
+    '<div class="kpi"><div class="kpi-label">Capital Reservado</div><div class="kpi-val amber">'+fmt(totalResv)+'</div><div class="kpi-sub">En pre-quotes activas</div></div>'+
+    '<div class="kpi"><div class="kpi-label">Capital Ejecutado</div><div class="kpi-val">'+fmt(totalExec)+'</div><div class="kpi-sub">Pendiente liquidacion</div></div>'+
+    '<div class="kpi"><div class="kpi-label">Lotes Activos</div><div class="kpi-val green">'+activeCount+'</div><div class="kpi-sub">de '+LOTS.length+' lotes totales</div></div>'+
+  '</div>';
+  var banner='';
+  var legend='<div style="display:flex;gap:12px;align-items:center;font-size:11px;color:var(--g600);margin-bottom:4px"><span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:var(--violet);border-radius:2px;display:inline-block"></span>Disponible</span><span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#fb923c;border-radius:2px;display:inline-block"></span>Reservado</span><span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:var(--g300);border-radius:2px;display:inline-block"></span>Ejecutado</span><span style="color:var(--g400);margin-left:4px">Waterfall: GPS PPS</span></div>';
+  var rows=lots.map(function(l,i){
+    var u=util(l);var isExcluded=l.ctx==='PPS'&&l.ps==='offline';
+    var provHtml='<div class="prov-wrap">'+(l.ctx==='PPS'?'<span class="prov-dot '+(l.ps||'online')+'"></span>':'<span class="prov-dot online"></span>')+'<span class="prov-name">'+l.provider+'</span></div>';
+    var exBadge=isExcluded?'<span class="badge badge-excluido" style="margin-left:4px">Excluido</span>':'';
+    return '<tr onclick="openLot(\''+l.id+'\')" style="'+(l.status==='CLOSED'?'opacity:0.55':'')+'">'  +
+      '<td class="td-mono" style="font-size:11px;color:var(--g400)">#'+(i+1)+'</td>'+
+      '<td><div style="font-size:12.5px;font-weight:600;color:var(--navy)">'+l.name+'</div><div style="font-size:11px;color:var(--g400)">'+l.id+'</div></td>'+
+      '<td><span class="badge '+(l.ctx==='GPS'?'badge-gps':'badge-pps')+'">'+l.ctx+(l.ctx==='GPS'?' Precio Fijo':' Precio Externo')+'</span></td>'+
+      '<td>'+provHtml+exBadge+'</td>'+
+      '<td class="td-mono" style="font-size:12px;color:var(--g800)">'+l.pair+'</td>'+
+      '<td><span class="badge badge-'+l.status.toLowerCase()+'">'+l.status+'</span></td>'+
+      '<td><div class="snap-row">'+snapBar(l,130)+'<div class="snap-nums"><span class="snap-num"><span class="snap-dot" style="background:var(--violet)"></span>'+fmt(l.available)+'</span><span class="snap-num"><span class="snap-dot" style="background:#fb923c"></span>'+fmt(l.reserved)+'</span><span class="snap-num"><span class="snap-dot" style="background:var(--g300)"></span>'+fmt(l.executed)+'</span></div></div></td>'+
+      '<td><span class="util-badge '+utilClass(u)+'">'+u+'%</span></td>'+
+      '<td><button class="btn btn-sm" onclick="openLot(\''+l.id+'\');event.stopPropagation()">Ver</button></td>'+
+    '</tr>';
+  }).join('');
+  return kpis+banner+'<div class="tcard"><div class="tcard-header"><div class="tcard-title" style="flex-direction:column;align-items:flex-start;gap:4px">Lotes de Liquidez '+legend+'</div><div class="filters"><select class="input-sm" onchange="S.filterCtx=this.value;render()"><option value="">GPS + PPS</option><option value="GPS"'+(S.filterCtx==='GPS'?' selected':'')+'>Solo GPS</option><option value="PPS"'+(S.filterCtx==='PPS'?' selected':'')+'>Solo PPS</option></select><select class="input-sm" onchange="S.filterStatus=this.value;render()"><option value="">Todos los estados</option><option value="ACTIVE"'+(S.filterStatus==='ACTIVE'?' selected':'')+'>ACTIVE</option><option value="SUSPENDED"'+(S.filterStatus==='SUSPENDED'?' selected':'')+'>SUSPENDED</option><option value="CLOSED"'+(S.filterStatus==='CLOSED'?' selected':'')+'>CLOSED</option></select>'+(getCurrentUser().rol==='MESA_SUPERVISOR'?'<button class="btn btn-primary btn-sm" onclick="openCreateLot()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Crear Lote</button>':'')+'</div></div><div class="table-wrap"><table class="table"><thead><tr><th>#</th><th>Lote</th><th>Contexto</th><th>Provider</th><th>Par</th><th>Estado</th><th>Snapshot</th><th>Util.</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+}
+
+function openLot(id){S.selectedLot=id;S.lotModalTab='overview';S.feedback='';S.fbType='';S.lotTxFilter='';render();}
+function closeLot(){S.selectedLot=null;S.feedback='';render();}
+function setLotTab(t){S.lotModalTab=t;S.feedback='';render();}
+
+function renderLotModal(){
+  var l=LOTS.find(function(x){return x.id===S.selectedLot;});if(!l)return '';
+  var u=util(l);var t=l.available+l.reserved+l.executed||1;var av=l.available/t*100,rs=l.reserved/t*100,ex=l.executed/t*100;
+  var isExcluded=l.ctx==='PPS'&&l.ps==='offline';
+  var tabs=['overview','fundin','fundout','config','history'].map(function(t){
+    var lbl={overview:'Resumen',fundin:'Fondear',fundout:'Retirar',config:'Configuracion',history:'Historial'}[t];
+    var dis=(l.status==='CLOSED'&&(t==='fundin'||t==='fundout'))?'opacity:.4;pointer-events:none':'';
+    return '<div class="modal-tab'+(S.lotModalTab===t?' active':'')+'" onclick="setLotTab(\''+t+'\')" style="'+dis+'">'+lbl+'</div>';
+  }).join('');
+  var body='';
+  if(S.lotModalTab==='overview'){
+    body=(isExcluded?'<div style="background:var(--rbg);border:1px solid var(--rring);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12.5px;color:var(--red)">Provider '+l.provider+' no disponible - excluido de allocations.</div>':'')+
+    '<div class="detail-section">Snapshot de Fondeo</div>'+
+    '<div class="snap-detail-bar"><div class="snap-seg avail" style="width:'+av+'%"></div><div class="snap-seg resv" style="width:'+rs+'%"></div><div class="snap-seg exec" style="width:'+ex+'%"></div></div>'+
+    '<div class="snap-detail-leg"><div class="snap-leg-item"><span class="snap-leg-dot" style="background:var(--violet)"></span><strong>'+fmt(l.available)+'</strong> Disponible</div><div class="snap-leg-item"><span class="snap-leg-dot" style="background:#fb923c"></span><strong>'+fmt(l.reserved)+'</strong> Reservado</div><div class="snap-leg-item"><span class="snap-leg-dot" style="background:var(--g300)"></span><strong>'+fmt(l.executed)+'</strong> Ejecutado</div><div class="snap-leg-item" style="margin-left:auto"><span class="util-badge '+utilClass(u)+'">'+u+'% util.</span></div></div>'+
+    '<div style="height:1px;background:var(--g100);margin:16px 0"></div>'+
+    '<div class="detail-section">Datos del Lote</div>'+
+    '<div class="detail-grid">'+
+      '<div class="di"><label>Contexto</label><p><span class="badge '+(l.ctx==='GPS'?'badge-gps':'badge-pps')+'">'+l.ctx+'</span></p></div>'+
+      '<div class="di"><label>Estado</label><p><span class="badge badge-'+l.status.toLowerCase()+'">'+l.status+'</span></p></div>'+
+      '<div class="di"><label>Par</label><p class="mono">'+l.pair+'</p></div>'+
+      '<div class="di"><label>Provider</label><p>'+l.provider+(l.ps?' <span style="font-size:10px;color:'+(l.ps==='online'?'var(--green)':'var(--red)')+'">'+l.ps+'</span>':'')+'</p></div>'+
+      (l.ctx==='GPS'?'<div class="di"><label>Precio Fijo</label><p class="violet">'+fmtP(l.price)+' ARS</p></div>':'')+
+      '<div class="di"><label>Cap. Max.</label><p class="mono">'+fmt(l.maxCap)+' USDT</p></div>'+
+      '<div class="di"><label>Volumen Hoy</label><p class="mono">'+fmt(l.dVol)+' / '+fmt(l.dLim)+'</p></div>'+
+      '<div class="di"><label>Threshold</label><p class="mono">'+fmt(l.threshold)+' USDT</p></div>'+
+    '</div>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+      (l.status==='ACTIVE'?'<button class="btn btn-amber" onclick="setLotTab(\'fundout\')">- Retirar</button><button class="btn btn-success" onclick="setLotTab(\'fundin\')">+ Fondear</button><button class="btn" onclick="suspendLot(\''+l.id+'\')">Suspender</button>':'')+
+      (l.status==='SUSPENDED'?'<button class="btn btn-success" onclick="resumeLot(\''+l.id+'\')">Reactivar</button>':'')+
+      (l.status==='SUSPENDED'&&getCurrentUser().rol==='MESA_SUPERVISOR'?'<button class="btn btn-danger" onclick="closeLotAction(\''+l.id+'\')">Cerrar Lote</button>':'')+
+    '</div>';
+  } else if(S.lotModalTab==='fundin'){
+    body='<p style="font-size:12.5px;color:var(--g600);margin-bottom:16px">Registra la entrada de fondos. El monto incrementa el capital disponible.</p>'+
+    '<div class="form-grid">'+
+      '<div class="form-group"><label class="form-label">Monto (USDT)</label><input id="fi-amt" class="form-input" type="number" placeholder="Ej: 100000" min="0"></div>'+
+      '<div class="form-group"><label class="form-label">Ref. Externa *</label><input id="fi-ref" class="form-input" type="text" placeholder="Hash de tx o ref. bancaria"><span class="form-hint">Obligatorio - respalda el fondeo</span></div>'+
+      '<div class="form-group full"><label class="form-label">Motivo (opcional)</label><input id="fi-reason" class="form-input" type="text" placeholder="Ej: Fondeo inicial Q2 2026"></div>'+
+    '</div>'+
+    (S.feedback?'<div class="save-fb '+S.fbType+'" style="margin-top:10px">'+S.feedback+'</div>':'')+
+    '<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end"><button class="btn" onclick="closeLot()">Cancelar</button><button class="btn btn-success" onclick="saveFundsIn(\''+l.id+'\')">Confirmar Fondeo</button></div>';
+  } else if(S.lotModalTab==='fundout'){
+    body='<div style="background:var(--g50);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12.5px;color:var(--g600)">Maximo retirable: <strong class="td-mono" style="color:var(--navy)">'+fmt(l.available)+' USDT</strong></div>'+
+    '<div class="form-grid">'+
+      '<div class="form-group"><label class="form-label">Monto (USDT)</label><input id="fo-amt" class="form-input" type="number" placeholder="Ej: 50000" min="0" max="'+l.available+'" oninput="checkFoThreshold(\''+l.id+'\')"></div>'+
+      '<div class="form-group"><label class="form-label">Motivo *</label><input id="fo-reason" class="form-input" type="text" placeholder="Min. 10 caracteres"></div>'+
+      '<div class="form-group full" id="fo-approval-wrap" style="display:none"><label class="form-label">Aprobado por (Supervisor) *</label><select id="fo-approver" class="form-input"><option value="">Seleccionar...</option><option>Facundo Vasques (SUPERVISOR)</option></select></div>'+
+    '</div>'+
+    '<div id="fo-threshold-warn" style="display:none" class="warn-box">El monto supera el threshold ('+fmt(l.threshold)+' USDT). Requiere aprobacion de Supervisor.</div>'+
+    (S.feedback?'<div class="save-fb '+S.fbType+'" style="margin-top:10px">'+S.feedback+'</div>':'')+
+    '<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end"><button class="btn" onclick="closeLot()">Cancelar</button><button class="btn btn-danger" onclick="saveFundsOut(\''+l.id+'\')">Confirmar Retiro</button></div>';
+  } else if(S.lotModalTab==='config'){
+    body='<div class="detail-section">Limites</div>'+
+    '<div class="detail-grid"><div class="di"><label>Capacidad max.</label><p class="mono">'+fmt(l.maxCap)+' USDT</p></div><div class="di"><label>Max. por allocation</label><p class="mono">50,000 USDT</p></div><div class="di"><label>Lim. vol. diario</label><p class="mono">'+fmt(l.dLim)+' USDT</p></div><div class="di"><label>Threshold retiro</label><p class="mono">'+fmt(l.threshold)+' USDT</p></div></div>'+
+    '<div class="detail-section">Activacion</div>'+
+    '<div class="detail-grid"><div class="di"><label>Timezone</label><p>America/Buenos_Aires</p></div><div class="di"><label>Feriados</label><p>AR, US</p></div><div class="di"><label>Ventanas</label><p>Lun-Vie 09:00-22:00</p></div><div class="di"><label>Blackout</label><p style="color:var(--g400)">Ninguno</p></div></div>'+
+    (l.ctx==='PPS'?'<div class="detail-section">Pricing (PPS)</div><div class="detail-grid"><div class="di"><label>Modelo</label><p>COMPOSITE</p></div><div class="di"><label>Feed</label><p>'+l.provider+' ASK</p></div><div class="di"><label>Formula</label><p>MULTIPLY</p></div><div class="di"><label>Max staleness</label><p>5,000 ms</p></div></div>':'')+
+    (getCurrentUser().rol==='MESA_SUPERVISOR'?'<button class="btn btn-sm">Editar configuracion</button>':'<p style="font-size:12px;color:var(--g400)">Solo SUPERVISOR puede editar.</p>');
+  } else if(S.lotModalTab==='history'){
+    var LOT_TX={
+      'GPS-001':[{type:'FUNDS_IN',amt:150000,ref:'0xA1B2...F3D4',note:'Fondeo inicial Q2 2026',at:'2026-04-09T08:00:00Z'},{type:'FUNDS_RESERVE',amt:-8200,ref:'Q-7781',note:'Reserva pre-quote K3A-LM4X',at:'2026-04-09T14:32:00Z'},{type:'FUNDS_RESERVE',amt:-12000,ref:'Q-7782',note:'Reserva pre-quote M7P-QX2R',at:'2026-04-09T13:51:00Z'},{type:'FUNDS_OUT',amt:-30000,ref:'RET-0019',note:'Retiro parcial fin de semana',at:'2026-04-07T18:00:00Z'},{type:'FUNDS_IN',amt:80000,ref:'0xC5D6...E7F8',note:'Refuerzo de liquidez',at:'2026-04-06T10:00:00Z'}],
+      'PPS-001':[{type:'FUNDS_IN',amt:200000,ref:'0xB2C3...G4H5',note:'Fondeo inicial Binance',at:'2026-04-08T09:00:00Z'},{type:'FUNDS_RESERVE',amt:-21274,ref:'Q-7781',note:'Reserva pre-quote K3A-LM4X',at:'2026-04-09T14:32:00Z'}],
+      'PPS-002':[{type:'FUNDS_IN',amt:50000,ref:'0xD4E5...H6I7',note:'Fondeo inicial Bitso',at:'2026-04-08T09:30:00Z'},{type:'FUNDS_RESERVE',amt:-7500,ref:'Q-7780',note:'Reserva pre-quote B9N-WK6J',at:'2026-04-09T12:22:00Z'}]
+    };
+    var txs=(LOT_TX[l.id]||[]).filter(function(tx){return !S.lotTxFilter||tx.type===S.lotTxFilter;});
+    var typeColors={FUNDS_IN:'var(--green)',FUNDS_OUT:'var(--red)',FUNDS_RESERVE:'var(--amber)'};
+    var txRows=txs.map(function(tx){var isIn=tx.type==='FUNDS_IN';return '<tr>'+
+      '<td class="td-mono" style="font-size:11px;color:var(--g400)">'+fmtDT(tx.at)+'</td>'+
+      '<td><span class="badge" style="font-size:10px;background:'+(isIn?'var(--gbg)':tx.type==='FUNDS_RESERVE'?'var(--abg)':'var(--rbg)')+';color:'+typeColors[tx.type]+'">'+tx.type.replace('FUNDS_','')+'</span></td>'+
+      '<td class="td-mono" style="font-size:12.5px;font-weight:600;color:'+(isIn?'var(--green)':'var(--red)')+'">'+(isIn?'+':'')+fmt(tx.amt)+' USDT</td>'+
+      '<td class="td-mono" style="font-size:11.5px;color:var(--g400)">'+tx.ref+'</td>'+
+      '<td style="font-size:12px;color:var(--g600)">'+tx.note+'</td>'+
+    '</tr>';}).join('');
+    body='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"><p style="font-size:12.5px;color:var(--g600)">Registro de movimientos del lote</p>'+
+    '<select class="input-sm" onchange="S.lotTxFilter=this.value;render()" style="font-size:11px"><option value="">Todos los tipos</option><option value="FUNDS_IN"'+(S.lotTxFilter==='FUNDS_IN'?' selected':'')+'>FUNDS_IN</option><option value="FUNDS_OUT"'+(S.lotTxFilter==='FUNDS_OUT'?' selected':'')+'>FUNDS_OUT</option><option value="FUNDS_RESERVE"'+(S.lotTxFilter==='FUNDS_RESERVE'?' selected':'')+'>FUNDS_RESERVE</option></select></div>'+
+    (txs.length>0?'<div class="table-wrap"><table class="table" style="font-size:12px"><thead><tr><th>Fecha</th><th>Tipo</th><th>Monto</th><th>Referencia</th><th>Nota</th></tr></thead><tbody>'+txRows+'</tbody></table></div>':'<div style="text-align:center;padding:32px;color:var(--g400)"><p>Sin transacciones.</p></div>');
+  }
+  return '<div class="modal-backdrop" onclick="if(event.target===this)closeLot()"><div class="modal modal-wide" onclick="event.stopPropagation()">'+
+    '<div class="modal-header"><div><div class="modal-title">'+l.name+'</div>'+
+    '<div style="display:flex;align-items:center;gap:6px;margin-top:4px"><span class="badge badge-'+l.status.toLowerCase()+'">'+l.status+'</span><span class="badge '+(l.ctx==='GPS'?'badge-gps':'badge-pps')+'">'+l.ctx+'</span>'+(isExcluded?'<span class="badge badge-excluido">Provider offline</span>':'')+'</div>'+
+    '</div><button class="close-btn" onclick="closeLot()">x</button></div>'+
+    '<div class="modal-tabs">'+tabs+'</div><div class="modal-body">'+body+'</div></div></div>';
+}
+
+function checkFoThreshold(lotId){var l=LOTS.find(function(x){return x.id===lotId;});var v=parseFloat(document.getElementById('fo-amt').value)||0;var over=v>l.threshold;document.getElementById('fo-threshold-warn').style.display=over?'flex':'none';document.getElementById('fo-approval-wrap').style.display=over?'block':'none';}
+function saveFundsIn(id){var amt=parseFloat(document.getElementById('fi-amt').value)||0;var ref=(document.getElementById('fi-ref').value||'').trim();if(!amt||amt<=0){S.feedback='El monto debe ser mayor a 0.';S.fbType='err';render();return;}if(!ref){S.feedback='La referencia externa es obligatoria.';S.fbType='err';render();return;}var l=LOTS.find(function(x){return x.id===id;});l.available+=amt;S.feedback='Fondeado: +'+fmt(amt)+' USDT';S.fbType='ok';render();setTimeout(function(){S.selectedLot=null;S.feedback='';render();},1600);}
+function saveFundsOut(id){var amt=parseFloat(document.getElementById('fo-amt').value)||0;var reason=(document.getElementById('fo-reason').value||'').trim();if(!amt||amt<=0){S.feedback='El monto debe ser mayor a 0.';S.fbType='err';render();return;}var l=LOTS.find(function(x){return x.id===id;});if(amt>l.available){S.feedback='El monto supera el disponible ('+fmt(l.available)+' USDT).';S.fbType='err';render();return;}if(reason.length<10){S.feedback='El motivo debe tener al menos 10 caracteres.';S.fbType='err';render();return;}if(amt>l.threshold&&getCurrentUser().rol==='MESA_TRADER'){S.feedback='Este retiro requiere aprobacion de Supervisor.';S.fbType='err';render();return;}l.available-=amt;S.feedback='Retiro registrado: -'+fmt(amt)+' USDT';S.fbType='ok';render();setTimeout(function(){S.selectedLot=null;S.feedback='';render();},1600);}
+function suspendLot(id){var l=LOTS.find(function(x){return x.id===id;});l.status='SUSPENDED';S.selectedLot=null;render();}
+function resumeLot(id){var l=LOTS.find(function(x){return x.id===id;});l.status='ACTIVE';S.selectedLot=null;render();}
+function closeLotAction(id){var l=LOTS.find(function(x){return x.id===id;});if(l.reserved>0){S.selectedLot=null;S.lotAction={type:'close_blocked',lot:l};render();}else{l.status='CLOSED';S.selectedLot=null;render();}}
+function renderCloseBlockedModal(){var l=S.lotAction.lot;return '<div class="modal-backdrop" onclick="if(event.target===this){S.lotAction=null;render()}"><div class="modal" onclick="event.stopPropagation()"><div class="modal-header"><div><div class="modal-title">No se puede cerrar el lote</div><div class="modal-sub">'+l.name+' - '+l.id+'</div></div><button class="close-btn" onclick="S.lotAction=null;render()">x</button></div><div class="modal-body"><div class="block-box"><div class="block-title">Cierre bloqueado</div><div class="block-msg">Este lote tiene <strong>'+fmt(l.reserved)+' USDT reservados</strong> en pre-quotes con TTL vigente.</div><ol class="block-steps"><li>El lote esta SUSPENDED - no acepta nuevas reservas.</li><li>Las reservas expiran por TTL automaticamente.</li><li>Con reserved = 0 el boton Cerrar se habilitara.</li></ol></div></div><div class="modal-footer"><button class="btn" onclick="S.lotAction=null;render()">Entendido</button></div></div></div>';}
+function openCreateLot(){if(getCurrentUser().rol!=='MESA_SUPERVISOR')return;S.lotAction={type:'create'};S.createLotCtx='GPS';S.feedback='';render();}
+function renderCreateLotModal(){
+  var isGPS=S.createLotCtx==='GPS';
+  var descStyle='background:'+(isGPS?'rgba(115,38,241,.05)':'rgba(29,78,216,.05)')+';border:1px solid '+(isGPS?'rgba(115,38,241,.2)':'var(--bring)')+';border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:12px;color:'+(isGPS?'var(--violet)':'var(--blue)');
+  var descText=isGPS?'<strong>GPS:</strong> Precio fijo definido por la Mesa.':'<strong>PPS:</strong> Precio provisto por feed externo en tiempo real.';
+  return '<div class="modal-backdrop" onclick="if(event.target===this){S.lotAction=null;render()}"><div class="modal modal-wide" onclick="event.stopPropagation()">'+
+    '<div class="modal-header"><div class="modal-title">Crear Lote de Liquidez</div><button class="close-btn" onclick="S.lotAction=null;render()">x</button></div>'+
+    '<div class="modal-body">'+
+      '<div style="display:flex;gap:8px;margin-bottom:18px">'+
+        '<button class="btn'+(isGPS?' btn-primary':'')+'" onclick="S.createLotCtx=\'GPS\';render()">GPS Precio Fijo</button>'+
+        '<button class="btn'+(!isGPS?' btn-primary':'')+'" onclick="S.createLotCtx=\'PPS\';render()">PPS Precio Externo</button>'+
+      '</div>'+
+      '<div style="'+descStyle+'">'+descText+'</div>'+
+      '<div class="form-grid">'+
+        '<div class="form-group full"><label class="form-label">Nombre del Lote</label><input class="form-input" placeholder="Ej: USDT/ARS Fix Ardua"></div>'+
+        '<div class="form-group"><label class="form-label">Par</label><select class="form-input"><option>USDT/ARS</option><option>USDC/ARS</option><option>USD/ARS</option><option>AL30/AL30D</option></select></div>'+
+        (isGPS?'<div class="form-group"><label class="form-label">Precio Fijo (ARS)</label><input class="form-input" type="number" placeholder="Ej: 1183.50"></div>':'<div class="form-group"><label class="form-label">Provider</label><select class="form-input"><option>BINANCE</option><option>BITSO</option><option>BYMA</option></select></div>')+
+        '<div class="form-group"><label class="form-label">Capacidad max.</label><input class="form-input" type="number" placeholder="Ej: 500000"></div>'+
+        '<div class="form-group"><label class="form-label">Threshold retiro</label><input class="form-input" type="number" placeholder="Ej: 50000"><span class="form-hint">FUNDS_OUT por encima requiere Supervisor</span></div>'+
+        '<div class="form-group"><label class="form-label">Lim. vol. diario</label><input class="form-input" type="number" placeholder="Ej: 200000"></div>'+
+        '<div class="form-group"><label class="form-label">Lim. por allocation</label><input class="form-input" type="number" placeholder="Ej: 50000"></div>'+
+      '</div>'+
+      (S.feedback?'<div class="save-fb '+S.fbType+'" style="margin-top:10px">'+S.feedback+'</div>':'')+
+    '</div>'+
+    '<div class="modal-footer"><button class="btn" onclick="S.lotAction=null;render()">Cancelar</button><button class="btn btn-primary" onclick="saveCreateLot()">Crear Lote</button></div>'+
+  '</div></div>';
+}
+function saveCreateLot(){S.feedback='Lote creado en estado SUSPENDED. Fondear para activar.';S.fbType='ok';render();setTimeout(function(){S.lotAction=null;S.feedback='';render();},1800);}
+
+function renderAlertasTab(){
+  if(ALERTS.length===0)return '<div style="text-align:center;padding:40px;color:var(--g400)"><p style="font-size:16px;margin-bottom:8px">Sin alertas activas</p><p style="font-size:13px">El sistema opera con normalidad.</p></div>';
+  return '<div style="max-width:640px">'+ALERTS.map(function(a){var l=LOTS.find(function(x){return x.id===a.lotId;})||{};var btnStyle='border-color:'+(a.type==='provider_down'||a.type==='reject_rate'?'var(--rring);color:var(--red)':a.type==='underfunded'?'var(--aring);color:var(--amber)':'var(--oring);color:var(--orange)');return '<div class="alert-card '+a.color+'"><div class="alert-card-header"><span class="alert-card-title" style="color:'+a.titleColor+'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'+a.title+'</span><span style="font-size:11px;color:var(--g400)">'+l.name+'</span></div><p class="alert-card-msg">'+a.desc+'</p><button class="alert-card-action" style="'+btnStyle+'" onclick="openLot(\''+a.lotId+'\')">'+a.action+'</button></div>';}).join('')+'</div>';
+}
+
+function renderClientes(){
+  var tabs='<div class="subtabs" style="margin-bottom:20px"><button class="stab'+(S.clientTab==='clientes'?' active':'')+'" onclick="setClientTab(\'clientes\')">Clientes</button><button class="stab'+(S.clientTab==='grupos'?' active':'')+'" onclick="setClientTab(\'grupos\')">Grupos</button></div>';
+  if(S.clientTab==='grupos')return tabs+renderGrupos();
+  var rows=CLIENTS.map(function(c){var be=c.bps!=null?c.bps:(GROUPS.find(function(g){return g.name===c.group;})||{}).bps||'-';var ep=c.expMax?Math.round(c.expCur/c.expMax*100):null;var ec=ep!=null?(ep>=90?'danger':ep>=70?'warn':''):'';return '<tr>'+
+    '<td><span style="font-size:12.5px;font-weight:500">'+c.name+'</span></td>'+
+    '<td class="td-mono" style="font-size:11.5px">'+c.legajo+'</td>'+
+    '<td>'+(c.group?c.group:'<span style="color:var(--g400)">-</span>')+'</td>'+
+    '<td><div style="display:flex;align-items:center;gap:5px"><span class="td-mono" style="font-size:12.5px;font-weight:600">'+be+'</span>'+(be!=='-'?'<span style="font-size:10.5px;color:var(--g400)">BPS</span>':'')+' <span class="src-badge src-'+c.bpsS.toLowerCase()+'">'+c.bpsS+'</span></div></td>'+
+    '<td><div class="exp-bar-wrap"><span class="exp-current">'+fmt(c.expCur)+'</span>'+(c.expMax?'<div class="exp-bar"><div class="exp-bar-fill '+ec+'" style="width:'+Math.min(ep,100)+'%"></div></div><span class="exp-nums">/ '+fmt(c.expMax)+' max</span>':'<span class="exp-nums" style="color:var(--g400)">Sin limite</span>')+'</div></td>'+
+    '<td><span class="src-badge src-'+c.expS.toLowerCase()+'">'+c.expS+'</span></td>'+
+    '<td onclick="event.stopPropagation()"><button class="btn btn-sm" onclick="openEditClient(\''+c.id+'\')">Editar</button></td>'+
+  '</tr>';}).join('');
+  return tabs+'<div class="tcard"><div class="tcard-header"><div class="tcard-title">Clientes <span style="font-size:12px;font-weight:400;color:var(--g400)">'+CLIENTS.length+' registros</span></div></div><div class="table-wrap"><table class="table"><thead><tr><th>Nombre</th><th>Legajo</th><th>Grupo</th><th>BPS Efectivo</th><th>Exposicion Actual</th><th>Fuente Exp.</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+}
+function renderGrupos(){
+  var rows=GROUPS.map(function(g){return '<tr><td style="font-weight:600">'+g.name+'</td><td><span class="td-mono" style="font-size:13px;font-weight:600;color:var(--violet)">'+g.bps+' BPS</span></td><td><span class="td-mono" style="font-size:12.5px">'+fmt(g.expMax)+'</span></td><td>'+g.members+' clientes</td><td onclick="event.stopPropagation()">'+(getCurrentUser().rol==='MESA_SUPERVISOR'?'<button class="btn btn-sm" onclick="openEditGroup(\''+g.id+'\')">Editar</button>':'<span style="font-size:11.5px;color:var(--g400)">Solo Supervisor</span>')+'</td></tr>';}).join('');
+  return '<div class="tcard"><div class="tcard-header"><div class="tcard-title">Grupos de Clientes</div>'+(getCurrentUser().rol==='MESA_SUPERVISOR'?'<button class="btn btn-primary btn-sm" onclick="openCreateGroup()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Crear Grupo</button>':'')+'</div><div class="table-wrap"><table class="table"><thead><tr><th>Nombre</th><th>BPS Grupo</th><th>Max. Exposicion</th><th>Miembros</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+}
+function openEditClient(id){S.editClient=id;S.feedback='';render();}
+function closeEditClient(){S.editClient=null;S.feedback='';render();}
+function openEditGroup(id){S.editGroup=id;S.feedback='';render();}
+function closeEditGroup(){S.editGroup=null;S.feedback='';render();}
+function openCreateGroup(){S.editGroup='NEW';S.feedback='';render();}
+function renderEditGroupModal(){
+  var isNew=S.editGroup==='NEW';var g=isNew?{id:'',name:'',bps:'',expMax:'',members:0}:GROUPS.find(function(x){return x.id===S.editGroup;});if(!g)return '';
+  var gid=isNew?'NEW':g.id;
+  return '<div class="modal-backdrop" onclick="if(event.target===this)closeEditGroup()"><div class="modal" onclick="event.stopPropagation()">'+
+    '<div class="modal-header"><div><div class="modal-title">'+(isNew?'Crear Grupo':'Editar Grupo')+'</div>'+(isNew?'':'<div class="modal-sub">'+g.name+'</div>')+'</div><button class="close-btn" onclick="closeEditGroup()">x</button></div>'+
+    '<div class="modal-body"><div class="form-grid">'+
+      '<div class="form-group full"><label class="form-label">Nombre del grupo *</label><input id="eg-name" class="form-input" type="text" placeholder="Ej: Premium" value="'+(isNew?'':g.name)+'"></div>'+
+      '<div class="form-group"><label class="form-label">BPS del grupo *</label><input id="eg-bps" class="form-input" type="number" placeholder="Ej: 25" value="'+(isNew?'':g.bps)+'"><span class="form-hint">Aplica a miembros sin override personal</span></div>'+
+      '<div class="form-group"><label class="form-label">Max. Exposicion (USDT) *</label><input id="eg-exp" class="form-input" type="number" placeholder="Ej: 100000" value="'+(isNew?'':g.expMax)+'"><span class="form-hint">Capital maximo en reservas activas por cliente</span></div>'+
+    '</div>'+
+    '<div style="background:var(--g50);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--g600);margin-top:4px">Precedencia: Override personal &gt; BPS/limite del grupo &gt; Default del sistema</div>'+
+    (S.feedback?'<div class="save-fb '+S.fbType+'" style="margin-top:10px">'+S.feedback+'</div>':'')+
+    '</div><div class="modal-footer"><button class="btn" onclick="closeEditGroup()">Cancelar</button><button class="btn btn-primary" onclick="saveGroup(\''+gid+'\')">'+(isNew?'Crear Grupo':'Guardar cambios')+'</button></div></div></div>';
+}
+function saveGroup(id){var name=(document.getElementById('eg-name').value||'').trim();var bps=parseFloat(document.getElementById('eg-bps').value);var expMax=parseFloat(document.getElementById('eg-exp').value);if(!name){S.feedback='El nombre es obligatorio.';S.fbType='err';render();return;}if(!bps||bps<=0){S.feedback='El BPS debe ser mayor a 0.';S.fbType='err';render();return;}if(!expMax||expMax<=0){S.feedback='La exposicion maxima debe ser mayor a 0.';S.fbType='err';render();return;}if(id==='NEW'){GROUPS.push({id:'GRP-00'+(GROUPS.length+1),name:name,bps:bps,expMax:expMax,members:0});S.feedback='Grupo creado.';}else{var g=GROUPS.find(function(x){return x.id===id;});if(g){g.name=name;g.bps=bps;g.expMax=expMax;}S.feedback='Grupo actualizado.';}S.fbType='ok';render();setTimeout(function(){S.editGroup=null;S.feedback='';render();},1500);}
+function renderEditClientModal(){
+  var c=CLIENTS.find(function(x){return x.id===S.editClient;});if(!c)return '';
+  var be=c.bps!=null?c.bps:(GROUPS.find(function(g){return g.name===c.group;})||{}).bps||'-';
+  return '<div class="modal-backdrop" onclick="if(event.target===this)closeEditClient()"><div class="modal" onclick="event.stopPropagation()">'+
+    '<div class="modal-header"><div><div class="modal-title">Editar Pricing</div><div class="modal-sub">'+c.name+'</div></div><button class="close-btn" onclick="closeEditClient()">x</button></div>'+
+    '<div class="modal-body"><div class="form-grid">'+
+      '<div class="form-group full"><label class="form-label">Grupo</label><select id="ec-group" class="form-input"><option value="">Sin grupo asignado</option>'+GROUPS.map(function(g){return '<option value="'+g.name+'"'+(c.group===g.name?' selected':'')+'>'+g.name+' ('+g.bps+' BPS)</option>';}).join('')+'</select></div>'+
+      '<div class="form-group"><label class="form-label">BPS Override (personal)</label><input id="ec-bps" class="form-input" type="number" placeholder="Dejar vacio para usar grupo" value="'+(c.bps!=null?c.bps:'')+'"><span class="form-hint">Prevalece sobre el BPS del grupo</span></div>'+
+      '<div class="form-group"><label class="form-label">Max. Exposicion Override</label><input id="ec-exp" class="form-input" type="number" placeholder="Dejar vacio para usar grupo" value="'+(c.expMax||'')+'"><span class="form-hint">Capital maximo en reservas activas</span></div>'+
+    '</div>'+
+    '<div style="background:var(--g50);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--g600);margin-top:4px">Precedencia: Override personal &gt; Grupo &gt; Default del sistema</div>'+
+    '<div style="margin-top:10px;font-size:12px;color:var(--g600)">BPS efectivo actual: <strong style="color:var(--violet)">'+be+' BPS</strong> (fuente: '+c.bpsS+')</div>'+
+    (S.feedback?'<div class="save-fb '+S.fbType+'" style="margin-top:10px">'+S.feedback+'</div>':'')+
+    '</div><div class="modal-footer"><button class="btn" onclick="closeEditClient()">Cancelar</button><button class="btn btn-primary" onclick="saveClientPricing(\''+c.id+'\')">Guardar</button></div></div></div>';
+}
+function saveClientPricing(id){var c=CLIENTS.find(function(x){return x.id===id;});var bps=document.getElementById('ec-bps').value;var exp=document.getElementById('ec-exp').value;var grp=document.getElementById('ec-group').value;c.group=grp||null;c.bps=bps!==''?parseFloat(bps):null;c.bpsS=bps!==''?'CLIENT':(grp?'GROUP':'UNDEFINED');c.expMax=exp!==''?parseFloat(exp):null;c.expS=exp!==''?'CLIENT':(grp?'GROUP':'NONE');S.feedback='Pricing actualizado.';S.fbType='ok';render();setTimeout(function(){S.editClient=null;S.feedback='';render();},1500);}
+
+function renderRfq(){
+  var content=renderLotes();
+  var overlay=S.selectedLot?renderLotModal():S.lotAction&&S.lotAction.type==='close_blocked'?renderCloseBlockedModal():S.lotAction&&S.lotAction.type==='create'?renderCreateLotModal():'';
+  return '<div class="page-header"><div><div class="page-title">RFQ Gateway</div><div class="page-sub">Gestion de lotes de liquidez GPS/PPS</div></div></div>'+content+overlay;
+}
+
+function render(){
+  var pc=document.getElementById('page-content');
+  switch(S.page){
+    case 'quotes':pc.innerHTML=renderQuotesPage();break;
+    case 'bots':pc.innerHTML=placeholder('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>','Bots','Estrategias automatizadas sin cambios.');break;
+    case 'clientes':pc.innerHTML='<div class="page-header"><div><div class="page-title">Clientes</div><div class="page-sub">Gestion de BPS, grupos y exposicion</div></div></div>'+renderClientes()+(S.editClient?renderEditClientModal():'')+(S.editGroup?renderEditGroupModal():'');break;
+    default:pc.innerHTML=renderRfq();
+  }
+}
+render();
+</script>
+</body>
+</html>

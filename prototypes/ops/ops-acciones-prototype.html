@@ -1,0 +1,1640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>OPS · Ardua</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0A0A0A;--surf:#111;--card:#181818;--card2:#1E1E1E;
+  --b1:#1E1E1E;--b2:#272727;--b3:#333;--b4:#444;
+  --t1:#F0F0F0;--t2:#C0C0C0;--t3:#888;--t4:#4A4A4A;
+  --red:#EF4444;--red-bg:rgba(239,68,68,.08);
+  --green:#22C55E;--green-bg:rgba(34,197,94,.08);
+  --blue:#3B82F6;--blue-bg:rgba(59,130,246,.09);
+  --amber:#F59E0B;--amber-bg:rgba(245,158,11,.09);
+  --teal:#2DD4BF;--teal-bg:rgba(45,212,191,.08);
+  --purple:#A78BFA;
+  --f:'DM Sans',system-ui,sans-serif;
+}
+html,body{background:var(--bg);color:var(--t1);font-family:var(--f);font-size:14px;min-height:100vh;-webkit-font-smoothing:antialiased}
+.app{display:flex;min-height:100vh}
+
+/* ── SIDEBAR ─────────────────────────────────────────────────── */
+.sb{width:200px;min-height:100vh;background:var(--surf);border-right:1px solid var(--b1);
+  display:flex;flex-direction:column;padding:16px 10px 20px;
+  position:fixed;left:0;top:0;bottom:0;z-index:50;gap:2px}
+.sb-brand{display:flex;align-items:center;gap:10px;padding:6px 10px 18px;border-bottom:1px solid var(--b1);margin-bottom:6px}
+.sb-logo{width:28px;height:28px;border-radius:7px;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0}
+.sb-brand-info{display:flex;flex-direction:column;gap:1px}
+.sb-brand-name{font-size:13px;font-weight:700;color:var(--t1);letter-spacing:-.2px}
+.sb-brand-sub{font-size:10px;color:var(--t4);font-weight:500}
+.sb-section{font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--t4);padding:12px 10px 5px}
+.ni{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;
+  color:var(--t3);cursor:pointer;transition:all .15s;font-size:13px;font-weight:500;
+  text-decoration:none;user-select:none}
+.ni:hover{background:var(--card);color:var(--t2)}
+.ni.on{background:var(--red-bg);color:var(--red);font-weight:600}
+.ni svg{width:15px;height:15px;flex-shrink:0}
+.sb-sp{flex:1}
+.sb-user{display:flex;align-items:center;gap:9px;padding:8px 10px;border-top:1px solid var(--b1);margin-top:6px;padding-top:14px}
+.sb-av{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--purple));display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.sb-user-name{font-size:12px;font-weight:600;color:var(--t2)}
+.sb-user-email{font-size:10px;color:var(--t4)}
+
+/* ── MAIN ────────────────────────────────────────────────────── */
+.main{margin-left:200px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{height:50px;background:var(--surf);border-bottom:1px solid var(--b1);display:flex;align-items:center;padding:0 22px;position:sticky;top:0;z-index:40}
+.bc{display:flex;align-items:center;gap:6px;font-size:13px}
+.bc-dim{color:var(--t4)}.bc-sep{color:var(--t4)}.bc-cur{color:var(--t2);font-weight:600}
+.page{padding:22px 22px 36px;display:none}
+.page.on{display:block}
+
+/* ── PAGE HEADER ─────────────────────────────────────────────── */
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px}
+.ph-left{}
+.ph-title{font-size:22px;font-weight:800;color:var(--t1);letter-spacing:-.5px}
+.ph-sub{font-size:12px;color:var(--t3);margin-top:3px;font-weight:400}
+.ph-actions{display:flex;align-items:center;gap:8px;margin-top:2px}
+
+/* ── BUTTONS ─────────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:8px;
+  font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;font-family:var(--f);
+  white-space:nowrap;border:1px solid var(--b3);background:var(--card2);color:var(--t2)}
+.btn:hover{border-color:var(--b4);color:var(--t1);background:#222}
+.btn svg{width:14px;height:14px}
+.btn-p{background:#1D4ED8;border-color:#2563EB;color:#fff;font-weight:700}
+.btn-p:hover{background:#1E40AF;color:#fff;border-color:#1D4ED8}
+
+/* ── KPI CARDS ───────────────────────────────────────────────── */
+.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:22px}
+.kpi{background:var(--card2);border:1px solid var(--b2);border-radius:11px;padding:16px 18px}
+.kpi-label{font-size:9px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--t4);margin-bottom:8px}
+.kpi-val{font-size:24px;font-weight:800;color:var(--t1);letter-spacing:-.5px;line-height:1}
+.kpi-val.kpi-red{color:var(--red)}
+.kpi-val.kpi-green{color:var(--green)}
+.kpi-val.kpi-amber{color:var(--amber)}
+.kpi-sub{font-size:11px;color:var(--t4);margin-top:5px}
+
+/* ── TABLE SECTION ───────────────────────────────────────────── */
+.sec-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.sec-title{font-size:14px;font-weight:700;color:var(--t2)}
+.sec-count{font-size:11px;font-weight:600;color:var(--t4);background:var(--card);border:1px solid var(--b2);padding:2px 8px;border-radius:20px}
+.sec-sp{flex:1}
+.search-wrap{position:relative}
+.search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:var(--t4);pointer-events:none}
+.search-input{background:var(--card);border:1px solid var(--b2);color:var(--t1);padding:7px 12px 7px 32px;
+  border-radius:8px;font-size:13px;font-family:var(--f);outline:none;transition:border-color .15s;width:220px}
+.search-input:focus{border-color:var(--blue)}
+.search-input::placeholder{color:var(--t4)}
+
+/* ── FILTER BAR ──────────────────────────────────────────────── */
+.fbar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.fsel{appearance:none;background:var(--card);border:1px solid var(--b2);color:var(--t2);
+  padding:7px 30px 7px 11px;border-radius:8px;font-size:12px;font-weight:500;font-family:var(--f);
+  outline:none;cursor:pointer;transition:border-color .15s;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center}
+.fsel:focus{border-color:var(--blue)}.fsel option{background:#1a1a1a}
+.fsel.active{border-color:var(--blue);color:var(--t1)}
+.f-div{width:1px;height:20px;background:var(--b2)}
+.fchip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:6px;
+  font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--b2);background:var(--card);
+  color:var(--t3);transition:all .15s;font-family:var(--f)}
+.fchip:hover{border-color:var(--b3);color:var(--t2)}.fchip.on{border-color:var(--blue);background:var(--blue-bg);color:#93C5FD}
+.fchip svg{width:11px;height:11px}
+.f-res{font-size:11px;color:var(--t4);padding:0 4px}
+
+/* ── TABLE ───────────────────────────────────────────────────── */
+.tw{background:var(--card2);border:1px solid var(--b2);border-radius:10px;overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead tr{border-bottom:1px solid var(--b2)}
+th{padding:9px 14px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);white-space:nowrap}
+th:first-child{padding-left:18px}th.tc{text-align:center;width:40px;padding-right:14px}
+tbody tr{border-bottom:1px solid var(--b1);transition:background .1s;cursor:default}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+td{padding:10px 14px;vertical-align:middle}
+td:first-child{padding-left:18px}td.tc{text-align:center;padding-right:14px}
+.cd{font-size:12px;color:var(--t3);white-space:nowrap}
+.cc{font-size:13px;font-weight:600;color:var(--t2);white-space:nowrap}
+.cdocket{font-size:10px;color:var(--t4);margin-top:2px}
+.cr{font-size:12px;color:var(--t3);font-weight:500}
+.tp{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--t2);white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.da{background:var(--amber)}.dt{background:var(--teal)}.dr{background:var(--red)}.dg{background:var(--green)}.db{background:var(--blue)}
+.ap{font-size:13px;font-weight:700;color:var(--green);white-space:nowrap}
+.an{font-size:13px;font-weight:700;color:var(--red);white-space:nowrap}
+.au{font-size:13px;font-weight:700;color:var(--t2);white-space:nowrap}
+.pbadge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:700;letter-spacing:.03em;white-space:nowrap}
+.pa{background:rgba(167,139,250,.1);color:#C4B5FD;border:1px solid rgba(167,139,250,.18)}
+.pc{background:rgba(245,158,11,.1);color:#FCD34D;border:1px solid rgba(245,158,11,.18)}
+.pbr{background:rgba(59,130,246,.1);color:#93C5FD;border:1px solid rgba(59,130,246,.18)}
+.pbi{background:rgba(34,197,94,.08);color:#86EFAC;border:1px solid rgba(34,197,94,.16)}
+.ac-none{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:600;background:rgba(255,255,255,.03);border:1px solid var(--b2);color:var(--t4);white-space:nowrap}
+.ac-none svg{width:11px;height:11px}
+.ac-done{display:flex;flex-direction:column;gap:1px}
+.ac-bank{font-size:12px;font-weight:600;color:var(--t2)}.ac-sub{font-size:11px;color:var(--t3)}.ac-ent{font-size:10px;color:var(--t4)}
+
+/* ── ACTIONS ─────────────────────────────────────────────────── */
+.aw{position:relative;display:inline-block}
+.abtn{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;color:var(--t4);cursor:pointer;transition:all .15s;font-family:var(--f)}
+.abtn:hover,.abtn.on{background:var(--card);border-color:var(--b2);color:var(--t2)}.abtn svg{width:14px;height:14px}
+.dd{position:absolute;right:0;top:calc(100% + 4px);z-index:300;background:#1E1E1E;border:1px solid var(--b3);border-radius:9px;padding:5px;min-width:210px;box-shadow:0 8px 28px rgba(0,0,0,.6);display:none}
+.dd.on{display:block}
+.ddl{padding:5px 10px 3px;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t4)}
+.di{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;font-size:13px;font-weight:500;color:var(--t2);cursor:pointer;transition:background .1s;border:none;background:none;font-family:var(--f);text-align:left;white-space:nowrap;width:100%}
+.di:hover{background:rgba(255,255,255,.06);color:var(--t1)}.di.dis{color:var(--t4);cursor:not-allowed;pointer-events:none}
+.di svg{width:14px;height:14px;flex-shrink:0}
+.dtag{margin-left:auto;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,.05);color:var(--t4);text-transform:uppercase;letter-spacing:.04em}
+.ddiv{height:1px;background:var(--b1);margin:4px 0}
+
+/* ── PAGINATION ──────────────────────────────────────────────── */
+.pag{display:flex;align-items:center;justify-content:space-between;margin-top:14px}
+.pi{font-size:12px;color:var(--t3)}.pi b{color:var(--t2);font-weight:600}
+.pbs{display:flex;align-items:center;gap:4px}
+.pb2{width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:var(--f);border:1px solid var(--b2);background:var(--card);color:var(--t3)}
+.pb2:hover{border-color:var(--b3);color:var(--t1)}.pb2.cur{border-color:var(--blue);background:var(--blue-bg);color:var(--blue)}.pb2 svg{width:12px;height:12px}
+.psh{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--t3)}
+.psh select{background:var(--card);border:1px solid var(--b2);color:var(--t2);padding:4px 8px;border-radius:6px;font-size:12px;font-family:var(--f);outline:none;cursor:pointer}
+
+/* ── QUOTES MODULE ───────────────────────────────────────────── */
+.qtabs{display:flex;gap:2px;border-bottom:1px solid var(--b1);margin-bottom:20px}
+.qtab{position:relative;display:flex;align-items:center;gap:6px;padding:10px 14px;font-size:13px;font-weight:500;color:var(--t3);cursor:pointer;border:none;background:none;font-family:var(--f);transition:color .15s}
+.qtab:hover{color:var(--t2)}.qtab.on{color:var(--t1);font-weight:600}
+.qtab.on::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--red);border-radius:2px 2px 0 0}
+.qtab svg{width:13px;height:13px}
+.qpanel{display:none}.qpanel.on{display:block}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:5px;font-size:11px;font-weight:700;letter-spacing:.03em;white-space:nowrap}
+.badge-green{background:var(--green-bg);color:var(--green);border:1px solid rgba(34,197,94,.2)}
+.badge-amber{background:var(--amber-bg);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+.badge-blue{background:var(--blue-bg);color:#93C5FD;border:1px solid rgba(59,130,246,.2)}
+.badge-gray{background:rgba(255,255,255,.04);color:var(--t4);border:1px solid var(--b2)}
+.badge-red{background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.badge-buy{background:var(--teal-bg);color:var(--teal);border:1px solid rgba(45,212,191,.2)}
+.badge-sell{background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.term-badge{display:inline-flex;align-items:center;justify-content:center;width:26px;height:20px;border-radius:5px;font-size:10px;font-weight:800;letter-spacing:.03em}
+.term-t0{background:var(--green-bg);color:var(--green);border:1px solid rgba(34,197,94,.2)}
+.term-t1{background:var(--amber-bg);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+.term-t2{background:var(--blue-bg);color:#93C5FD;border:1px solid rgba(59,130,246,.2)}
+
+/* ── TEMPORAL FILTER ─────────────────────────────────────────── */
+.tfilter{display:flex;align-items:center;gap:4px;background:var(--card);border:1px solid var(--b2);border-radius:9px;padding:3px}
+.tpill{padding:5px 14px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:none;color:var(--t3);font-family:var(--f);transition:all .15s;white-space:nowrap}
+.tpill:hover{color:var(--t2)}.tpill.on{background:var(--card2);color:var(--t1);box-shadow:0 1px 3px rgba(0,0,0,.3)}
+/* ── CLICKABLE KPI CARDS ─────────────────────────────────────── */
+.kpi-btn{cursor:pointer;transition:border-color .15s,background .15s}
+/* ── PORTAL FILTER SHARED ─────────────────────────────────────── */
+button.fsel{display:inline-flex;align-items:center;gap:4px}
+button.fsel.active{border-color:var(--blue);color:#93C5FD}
+button.fsel.open{border-color:var(--b3);color:var(--t1)}
+.di-chk{width:13px;height:13px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--blue);opacity:0}
+.di-chk.on{opacity:1}
+.di-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;display:inline-block;margin-right:1px}
+.kpi-btn:hover{border-color:var(--b3);background:#212121}
+.kpi-btn.kpi-active{border-color:var(--blue);background:rgba(59,130,246,.06)}
+/* ── STATUS MULTI-SELECT TRIGGER ─────────────────────────────── */
+.qs-btn{
+  appearance:none;background:var(--card);border:1px solid var(--b2);color:var(--t2);
+  padding:7px 11px;border-radius:8px;font-size:12px;font-weight:500;
+  font-family:var(--f);outline:none;cursor:pointer;transition:border-color .15s;
+  white-space:nowrap;display:inline-flex;align-items:center;gap:6px;
+}
+.qs-btn:hover{border-color:var(--b3);color:var(--t1)}
+.qs-btn.filtered{border-color:var(--blue);color:#93C5FD}
+.qs-btn svg{width:10px;height:10px;opacity:.6;transition:transform .15s;flex-shrink:0}
+.qs-btn.open svg{transform:rotate(180deg)}
+/* ── CHECKBOX ITEMS IN DD PORTAL ─────────────────────────────── */
+.di-cb{
+  display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:6px;
+  font-size:13px;font-weight:500;color:var(--t2);cursor:pointer;
+  transition:background .1s;border:none;background:none;font-family:var(--f);
+  text-align:left;white-space:nowrap;width:100%;
+}
+.di-cb:hover{background:rgba(255,255,255,.06);color:var(--t1)}
+.di-cb input[type=checkbox]{
+  appearance:none;-webkit-appearance:none;width:15px;height:15px;min-width:15px;
+  border-radius:4px;border:1.5px solid var(--b3);background:transparent;
+  cursor:pointer;transition:all .15s;position:relative;
+}
+.di-cb input[type=checkbox]:checked{background:var(--blue);border-color:var(--blue)}
+.di-cb input[type=checkbox]:checked::after{
+  content:'';position:absolute;left:4px;top:1px;width:5px;height:8px;
+  border:2px solid #fff;border-top:none;border-left:none;
+  transform:rotate(45deg);display:block;
+}
+.prox{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:400px;gap:14px;color:var(--t4)}
+.prox-icon{width:56px;height:56px;border-radius:16px;background:var(--card);border:1px solid var(--b2);display:flex;align-items:center;justify-content:center}
+.prox-icon svg{width:24px;height:24px}
+.prox-title{font-size:16px;font-weight:700;color:var(--t3)}
+.prox-sub{font-size:13px;color:var(--t4)}
+.empty-row td{padding:40px;text-align:center;color:var(--t4);font-size:13px}
+
+/* ── MODAL ───────────────────────────────────────────────────── */
+.ov{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.75);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:16px}
+.ov.on{display:flex}
+.modal{background:#1A1A1A;border:1px solid var(--b3);border-radius:14px;width:440px;max-width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.7)}
+.mh{display:flex;align-items:flex-start;justify-content:space-between;padding:20px 20px 0}
+.mt{font-size:16px;font-weight:700;color:var(--t1)}.ms{font-size:12px;color:var(--t3);margin-top:3px}
+.mx{width:28px;height:28px;border-radius:6px;border:1px solid var(--b3);background:transparent;color:var(--t3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;font-family:var(--f);flex-shrink:0}
+.mx:hover{background:var(--card2);color:var(--t1)}.mx svg{width:13px;height:13px}
+.mb{padding:16px 20px 0}
+.mref{background:#111;border:1px solid var(--b2);border-radius:8px;padding:12px 14px;margin-bottom:16px}
+.mrefl{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t4);margin-bottom:4px}
+.mrefid{font-family:'Courier New',monospace;font-size:11px;color:var(--t3)}
+.mrefd{font-size:12px;color:var(--t3);margin-top:5px}
+.info{background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.14);border-radius:8px;padding:10px 13px;margin-bottom:15px;font-size:12px;color:#93C5FD;line-height:1.55}
+.info svg{width:13px;height:13px;display:inline;vertical-align:-2px;margin-right:4px}
+.fg{margin-bottom:13px}
+.fl{display:block;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3);margin-bottom:6px}
+.fs{width:100%;appearance:none;background:#111;border:1px solid var(--b3);color:var(--t1);padding:10px 36px 10px 12px;border-radius:8px;font-size:13px;font-family:var(--f);font-weight:500;outline:none;cursor:pointer;transition:border-color .15s;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.fs:focus{border-color:var(--blue)}.fs:disabled{opacity:.38;cursor:not-allowed}.fs option{background:#1a1a1a}
+.fh{font-size:11px;color:var(--t4);margin-top:4px}
+.mf{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid var(--b1)}
+.bca{padding:8px 15px;border-radius:7px;font-size:13px;font-weight:600;border:1px solid var(--b3);background:transparent;color:var(--t3);cursor:pointer;font-family:var(--f);transition:all .15s}
+.bca:hover{color:var(--t1);border-color:var(--b4)}
+.bco{display:flex;align-items:center;gap:6px;padding:8px 18px;border-radius:7px;font-size:13px;font-weight:700;background:#1D4ED8;border:1px solid #2563EB;color:#fff;cursor:pointer;font-family:var(--f);transition:all .15s}
+.bco:hover{background:#1E40AF}.bco:disabled{opacity:.38;cursor:not-allowed}.bco svg{width:13px;height:13px}
+
+/* ── TOAST ───────────────────────────────────────────────────── */
+.twr{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:#1E1E1E;border:1px solid var(--b3);border-radius:10px;padding:12px 16px;max-width:330px;display:flex;align-items:flex-start;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,.6);pointer-events:all;animation:ti .2s ease-out}
+.tic{width:18px;height:18px;border-radius:50%;background:var(--green-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.tic svg{width:10px;height:10px;color:var(--green)}
+.tit{font-size:13px;font-weight:700;color:var(--t1)}.tim{font-size:12px;color:var(--t3);margin-top:2px}
+@keyframes ti{from{transform:translateX(14px);opacity:0}to{transform:translateX(0);opacity:1}}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--b3);border-radius:3px}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ── SIDEBAR ──────────────────────────────────────────────────────── -->
+<nav class="sb">
+  <div class="sb-brand">
+    <div class="sb-logo">A</div>
+    <div class="sb-brand-info">
+      <span class="sb-brand-name">OPS · Ardua</span>
+      <span class="sb-brand-sub">Operaciones</span>
+    </div>
+  </div>
+  <a class="ni" data-mod="home" onclick="nav('home')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+    Home
+  </a>
+  <div class="sb-section">Operaciones</div>
+  <a class="ni on" data-mod="mov" onclick="nav('mov')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>
+    Movimientos
+  </a>
+  <a class="ni" data-mod="quotes" onclick="nav('quotes')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+    Quotes
+  </a>
+  <div class="sb-section">Gestión</div>
+  <a class="ni" data-mod="clientes" onclick="nav('clientes')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+    Clientes
+  </a>
+  <a class="ni" data-mod="bancos" onclick="nav('bancos')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3v3M4 6h16"/></svg>
+    Bancos / Cuentas
+  </a>
+  <a class="ni" data-mod="psp" onclick="nav('psp')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+    PSP
+  </a>
+  <div class="sb-sp"></div>
+  <div class="sb-user">
+    <div class="sb-av">YR</div>
+    <div>
+      <div class="sb-user-name">Yasmani R.</div>
+      <div class="sb-user-email">yrodriguez@ardua</div>
+    </div>
+  </div>
+</nav>
+
+<!-- ── MAIN ──────────────────────────────────────────────────────────── -->
+<div class="main">
+  <div class="topbar">
+    <div class="bc" id="bc">
+      <span class="bc-dim">Personal account</span>
+      <span class="bc-sep">/</span>
+      <span class="bc-cur" id="bc-cur">Movimientos</span>
+    </div>
+  </div>
+
+  <!-- HOME -->
+  <div class="page" id="page-home">
+    <div class="prox">
+      <div class="prox-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></div>
+      <div class="prox-title">Home</div>
+      <div class="prox-sub">Próximamente</div>
+    </div>
+  </div>
+
+  <!-- MOVIMIENTOS -->
+  <div class="page on" id="page-mov">
+    <div class="ph">
+      <div class="ph-left">
+        <div class="ph-title">Movimientos</div>
+        <div class="ph-sub">Registros de entrada y salida de fondos</div>
+      </div>
+      <div class="ph-actions">
+        <button class="btn">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3-3m0 0l3 3m-3-3v12"/></svg>
+          Import SWIFT
+        </button>
+        <button class="btn btn-p">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Create Movement
+        </button>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="kpi">
+        <div class="kpi-label">Total movimientos</div>
+        <div class="kpi-val" id="kpi-total">10</div>
+        <div class="kpi-sub">en el período</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Entradas</div>
+        <div class="kpi-val kpi-green" id="kpi-in">2</div>
+        <div class="kpi-sub" id="kpi-in-sub">Deposits</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Salidas</div>
+        <div class="kpi-val kpi-red" id="kpi-out">1</div>
+        <div class="kpi-sub" id="kpi-out-sub">Withdrawals</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Internos</div>
+        <div class="kpi-val" id="kpi-otros">9</div>
+        <div class="kpi-sub">ni Deposit ni Withdrawal</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Sin asignar</div>
+        <div class="kpi-val kpi-amber" id="kpi-unassigned">6</div>
+        <div class="kpi-sub">salidas sin banco/cuenta</div>
+      </div>
+    </div>
+
+    <!-- Table header + search + filters -->
+    <div class="sec-head" style="flex-wrap:wrap;gap:8px">
+      <span class="sec-title">Activity</span>
+      <div style="width:16px"></div>
+      <div class="search-wrap">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <input class="search-input" id="mov-search" placeholder="Buscar por nombre de cliente..." oninput="renderMov()" style="width:240px"/>
+      </div>
+      <div class="sec-sp"></div>
+      <button class="fsel" id="btn-f-periodo" onclick="openFDD(event,'f-periodo')" style="font-weight:600">Período: Día</button>
+      <div style="width:1px;height:20px;background:var(--b2)"></div>
+      <button class="fsel" id="btn-f-tipo"    onclick="openFDD(event,'f-tipo')">Tipo</button>
+      <button class="fsel" id="btn-f-rail"    onclick="openFDD(event,'f-rail')">Rail</button>
+      <button class="fsel" id="btn-f-partner" onclick="openFDD(event,'f-partner')">Partner</button>
+      <button class="fsel" id="btn-f-assign"  onclick="openFDD(event,'f-assign')">Estructura / Cuenta</button>
+      <span class="f-res" id="f-res"></span>
+    </div>
+
+    <!-- Movements table -->
+    <div class="tw">
+      <table>
+        <thead><tr>
+          <th>Date</th><th>Client</th><th>Rail</th><th>Type</th>
+          <th>Partner</th><th>Amount</th>
+          <th>Banco / Cuenta <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9px;color:var(--t4)">salida</span></th>
+          <th class="tc"></th>
+        </tr></thead>
+        <tbody id="mov-tbody"></tbody>
+      </table>
+    </div>
+    <div class="pag">
+      <div class="pi">Page <b>2</b> of 757 &nbsp;·&nbsp; 7,562 total movements</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="psh">Show:<select><option>10</option><option>25</option><option>50</option></select></div>
+        <div class="pbs">
+          <button class="pb2"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
+          <button class="pb2">1</button><button class="pb2 cur">2</button><button class="pb2">3</button>
+          <button class="pb2" style="width:auto;padding:0 8px;font-size:11px">…</button><button class="pb2">757</button>
+          <button class="pb2"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUOTES -->
+  <div class="page" id="page-quotes">
+    <div class="ph">
+      <div class="ph-left">
+        <div class="ph-title">Quotes</div>
+        <div class="ph-sub">Operaciones de cambio y transferencias</div>
+      </div>
+      <div class="ph-actions">
+        <button class="btn btn-p">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Crear Quote
+        </button>
+      </div>
+    </div>
+
+    <!-- KPI Cards — clickeables, filtran la tabla -->
+    <div class="cards" style="grid-template-columns:repeat(5,1fr)">
+      <div class="kpi kpi-btn" id="qcard-all" onclick="setQFilter(['PENDING','ACCEPTED','COMPLETED','CANCELLED'])">
+        <div class="kpi-label">Total</div>
+        <div class="kpi-val" id="q-kpi-all">14</div>
+        <div class="kpi-sub">todos los registros</div>
+      </div>
+      <div class="kpi kpi-btn kpi-active" id="qcard-activos" onclick="setQFilter(['PENDING','ACCEPTED'])">
+        <div class="kpi-label">Activos</div>
+        <div class="kpi-val" id="q-kpi-activos">5</div>
+        <div class="kpi-sub">no terminales</div>
+      </div>
+      <div class="kpi kpi-btn" id="qcard-pending" onclick="setQFilter(['PENDING'])">
+        <div class="kpi-label">Pendientes</div>
+        <div class="kpi-val kpi-amber" id="q-kpi-pending">3</div>
+        <div class="kpi-sub">esperando confirmación</div>
+      </div>
+      <div class="kpi kpi-btn" id="qcard-accepted" onclick="setQFilter(['ACCEPTED'])">
+        <div class="kpi-label">Aceptados</div>
+        <div class="kpi-val kpi-green" id="q-kpi-accepted">2</div>
+        <div class="kpi-sub">en proceso</div>
+      </div>
+      <div class="kpi kpi-btn" id="qcard-completed" onclick="setQFilter(['COMPLETED'])">
+        <div class="kpi-label">Completados</div>
+        <div class="kpi-val" id="q-kpi-completed">8</div>
+        <div class="kpi-sub">liquidados</div>
+      </div>
+    </div>
+
+    <!-- Single unified table -->
+    <div class="sec-head" style="flex-wrap:wrap;gap:8px">
+      <span class="sec-title">Quotes</span>
+      <div style="width:16px"></div>
+      <div class="search-wrap">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <input class="search-input" id="q-search" placeholder="Buscar por nombre de cliente..." oninput="renderQuotes()" style="width:240px"/>
+      </div>
+      <div class="sec-sp"></div>
+      <div style="width:1px;height:20px;background:var(--b2)"></div>
+      <button class="fsel" id="btn-q-periodo" onclick="openFDD(event,'q-periodo')" style="font-weight:600">Período: Día</button>
+      <!-- Multi-select Estado -->
+      <button class="qs-btn filtered" id="q-status-btn" onclick="openStatusDD(event)">
+        Estado: Activos
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <button class="fsel" id="btn-q-op"      onclick="openFDD(event,'q-op')">Operación</button>
+      <button class="fsel" id="btn-q-term"    onclick="openFDD(event,'q-term')">Plazo</button>
+    </div>
+    <div class="tw" style="margin-top:12px">
+      <table>
+        <thead><tr>
+          <th>Fecha</th><th>Cliente</th><th>Operación</th>
+          <th>Origen</th><th>Destino</th><th>TC</th>
+          <th>Plazo</th><th>F. Liq.</th><th>Status</th>
+        </tr></thead>
+        <tbody id="q-tbody"></tbody>
+      </table>
+    </div>
+    <div class="pag" id="q-pag">
+      <div class="pi" id="q-pag-info">Page <b>1</b> of 1 &nbsp;·&nbsp; 0 resultados</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="psh">Show:
+          <select id="q-limit" onchange="qSetLimit(this.value)">
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+          </select>
+        </div>
+        <div class="pbs" id="q-pbs"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BANCOS / CUENTAS -->
+  <div class="page" id="page-bancos">
+    <div class="ph">
+      <div class="ph-left">
+        <div class="ph-title">Bancos / Cuentas</div>
+        <div class="ph-sub">Catálogo maestro de estructuras y cuentas de Ardua — con configuración contable</div>
+      </div>
+      <div class="ph-actions">
+        <button class="btn">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21H5a2 2 0 01-2-2V7l7-7h9a2 2 0 012 2v17z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 3v4a1 1 0 001 1h4"/></svg>
+          Nueva Estructura
+        </button>
+        <button class="btn btn-p">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Nueva Cuenta
+        </button>
+      </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="cards" style="grid-template-columns:repeat(4,1fr)">
+      <div class="kpi">
+        <div class="kpi-label">Estructuras</div>
+        <div class="kpi-val" id="bc-kpi-est">—</div>
+        <div class="kpi-sub">bancos, exchanges y custodios</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Cuentas totales</div>
+        <div class="kpi-val" id="bc-kpi-total">—</div>
+        <div class="kpi-sub">activas en el catálogo</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Config. contable</div>
+        <div class="kpi-val kpi-green" id="bc-kpi-conf">—</div>
+        <div class="kpi-sub">cuentas con cuenta asignada</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Sin configurar</div>
+        <div class="kpi-val kpi-amber" id="bc-kpi-noconf">—</div>
+        <div class="kpi-sub">pendientes de mapeo contable</div>
+      </div>
+    </div>
+
+    <!-- Notice -->
+    <div style="background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.14);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#93C5FD;line-height:1.55">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:13px;height:13px;display:inline;vertical-align:-2px;margin-right:5px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      La configuración contable de este módulo es <strong>preparatoria</strong>. Cuando FIN defina el plan de cuentas operativo del grupo, cada cuenta aquí configurada se validará y vinculará al asiento tipo correspondiente del Motor Contable.
+    </div>
+
+    <!-- Table header + filters -->
+    <div class="sec-head" style="flex-wrap:wrap;gap:8px">
+      <span class="sec-title">Cuentas</span>
+      <div style="width:16px"></div>
+      <div class="search-wrap">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <input class="search-input" id="bc-search" placeholder="Buscar por banco o cuenta..." oninput="renderBancos()" style="width:220px"/>
+      </div>
+      <div class="sec-sp"></div>
+      <div style="width:1px;height:20px;background:var(--b2)"></div>
+      <button class="fsel" id="btn-bc-soc"      onclick="openFDD(event,'bc-soc')">Sociedad</button>
+      <button class="fsel" id="btn-bc-tipoestr" onclick="openFDD(event,'bc-tipoestr')">Tipo</button>
+      <button class="fsel" id="btn-bc-tipocta"  onclick="openFDD(event,'bc-tipocta')">Tipo de cuenta</button>
+      <button class="fsel" id="btn-bc-mon"      onclick="openFDD(event,'bc-mon')">Moneda</button>
+      <button class="fsel" id="btn-bc-cont"     onclick="openFDD(event,'bc-cont')">Config. contable</button>
+    </div>
+
+    <div class="tw" style="margin-top:12px">
+      <table>
+        <thead><tr>
+          <th>Sociedad</th><th>Banco / Estructura</th><th>Tipo</th>
+          <th>Tipo de cuenta</th><th>Moneda</th><th>Nro. / Address</th>
+          <th>Cuenta padre</th><th>Estado</th><th>Cuenta contable</th>
+          <th class="tc"></th>
+        </tr></thead>
+        <tbody id="bc-tbody"></tbody>
+      </table>
+    </div>
+    <div class="pag" id="bc-pag">
+      <div class="pi" id="bc-pag-info">Page <b>1</b> of 1 &nbsp;·&nbsp; 0 resultados</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="psh">Show:
+          <select id="bc-limit" onchange="bcSetLimit(this.value)">
+            <option value="10" selected>10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
+        <div class="pbs" id="bc-pbs"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLIENTES -->
+  <div class="page" id="page-clientes">
+    <div class="prox">
+      <div class="prox-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
+      <div class="prox-title">Clientes</div>
+      <div class="prox-sub">Próximamente</div>
+    </div>
+  </div>
+
+  <!-- PSP -->
+  <div class="page" id="page-psp">
+    <div class="prox">
+      <div class="prox-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg></div>
+      <div class="prox-title">PSP</div>
+      <div class="prox-sub">Próximamente</div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- MODAL -->
+<div class="ov" id="ov">
+  <div class="modal">
+    <div class="mh">
+      <div><div class="mt">Asignar Banco y Cuenta</div><div class="ms">Origen de fondos — movimiento de salida</div></div>
+      <button class="mx" id="mx"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+    </div>
+    <div class="mb">
+      <div class="mref">
+        <div class="mrefl">Movimiento</div>
+        <div class="mrefid" id="rid">—</div>
+        <div class="mrefd" id="rdet">—</div>
+      </div>
+      <div class="info">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        En movimientos de salida, el banco y la cuenta de Ardua se definen en este paso según disponibilidad de fondos y criterio operativo.
+      </div>
+      <div class="fg">
+        <label class="fl">Sociedad</label>
+        <select class="fs" id="ss">
+          <option value="">Seleccionar sociedad...</option>
+          <option value="Circuit Pay SA">Circuit Pay SA — PSAV · Argentina</option>
+          <option value="Haz Pagos SA">Haz Pagos SA — PSP · Argentina</option>
+          <option value="_ardua" disabled>Ardua Solutions Corp — MSB · Canadá (sin cuentas aún)</option>
+          <option value="_astra" disabled>Astra Ventures — VASP · Polonia (sin cuentas aún)</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">Estructura / Banco</label>
+        <select class="fs" id="sb" disabled><option value="">Seleccionar sociedad primero...</option></select>
+        <span class="fh">Exchange, banco, ALyC u otro custodio de Ardua</span>
+      </div>
+      <div class="fg" style="margin-bottom:0">
+        <label class="fl">Cuenta</label>
+        <select class="fs" id="sc" disabled><option value="">Seleccionar estructura primero...</option></select>
+        <span class="fh">Moneda y número de cuenta</span>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="bca" id="bca">Cancelar</button>
+      <button class="bco" id="bco" disabled>
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+        Confirmar asignación
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ACCOUNTING CONFIG MODAL -->
+<div class="ov" id="bc-ov">
+  <div class="modal">
+    <div class="mh">
+      <div>
+        <div class="mt">Configurar cuenta contable</div>
+        <div class="ms">Vinculación con el plan de cuentas operativo</div>
+      </div>
+      <button class="mx" id="bc-mx"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+    </div>
+    <div class="mb">
+      <!-- Readonly context -->
+      <div class="mref">
+        <div class="mrefl">Cuenta de Ardua</div>
+        <div class="mrefid" id="bc-ref-id">—</div>
+        <div class="mrefd" id="bc-ref-det">—</div>
+      </div>
+      <div class="info">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:13px;height:13px;display:inline;vertical-align:-2px;margin-right:4px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Configuración provisional. Será validada cuando FIN defina el plan de cuentas operativo del grupo.
+      </div>
+      <div class="fg">
+        <label class="fl">Código de cuenta contable</label>
+        <input class="fs" id="bc-cod" placeholder="Ej: 1.1.01" style="appearance:none;padding:10px 12px;border-radius:8px"/>
+        <span class="fh">Código del plan de cuentas operativo interno (a definir en FIN)</span>
+      </div>
+      <div class="fg">
+        <label class="fl">Nombre de cuenta contable</label>
+        <input class="fs" id="bc-nombre" placeholder="Ej: Banco COINAG - Cta ARS" style="appearance:none;padding:10px 12px;border-radius:8px"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Tipo de cuenta</label>
+        <select class="fs" id="bc-tipocta">
+          <option value="">Seleccionar tipo...</option>
+          <option value="act-disp">Activo corriente — Disponibilidades</option>
+          <option value="act-inv">Activo corriente — Inversiones transitorias</option>
+          <option value="act-cred">Activo corriente — Créditos</option>
+          <option value="act-nc">Activo no corriente</option>
+          <option value="pas-cor">Pasivo corriente</option>
+          <option value="pn">Patrimonio neto</option>
+          <option value="ingreso">Resultado — Ingresos</option>
+          <option value="egreso">Resultado — Egresos</option>
+        </select>
+        <span class="fh">Para cuentas bancarias y de exchanges: Activo corriente — Disponibilidades</span>
+      </div>
+      <div class="fg" style="margin-bottom:0">
+        <label class="fl">Observaciones</label>
+        <input class="fs" id="bc-obs" placeholder="Notas sobre el tratamiento contable..." style="appearance:none;padding:10px 12px;border-radius:8px"/>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="bca" id="bc-cancel">Cancelar</button>
+      <button class="bco" id="bc-confirm">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+        Guardar configuración
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="twr" id="twr"></div>
+
+<script>
+// ── REAL CATALOG ────────────────────────────────────────────────────────
+const CAT = {
+  "Circuit Pay SA": {
+    "ADCAP": ["ARS · Cta 216216","USD cable · Cta 216216","USD · Cta 250761"],
+    "ALLARIA": ["ARS · Cta 303682"],
+    "BINANCE": ["ARS","USD"],
+    "BIND": ["ARS · Cta 3990180/1","USD · Cta 3990180/2","ARS · Cta 3990180/3"],
+    "BITGO": ["ARS","USD"],
+    "BITSO": ["ARS","USD"],
+    "BRIDGE": ["USD"],
+    "BRUBANK": ["ARS · Cta 2504665352001","USD · Cta 2604665352002"],
+    "BULL MARKET": ["ARS · Cta 901731","USD · Cta 901731"],
+    "CENTAURUS": ["ARS · Cta 11385","USD MEP · Cta 11385","USD cable · Cta 11385"],
+    "COHEN": ["ARS · Cta 106656","USD cable · Cta 106656"],
+    "COINAG": ["ARS · Cta 10.045","ARS · Cta 10.046","USD · Cta 10.047","USD · Cta 10.048"],
+    "COINBASE": ["ARS","USD"],
+    "COMERCIO": ["ARS · Cta 356754","USD · Cta 356754"],
+    "CONO SUR": ["ARS · Cta 5911","USD cable · Cta 5911"],
+    "CUCCHIARA": ["ARS · Cta 3400","USD · Cta 3925"],
+    "FV BANK": ["USD · Cta 780001002640"],
+    "INVIU": ["ARS · Cta 229468","USD cable · Cta 871"],
+    "IVSA": ["ARS · Cta 5708","USD cable · Cta 5708","USD MEP · Cta 5708"],
+    "KRAKEN": ["USD"],
+    "LYNX": ["ARS · Cta 2829","USD · Cta 2829"],
+    "PERC": ["USD","ARS"],
+    "STRATO": ["USD · Cta 6.052"]
+  },
+  "Haz Pagos SA": {
+    "ADCAP": ["ARS · Cta 250788","USD bvi · Cta 250788","ARS · Cta 217487","USD cable · Cta 217487","USD MEP · Cta 217487"],
+    "BIND": ["ARS · Cta 4403443/1","ARS · Cta 4403443/2","ARS · Cta 4403443/3","ARS · Cta 4403443/4"],
+    "BRUBANK": ["ARS · Cta 2504679505001"],
+    "BULL MARKET": ["ARS","USD cable"],
+    "CENTAURUS": ["ARS · Cta 11332","USD cable · Cta 11332","USD CV7M · Cta 11332","USD MEP · Cta 11332"],
+    "COINAG": ["ARS · Cta 10.049"],
+    "COMERCIO": ["ARS · Cta 356744","ARS · Cta 356744"],
+    "MACRO": ["ARS","USD"],
+    "REBA": ["ARS · Cta 1607687/1"]
+  }
+};
+
+// ── MOVEMENTS DATA ──────────────────────────────────────────────────────
+const MOVS = [
+  {id:'mv-000',date:'15.04.26 20:10',cl:'Fintech Capital Partners', rail:'SWIFT',    type:'Deposit',      dot:'dg',part:'BRIDGE', pc:'pbr', isOut:false, assign:{soc:'Circuit Pay SA',est:'BRIDGE',  cta:'USD'},                        amt:'+50,000.00 USDC', daysAgo:0},
+  {id:'mv-001',date:'15.04.26 19:22',cl:'Grupo Negrete y Gil',       rail:'INTERNAL', type:'Deduction',    dot:'da',part:'ARDUA',  pc:'pa',  isOut:true,  assign:null,                                                                   amt:'-1.00 USDT',      daysAgo:0},
+  {id:'mv-002',date:'15.04.26 19:07',cl:'Ignacio Ramos',             rail:'INTERNAL', type:'Swap',         dot:'dt',part:'ARDUA',  pc:'pa',  isOut:false, assign:{soc:'Haz Pagos SA', est:'COINAG',  cta:'ARS · Cta 10.049'},            amt:'-1.00 ARS',       daysAgo:0},
+  {id:'mv-003',date:'14.04.26 17:30',cl:'Grupo Negrete y Gil',       rail:'INTERNAL', type:'Collector Out',dot:'da',part:'ARDUA',  pc:'pa',  isOut:true,  assign:null,                                                                   amt:'-8,000.00 ARS',   daysAgo:1},
+  {id:'mv-004',date:'14.04.26 15:21',cl:'Haz Pagos S.A.',            rail:'INTERNAL', type:'Collector In', dot:'da',part:'ARDUA',  pc:'pa',  isOut:false, assign:{soc:'Haz Pagos SA', est:'COINAG',  cta:'ARS · Cta 10.049'},            amt:'+8,000.00 ARS',   daysAgo:1},
+  {id:'mv-005',date:'12.04.26 19:07',cl:'Santiago Montero',          rail:'INTERNAL', type:'Internal OUT', dot:'dt',part:'COINAG', pc:'pc',  isOut:true,  assign:null,                                                                   amt:'-16.00 ARS',      daysAgo:3},
+  {id:'mv-006',date:'12.04.26 14:07',cl:'Ignacio Ramos',             rail:'INTERNAL', type:'Internal IN',  dot:'dt',part:'COINAG', pc:'pc',  isOut:false, assign:{soc:'Circuit Pay SA',est:'COINAG',  cta:'ARS · Cta 10.045'},            amt:'+16.00 ARS',      daysAgo:3},
+  {id:'mv-007',date:'05.04.26 19:07',cl:'Santiago Montero',          rail:'SPE',      type:'Withdrawal',   dot:'dr',part:'COINAG', pc:'pc',  isOut:true,  assign:null,                                                                   amt:'-15.00 ARS',      daysAgo:10},
+  {id:'mv-008',date:'28.03.26 09:56',cl:'Santiago Montero',          rail:'SPE',      type:'Deduction',    dot:'da',part:'COINAG', pc:'pc',  isOut:true,  assign:null,                                                                   amt:'-8.00 ARS',       daysAgo:18},
+  {id:'mv-009',date:'10.03.26 19:06',cl:'Santiago Montero',          rail:'SPE',      type:'Addition',     dot:'dt',part:'COINAG', pc:'pc',  isOut:false, assign:{soc:'Haz Pagos SA', est:'COINAG',  cta:'ARS · Cta 10.049'},            amt:'+15.00 ARS',      daysAgo:36},
+  {id:'mv-010',date:'20.02.26 19:05',cl:'Grupo Negrete y Gil',       rail:'INTERNAL', type:'Collector Out',dot:'da',part:'ARDUA',  pc:'pa',  isOut:true,  assign:null,                                                                   amt:'-15.00 ARS',      daysAgo:54},
+  {id:'mv-011',date:'10.01.26 18:55',cl:'Importaciones del Sur SA',  rail:'WIRE',     type:'Deposit',      dot:'dg',part:'BITGO',  pc:'pbi', isOut:false, assign:{soc:'Circuit Pay SA',est:'BITGO',   cta:'USD'},                        amt:'+25,000.00 USDT', daysAgo:95},
+];
+
+// ── QUOTES DATA (unified) ────────────────────────────────────────────────
+const QUOTES = [
+  {date:'15.04.26 10:05',cl:'Exportadora Pampa Grill',  docket:'AS-00291',op:'SELL',from:'USDC',fa:'250.000',    to:'ARS', ta:'$299.250.000',tc:'$1.197,0',term:'T2',liq:'17.04.26',status:'PENDING',   daysAgo:0},
+  {date:'15.04.26 10:32',cl:'Distribuidora Austral',    docket:'AS-00507',op:'BUY', from:'ARS', fa:'$119.500.000',to:'USDC',ta:'100.000',    tc:'$1.195,0',term:'T1',liq:'16.04.26',status:'ACCEPTED',  daysAgo:0},
+  {date:'15.04.26 11:18',cl:'Energía Renovable SA',     docket:'AS-00144',op:'SELL',from:'USDT',fa:'200.000',    to:'ARS', ta:'$239.000.000',tc:'$1.195,0',term:'T1',liq:'16.04.26',status:'PENDING',   daysAgo:0},
+  {date:'15.04.26 11:47',cl:'Fintech Capital Partners', docket:'AS-00601',op:'BUY', from:'ARS', fa:'$178.800.000',to:'USDC',ta:'150.000',    tc:'$1.192,0',term:'T1',liq:'16.04.26',status:'ACCEPTED',  daysAgo:0},
+  {date:'10.04.26 13:14',cl:'Nordeste Granos SA',       docket:'AS-00289',op:'SELL',from:'USDC',fa:'300.000',    to:'ARS', ta:'$357.000.000',tc:'$1.190,0',term:'T2',liq:'12.04.26',status:'PENDING',   daysAgo:5},
+  {date:'15.04.26 09:14',cl:'Importaciones del Sur',    docket:'AS-00412',op:'BUY', from:'ARS', fa:'$120.000.000',to:'USDC',ta:'100.000',    tc:'$1.200,0',term:'T1',liq:'16.04.26',status:'COMPLETED', daysAgo:0},
+  {date:'15.04.26 09:47',cl:'Grupo Terramar',           docket:'AS-00318',op:'BUY', from:'ARS', fa:'$179.325.000',to:'USDC',ta:'150.000',    tc:'$1.195,5',term:'T1',liq:'16.04.26',status:'COMPLETED', daysAgo:0},
+  {date:'15.04.26 12:30',cl:'Agroindustria Pampas',     docket:'AS-00377',op:'BUY', from:'ARS', fa:'$119.250.000',to:'USDC',ta:'100.000',    tc:'$1.192,5',term:'T0',liq:'15.04.26',status:'COMPLETED', daysAgo:0},
+  {date:'14.04.26 17:02',cl:'Agroindustria Pampas',     docket:'AS-00377',op:'BUY', from:'ARS', fa:'$178.800.000',to:'USDC',ta:'150.000',    tc:'$1.192,0',term:'T1',liq:'15.04.26',status:'COMPLETED', daysAgo:1},
+  {date:'14.04.26 16:14',cl:'Nordeste Granos SA',       docket:'AS-00289',op:'BUY', from:'ARS', fa:'$119.250.000',to:'USDC',ta:'100.000',    tc:'$1.192,5',term:'T0',liq:'14.04.26',status:'COMPLETED', daysAgo:1},
+  {date:'14.04.26 15:50',cl:'Importaciones del Sur',    docket:'AS-00412',op:'SELL',from:'USDT',fa:'150.000',    to:'ARS', ta:'$178.800.000',tc:'$1.192,0',term:'T1',liq:'15.04.26',status:'COMPLETED', daysAgo:1},
+  {date:'14.04.26 14:30',cl:'Logística Global SRL',     docket:'AS-00522',op:'BUY', from:'ARS', fa:'$591.000.000',to:'USDC',ta:'500.000',    tc:'$1.182,0',term:'T1',liq:'15.04.26',status:'COMPLETED', daysAgo:1},
+  {date:'13.04.26 11:05',cl:'Grupo Terramar',           docket:'AS-00318',op:'SELL',from:'USDC',fa:'200.000',    to:'ARS', ta:'$237.700.000',tc:'$1.188,5',term:'T1',liq:'14.04.26',status:'COMPLETED', daysAgo:2},
+  {date:'13.04.26 10:22',cl:'Distribuidora Austral',    docket:'AS-00507',op:'BUY', from:'ARS', fa:'$298.750.000',to:'USDC',ta:'250.000',    tc:'$1.195,0',term:'T1',liq:'14.04.26',status:'CANCELLED',  daysAgo:2},
+];
+const ACTIVE_STATUSES = new Set(['PENDING','ACCEPTED']);
+
+// ── NAV ─────────────────────────────────────────────────────────────────
+const TITLES = {home:'Home',mov:'Movimientos',quotes:'Quotes',clientes:'Clientes',bancos:'Bancos / Cuentas',psp:'PSP'};
+function nav(mod) {
+  document.querySelectorAll('.ni').forEach(n => n.classList.remove('on'));
+  document.querySelector(`.ni[data-mod="${mod}"]`).classList.add('on');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
+  document.getElementById('page-'+mod).classList.add('on');
+  document.getElementById('bc-cur').textContent = TITLES[mod];
+}
+
+// ── GENERIC FILTER DROPDOWN SYSTEM (portal pattern) ─────────────────────
+const MOV_F = {periodo:'dia', tipo:'', rail:'', partner:'', assign:''};
+const Q_F   = {periodo:'dia', op:'',   term:''};
+const BC_F  = {soc:'', tipoestr:'', tipocta:'', mon:'', cont:''};
+
+const PERIOD_ITEMS = [
+  {v:'todo',l:'Todo'},{v:'dia',l:'Día'},{v:'semana',l:'Semana'},
+  {v:'mes',l:'Mes'},{v:'trimestre',l:'Trimestre'},{v:'año',l:'Año'},
+];
+
+const FDD_OPTS = {
+  'f-periodo': {label:'Período', items: PERIOD_ITEMS},
+  'q-periodo': {label:'Período', items: PERIOD_ITEMS},
+  'f-tipo': {label:'Tipo', groups:[
+    {gl:'Entradas', items:[
+      {v:'DEPOSIT',l:'Deposit'},{v:'INT_DEPOSIT',l:'Deposit (Int.)'},{v:'FX_DEPOSIT',l:'FX Deposit'},
+      {v:'ADDITION',l:'Addition'},{v:'REBATE',l:'Rebate'},
+      {v:'COLLECTOR_IN',l:'Collector In'},{v:'TRANSFER_IN',l:'Internal IN'},{v:'SWAP_IN',l:'Swap IN'},
+    ]},
+    {gl:'Salidas', items:[
+      {v:'WITHDRAWAL',l:'Withdrawal'},{v:'INT_WITHDRAWAL',l:'Withdrawal (Int.)'},{v:'FX_WITHDRAWAL',l:'FX Withdrawal'},
+      {v:'DEDUCTION',l:'Deduction'},{v:'FEE',l:'Fee'},
+      {v:'COLLECTOR_OUT',l:'Collector Out'},{v:'TRANSFER_OUT',l:'Internal OUT'},{v:'SWAP_OUT',l:'Swap OUT'},
+    ]},
+  ]},
+  'f-rail':    {label:'Rail',    items:[{v:'INTERNAL',l:'INTERNAL'},{v:'SPE',l:'SPE'},{v:'SWIFT',l:'SWIFT'},{v:'WIRE',l:'WIRE'}]},
+  'f-partner': {label:'Partner', items:[{v:'ARDUA',l:'ARDUA'},{v:'COINAG',l:'COINAG'},{v:'BRIDGE',l:'BRIDGE'},{v:'BITGO',l:'BITGO'}]},
+  'f-assign':  {label:'Asignación', items:[{v:'none',l:'Sin asignar'},{v:'done',l:'Asignados'}]},
+  'q-op':   {label:'Operación', items:[{v:'BUY',l:'Compra (BUY)'},{v:'SELL',l:'Venta (SELL)'}]},
+  'q-term': {label:'Plazo',     items:[{v:'T0',l:'T0'},{v:'T1',l:'T1'},{v:'T2',l:'T2'}]},
+  'bc-soc':      {label:'Sociedad',         items:[{v:'Circuit Pay SA',l:'Circuit Pay SA'},{v:'Haz Pagos SA',l:'Haz Pagos SA'},{v:'Ardua Solutions Corp',l:'Ardua Solutions Corp'},{v:'Astra Ventures',l:'Astra Ventures'}]},
+  'bc-tipoestr': {label:'Tipo de estructura',items:[{v:'Banco',l:'Banco'},{v:'Banco digital',l:'Banco digital'},{v:'ALyC',l:'ALyC'},{v:'Exchange',l:'Exchange'},{v:'Custodio',l:'Custodio'},{v:'PSP',l:'PSP'},{v:'Proveedor',l:'Proveedor'}]},
+  'bc-tipocta':  {label:'Tipo de cuenta',    items:[{v:'Cuenta Corriente',l:'Cuenta Corriente'},{v:'CVU',l:'CVU'},{v:'Wallet Pool',l:'Wallet Pool'},{v:'Exchange Account',l:'Exchange Account'},{v:'Custodia',l:'Custodia'},{v:'Comitente',l:'Comitente'}]},
+  'bc-mon':      {label:'Moneda',            items:[{v:'ARS',l:'ARS'},{v:'USD',l:'USD'},{v:'USDC',l:'USDC'},{v:'USDT',l:'USDT'},{v:'BTC',l:'BTC'},{v:'USD MEP',l:'USD MEP'},{v:'USD cable',l:'USD cable'}]},
+  'bc-cont':     {label:'Config. contable',  items:[{v:'conf',l:'Configurada'},{v:'noconf',l:'Sin configurar'}]},
+};
+
+const FDD_STATE_MAP = {
+  'f-periodo':['MOV_F','periodo'],'f-tipo':['MOV_F','tipo'],'f-rail':['MOV_F','rail'],
+  'f-partner':['MOV_F','partner'],'f-assign':['MOV_F','assign'],
+  'q-periodo':['Q_F','periodo'],'q-op':['Q_F','op'],'q-term':['Q_F','term'],
+  'bc-soc':['BC_F','soc'],'bc-tipoestr':['BC_F','tipoestr'],'bc-tipocta':['BC_F','tipocta'],'bc-mon':['BC_F','mon'],'bc-cont':['BC_F','cont'],
+};
+
+function getFDDLabel(id, val) {
+  if (id.includes('periodo')) {
+    const pl = {todo:'Todo',dia:'Día',semana:'Semana',mes:'Mes',trimestre:'Trimestre','año':'Año'};
+    return 'Período: ' + (pl[val]||'Día');
+  }
+  if (!val) {
+    const names = {'f-tipo':'Tipo','f-rail':'Rail','f-partner':'Partner','f-assign':'Estructura / Cuenta',
+                   'q-op':'Operación','q-term':'Plazo',
+                   'bc-soc':'Sociedad','bc-tipoestr':'Tipo','bc-tipocta':'Tipo de cuenta','bc-mon':'Moneda','bc-cont':'Config. contable'};
+    return names[id] || id;
+  }
+  const opts = FDD_OPTS[id];
+  if (!opts) return val;
+  const all = opts.groups ? opts.groups.flatMap(g=>g.items) : (opts.items||[]);
+  return (all.find(i=>i.v===val)||{l:val}).l;
+}
+
+function getFDDCurVal(id) {
+  const m = FDD_STATE_MAP[id]; if (!m) return '';
+  const obj = m[0]==='MOV_F' ? MOV_F : m[0]==='Q_F' ? Q_F : BC_F;
+  return obj[m[1]] || '';
+}
+
+let fddPortal = null;
+let fddActiveId = null;
+
+// ── SHARED PORTAL POSITIONING ────────────────────────────────────────────
+// Anchors portal to the right edge of the button when near right side of screen,
+// left edge otherwise. Prevents overflow in both directions.
+// portalPos: render hidden first, measure real width, then clamp to viewport
+// portalPos: decides anchor based on available space.
+// Buttons on the RIGHT side → anchor right edge to button right edge (grows leftward, never overflows).
+// Buttons on the LEFT side → anchor left edge to button left edge (grows rightward).
+function portalPos(rect, minW) {
+  const top        = rect.bottom + 4;
+  const w          = Math.max(rect.width, minW || 150);
+  const rightSpace = window.innerWidth - rect.right;  // space to the right of button
+  const leftSpace  = rect.left;                        // space to the left of button
+
+  if (leftSpace >= rightSpace) {
+    // More space on the left → right-anchor (portal grows leftward from button's right edge)
+    return `position:fixed;display:block;top:${top}px;right:${Math.max(8, rightSpace)}px;min-width:${w}px;width:auto;z-index:9999;`;
+  } else {
+    // More space on the right → left-anchor (portal grows rightward from button's left edge)
+    return `position:fixed;display:block;top:${top}px;left:${Math.max(8, rect.left)}px;min-width:${w}px;width:auto;z-index:9999;`;
+  }
+}
+
+// No-op kept for call sites — positioning is now handled entirely in portalPos
+function adjustPortal(el) { /* handled by portalPos */ }
+
+// Close ALL portals — called before opening any portal
+function closeAllPortals() { closeDd(); closeFDD(); closeStatusDD(); }
+
+function openFDD(e, id) {
+  e.stopPropagation();
+  if (fddPortal && fddActiveId === id) { closeFDD(); return; }
+  closeAllPortals();
+  const btn = e.currentTarget;
+  const rect = btn.getBoundingClientRect();
+  const curVal = getFDDCurVal(id);
+  const opts = FDD_OPTS[id]; if (!opts) return;
+
+  fddPortal = document.createElement('div');
+  fddPortal.className = 'dd';
+  fddPortal.style.cssText = portalPos(rect, 160);
+
+  const renderItem = (item) => {
+    const sel = curVal === item.v;
+    return `<button class="di" onclick="selectFDD('${id}','${item.v.replace(/'/g,"\'")}',event)">
+      <svg class="di-chk ${sel?'on':''}" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:12px;height:12px;flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+      ${item.dot ? `<span class="di-dot" style="background:${item.dot}"></span>` : ''}
+      ${item.l}
+    </button>`;
+  };
+
+  let html = `<div class="ddl">${opts.label||''}</div>`;
+  // "Todos" clear option (not for Período which always has a value)
+  if (!id.includes('periodo')) {
+    html += `<button class="di" onclick="selectFDD('${id}','',event)">
+      <svg class="di-chk ${!curVal?'on':''}" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:12px;height:12px;flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+      Todos
+    </button>`;
+  }
+
+  if (opts.groups) {
+    opts.groups.forEach((g, gi) => {
+      html += `<div class="ddl">${g.gl}</div>` + g.items.map(renderItem).join('');
+      if (gi < opts.groups.length-1) html += '<div class="ddiv"></div>';
+    });
+  } else {
+    html += (opts.items||[]).map(renderItem).join('');
+  }
+
+  fddPortal.innerHTML = html;
+  document.body.appendChild(fddPortal);
+  adjustPortal(fddPortal);
+  btn.classList.add('open');
+  fddActiveId = id;
+}
+
+function selectFDD(id, val, e) {
+  e.stopPropagation();
+  const m = FDD_STATE_MAP[id]; if (!m) return;
+  const obj = m[0]==='MOV_F' ? MOV_F : m[0]==='Q_F' ? Q_F : BC_F;
+  obj[m[1]] = val;
+
+  const btn = document.getElementById('btn-'+id);
+  if (btn) {
+    btn.childNodes[0].textContent = getFDDLabel(id, val);
+    btn.classList.toggle('active', !!val && !id.includes('periodo'));
+  }
+
+  closeFDD();
+  if (id.startsWith('f-')) renderMov();
+  else if (id.startsWith('q-')) renderQuotes();
+  else if (id.startsWith('bc-')) renderBancos();
+}
+
+function closeFDD() {
+  if (fddPortal) { fddPortal.remove(); fddPortal = null; }
+  document.querySelectorAll('button.fsel.open').forEach(b => b.classList.remove('open'));
+  fddActiveId = null;
+}
+
+// ── QUOTES MULTI-SELECT + FILTER (portal pattern) ────────────────────────
+// State lives here, not in DOM checkboxes
+let qStatusSet  = new Set(['PENDING','ACCEPTED']);
+let statusPortal = null;
+
+const Q_STATUS_OPTS = [
+  {v:'PENDING',   l:'Pendiente',  dot:'amber'},
+  {v:'ACCEPTED',  l:'Aceptado',   dot:'blue'},
+  {v:'COMPLETED', l:'Completado', dot:'green'},
+  {v:'CANCELLED', l:'Cancelado',  dot:'red'},
+];
+const DOT_COL = {amber:'var(--amber)',blue:'var(--blue)',green:'var(--green)',red:'var(--red)'};
+
+function getCheckedStatuses() { return [...qStatusSet]; }
+
+function buildStatusPortal(btn) {
+  if (statusPortal) closeStatusDD();
+  const rect = btn.getBoundingClientRect();
+  statusPortal = document.createElement('div');
+  statusPortal.className = 'dd';
+  statusPortal.style.cssText = `position:fixed;display:block;top:${rect.bottom+4}px;left:${rect.left}px;z-index:9999;min-width:180px;`;
+  statusPortal.innerHTML =
+    `<div class="ddl">Estado</div>` +
+    Q_STATUS_OPTS.map((o,i) => {
+      const chk = qStatusSet.has(o.v);
+      return `<button class="di-cb" onclick="toggleStatus('${o.v}',event)">
+        <input type="checkbox" ${chk ? 'checked' : ''} style="pointer-events:none">
+        <span style="width:7px;height:7px;border-radius:50%;background:${DOT_COL[o.dot]};flex-shrink:0;display:inline-block"></span>
+        ${o.l}
+      </button>${i===1?'<div class="ddiv"></div>':''}`;
+    }).join('');
+  document.body.appendChild(statusPortal);
+  adjustPortal(statusPortal);
+  btn.classList.add('open');
+}
+
+function openStatusDD(e) {
+  e.stopPropagation();
+  if (statusPortal) { closeStatusDD(); return; }
+  closeAllPortals();
+  buildStatusPortal(e.currentTarget);
+}
+
+function closeStatusDD() {
+  if (statusPortal) { statusPortal.remove(); statusPortal = null; }
+  document.getElementById('q-status-btn')?.classList.remove('open');
+}
+
+function toggleStatus(val, e) {
+  e.stopPropagation();
+  if (qStatusSet.has(val)) qStatusSet.delete(val);
+  else qStatusSet.add(val);
+  // Rebuild portal in same position to reflect updated checkboxes
+  const btn = document.getElementById('q-status-btn');
+  if (statusPortal) { statusPortal.remove(); statusPortal = null; }
+  buildStatusPortal(btn);
+  updateStatusBtnLabel();
+  renderQuotes();
+}
+
+function setQFilter(statuses) {
+  qStatusSet = new Set(statuses);
+  closeStatusDD();
+  updateStatusBtnLabel();
+  renderQuotes();
+}
+
+function updateStatusBtnLabel() {
+  const checked = [...qStatusSet];
+  const btn = document.getElementById('q-status-btn');
+  let label;
+  if (checked.length === 0) {
+    label = 'Estado';
+  } else if (checked.length === 4) {
+    label = 'Estado: Todos';
+  } else if (checked.length === 2 && qStatusSet.has('PENDING') && qStatusSet.has('ACCEPTED')) {
+    label = 'Estado: Activos';
+  } else if (checked.length === 1) {
+    const lbl = {PENDING:'Pendiente',ACCEPTED:'Aceptado',COMPLETED:'Completado',CANCELLED:'Cancelado'};
+    label = lbl[checked[0]] || checked[0];
+  } else {
+    label = `${checked.length} estados`;
+  }
+  // Preserve chevron SVG
+  const svg = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 9l6 6 6-6"/></svg>`;
+  btn.innerHTML = label + ' ' + svg;
+  btn.classList.toggle('filtered', checked.length > 0 && checked.length < 4);
+
+  // Highlight matching card
+  document.querySelectorAll('.kpi-btn').forEach(c => c.classList.remove('kpi-active'));
+  const sorted = [...checked].sort().join(',');
+  const cardMap = {
+    'ACCEPTED,PENDING':                     'qcard-activos',
+    'PENDING':                              'qcard-pending',
+    'ACCEPTED':                             'qcard-accepted',
+    'COMPLETED':                            'qcard-completed',
+    'ACCEPTED,CANCELLED,COMPLETED,PENDING': 'qcard-all',
+  };
+  if (cardMap[sorted]) document.getElementById(cardMap[sorted])?.classList.add('kpi-active');
+}
+
+// ── TEMPORAL FILTER ──────────────────────────────────────────────────────
+const PERIOD_DAYS = { todo: 9999, dia: 0, semana: 6, mes: 29, trimestre: 89, año: 364 };
+
+// ── MOVEMENTS RENDER ─────────────────────────────────────────────────────
+function acCell(m) {
+  if (!m.isOut && m.assign)
+    return `<div class="ac-done"><span class="ac-bank">${m.assign.est}</span><span class="ac-sub">${m.assign.cta}</span></div>`;
+  if (m.isOut && m.assign)
+    return `<div class="ac-done"><span class="ac-bank">${m.assign.est}</span><span class="ac-sub">${m.assign.cta}</span><span class="ac-ent">${m.assign.soc}</span></div>`;
+  return `<div class="ac-none"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-width="2"/><path stroke-linecap="round" stroke-width="2" d="M12 8v4m0 4h.01"/></svg>Sin asignar</div>`;
+}
+function ddHtml(m, i) {
+  const btn = m.isOut
+    ? `<button class="di" onclick="openM(${i})"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>Asignar Banco y Cuenta${m.assign ? '<span class="dtag">Editar</span>' : ''}</button>`
+    : `<button class="di dis"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>Asignar Banco y Cuenta<span class="dtag">N/A</span></button>`;
+  return `<div class="ddl">Acciones</div>${btn}<div class="ddiv"></div>
+    <button class="di dis"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>Crear Nota de Crédito<span class="dtag">V2</span></button>
+    <button class="di dis"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>Crear Nota de Débito<span class="dtag">V2</span></button>`;
+}
+
+function renderMov() {
+  const q = document.getElementById('mov-search').value.toLowerCase();
+  const fTipo = MOV_F.tipo;
+  const fRail = MOV_F.rail;
+  const fPart = MOV_F.partner;
+  const fAsgn = MOV_F.assign;
+  const maxDays = PERIOD_DAYS[MOV_F.periodo] ?? 9999;
+  const visible = MOVS.filter((m,i) => {
+    if (m.daysAgo > maxDays) return false;
+    if (q && !m.cl.toLowerCase().includes(q)) return false;
+    if (fTipo && m.type !== fTipo) return false;
+    if (fRail && m.rail !== fRail) return false;
+    if (fPart && m.part !== fPart) return false;
+    if (fAsgn === 'none' && !(m.isOut && !m.assign)) return false;
+    if (fAsgn === 'done' && !(!m.isOut || m.assign)) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById('mov-tbody');
+  if (visible.length === 0) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">No hay movimientos con los filtros seleccionados</td></tr>`;
+  } else {
+    tbody.innerHTML = visible.map(m => {
+      const i = MOVS.indexOf(m);
+      const ac = m.amt.startsWith('+') ? 'ap' : m.amt.startsWith('-') ? 'an' : 'au';
+      return `<tr>
+        <td><span class="cd">${m.date}</span></td>
+        <td><span class="cc">${m.cl}</span></td>
+        <td><span class="cr">${m.rail}</span></td>
+        <td><div class="tp"><span class="dot ${m.dot}"></span>${m.type}</div></td>
+        <td><span class="pbadge ${m.pc}">${m.part}</span></td>
+        <td><span class="${ac}">${m.amt}</span></td>
+        <td id="ac${i}">${acCell(m)}</td>
+        <td class="tc"><div class="aw" id="aw${i}">
+          <button class="abtn" id="ab${i}" onclick="togDd(event,${i})"><svg fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button>
+        </div></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Update KPIs
+  const total      = visible.length;
+  const inMov      = visible.filter(m => m.type === 'Deposit').length;
+  const outMov     = visible.filter(m => m.type === 'Withdrawal').length;
+  const otros      = visible.filter(m => m.type !== 'Deposit' && m.type !== 'Withdrawal').length;
+  const unassigned = visible.filter(m => m.isOut && !m.assign).length;
+  document.getElementById('kpi-total').textContent      = total;
+  document.getElementById('kpi-in').textContent         = inMov;
+  document.getElementById('kpi-out').textContent        = outMov;
+  document.getElementById('kpi-otros').textContent      = otros;
+  document.getElementById('kpi-unassigned').textContent = unassigned;
+  document.getElementById('kpi-in-sub').textContent     = `Deposit${inMov !== 1 ? 's' : ''}`;
+  document.getElementById('kpi-out-sub').textContent    = `Withdrawal${outMov !== 1 ? 's' : ''}`;
+  const hasFilter = (MOV_F.periodo && MOV_F.periodo !== 'dia') || q || fTipo || fRail || fPart || fAsgn;
+  document.getElementById('f-res').textContent = hasFilter ? `${total} resultado${total !== 1 ? 's' : ''}` : '';
+}
+
+// ── QUOTES RENDER ────────────────────────────────────────────────────────
+function qStatusClass(s) {
+  return {COMPLETED:'badge-green',PENDING:'badge-amber',ACCEPTED:'badge-blue',CANCELLED:'badge-gray'}[s]||'badge-gray';
+}
+function qStatusLabel(s) {
+  return {COMPLETED:'COMPLETADO',PENDING:'PENDIENTE',ACCEPTED:'ACEPTADO',CANCELLED:'CANCELADO'}[s]||s;
+}
+function termClass(t) {
+  return {T0:'term-t0',T1:'term-t1',T2:'term-t2'}[t]||'term-t1';
+}
+
+function qRowHtml(q) {
+  return `<tr>
+    <td><span class="cd">${q.date}</span></td>
+    <td><span class="cc">${q.cl}</span><div class="cdocket">${q.docket}</div></td>
+    <td><span class="badge ${q.op==='BUY'?'badge-buy':'badge-sell'}">${q.op==='BUY'?'COMPRA':'VENTA'}</span></td>
+    <td><span class="au" style="font-size:12px">${q.fa} <span style="color:var(--t4);font-weight:500">${q.from}</span></span></td>
+    <td><span class="au" style="font-size:12px">${q.ta} <span style="color:var(--t4);font-weight:500">${q.to}</span></span></td>
+    <td><span style="font-size:12px;color:var(--t2)">${q.tc}</span></td>
+    <td><span class="term-badge ${termClass(q.term)}">${q.term}</span></td>
+    <td><span class="cd">${q.liq}</span></td>
+    <td><span class="badge ${qStatusClass(q.status)}">${qStatusLabel(q.status)}</span></td>
+  </tr>`;
+}
+
+// ── QUOTES PAGINATION STATE ───────────────────────────────────────────────
+let qCurrentPage = 1;
+let qLimit       = 10;
+
+function qSetLimit(val) { qLimit = parseInt(val); qCurrentPage = 1; renderQuotes(); }
+function qGoTo(page)    { qCurrentPage = page; renderQuotes(); }
+
+function renderQPagination(total) {
+  const totalPages = Math.max(1, Math.ceil(total / qLimit));
+  if (qCurrentPage > totalPages) qCurrentPage = totalPages;
+
+  document.getElementById('q-pag-info').innerHTML =
+    `Page <b>${qCurrentPage}</b> of ${totalPages} &nbsp;·&nbsp; ${total} resultado${total !== 1 ? 's' : ''}`;
+
+  const pbs = document.getElementById('q-pbs');
+  if (totalPages <= 1) { pbs.innerHTML = ''; return; }
+
+  const prev = `<button class="pb2" ${qCurrentPage===1?'disabled style="opacity:.4;cursor:not-allowed"':''} onclick="qGoTo(${qCurrentPage-1})"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>`;
+  const next = `<button class="pb2" ${qCurrentPage===totalPages?'disabled style="opacity:.4;cursor:not-allowed"':''} onclick="qGoTo(${qCurrentPage+1})"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>`;
+
+  // Build page numbers with ellipsis
+  const pages = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (qCurrentPage > 3) pages.push('…');
+    for (let i = Math.max(2, qCurrentPage-1); i <= Math.min(totalPages-1, qCurrentPage+1); i++) pages.push(i);
+    if (qCurrentPage < totalPages - 2) pages.push('…');
+    pages.push(totalPages);
+  }
+
+  const nums = pages.map(p =>
+    p === '…'
+      ? `<button class="pb2" style="width:auto;padding:0 8px;font-size:11px;cursor:default">…</button>`
+      : `<button class="pb2 ${p===qCurrentPage?'cur':''}" onclick="qGoTo(${p})">${p}</button>`
+  ).join('');
+
+  pbs.innerHTML = prev + nums + next;
+}
+
+function renderQuotes() {
+  const q       = document.getElementById('q-search').value.toLowerCase();
+  const period  = Q_F.periodo;
+  const fOp     = Q_F.op;
+  const fTerm   = Q_F.term;
+  const maxD    = PERIOD_DAYS[period] ?? 9999;
+  const checked = getCheckedStatuses();
+
+  updateStatusBtnLabel();
+
+  // Base: full dataset within period (for KPIs)
+  const base = QUOTES.filter(r => (r.daysAgo ?? 0) <= maxD);
+  document.getElementById('q-kpi-all').textContent       = base.length;
+  document.getElementById('q-kpi-activos').textContent   = base.filter(r => ACTIVE_STATUSES.has(r.status)).length;
+  document.getElementById('q-kpi-pending').textContent   = base.filter(r => r.status === 'PENDING').length;
+  document.getElementById('q-kpi-accepted').textContent  = base.filter(r => r.status === 'ACCEPTED').length;
+  document.getElementById('q-kpi-completed').textContent = base.filter(r => r.status === 'COMPLETED').length;
+
+  // Visible rows: apply all filters
+  const visible = base.filter(r => {
+    if (checked.length > 0 && !checked.includes(r.status)) return false;
+    if (q    && !r.cl.toLowerCase().includes(q)) return false;
+    if (fOp   && r.op   !== fOp)   return false;
+    if (fTerm && r.term !== fTerm) return false;
+    return true;
+  });
+
+  // Reset to page 1 when filters change total
+  const totalPages = Math.max(1, Math.ceil(visible.length / qLimit));
+  if (qCurrentPage > totalPages) qCurrentPage = 1;
+
+  const start  = (qCurrentPage - 1) * qLimit;
+  const paged  = visible.slice(start, start + qLimit);
+
+  const tbody = document.getElementById('q-tbody');
+  tbody.innerHTML = paged.length
+    ? paged.map(qRowHtml).join('')
+    : `<tr class="empty-row"><td colspan="9">No hay quotes con los filtros seleccionados</td></tr>`;
+
+  renderQPagination(visible.length);
+}
+
+// ── DROPDOWN (portal — escapes table overflow:hidden) ────────────────────
+let portalEl  = null;
+let portalIdx = null;
+
+function togDd(e, i) {
+  e.stopPropagation();
+  if (portalIdx === i) { closeDd(); return; }
+  closeDd();
+
+  const btn  = document.getElementById('ab'+i);
+  const rect = btn.getBoundingClientRect();
+  const m    = MOVS.find((_,xi) => xi === i) || MOVS[i];
+
+  closeAllPortals();
+  portalEl = document.createElement('div');
+  portalEl.className = 'dd';
+  portalEl.style.cssText = portalPos(rect, 214);
+  portalEl.innerHTML = ddHtml(m, i);
+  document.body.appendChild(portalEl);
+  adjustPortal(portalEl);
+  btn.classList.add('on');
+  portalIdx = i;
+}
+
+function closeDd() {
+  if (portalEl) { portalEl.remove(); portalEl = null; }
+  document.querySelectorAll('.abtn.on').forEach(b => b.classList.remove('on'));
+  portalIdx = null;
+}
+document.addEventListener('click', (e) => {
+  // Close action portals (portalEl)
+  if (!e.target.closest('.abtn') && !e.target.closest('.dd')) closeDd();
+  // Close FDD portal
+  if (!e.target.closest('button.fsel') && !e.target.closest('.dd')) closeFDD();
+  // Close status portal
+  if (!e.target.closest('#q-status-btn') && !e.target.closest('.dd')) closeStatusDD();
+});
+window.addEventListener('scroll', () => { closeAllPortals(); }, true);
+
+// ── MODAL ─────────────────────────────────────────────────────────────────
+let midx = null, sS = '', sE = '', sC = '';
+function openM(i) {
+  closeDd(); midx = i; const m = MOVS[i];
+  document.getElementById('rid').textContent = m.id;
+  document.getElementById('rdet').innerHTML = `<div class="tp" style="margin-top:4px"><span class="dot ${m.dot}" style="display:inline-block"></span>${m.type} · ${m.rail} · ${m.amt}</div><div style="margin-top:3px;font-size:12px;color:var(--t3)">${m.cl}</div>`;
+  const ss = document.getElementById('ss'); ss.value = m.assign ? m.assign.soc : ''; sS = ss.value; upE();
+  if (m.assign) { document.getElementById('sb').value = m.assign.est; sE = m.assign.est; upC(); document.getElementById('sc').value = m.assign.cta; sC = m.assign.cta; }
+  upBtn(); document.getElementById('ov').classList.add('on');
+}
+function closeM() {
+  document.getElementById('ov').classList.remove('on'); midx = null; sS = ''; sE = ''; sC = '';
+  document.getElementById('ss').value = '';
+  const sb = document.getElementById('sb'); sb.disabled = true; sb.innerHTML = '<option value="">Seleccionar sociedad primero...</option>';
+  const sc = document.getElementById('sc'); sc.disabled = true; sc.innerHTML = '<option value="">Seleccionar estructura primero...</option>';
+  document.getElementById('bco').disabled = true;
+}
+function upE() {
+  const sb = document.getElementById('sb'); const ests = Object.keys(CAT[sS] || {});
+  if (!sS || !ests.length) { sb.innerHTML = '<option value="">Seleccionar sociedad primero...</option>'; sb.disabled = true; }
+  else { sb.innerHTML = '<option value="">Seleccionar estructura / banco...</option>' + ests.map(e => `<option value="${e}">${e}</option>`).join(''); sb.disabled = false; }
+  sE = ''; sb.value = ''; upC();
+}
+function upC() {
+  const sc = document.getElementById('sc'); const ctas = (CAT[sS] || {})[sE] || [];
+  if (!sE || !ctas.length) { sc.innerHTML = '<option value="">Seleccionar estructura primero...</option>'; sc.disabled = true; }
+  else { sc.innerHTML = '<option value="">Seleccionar cuenta...</option>' + ctas.map(c => `<option value="${c}">${c}</option>`).join(''); sc.disabled = false; }
+  sC = ''; sc.value = ''; upBtn();
+}
+function upBtn() { document.getElementById('bco').disabled = !(sS && sE && sC); }
+
+document.getElementById('ss').addEventListener('change', e => { sS = e.target.value; upE(); upBtn(); });
+document.getElementById('sb').addEventListener('change', e => { sE = e.target.value; upC(); upBtn(); });
+document.getElementById('sc').addEventListener('change', e => { sC = e.target.value; upBtn(); });
+document.getElementById('mx').addEventListener('click', closeM);
+document.getElementById('bca').addEventListener('click', closeM);
+document.getElementById('ov').addEventListener('click', e => { if (e.target === document.getElementById('ov')) closeM(); });
+document.getElementById('bco').addEventListener('click', () => {
+  if (!sS || !sE || !sC) return;
+  MOVS[midx].assign = { soc: sS, est: sE, cta: sC };
+  document.getElementById('ac'+midx).innerHTML = acCell(MOVS[midx]);
+  toast(`${MOVS[midx].id} — ${sE} · ${sC}`);
+  renderMov();
+  closeM();
+});
+
+// ── TOAST ─────────────────────────────────────────────────────────────────
+function toast(msg) {
+  const w = document.getElementById('twr'); const el = document.createElement('div'); el.className = 'toast';
+  el.innerHTML = `<div class="tic"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg></div><div><div class="tit">Asignación confirmada</div><div class="tim">${msg}</div></div>`;
+  w.appendChild(el); setTimeout(() => el.remove(), 4500);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+renderMov();
+renderQuotes();
+
+// ── BANCOS / CUENTAS ──────────────────────────────────────────────────────
+let bcPage  = 1;
+let bcLimit = 10;
+
+function bcSetLimit(v) { bcLimit = parseInt(v); bcPage = 1; renderBancos(); }
+function bcGoTo(p)      { bcPage = p; renderBancos(); }
+
+function renderBcPag(total) {
+  const tp = Math.max(1, Math.ceil(total / bcLimit));
+  if (bcPage > tp) bcPage = tp;
+  document.getElementById('bc-pag-info').innerHTML =
+    `Page <b>${bcPage}</b> of ${tp} &nbsp;·&nbsp; ${total} resultado${total !== 1 ? 's' : ''}`;
+  const pbs = document.getElementById('bc-pbs');
+  if (tp <= 1) { pbs.innerHTML = ''; return; }
+  const prev = `<button class="pb2" ${bcPage===1?'disabled style="opacity:.4;cursor:not-allowed"':''} onclick="bcGoTo(${bcPage-1})"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>`;
+  const next = `<button class="pb2" ${bcPage===tp?'disabled style="opacity:.4;cursor:not-allowed"':''} onclick="bcGoTo(${bcPage+1})"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>`;
+  const pages = [];
+  if (tp <= 7) { for (let i=1;i<=tp;i++) pages.push(i); }
+  else {
+    pages.push(1);
+    if (bcPage > 3) pages.push('…');
+    for (let i=Math.max(2,bcPage-1);i<=Math.min(tp-1,bcPage+1);i++) pages.push(i);
+    if (bcPage < tp-2) pages.push('…');
+    pages.push(tp);
+  }
+  pbs.innerHTML = prev + pages.map(p =>
+    p==='…' ? `<button class="pb2" style="width:auto;padding:0 8px;font-size:11px;cursor:default">…</button>`
+             : `<button class="pb2 ${p===bcPage?'cur':''}" onclick="bcGoTo(${p})">${p}</button>`
+  ).join('') + next;
+}
+
+// Full account catalog from CUENTAS_ESTRUCTURAS.xlsx
+// tipo: Banco | Banco digital | ALyC | Exchange | Custodio | PSP | Proveedor
+const BC_TIPO = {
+  ADCAP:'ALyC',ALLARIA:'ALyC',BINANCE:'Exchange',BIND:'Banco',BITGO:'Custodio',
+  BITSO:'Exchange',BRIDGE:'Proveedor',BRUBANK:'Banco digital','BULL MARKET':'ALyC',
+  CENTAURUS:'ALyC',COHEN:'ALyC',COINAG:'PSP',COINBASE:'Exchange',COMERCIO:'Banco',
+  'CONO SUR':'ALyC',CUCCHIARA:'ALyC','FV BANK':'Banco',INVIU:'ALyC',IVSA:'ALyC',
+  KRAKEN:'Exchange',LYNX:'ALyC',MACRO:'Banco',PERC:'ALyC',REBA:'Banco digital',
+  STRATO:'ALyC',BITGET:'Exchange',CIRCLE:'Proveedor',CONDUIT:'Proveedor',VITA:'ALyC',
+};
+
+// Tipo de cuenta: operativa nature of the account (independent of structure type)
+const BC_TIPO_CTA = {
+  COINAG:  (mon, nro) => mon === 'ARS' ? 'CVU' : 'Wallet Pool',
+  BIND:    () => 'Cuenta Corriente',
+  COMERCIO:() => 'Cuenta Corriente',
+  MACRO:   () => 'Cuenta Corriente',
+  'FV BANK':() => 'Cuenta Corriente',
+  BRUBANK: () => 'Cuenta Corriente',
+  REBA:    () => 'Cuenta Corriente',
+  BITGO:   () => 'Custodia',
+  BRIDGE:  () => 'Wallet Pool',
+  BINANCE: () => 'Exchange Account',
+  BITSO:   () => 'Exchange Account',
+  COINBASE:() => 'Exchange Account',
+  KRAKEN:  () => 'Exchange Account',
+  BITGET:  () => 'Exchange Account',
+};
+function getTipoCuenta(banco, mon) {
+  const fn = BC_TIPO_CTA[banco];
+  if (fn) return fn(mon);
+  const t = BC_TIPO[banco];
+  if (t === 'ALyC') return 'Comitente';
+  if (t === 'Proveedor') return 'Wallet Pool';
+  return 'Cuenta Corriente';
+}
+
+// Cuenta padre: CBU is parent of CVU accounts (PSP scheme)
+const BC_PADRE = {
+  'Haz Pagos SA|COINAG': 'CBU Haz Pagos · Coinag',
+  'Circuit Pay SA|COINAG': 'CBU Circuit Pay · Coinag',
+};
+
+const BC_TIPO_COLOR = {
+  'Banco':'pbr','Banco digital':'pbi','ALyC':'pc','Exchange':'pa',
+  'Custodio':'pbr','PSP':'pc','Proveedor':'pbadge',
+};
+
+// Pre-configured accounting accounts (provisional)
+const BC_ACCOUNTING = {
+  'Circuit Pay SA|COINAG|ARS · Cta 10.045': {cod:'1.1.01', nombre:'COINAG - Cta ARS 10.045', tipo:'act-disp', obs:'Cuenta operativa PSP ARS'},
+  'Circuit Pay SA|COINAG|ARS · Cta 10.046': {cod:'1.1.02', nombre:'COINAG - Cta ARS 10.046', tipo:'act-disp', obs:'Cuenta operativa PSP ARS secundaria'},
+  'Circuit Pay SA|COINAG|USD · Cta 10.047': {cod:'1.1.03', nombre:'COINAG - Cta USD 10.047', tipo:'act-disp', obs:''},
+  'Circuit Pay SA|COINAG|USD · Cta 10.048': {cod:'1.1.04', nombre:'COINAG - Cta USD 10.048', tipo:'act-disp', obs:''},
+  'Circuit Pay SA|BRIDGE|USD':              {cod:'1.1.10', nombre:'Bridge - USDC Settlement', tipo:'act-disp', obs:'Fondos en tránsito internacional'},
+  'Circuit Pay SA|BITGO|USD':               {cod:'1.1.11', nombre:'BitGo - Custodia USD', tipo:'act-disp', obs:'Custodio institucional'},
+  'Haz Pagos SA|COINAG|ARS · Cta 10.049':  {cod:'1.2.01', nombre:'COINAG - Cta ARS 10.049 (HP)', tipo:'act-disp', obs:'PSP Haz Pagos SA'},
+  'Haz Pagos SA|COMERCIO|ARS · Cta 356744':{cod:'1.2.10', nombre:'Bco Comercio - CA ARS (HP)', tipo:'act-disp', obs:''},
+};
+
+// Build flat accounts list from CAT
+function buildBCData() {
+  const rows = [];
+  for (const [soc, bancos] of Object.entries(CAT)) {
+    for (const [banco, cuentas] of Object.entries(bancos)) {
+      for (const cta of cuentas) {
+        const key = `${soc}|${banco}|${cta}`;
+        const mon = cta.includes(' ·') ? cta.split(' ·')[0].trim() : cta;
+        const nro = cta.includes('Cta ') ? cta.split('Cta ')[1].trim()
+                  : cta.includes('/') ? cta : '—';
+        const padreKey = `${soc}|${banco}`;
+        rows.push({
+          soc, banco,
+          tipo:      BC_TIPO[banco] || 'Banco',
+          tipoCuenta: getTipoCuenta(banco, mon),
+          mon,
+          nro,
+          padre:     (BC_TIPO[banco] === 'PSP' && mon === 'ARS') ? BC_PADRE[padreKey] || '' : '',
+          cta,
+          activa: true,
+          contable: BC_ACCOUNTING[key] || null,
+          key,
+        });
+      }
+    }
+  }
+  return rows;
+}
+
+const BC_DATA = buildBCData();
+let bcEditKey = null;
+
+function renderBancos() {
+  const q     = document.getElementById('bc-search').value.toLowerCase();
+  const fSoc     = BC_F.soc;
+  const fTipo    = BC_F.tipoestr;
+  const fTipoCta = BC_F.tipocta;
+  const fMon     = BC_F.mon;
+  const fCont    = BC_F.cont;
+
+  const visible = BC_DATA.filter(r => {
+    if (q && !r.banco.toLowerCase().includes(q) && !r.nro.toLowerCase().includes(q) && !r.soc.toLowerCase().includes(q)) return false;
+    if (fSoc     && r.soc       !== fSoc)     return false;
+    if (fTipo    && r.tipo      !== fTipo)    return false;
+    if (fTipoCta && r.tipoCuenta !== fTipoCta) return false;
+    if (fMon     && r.mon       !== fMon)     return false;
+    if (fCont === 'conf'   && !r.contable) return false;
+    if (fCont === 'noconf' &&  r.contable) return false;
+    return true;
+  });
+
+  // KPIs (always from full dataset)
+  const ests = new Set(BC_DATA.map(r => r.banco)).size;
+  document.getElementById('bc-kpi-est').textContent    = ests;
+  document.getElementById('bc-kpi-total').textContent  = BC_DATA.length;
+  document.getElementById('bc-kpi-conf').textContent   = BC_DATA.filter(r => r.contable).length;
+  document.getElementById('bc-kpi-noconf').textContent = BC_DATA.filter(r => !r.contable).length;
+
+  const socBadge = {'Circuit Pay SA':'pc','Haz Pagos SA':'pc','Ardua Solutions Corp':'pbr','Astra Ventures':'pbi'};
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(visible.length / bcLimit));
+  if (bcPage > totalPages) bcPage = 1;
+  const start = (bcPage - 1) * bcLimit;
+  const paged = visible.slice(start, start + bcLimit);
+
+  const tbody = document.getElementById('bc-tbody');
+  tbody.innerHTML = paged.length ? paged.map(r => {
+    const tipoCls = BC_TIPO_COLOR[r.tipo] || 'pbadge';
+    const sbCls   = socBadge[r.soc] || 'pc';
+    const contCell = r.contable
+      ? `<div style="display:flex;flex-direction:column;gap:2px">
+           <span style="font-size:12px;font-weight:700;color:var(--t2);font-family:'Courier New',monospace">${r.contable.cod}</span>
+           <span style="font-size:11px;color:var(--t3)">${r.contable.nombre}</span>
+         </div>`
+      : `<span class="ac-none" style="font-size:11px"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:11px;height:11px"><circle cx="12" cy="12" r="9" stroke-width="2"/><path stroke-linecap="round" stroke-width="2" d="M12 8v4m0 4h.01"/></svg>Sin configurar</span>`;
+    const monBadge = {ARS:'term-t1',USD:'term-t2',USDC:'badge-blue',USDT:'badge-green',BTC:'badge-amber'}[r.mon] || 'badge-gray';
+    return `<tr>
+      <td><span class="pbadge ${sbCls}" style="font-size:10px">${r.soc.replace(' SA','').replace(' Corp','')}</span></td>
+      <td><span class="cc" style="font-size:13px">${r.banco}</span></td>
+      <td><span class="pbadge ${tipoCls}" style="font-size:10px">${r.tipo}</span></td>
+      <td><span class="cr" style="font-size:11px">${r.tipoCuenta}</span></td>
+      <td><span class="term-badge ${monBadge}" style="font-size:10px">${r.mon}</span></td>
+      <td><span class="cr" style="font-family:'Courier New',monospace;font-size:11px">${r.nro}</span></td>
+      <td><span style="font-size:11px;color:${r.padre ? 'var(--t3)' : 'var(--t4)'}">
+        ${r.padre ? r.padre : '<span style="opacity:.4">—</span>'}</span></td>
+      <td><span class="badge ${r.activa ? 'badge-green' : 'badge-gray'}" style="font-size:10px">${r.activa ? 'Activa' : 'Inactiva'}</span></td>
+      <td>${contCell}</td>
+      <td class="tc"><div class="aw" id="bcaw-${r.key.replace(/[^a-z0-9]/gi,'_')}">
+        <button class="abtn" onclick="togBcDd(event,'${r.key}')">
+          <svg fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+        </button>
+      </div></td>
+    </tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="8">No hay cuentas con los filtros seleccionados</td></tr>`;
+
+  renderBcPag(visible.length);
+}
+
+// Dropdown for Bancos
+function togBcDd(e, key) {
+  e.stopPropagation();
+  closeDd();
+  const btn  = e.currentTarget;
+  const rect = btn.getBoundingClientRect();
+  const r    = BC_DATA.find(x => x.key === key);
+
+  closeAllPortals();
+  portalEl = document.createElement('div');
+  portalEl.className = 'dd';
+  portalEl.style.cssText = portalPos(rect, 220);
+  portalEl.innerHTML = `
+    <div class="ddl">Acciones</div>
+    <button class="di" onclick="openBcModal('${key}')">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M12 7h.01M15 7h.01M9 17v-3m6 3v-3m0-7H9m12 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h3"/></svg>
+      Configurar cuenta contable
+      ${r && r.contable ? '<span class="dtag">Editar</span>' : ''}
+    </button>
+    <div class="ddiv"></div>
+    <button class="di dis">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+      Editar datos
+      <span class="dtag">V2</span>
+    </button>`;
+  document.body.appendChild(portalEl);
+  adjustPortal(portalEl);
+  btn.classList.add('on');
+  portalIdx = key;
+}
+
+// Accounting config modal
+function openBcModal(key) {
+  closeDd();
+  bcEditKey = key;
+  const r = BC_DATA.find(x => x.key === key);
+  document.getElementById('bc-ref-id').textContent = `${r.banco} — ${r.tipoCuenta} · ${r.mon}`;
+  document.getElementById('bc-ref-det').textContent = `${r.soc}  ·  ${r.nro !== '—' ? r.nro : 'Sin número'}${r.padre ? '  ·  Padre: ' + r.padre : ''}`;
+  const ac = r.contable || {};
+  document.getElementById('bc-cod').value     = ac.cod     || '';
+  document.getElementById('bc-nombre').value  = ac.nombre  || `${r.banco} - ${r.cta}`;
+  document.getElementById('bc-tipocta').value = ac.tipo    || 'act-disp';
+  document.getElementById('bc-obs').value     = ac.obs     || '';
+  document.getElementById('bc-ov').classList.add('on');
+}
+
+function closeBcModal() {
+  document.getElementById('bc-ov').classList.remove('on');
+  bcEditKey = null;
+}
+
+document.getElementById('bc-mx').addEventListener('click', closeBcModal);
+document.getElementById('bc-cancel').addEventListener('click', closeBcModal);
+document.getElementById('bc-ov').addEventListener('click', e => { if (e.target === document.getElementById('bc-ov')) closeBcModal(); });
+
+document.getElementById('bc-confirm').addEventListener('click', () => {
+  const cod    = document.getElementById('bc-cod').value.trim();
+  const nombre = document.getElementById('bc-nombre').value.trim();
+  const tipo   = document.getElementById('bc-tipocta').value;
+  const obs    = document.getElementById('bc-obs').value.trim();
+  if (!cod || !nombre || !tipo) return;
+  const r = BC_DATA.find(x => x.key === bcEditKey);
+  r.contable = {cod, nombre, tipo, obs};
+  BC_ACCOUNTING[bcEditKey] = {cod, nombre, tipo, obs};
+  renderBancos();
+  closeBcModal();
+  toast(`${r.banco} · ${r.mon} — cuenta contable ${cod} configurada`);
+});
+
+renderBancos();
+</script>
+</body>
+</html>

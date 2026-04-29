@@ -1,0 +1,304 @@
+<!--
+  ARDUA PROCESS DOCUMENTATION SKILL — Swimlane Diagram Motor
+  ===========================================================
+  Uso: reemplazar el objeto PROCESS_DATA al final del script con los datos
+  del proceso capturado durante la conversación.
+
+  Estructura de PROCESS_DATA:
+  {
+    title: string,
+    lanes: [ { id, label, color } ],
+    steps: [ { phase, lane, n?, text, tip?, type? } ]
+      type: "normal" | "decision" | "external" | "warning"
+  }
+
+  El motor infiere las fases automáticamente del campo `phase` de cada step.
+  Los colores de fase se asignan en orden del array PHASE_COLORS.
+-->
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.sw-outer{font-family:var(--font-sans);padding:0}
+.sw-scroll{overflow-x:auto;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg)}
+table.sw{border-collapse:collapse;min-width:600px;width:100%;table-layout:auto}
+.sw-phase{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;text-align:center;padding:6px 8px;border:0.5px solid var(--color-border-tertiary);white-space:nowrap;border-top:none;transition:outline .2s}
+.sw-phase.new-phase{outline:2px solid var(--color-border-info);outline-offset:-2px}
+.sw-corner{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-top:none;border-left:none;width:88px;min-width:88px}
+.sw-lane-lbl{font-size:11px;font-weight:500;color:var(--color-text-secondary);text-align:right;padding:8px 10px 8px 8px;vertical-align:middle;border-right:2.5px solid var(--lc,var(--color-border-secondary));border-top:0.5px solid var(--color-border-tertiary);width:88px;min-width:88px;line-height:1.3}
+.sw-cell{vertical-align:top;padding:8px 8px;border:0.5px solid var(--color-border-tertiary);min-width:110px;max-width:170px}
+.sw-cell.empty{background:repeating-linear-gradient(135deg,transparent,transparent 5px,var(--color-border-tertiary) 5px,var(--color-border-tertiary) 5.5px);opacity:.18}
+.sw-cell.pulse{animation:cell-pulse .5s ease}
+@keyframes cell-pulse{0%{background:var(--color-background-info)}100%{background:transparent}}
+.nodes{display:flex;flex-direction:column;gap:5px}
+.nd{display:inline-flex;align-items:flex-start;gap:4px;padding:5px 8px;border-radius:5px;font-size:11px;border:0.5px solid var(--ns,var(--color-border-secondary));background:var(--nb,var(--color-background-primary));color:var(--nt,var(--color-text-primary));line-height:1.35;width:100%;position:relative}
+.nd.clickable{cursor:pointer;transition:opacity .12s}
+.nd.clickable:hover{opacity:.75}
+.nd.dec{border-radius:0;clip-path:polygon(9px 0%,100% 0%,calc(100% - 9px) 100%,0% 100%);padding:4px 14px;border:none;background:var(--color-background-secondary);color:var(--color-text-secondary);font-style:italic;font-size:10px;justify-content:center;cursor:default}
+.nd.ext{border-style:dashed;color:var(--color-text-secondary);font-size:10px;background:transparent;justify-content:center;cursor:default}
+.nd.warn{border-color:#E24B4A;background:#FCEBEB;color:#A32D2D}
+.nd .nn{font-size:9px;opacity:.4;flex-shrink:0;margin-top:1px;min-width:12px}
+.nd-body{display:flex;flex-direction:column;gap:3px;width:100%}
+.nd-badges{display:flex;flex-wrap:wrap;gap:3px}
+.nd-badge{font-size:9px;font-weight:500;padding:1px 5px;border-radius:3px;white-space:nowrap;line-height:1.4}
+.nd-badge.ardua{background:#E6F1FB;color:#185FA5;border:0.5px solid #85B7EB}
+.nd-badge.hazpagos{background:#E1F5EE;color:#0F6E56;border:0.5px solid #5DCAA5}
+.nd-badge.circuit{background:#EEEDFE;color:#534AB7;border:0.5px solid #AFA9EC}
+.nd-badge.nerghis{background:#FAEEDA;color:#854F0B;border:0.5px solid #EF9F27}
+.nd-badge.default{background:var(--color-background-secondary);color:var(--color-text-secondary);border:0.5px solid var(--color-border-secondary)}
+.vdiv{height:6px;display:flex;align-items:center;padding-left:16px;color:var(--color-border-secondary);font-size:10px;line-height:1;user-select:none}
+.tip-box{background:var(--color-background-primary);border:0.5px solid var(--color-border-primary);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--color-text-primary);max-width:220px;pointer-events:none;position:absolute;z-index:999;display:none;line-height:1.5;white-space:normal}
+.tip-box strong{display:block;font-weight:500;margin-bottom:3px;font-size:11px}
+.sw-legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--color-text-secondary)}
+.leg-swatch{width:12px;height:12px;border-radius:2px;flex-shrink:0}
+.sw-footer{margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sw-footer button{font-size:11px;padding:4px 10px;cursor:pointer}
+.sw-footer .hint{font-size:11px;color:var(--color-text-tertiary)}
+</style>
+
+<div class="sw-outer" id="sw-outer">
+  <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px">
+    <span style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-tertiary)">Proceso</span>
+    <span style="font-size:15px;font-weight:500;color:var(--color-text-primary)" id="sw-title"></span>
+  </div>
+  <div class="sw-scroll"><table class="sw" id="sw-table"></table></div>
+  <div class="sw-legend" id="sw-legend"></div>
+  <div class="sw-footer">
+    <span class="hint" id="sw-hint"></span>
+  </div>
+</div>
+<div class="tip-box" id="tip-box"></div>
+
+<script>
+const PHASE_COLORS = [
+  {bg:'#E6F1FB',tc:'#0C447C'},
+  {bg:'#EEEDFE',tc:'#3C3489'},
+  {bg:'#E1F5EE',tc:'#085041'},
+  {bg:'#FAEEDA',tc:'#633806'},
+  {bg:'#F1EFE8',tc:'#444441'},
+  {bg:'#FBEAF0',tc:'#72243E'},
+  {bg:'#EAF3DE',tc:'#27500A'},
+  {bg:'#FAECE7',tc:'#712B13'},
+];
+
+function deriveLaneMeta(lane) {
+  const c = lane.color || '#888780';
+  const hex = c.replace('#','');
+  const r=parseInt(hex.substr(0,2),16),g=parseInt(hex.substr(2,2),16),b=parseInt(hex.substr(4,2),16);
+  const lighten = (v,a) => Math.round(v+(255-v)*a).toString(16).padStart(2,'0');
+  const darken  = (v,a) => Math.round(v*a).toString(16).padStart(2,'0');
+  return {
+    nb: '#'+lighten(r,.88)+lighten(g,.88)+lighten(b,.88),
+    ns: '#'+lighten(r,.5)+lighten(g,.5)+lighten(b,.5),
+    nt: '#'+darken(r,.35)+darken(g,.35)+darken(b,.35),
+    lc: c,
+  };
+}
+
+function buildDiagram(data, highlightPhase) {
+  const tbl = document.getElementById('sw-table');
+  tbl.innerHTML = '';
+
+  const titleEl = document.getElementById('sw-title');
+  if (titleEl) titleEl.textContent = data.title || '';
+
+  const phases = [];
+  const phaseSet = new Set();
+  data.steps.forEach(s => {
+    if (!phaseSet.has(s.phase)) { phaseSet.add(s.phase); phases.push(s.phase); }
+  });
+
+  const laneMetaMap = {};
+  data.lanes.forEach(l => { laneMetaMap[l.id] = { ...l, ...deriveLaneMeta(l) }; });
+
+  if (phases.length === 0) {
+    tbl.innerHTML = '<tr><td style="padding:24px;text-align:center;font-size:12px;color:var(--color-text-tertiary)">Sin pasos capturados aún</td></tr>';
+    return;
+  }
+
+  const phRow = document.createElement('tr');
+  const corner = document.createElement('th');
+  corner.className = 'sw-corner';
+  phRow.appendChild(corner);
+  phases.forEach((ph, i) => {
+    const c = PHASE_COLORS[i % PHASE_COLORS.length];
+    const th = document.createElement('th');
+    th.className = 'sw-phase' + (ph === highlightPhase ? ' new-phase' : '');
+    th.style.background = c.bg;
+    th.style.color = c.tc;
+    th.textContent = ph;
+    phRow.appendChild(th);
+  });
+  tbl.appendChild(phRow);
+
+  data.lanes.forEach(rawLane => {
+    const lane = laneMetaMap[rawLane.id];
+    const tr = document.createElement('tr');
+    const lbl = document.createElement('td');
+    lbl.className = 'sw-lane-lbl';
+    lbl.style.setProperty('--lc', lane.lc);
+    lbl.innerHTML = (lane.label || '').replace(/\n/g, '<br>');
+    tr.appendChild(lbl);
+
+    phases.forEach(ph => {
+      const items = data.steps.filter(s => s.phase === ph && s.lane === rawLane.id);
+      const td = document.createElement('td');
+      const isNew = ph === highlightPhase && items.length > 0;
+      td.className = 'sw-cell' + (items.length === 0 ? ' empty' : '') + (isNew ? ' pulse' : '');
+
+      if (items.length > 0) {
+        const wrap = document.createElement('div');
+        wrap.className = 'nodes';
+        items.forEach((item, i) => {
+          if (i > 0) {
+            const div = document.createElement('div');
+            div.className = 'vdiv';
+            div.textContent = '↓';
+            wrap.appendChild(div);
+          }
+          wrap.appendChild(makeNode(item, lane));
+        });
+        td.appendChild(wrap);
+      }
+      tr.appendChild(td);
+    });
+    tbl.appendChild(tr);
+  });
+
+  buildLegend(data.lanes, laneMetaMap);
+  updateHint(data);
+}
+
+function makeNode(item, lane) {
+  const type = item.type || 'normal';
+  const d = document.createElement('div');
+  if (type === 'decision') {
+    d.className = 'nd dec';
+    d.textContent = item.text;
+  } else if (type === 'external') {
+    d.className = 'nd ext';
+    d.textContent = item.text;
+  } else {
+    d.className = 'nd' + (type === 'warning' ? ' warn' : '');
+    if (type !== 'warning') {
+      d.style.setProperty('--nb', lane.nb);
+      d.style.setProperty('--ns', lane.ns);
+      d.style.setProperty('--nt', lane.nt);
+    }
+    const body = document.createElement('div');
+    body.className = 'nd-body';
+    const textRow = document.createElement('div');
+    textRow.style.display = 'flex';textRow.style.gap = '4px';textRow.style.alignItems = 'flex-start';
+    textRow.innerHTML = (item.n ? `<span class="nn">${item.n}</span>` : '') + '<span>' + (item.text || '') + '</span>';
+    body.appendChild(textRow);
+    if (item.entities && item.entities.length > 0) {
+      const badges = document.createElement('div');
+      badges.className = 'nd-badges';
+      const entityClass = {
+        'Ardua Solutions Corp': 'ardua',
+        'Haz Pagos S.A.': 'hazpagos',
+        'Circuit Pay S.A.': 'circuit',
+        'Nerghis SRL': 'nerghis',
+      };
+      const shortName = {
+        'Ardua Solutions Corp': 'Ardua',
+        'Haz Pagos S.A.': 'Haz Pagos',
+        'Circuit Pay S.A.': 'Circuit Pay',
+        'Nerghis SRL': 'Nerghis',
+      };
+      item.entities.forEach(e => {
+        const b = document.createElement('span');
+        b.className = 'nd-badge ' + (entityClass[e] || 'default');
+        b.textContent = shortName[e] || e;
+        badges.appendChild(b);
+      });
+      body.appendChild(badges);
+    }
+    d.appendChild(body);
+  }
+  if (item.tip) {
+    d.classList.add('clickable');
+    d.addEventListener('mouseenter', e => showTip(e, item.text, item.tip));
+    d.addEventListener('mouseleave', hideTip);
+  }
+  return d;
+}
+
+function buildLegend(lanes, metaMap) {
+  const leg = document.getElementById('sw-legend');
+  leg.innerHTML = '';
+  lanes.forEach(l => {
+    const m = metaMap[l.id];
+    const div = document.createElement('div');
+    div.className = 'leg-item';
+    const sw = document.createElement('div');
+    sw.className = 'leg-swatch';
+    sw.style.background = m.nb;
+    sw.style.border = `0.5px solid ${m.ns}`;
+    div.appendChild(sw);
+    div.appendChild(document.createTextNode(l.label));
+    leg.appendChild(div);
+  });
+  const extras = [
+    {label:'Decisión',style:'clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);background:var(--color-background-secondary);border:none'},
+    {label:'Sistema externo',style:'border:0.5px dashed var(--color-border-secondary)'},
+    {label:'Alerta crítica',style:'background:#FCEBEB;border:0.5px solid #E24B4A'},
+  ];
+  extras.forEach(e => {
+    const div = document.createElement('div');
+    div.className = 'leg-item';
+    const sw = document.createElement('div');
+    sw.className = 'leg-swatch';
+    sw.setAttribute('style', e.style);
+    div.appendChild(sw);
+    div.appendChild(document.createTextNode(e.label));
+    leg.appendChild(div);
+  });
+}
+
+function updateHint(data) {
+  const hint = document.getElementById('sw-hint');
+  const phases = [...new Set(data.steps.map(s => s.phase))];
+  const steps = data.steps.filter(s => s.type !== 'external').length;
+  hint.textContent = `${phases.length} fase${phases.length !== 1 ? 's' : ''} · ${steps} paso${steps !== 1 ? 's' : ''}`;
+}
+
+function showTip(e, title, body) {
+  const t = document.getElementById('tip-box');
+  t.innerHTML = `<strong>${title || ''}</strong>${body}`;
+  t.style.display = 'block';
+  const r = e.target.getBoundingClientRect();
+  const or = document.getElementById('sw-outer').getBoundingClientRect();
+  let left = r.right - or.left + 6;
+  if (left + 230 > or.width) left = r.left - or.left - 234;
+  t.style.left = Math.max(0, left) + 'px';
+  t.style.top = Math.max(0, r.top - or.top - 8) + 'px';
+}
+function hideTip() { document.getElementById('tip-box').style.display = 'none'; }
+
+/*
+  ============================================================
+  PROCESS_DATA — reemplazar con los datos del proceso capturado
+  ============================================================
+  Este es el único bloque que Claude modifica en cada generación.
+  El motor buildDiagram() lo consume y renderiza el diagrama completo.
+*/
+const PROCESS_DATA = {
+  title: "Proceso de ejemplo",
+  lanes: [
+    { id: "ops",  label: "Operaciones",  color: "#378ADD" },
+    { id: "comp", label: "Compliance",   color: "#7F77DD" },
+    { id: "ext",  label: "Externos",     color: "#888780" }
+  ],
+  steps: [
+    { phase: "Recepción", lane: "ops",  n: 1, text: "Recibe solicitud", tip: "Descripción del paso 1." },
+    { phase: "Recepción", lane: "ext",  text: "Canal de entrada", type: "external" },
+    { phase: "Validación", lane: "ops", text: "¿Completo?", type: "decision", tip: "Bifurcación según la documentación recibida." },
+    { phase: "Validación", lane: "comp", n: 2, text: "Verifica identidad", tip: "Descripción del paso 2." },
+    { phase: "Validación", lane: "ext",  text: "Sistema KYC", type: "external" },
+    { phase: "Cierre",     lane: "comp", n: 3, text: "Confirma alta", tip: "Descripción del paso 3.", type: "warning" },
+    { phase: "Cierre",     lane: "ops",  n: 4, text: "Notifica resultado", tip: "Descripción del paso 4." }
+  ]
+};
+
+buildDiagram(PROCESS_DATA, null);
+</script>
