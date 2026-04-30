@@ -1,12 +1,17 @@
-# Reporte de P&L (FIN · PnL Skill) — Session Context
-
-> **DISCOVERY CERRADO** — 2026-04-23
-> Feature derivada: `features/ardua-pnl-report.md`
-> Resumen de decisiones que sobrevivieron: Skill que transforma MASTER.xlsx en reporte HTML print-ready con 4 tipos (daily/weekly/monthly/custom), layout único basado en Report 9, y `cost=0` en V1 para mantener paridad con el flujo manual de Santi. Output HTML (el usuario hace Cmd+P → PDF en el navegador). Lógica validada numéricamente contra Report 9 (match exacto dentro del error de redondeo).
-
+---
+name: Reporte de P&L (FIN · PnL Skill) — Session Context
+features: [CLP]
+status: Concluida
+owner: Yasmani Rodriguez
+created_at: 2026-04-30
+updated_at: 2026-04-23
 ---
 
-> Última actualización: 17/04/2026 | Estado: Discovery inicial completo · Spec validado · Pendiente construcción
+# Reporte de P&L (FIN · PnL Skill) — Session Context
+
+> **DISCOVERY CONCLUIDO** — 2026-04-23
+> Feature derivada original: `features/ardua-pnl-report.md` (eliminado en el refactor de la triada — pendiente de absorción dentro de `features/clp/`)
+> Resumen de decisiones que sobrevivieron: Skill que transforma MASTER.xlsx en reporte HTML print-ready con 4 tipos (daily/weekly/monthly/custom), layout único basado en Report 9, y `cost=0` en V1 para mantener paridad con el flujo manual de Santi. Output HTML (el usuario hace Cmd+P → PDF en el navegador). Lógica validada numéricamente contra Report 9 (match exacto dentro del error de redondeo).
 
 ---
 

@@ -1,3 +1,12 @@
+---
+name: Aplicación TRD — Discovery Document
+features: [TRD]
+status: Concluida
+owner: Yasmani Rodriguez
+created_at: 2026-04-30
+updated_at: 2026-04-10
+---
+
 # Aplicación TRD — Discovery Document
 
 > Última actualización: 22/04/2026 | Estado: En producción — iteración activa
@@ -9,6 +18,7 @@
 Este documento consolida el entendimiento actual de la aplicación TRD — su propósito, modelo operacional, estado actual, bloques funcionales y mejoras propuestas. Es la base de conocimiento para futuras sesiones de producto, discovery y desarrollo.
 
 **Documentos complementarios:**
+
 - Para el detalle del módulo **Proveedores de Liquidez** (modelo de datos, API, componentes, decisiones de implementación), ver `trd-proveedores-de-liquidez-discovery.md`.
 - Para el detalle del sistema **Prime Desk RFQ** (REQ-8, REQ-9, REQ-30, REQ-31, REQ-33 y arquitectura APE / RFQ API), ver `rfq-prime-desk-discovery.md`.
 
@@ -220,6 +230,7 @@ Existe una ruta `/dashboard` con cards de métricas hardcodeadas (sin conexión 
 **Objetivo:** Incorporar el RFQ Gateway como módulo nativo en TRD, habilitando a la Mesa gestionar lotes de liquidez, BPS y operaciones pendientes desde el mismo panel.
 **Discovery:** `rfq-prime-desk-discovery.md`
 **Requerimientos:**
+
 - REQ-8 · CLP (Solicitud de Cotización) — Ready for Dev
 - REQ-9 · TRD (Panel de Gestión Mesa) — Ready for Dev
 - REQ-30 · APE (Motor de Precio y Liquidez) — Ready for Dev
@@ -232,39 +243,39 @@ Existe una ruta `/dashboard` con cards de métricas hardcodeadas (sin conexión 
 
 ## 9. Decisiones de diseño registradas
 
-| Decisión | Detalle |
-|---|---|
-| La Mesa no mueve fondos entre plataformas | Solo ejecuta intercambios dentro de cada plataforma. Movimientos entre cuentas son scope de OPS. |
-| RFQ no tributa directo a Exposición | El resultado del proceso es una Quote. La exposición queda capturada en el bloque Quotes. |
-| Exposición es vista calculada, no módulo | No tiene registro propio. Se calcula dinámicamente desde los bloques. |
-| Home es el contenedor de Exposición | Cards de Exposición en el futuro Home. Granularidad (por moneda, plataforma, total): TBD. |
-| Clients Module de RFQ puede integrarse en TRD | TRD ya tiene módulo de Clientes. La integración del Client Module del RFQ no requiere depender de LEX. |
+| Decisión                                      | Detalle                                                                                                   |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| La Mesa no mueve fondos entre plataformas     | Solo ejecuta intercambios dentro de cada plataforma. Movimientos entre cuentas son scope de OPS.          |
+| RFQ no tributa directo a Exposición           | El resultado del proceso es una Quote. La exposición queda capturada en el bloque Quotes.                 |
+| Exposición es vista calculada, no módulo      | No tiene registro propio. Se calcula dinámicamente desde los bloques.                                     |
+| Home es el contenedor de Exposición           | Cards de Exposición en el futuro Home. Granularidad (por moneda, plataforma, total): TBD.                 |
+| Clients Module de RFQ puede integrarse en TRD | TRD ya tiene módulo de Clientes. La integración del Client Module del RFQ no requiere depender de LEX.    |
 | Prototipo RFQ no es implementación definitiva | El prototipo existente sirvió para exploración. El módulo nativo en TRD parte de cero desde el discovery. |
-| Summary de Proveedores es server-side | El backend recalcula el objeto summary con cada request filtrado. No hay agregación client-side. |
-| Proveedores usa pares de moneda dinámicos | A diferencia del prototipo (CABLE/MEP), producción usa CurrencyPairSelector con default USD/ARS. |
+| Summary de Proveedores es server-side         | El backend recalcula el objeto summary con cada request filtrado. No hay agregación client-side.          |
+| Proveedores usa pares de moneda dinámicos     | A diferencia del prototipo (CABLE/MEP), producción usa CurrencyPairSelector con default USD/ARS.          |
 
 ---
 
 ## 10. Preguntas de diseño abiertas
 
-| Pregunta | Prioridad |
-|---|---|
-| ¿Granularidad de los cards de Exposición en Home? (por moneda, por plataforma, total) | Alta |
-| ¿Cómo contribuyen los Bots a la Exposición — reportan posiciones propias o se infieren desde trades? | Alta |
-| ¿La Exposición se calcula por moneda, por plataforma, o ambas? | Alta |
-| ¿El Home reemplaza el Dashboard actual o es una ruta nueva? | Media |
-| ¿Los cards de volumen de Proveedores deberían soportar múltiples pares en el futuro? | Media |
-| ¿Se necesita edición o cancelación de operaciones de Proveedores en v2? | Media |
+| Pregunta                                                                                             | Prioridad |
+| ---------------------------------------------------------------------------------------------------- | --------- |
+| ¿Granularidad de los cards de Exposición en Home? (por moneda, por plataforma, total)                | Alta      |
+| ¿Cómo contribuyen los Bots a la Exposición — reportan posiciones propias o se infieren desde trades? | Alta      |
+| ¿La Exposición se calcula por moneda, por plataforma, o ambas?                                       | Alta      |
+| ¿El Home reemplaza el Dashboard actual o es una ruta nueva?                                          | Media     |
+| ¿Los cards de volumen de Proveedores deberían soportar múltiples pares en el futuro?                 | Media     |
+| ¿Se necesita edición o cancelación de operaciones de Proveedores en v2?                              | Media     |
 
 ---
 
 ## 11. Próximos pasos
 
-| # | Acción | Owner | Estado |
-|---|---|---|---|
-| 1 | Handoff REQ-35 (Contravalor ARS en cards) a Tecnología | HoP | Pendiente |
-| 2 | Evaluar inicio de discovery para Home + Exposición Agregada | HoP + Facundo Vasques | No iniciado |
-| 3 | Resolver granularidad y modelo de cálculo de Exposición para el Home | HoP + Facundo Vasques | No iniciado |
-| 4 | Evaluar necesidad de edición/cancelación de operaciones de Proveedores (v2) | HoP + Facundo Vasques | No iniciado |
-| 5 | Validar REQ-33 (Centro de Notificaciones) para avanzar a Ready for Dev | HoP + Facundo Vasques | Pendiente |
-| 6 | Decidir si Admin BFF (auth TRD ↔ APE) requiere REQ propio o se foldea en REQ-30 | HoP | Pendiente |
+| #   | Acción                                                                          | Owner                 | Estado      |
+| --- | ------------------------------------------------------------------------------- | --------------------- | ----------- |
+| 1   | Handoff REQ-35 (Contravalor ARS en cards) a Tecnología                          | HoP                   | Pendiente   |
+| 2   | Evaluar inicio de discovery para Home + Exposición Agregada                     | HoP + Facundo Vasques | No iniciado |
+| 3   | Resolver granularidad y modelo de cálculo de Exposición para el Home            | HoP + Facundo Vasques | No iniciado |
+| 4   | Evaluar necesidad de edición/cancelación de operaciones de Proveedores (v2)     | HoP + Facundo Vasques | No iniciado |
+| 5   | Validar REQ-33 (Centro de Notificaciones) para avanzar a Ready for Dev          | HoP + Facundo Vasques | Pendiente   |
+| 6   | Decidir si Admin BFF (auth TRD ↔ APE) requiere REQ propio o se foldea en REQ-30 | HoP                   | Pendiente   |

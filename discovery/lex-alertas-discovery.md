@@ -1,6 +1,15 @@
+---
+name: LEX — Módulo Alertas · Discovery Document
+features: [LEX]
+status: En investigación
+owner: Yasmani Rodriguez
+created_at: 2026-04-30
+updated_at: 2026-04-24
+---
+
 # LEX — Módulo Alertas · Discovery Document
 
-> Última actualización: 2026-04-24 PM | Estado: Opened — discovery hijo de `lex-discovery.md` para el módulo Alertas de LEX. Documenta el scope funcional completo del **REQ-52 — Módulo de Alertas + Screening de Contrapartes como primer tipo de alerta** (estado SENT TO DEV desde 2026-04-24 AM; UX ajustada 2026-04-24 PM a dos pestañas Nuevas/Histórico con reorden de columnas). Aporta sobre el REQ-33 (patrón de referencia): state machine completa, asignación de responsable, comentarios; hereda del REQ-33 el formato visual de la pestaña Nuevas (card-list TRD-style).
+> Discovery hijo de `lex-discovery.md`. Documenta el scope funcional completo del **REQ-52 — Módulo de Alertas + Screening de Contrapartes como primer tipo de alerta** (estado SENT TO DEV desde 2026-04-24 AM; UX ajustada 2026-04-24 PM a dos pestañas Nuevas/Histórico con reorden de columnas). Aporta sobre el REQ-33 (patrón de referencia): state machine completa, asignación de responsable, comentarios; hereda del REQ-33 el formato visual de la pestaña Nuevas (card-list TRD-style).
 
 ---
 

@@ -1,142 +1,218 @@
 # Discovery — Convención y criterio
 
-> Última actualización: 2026-04-29
+> Última actualización: 2026-04-30
 
 ## Propósito
 
-Esta carpeta contiene los **Living Discovery Documents** de Ardua: la fuente de verdad conceptual sobre cómo funciona (o debería funcionar) cada aplicación del core y cada módulo del negocio.
+Esta carpeta contiene las **investigaciones de hipótesis** del área de Producto: cada archivo captura una hipótesis (o un área acotada de investigación) y los hallazgos que se acumulan mientras se la valida.
 
-Un discovery document responde a la pregunta: **"¿qué sabemos hoy de X y cómo opera?"**. Captura modelo conceptual, arquitectura, decisiones cerradas, hipótesis bajo validación, preguntas abiertas, y blockers activos. Es un documento **vivo** — se actualiza con cada sesión de producto que aporte aprendizaje nuevo.
-
----
-
-## Discovery-First Principle
-
-> **Antes de trabajar en cualquier feature o iniciativa sobre una aplicación del core o módulo, el punto de partida obligado es leer el discovery correspondiente. Si no existe, lo primero es proponer crearlo antes de avanzar.**
-
-Toda feature work genera nuevos hallazgos que deben volver al discovery para mantenerlo vivo. El discovery alimenta la feature, la feature actualiza el discovery, y el ciclo se repite hasta que el discovery madura y genera un feature spec estable.
+Un discovery responde a la pregunta: **"¿qué hipótesis estamos validando, y qué aprendimos?"**. **No** es un snapshot del estado actual de un producto — eso vive en `features/`.
 
 ---
 
-## Estructura active / archived
+## Lugar en la triada
 
-Un discovery vive en uno de dos estados:
+```
+Investigar → Definir → Prototipar
+discovery/    features/   prototypes/
+```
 
-| Estado | Ubicación | Significado |
+Las tres carpetas forman el **bucle de producción** del framework. Cada hipótesis nace en `discovery/`. Cuando madura, sus conclusiones se **propagan** al feature correspondiente en `features/[aplicacion]/`. El estado consolidado del producto vive en `features/`; el rastro del proceso de validación vive en `discovery/`.
+
+### Cardinalidad
+
+- **Discovery → Features: N-N.** Una hipótesis puede impactar uno o más features. Un feature puede recibir aportes de uno o más discoveries a lo largo de su vida.
+
+> Ejemplo: una investigación sobre cómo se autentican operadores externos en Ardua puede impactar simultáneamente a `features/clp/clp-accounts.md` y a `features/lex/lex-limites.md`. Cada feature se actualiza con la parte que le aplica; el discovery queda como registro único de la investigación.
+
+---
+
+## Estructura
+
+La carpeta es **plana**. Todo discovery vive directamente bajo `discovery/`, sin subcarpetas. No existe distinción `active/archived` — el estado de cada discovery se captura en su header (ver §"Estructura del archivo").
+
+---
+
+## Estructura del archivo
+
+Todo discovery sigue una estructura estandarizada que separa **metadatos** (header) y **contenido** (body). Esto permite que cualquier PM o herramienta externa pueda procesar el estado y alcance de un discovery sin leer todo el documento.
+
+### Header obligatorio — YAML frontmatter
+
+El archivo arranca con un bloque YAML delimitado por `---` que captura los metadatos del discovery:
+
+```yaml
+---
+name: Alertas LEX — modelo Perfil B Workflow
+features: [LEX]
+status: En investigación
+owner: Yasmani Rodriguez
+created_at: 2026-04-15
+updated_at: 2026-04-30
+---
+```
+
+#### Campos
+
+| Campo | Tipo | Descripción |
 |---|---|---|
-| **Active** | `discovery/active/` | Discovery activo — hipótesis bajo validación, preguntas abiertas, blockers sin resolver. |
-| **Archived** | `discovery/archived/` | Discovery archivado — todas las hipótesis están resueltas (validadas, descartadas o definidas) y el feature spec derivado ya vive en `features/`. |
+| `name` | string | Título descriptivo de la investigación. Se repite como `# Heading` al inicio del body para visualización en GitHub. |
+| `features` | array | Lista de productos del financial-core afectados, en mayúsculas (`[LEX]`, `[CLP, FIN]`). Para hipótesis sobre **features transversales** (cross-product) usar `[COMMON]`. Para discoveries de **sistemas transversales de infraestructura** (`core-template-frontend`, `jira-automations`, `observabilidad`) usar array vacío `[]`. Ver §"Sintaxis de `features`" para la distinción. |
+| `status` | enum | Estado del discovery. Valores aceptados: `En investigación`, `Concluida`, `Descartada`. Ver §"Ciclo de vida" para el significado de cada uno. |
+| `owner` | string | Nombre completo del PM responsable de la investigación. |
+| `created_at` | date | Fecha de creación del archivo en formato `YYYY-MM-DD`. |
+| `updated_at` | date | Fecha de la última actualización significativa, en formato `YYYY-MM-DD`. Se actualiza con cada iteración. |
 
-> **Nota sobre el nombre.** La definición firme de lo que se va a construir vive en `features/`, no en `archived/`. Lo que vive en `archived/` es el **registro histórico del proceso de validación** — qué hipótesis se probaron, cuáles se descartaron, qué decisiones sobrevivieron. Sirve para auditoría y aprendizaje.
+El `features` array referencia productos a nivel de aplicación (carpeta en `features/`), no a nivel de feature file específico. Si un discovery aporta a `features/lex/lex-alertas.md`, el array igual lleva `[LEX]`. La referencia al feature file específico va en el body cuando se sepa.
 
-### Trigger de archivo
+#### Sintaxis de `features`
 
-Al final de cada iteración sobre un discovery en `active/`, el sistema debe evaluar si **todas las hipótesis, preguntas abiertas y decisiones pendientes están resueltas**. Cuando el documento está maduro, el sistema debe proponer:
+La convención distingue tres casos:
 
-1. **Generar o actualizar** el archivo `features/[aplicacion]-[feature].md` correspondiente, consolidando las definiciones cerradas.
-2. **Mover** el discovery de `active/` a `archived/` y registrar en un header de cierre al inicio del archivo:
-   - Fecha de archivo
-   - Feature derivada (path al archivo en `features/`)
-   - Resumen de 2-3 líneas con las decisiones clave que sobrevivieron
+| Caso | Sintaxis | Ejemplo |
+|---|---|---|
+| Hipótesis sobre uno o varios productos del financial-core | `[APP1]`, `[APP1, APP2]` | `[CLP]`, `[LEX, FIN]` |
+| Hipótesis sobre una **feature transversal** (cross-product, vive en `features/common/`) | `[COMMON]` | `[COMMON]` para una hipótesis sobre el sistema unificado de notificaciones |
+| Hipótesis sobre un **sistema transversal de infraestructura** (no es feature, no tiene carpeta en `features/`) | `[]` (array vacío) | `[]` para `jira-automations-discovery.md`, `observabilidad-discovery.md` |
 
-Si quedan hipótesis abiertas, el discovery permanece en `active/` y se proponen updates in-place, no archivo.
+El token `COMMON` es **solo para features transversales** que viven en `features/common/`. No se usa para infraestructura interna; ésa lleva array vacío.
 
-### Alineación de nombre con feature
+### Body — mínimo obligatorio
 
-Cuando un discovery se archiva y produce un feature spec, **el nombre del archivo de discovery debe coincidir con el nombre del feature** (más el sufijo `-discovery`). Esto garantiza trazabilidad entre el proceso de validación y la definición consolidada:
+Después del frontmatter, el body arranca con el `# Heading` que repite el `name` del header (para visualización), y a continuación dos secciones obligatorias:
 
-- `features/prime-desk-rfq-gateway.md` ↔ `discovery/archived/prime-desk-rfq-gateway-discovery.md`
-- `features/com-pipeline-comercial.md` ↔ `discovery/archived/com-pipeline-comercial-discovery.md`
+```markdown
+# [Mismo valor que `name` del frontmatter]
+
+## Objetivo
+Qué se busca aprender, validar o decidir con esta investigación.
+
+## Contexto
+Origen del problema, antecedentes relevantes, por qué esta hipótesis emerge ahora.
+```
+
+El resto del body queda a **libre criterio de la interacción** (sesión con el sistema). Secciones típicas que pueden aparecer según el caso: hipótesis específicas, hallazgos, opciones evaluadas, decisiones, blockers, referencias a otros discoveries o features, anexos.
+
+**Lo crítico:** que en algún punto del ciclo de vida del discovery, el `Objetivo` y el `Contexto` queden documentados — ya sea desde el primer guardado o aterrizados en iteraciones siguientes. Sin eso, el discovery no es navegable para nadie más que su autor.
+
+### Template completo
+
+```markdown
+---
+name: [Título descriptivo]
+features: [APP1, APP2]
+status: En investigación
+owner: [Nombre completo del PM]
+created_at: YYYY-MM-DD
+updated_at: YYYY-MM-DD
+---
+
+# [Mismo valor que `name`]
+
+## Objetivo
+[Qué se busca aprender, validar o decidir.]
+
+## Contexto
+[Origen del problema, antecedentes, por qué emerge ahora.]
+
+[A partir de acá, secciones libres según la naturaleza de la investigación.]
+```
 
 ---
 
-## Taxonomía — Aplicación del core vs Módulo
+## Cuándo se crea un discovery
 
-Ardua organiza su software en dos niveles jerárquicos:
+Cuando hay una **hipótesis** que requiere investigación antes de poder afectar el estado de un producto. Por ejemplo:
 
-### Aplicación del core (nivel top)
+- *"El módulo de Earn de CLP debería operar con AdCap como contraparte de FCI"* → genera `clp-earn-discovery.md`.
+- *"Nuestro sistema de alertas LEX debe tener tres perfiles de comportamiento"* → genera `lex-alertas-discovery.md`.
+- *"Las automatizaciones de Jira deberían disparar comentarios automáticos al cambiar de estado"* → genera `jira-automations-discovery.md` (transversal, no scoped a un producto).
 
-Aplicación con identidad propia, repositorio propio, y roles de usuario definidos dentro del ecosistema Ardua Core. Son seis:
+**No se crea un discovery para:**
 
-- **TRD** — Trading Desk
-- **OPS** — Operations
-- **LEX** — Legal file management
-- **CLP** — Client Portal
-- **COM** — Comercial
-- **FIN** — Finance
+- Capturar el estado actual de un producto. Eso va a `features/[aplicacion]/README.md`.
+- Especificar un feature ya validado. Eso va a `features/[aplicacion]/[aplicacion]-[modulo-o-feature].md`.
+- Documentar una decisión operacional o un proceso. Eso vive en otros sistemas (Notion, framework, etc.).
 
-También entran en este nivel los **sistemas transversales** que no son una aplicación del core en sentido estricto pero ocupan un rol top-level:
+---
 
-- `core-template-frontend` — infraestructura frontend compartida
-- `jira-automations` — automatizaciones Jira
-- `observabilidad` — stack de monitoring
-- Productos completos multi-aplicación (ej: `prime-desk-rfq`, `ardua-pnl-report`)
+## Ciclo de vida
 
-### Módulo (dentro de una aplicación del core)
+Un discovery atraviesa tres estados:
 
-Bloque funcional con modelo conceptual y arquitectura propios, que vive dentro de una aplicación del core. Ejemplos:
+| Estado | Significado |
+|---|---|
+| **En investigación** | La hipótesis está siendo activamente validada. Se itera con cada nuevo hallazgo. |
+| **Concluida — propagada a features/[...]** | La hipótesis fue validada o suficientemente definida. Los hallazgos relevantes ya fueron propagados al/los feature(s) correspondiente(s). |
+| **Descartada** | La hipótesis fue rechazada. El archivo se mantiene como registro de **por qué** se descartó. |
 
-- **Proveedores de Liquidez** — módulo de TRD
-- **Clientes** — módulo presente en TRD, LEX y otras aplicaciones
-- **Earn** — módulo de CLP
-- **Accounts** — módulo de CLP
-- **Límites** — módulo de LEX
+El estado se declara en el campo `status` del frontmatter del archivo (ver §"Estructura del archivo").
 
-Un módulo no es una feature: es un componente estable que **acumula features** a lo largo del tiempo. Las features individuales viven en Jira como REQ-XX y se reflejan en el discovery del módulo como registro de estado (qué hay, qué está en curso, qué fue entregado).
+### Regla crítica de propagación
+
+> **Cuando una hipótesis se concluye, sus hallazgos relevantes se propagan al feature file correspondiente en `features/`.**
+>
+> Un aprendizaje validado que no actualiza `features/` es una fuga. El sistema debe siempre proponer la propagación al cerrar un discovery.
+
+Si un discovery impacta varios features, la propagación debe actualizar **cada uno** de los features afectados.
 
 ---
 
 ## Convención de nombres
 
-Formato base:
-
 ```
-[aplicacion]-discovery.md                   ← discovery de una aplicación del core
-[aplicacion]-[modulo]-discovery.md          ← discovery de un módulo dentro de una aplicación
+[aplicacion]-[topic]-discovery.md        ← scoped a una aplicación o módulo
+[topic]-discovery.md                     ← transversal (no scoped)
 ```
 
 Reglas:
 
-- Todo en **kebab-case** (minúsculas, palabras separadas por guiones). Sin underscores, sin PascalCase.
+- Todo en **kebab-case**.
 - **ASCII only** — sin acentos, sin `ñ`, sin caracteres especiales. Set permitido: `[a-z0-9-]`.
 - Siempre termina en `-discovery.md`.
-- El prefijo `[aplicacion]-` agrupa alfabéticamente la aplicación del core y sus módulos en el listado de la carpeta.
+- Cuando aplica, el prefijo `[aplicacion]-` agrupa el discovery con su aplicación de impacto principal en el listado de la carpeta.
 
 **Ejemplos:**
 
 ```
-trd-discovery.md                            ← aplicación del core TRD
-trd-proveedores-de-liquidez-discovery.md    ← módulo Proveedores dentro de TRD
-clp-discovery.md                            ← aplicación del core Client Portal
-ops-discovery.md                            ← aplicación del core OPS
-lex-limites-discovery.md                    ← módulo Límites dentro de LEX
+clp-earn-discovery.md                    ← hipótesis sobre Earn dentro de CLP
+trd-proveedores-de-liquidez-discovery.md ← hipótesis sobre Proveedores de TRD
+lex-alertas-discovery.md                 ← hipótesis sobre el módulo de Alertas de LEX
+jira-automations-discovery.md            ← transversal, no scoped a un producto
+observabilidad-discovery.md              ← transversal
 ```
-
-### Relación padre ↔ hijo
-
-El discovery de una aplicación del core actúa como **índice**: menciona cada módulo, resume su propósito y estado, y enlaza al discovery específico cuando existe. Los discoveries de módulos son la **fuente de detalle**: modelo de datos, arquitectura interna, decisiones de implementación. El padre no duplica el detalle del hijo.
 
 ---
 
 ## Versionado
 
-El versionado lo maneja **Git**. Los archivos de discovery no llevan sufijos `v[N]` para iteraciones normales — el historial vive en el log de commits.
+El versionado lo maneja **Git**. Los archivos de discovery no llevan sufijos `v[N]` para iteraciones normales.
 
-El sufijo `v[N]` se reserva **solo para forks conceptuales reales**: pivotes, cambios de dirección, scope significativamente redefinido. En ese caso se crea un archivo nuevo con el sufijo (ej: `trd-proveedores-de-liquidez-discovery-v2.md`) y el original se mantiene como referencia histórica del enfoque previo.
+El sufijo `v[N]` se reserva **solo para forks conceptuales reales**: pivotes, cambios de dirección, scope significativamente redefinido. En ese caso se crea un archivo nuevo con el sufijo y el original se mantiene como referencia histórica del enfoque previo.
 
 ---
 
-## Caso excepcional — Instancias paralelas
+## Caso especial — Sistemas transversales
 
-Cuando existen dos o más implementaciones independientes del mismo dominio (por ejemplo, una versión de producción y un MVP corriendo en paralelo, o una migración con versión vieja y nueva conviviendo temporalmente), cada una lleva un qualifier de instancia:
+Algunos discoveries describen **sistemas transversales** que no son productos del financial-core (p. ej. `core-template-frontend`, `jira-automations`, `observabilidad`). Estos discoveries:
 
-```
-[dominio]-[instancia]-discovery.md
-```
+- Existen como cualquier otro archivo en `discovery/`.
+- **No tienen carpeta correspondiente en `features/` ni en `prototypes/`.**
+- Sus definiciones, cuando se consolidan, viven dentro del propio discovery o se referencian desde `framework/`.
 
-Regla: **si hay instancias paralelas, todas deben llevar qualifier. Ninguna queda como "default sin qualifier" compitiendo con otra que sí lo tiene.**
+---
 
-Este caso debe ser explícitamente temporal o justificado. Si surge, documentar en el archivo correspondiente por qué coexisten y cuál es el plan de consolidación.
+## Migración de discoveries históricos
+
+Algunos discoveries actuales (heredados del modelo previo) son **agregados por aplicación** que mezclan estado actual + hipótesis activas (p. ej. `clp-discovery.md`, `ops-discovery.md`, `trd-discovery.md`, `lex-discovery.md`, `fin-discovery.md`).
+
+Bajo el nuevo modelo, esos archivos se separan progresivamente cuando cada producto se toque en una sesión real:
+
+1. El **estado actual** del producto se migra a `features/[aplicacion]/README.md` y a los feature files individuales.
+2. Las **hipótesis activas** quedan en `discovery/` como discoveries scoped (`[aplicacion]-[topic]-discovery.md`).
+3. El archivo agregado original puede archivarse o mantenerse como referencia histórica según el caso.
+
+No se hace una migración en bloque — se separa cuando hay una sesión real que lo justifique.
 
 ---
 
@@ -144,12 +220,11 @@ Este caso debe ser explícitamente temporal o justificado. Si surge, documentar 
 
 Antes de crear uno nuevo:
 
-1. Listar `discovery/active/` y `discovery/archived/` y verificar si ya existe uno para el mismo scope.
-2. Si existe y cubre el mismo dominio → actualizar, no duplicar.
-3. Si se trata de un módulo nuevo dentro de una aplicación del core existente → usar `[aplicacion]-[modulo]-discovery.md` y agregar referencia en el discovery de la aplicación padre.
-4. Si se trata de una aplicación del core nueva o sistema transversal nuevo → usar `[aplicacion]-discovery.md`.
+1. Listar `discovery/` y verificar si ya existe un discovery sobre el mismo dominio o hipótesis.
+2. Si existe → actualizar el archivo existente, no duplicar.
+3. Si no existe → crear con el patrón de naming correspondiente y declarar el estado inicial en el header (`En investigación`).
 
-Si no existe un discovery para lo que se va a trabajar, **el primer paso de la sesión es proponer crearlo** (Discovery-First).
+Si la sesión introduce una hipótesis y no hay discovery, **el primer paso es proponer crearlo**.
 
 ---
 
@@ -158,54 +233,8 @@ Si no existe un discovery para lo que se va a trabajar, **el primer paso de la s
 Los archivos obsoletos no se borran físicamente. Se prefijan con `.trash-` para ocultarlos en listados pero preservar el contenido por si se necesita auditarlo.
 
 ```
-.trash-CLP_Session_Context.md                          ← versión previa reemplazada por clp-discovery.md
-.trash-OPS_Session_Context.md                          ← versión previa reemplazada por ops-discovery.md
+.trash-CLP_Session_Context.md                          ← versión previa reemplazada
+.trash-OPS_Session_Context.md                          ← versión previa reemplazada
 ```
 
 Una limpieza periódica puede borrarlos definitivamente cuando no haya riesgo de necesitar el histórico.
-
----
-
-## Snapshots de handoff (caso excepcional)
-
-Los discoveries son living documents — no capturan un momento puntual sino el estado actual del dominio. Cuando una sesión se interrumpe abruptamente (timeout del MCP, cambio de máquina, traslado al móvil) y se necesita preservar el estado intermedio del trabajo para retomarlo después, puede crearse un **snapshot de handoff** con naming distinto:
-
-```
-session-context-[tema]-YYYY-MM-DD.md
-```
-
-Propiedades:
-
-- **Es temporal y efímero.** Captura un momento puntual de una sesión interrumpida.
-- **No es un discovery.** Convive con el discovery del dominio; no lo reemplaza.
-- **Se soft-deletea apenas se retoma** y se consolida en el discovery correspondiente.
-
----
-
-## Inventario vivo
-
-Lista generada el 2026-04-29. Regenerar manualmente cuando se agreguen, renombren, muevan o archiven archivos.
-
-### Active (`discovery/active/`)
-
-| Archivo | Nivel | Scope |
-|---|---|---|
-| `clp-discovery.md` | Aplicación del core | Client Portal |
-| `com-discovery.md` | Aplicación del core | Comercial |
-| `core-template-frontend-discovery.md` | Transversal | Template frontend de producción (Vue 3 + TS) |
-| `fin-discovery.md` | Aplicación del core | FIN (Finance) — taxonomía v3 + Anexo de modelo conceptual de dimensiones del registro |
-| `jira-automations-discovery.md` | Transversal | Automatizaciones Jira |
-| `lex-discovery.md` | Aplicación del core | LEX (Legal) |
-| `lex-alertas-discovery.md` | Módulo | LEX · Alertas (canónico Perfil B Workflow del financial-core) |
-| `lex-limites-discovery.md` | Módulo | LEX · Límites |
-| `observabilidad-discovery.md` | Transversal | Observabilidad |
-| `ops-discovery.md` | Aplicación del core | OPS (Operations) — incluye OPS-Inbox como primer canónico de Inbox del financial-core |
-| `trd-discovery.md` | Aplicación del core | TRD (Trading Desk) |
-
-### Archived (`discovery/archived/`)
-
-| Archivo | Feature derivada | Archivado |
-|---|---|---|
-| `pnl-discovery.md` | `features/ardua-pnl-report.md` | 2026-04-23 |
-| `prime-desk-rfq-gateway-discovery.md` | `features/prime-desk-rfq-gateway.md` | 2026-04-23 |
-| `trd-proveedores-de-liquidez-discovery.md` | (pendiente migración a `features/`) | — |

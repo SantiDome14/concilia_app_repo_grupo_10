@@ -1,6 +1,15 @@
+---
+name: Módulo de Ops — Session Context
+features: [OPS]
+status: En investigación
+owner: Yasmani Rodriguez
+created_at: 2026-04-30
+updated_at: 2026-04-27
+---
+
 # Módulo de Ops — Session Context
 
-> Última actualización: 27/04/2026 | Estado: Discovery ampliado — modelo operativo + módulo Bancos/Cuentas en producción del prototipo + alineación con Motor Contable de FIN + OPS-Inbox como primer canónico de Inbox del financial-core
+> Discovery ampliado — modelo operativo + módulo Bancos/Cuentas en producción del prototipo + alineación con Motor Contable de FIN + OPS-Inbox como primer canónico de Inbox del financial-core.
 
 ---
 

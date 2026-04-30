@@ -10,7 +10,7 @@ This is the **shared operating system of the Product area at Ardua**. Every Prod
 
 1. **Versioning** — every change is traced to an author, a timestamp, and a diff. We can always see _what_ changed, _when_, and _by whom_.
 2. **Single source of truth** — GitHub is canonical. Local clones are working copies.
-3. **Code-friendly** — prototypes are increasingly project folders (with `package.json`, `src/`, etc.). A Git repository is the natural home for both markdown and code.
+3. **Code-friendly** — prototypes are project folders (with `package.json`, `src/`, etc.). A Git repository is the natural home for both markdown and code.
 
 The **canonical reference** for how this framework operates is [`framework/project-instructions.md`](framework/project-instructions.md). Read it first.
 
@@ -27,11 +27,12 @@ product-management-framework/
 │
 ├── framework/                ← Foundational constraints (gated by CODEOWNERS)
 ├── entities/                 ← Catalog of the operational ecosystem
-├── discovery/
-│   ├── active/               ← Discoveries currently under validation
-│   └── archived/             ← Discoveries whose validation has concluded
-├── features/                 ← Feature/product specifications
-├── prototypes/               ← Functional prototypes per core application
+├── discovery/                ← Investigation of hypotheses (flat folder)
+├── features/                 ← Source of truth of product state
+│   ├── [aplicacion]/         ←   One folder per product
+│   └── common/               ←   Transversal features (cross-product)
+├── prototypes/               ← Visual representation of products (1:1 with features/)
+│   └── [aplicacion]/         ←   Project folder per product
 ├── skills/                   ← Packaged Claude Skills used across the area
 └── workflows/                ← n8n workflow exports for the Miles Slack agent
 ```
@@ -48,30 +49,35 @@ Catalog of the operational ecosystem: own entities (Haz Pagos, Circuit Pay, Ardu
 
 Each file describes **what the entity enables us to do operationally** — which capabilities it unlocks, under which conditions, with which limits. Consulted whenever an entity is mentioned during a session.
 
-### `discovery/active/`
+### The Discovery–Features–Prototypes triad
 
-Discoveries currently under validation. **Living documents** that capture hypotheses being tested, open questions, decisions made along the way, and active blockers. Reading them is what guarantees continuity between sessions.
+These three folders form the **core production loop** of the framework. They reflect the natural flow of how products are created and updated:
 
-### `discovery/archived/`
+> **Investigate → Define → Prototype**
+>
+> First we investigate (discovery). From the investigation, definitions land (features). Those definitions give rise to prototypes — or to modifications of existing prototypes.
 
-Discoveries whose validation process has concluded. The consolidated definition lives in `features/`; what lives here is the **historical record** of how each feature was defined — which hypotheses were validated, which were discarded, and which decisions survived.
+#### `discovery/`
 
-### `features/`
+Investigation of hypotheses. Flat folder — every discovery file lives directly under `discovery/`. A single discovery can impact one or many features; a single feature can receive contributions from one or many discoveries. The relation is **N-N**.
 
-Feature/product specifications. **Single source of truth for "what we are building"** — these are the consolidated outputs of archived discoveries (SRS, PRDs, functional specs).
+A discovery is **not** a snapshot of a product's current state — that lives in `features/`. A discovery captures what was being investigated and what was learned. When a hypothesis matures, its conclusions are propagated to the affected feature file(s).
 
-### `prototypes/`
+#### `features/`
 
-Functional prototypes per core application. Two supported modalities:
+The **single source of truth** for the current, documented state of every product in Ardua's portfolio. When you want to know what a product looks like today and what it's expected to do, the answer lives here.
 
-- **Single-file** (`.html`) — for quick validations.
-- **Project folder** (with `package.json`, `src/`, etc.) — for prototypes whose scope justifies a real frontend project. Each project folder must include its own `README.md`.
+One folder per product. Inside each folder, a `README.md` captures the global state of the product (purpose, modules, current state, key decisions), and individual feature files (`[aplicacion]-[modulo-o-feature].md`) capture the consolidated specification of each capability.
 
-Prototypes are alignment and validation tools, not design or development deliverables.
+A special `features/common/` folder groups **transversal features** — capabilities that span two or more products with the same semantics (e.g., unified notifications, alerts, inboxes). Files inside `common/` drop the application prefix since the folder already provides the context.
+
+#### `prototypes/`
+
+Functional, navigable representation of each product, used as an alignment and validation tool with stakeholders before construction. **1:1 correspondence** with `features/` at the product level: `features/clp/` ↔ `prototypes/clp/`. Each prototype represents the entire product, not individual features.
 
 ### `skills/`
 
-Packaged [Claude Skills](https://docs.claude.com/en/docs/claude-code/skills) used across the area. Currently includes:
+Packaged Claude Skills used across the area. Currently includes:
 
 - `ardua-req-definition` — captures product requirements
 - `ardua-req-enrichment` — enriches captured requirements with context
@@ -137,7 +143,7 @@ See [`CODEOWNERS`](CODEOWNERS) for the exact rules and [`CONTRIBUTING.md`](CONTR
 
 - **kebab-case** for all filenames. ASCII only (no accents, no `ñ`).
 - **No version suffixes** — Git handles versioning. The `v[N]` pattern is reserved for real conceptual forks.
-- **Discovery ↔ Feature alignment** — when a discovery is archived, its filename must match the feature spec filename plus the `-discovery` suffix.
+- **Discovery → Features propagation** — when a hypothesis matures, its conclusions must be propagated to the affected feature file(s) in `features/`. A learning that doesn't update `features/` is a leak.
 - **Conventional Commits** with scope (e.g., `feat(clp): ...`, `docs(framework): ...`).
 
 Full detail in [`CONTRIBUTING.md`](CONTRIBUTING.md).

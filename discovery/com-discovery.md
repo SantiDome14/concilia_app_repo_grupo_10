@@ -1,9 +1,16 @@
+---
+name: COM — Living Discovery Document
+features: []
+status: Descartada
+owner: Yasmani Rodriguez
+created_at: 2026-04-30
+updated_at: 2026-04-07
+---
+
 # COM — Living Discovery Document
 
-> Module: Comercial (COM)
-> Requirement: REQ-18
-> Status: In Review → prototipo validado, pendiente de avanzar a Ready for Dev
-> Last updated: 2026-04-07
+> Module: Comercial (COM) — **DEPRECADO TOTALMENTE**
+> Requirement: REQ-18 (histórico)
 
 ---
 

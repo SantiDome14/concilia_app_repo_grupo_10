@@ -1,6 +1,15 @@
+---
+name: Aplicación de Finanzas (FIN) — Session Context
+features: [FIN]
+status: En investigación
+owner: Yasmani Rodriguez
+created_at: 2026-04-30
+updated_at: 2026-04-27
+---
+
 # Aplicación de Finanzas (FIN) — Session Context
 
-> Última actualización: 27/04/2026 | Estado: Discovery con prototipo FIN v4 auditado en disco — perfiles de Alertas cerrados, FIN-10 resuelto, taxonomía v3 con Contabilidad como bloque | Versión: v0.3.1
+> Versión interna del discovery: v0.3.1 — prototipo FIN v4 auditado en disco; perfiles de Alertas cerrados; FIN-10 resuelto; taxonomía v3 con Contabilidad como bloque.
 
 ---
 

@@ -21,7 +21,7 @@ The repository is the **shared operating system** of the Product area. Every PM 
 
    Other PMs may have pushed changes since your last session.
 
-2. **Work with the system.** The system loads context from the relevant folders (per `project-instructions.md` §10.1), proposes changes, and writes to the filesystem only after you confirm.
+2. **Work with the system.** The system loads context from the relevant folders (per `project-instructions.md` §11.1), proposes changes, and writes to the filesystem only after you confirm.
 
 3. **Commit and push at the end of the session.** The system will provide a ready-to-execute Git command block. Review, then run.
 
@@ -56,57 +56,69 @@ These rules apply to **every file in the repository** and are non-negotiable. Th
 |---|---|---|
 | `framework/` | `[topic].md` | `marco-legal.md`, `mision-vision.md` |
 | `entities/` | `[entity-name].md` | `haz-pagos.md`, `ardua-solutions-corp.md` |
-| `discovery/active/` | `[aplicacion]-discovery.md` | `clp-discovery.md` |
-|  | `[aplicacion]-[modulo]-discovery.md` | `lex-limites-discovery.md` |
-|  | `[product]-discovery.md` (transversal) | `prime-desk-rfq-gateway-discovery.md` |
-| `discovery/archived/` | Same patterns as `active/` | (see above) |
-| `features/` | `[aplicacion]-[feature].md` | `com-pipeline-comercial.md` |
-|  | `[product].md` (transversal) | `prime-desk-rfq-gateway.md` |
-| `prototypes/[aplicacion]/` | `[aplicacion]-[name]-prototype.html` (single-file) | `clp-rfq-prototype.html` |
-|  | `[aplicacion]-[name]-prototype/` (project folder) | `fin-tesoreria-prototype/` |
+| `discovery/` | `[aplicacion]-[topic]-discovery.md` | `lex-alertas-discovery.md`, `clp-earn-discovery.md` |
+|  | `[topic]-discovery.md` (transversal) | `jira-automations-discovery.md` |
+| `features/[aplicacion]/` | `README.md` (global state) | `features/clp/README.md` |
+|  | `[aplicacion]-[modulo-o-feature].md` | `features/clp/clp-rfq.md`, `features/trd/trd-proveedores-de-liquidez.md` |
+| `features/common/` | `README.md` (global state of transversal features) | `features/common/README.md` |
+|  | `[capacidad].md` (no app prefix — folder defines context) | `features/common/notificaciones.md`, `features/common/alertas.md` |
+| `prototypes/[aplicacion]/` | Project folder per product | `prototypes/clp/` (with `package.json`, `src/`, `README.md`) |
 | `skills/` | `[skill-name]/SKILL.md` | `ardua-req-definition/SKILL.md` |
 | `workflows/` | `[descriptive-name].json` | `miles-conversation-handler.json` |
 
-### 2.3 Discovery ↔ Feature alignment
+### 2.3 Discovery–Features–Prototypes relationships
 
-When a discovery is archived and produces a feature spec, the discovery filename **must match** the feature filename plus the `-discovery` suffix.
+The three folders are tightly coupled:
 
-- `features/prime-desk-rfq-gateway.md` ↔ `discovery/archived/prime-desk-rfq-gateway-discovery.md`
-- `features/com-pipeline-comercial.md` ↔ `discovery/archived/com-pipeline-comercial-discovery.md`
+- **Discovery → Features:** N-N. A discovery can impact one or many features. A feature can receive contributions from one or many discoveries.
+- **Features → Prototypes:** 1-1 at the product level. Each `features/[aplicacion]/` folder has a counterpart `prototypes/[aplicacion]/` folder. **Exception:** `features/common/` does NOT have a counterpart in `prototypes/` — transversal features are reflected inside the prototype of each product that implements them.
 
-This guarantees traceability between the validation process and the consolidated definition.
+The system enforces these relationships when proposing changes.
+
+### 2.4 Discovery `features` field syntax
+
+The `features` array in a discovery's YAML frontmatter has three valid forms:
+
+| Case | Syntax | Example |
+|---|---|---|
+| Hypothesis scoped to one or more financial-core products | `[APP1]`, `[APP1, APP2]` | `[CLP]`, `[LEX, FIN]` |
+| Hypothesis on a **transversal feature** (cross-product, lives in `features/common/`) | `[COMMON]` | `[COMMON]` for a hypothesis on the unified notifications system |
+| Hypothesis on a **transversal infrastructure system** (no feature folder) | `[]` (empty array) | `[]` for `jira-automations-discovery.md`, `observabilidad-discovery.md` |
+
+The `COMMON` token is reserved for transversal features only; do not use it for infrastructure tooling.
 
 ---
 
 ## 3. Discovery lifecycle
 
-Discoveries are **living documents** that capture hypotheses under validation, open questions, decisions, and active blockers. They follow a simple lifecycle:
+Discoveries are **investigations of hypotheses**. They are not snapshots of product state — that lives in `features/`. A discovery captures what was being investigated and what was learned.
 
-```
-[create]  →  discovery/active/[name]-discovery.md
-                     │
-                     │  iterate while hypotheses are open
-                     │
-                     ▼
-[mature]  →  generate features/[name].md
-                     +
-             move to discovery/archived/[name]-discovery.md
-                     +
-             register closure metadata in the document header
-```
+### 3.1 Standardized file structure
 
-### 3.1 When a discovery is mature
+Every discovery file has two parts:
 
-A discovery is mature when **all hypotheses, open questions, and pending decisions** in the document are resolved (validated, discarded, or defined). At that point the system will propose:
+- **YAML frontmatter** with metadata: `name`, `features`, `status`, `owner`, `created_at`, `updated_at`.
+- **Body** starting with `# Heading` matching `name`, followed by two mandatory sections (`## Objetivo`, `## Contexto`). The rest of the body is free-form.
 
-1. Generating or updating the corresponding `features/[aplicacion]-[feature].md`.
-2. Moving the discovery from `active/` to `archived/`.
-3. Registering in the archived document's header:
-   - Archive date
-   - Derived feature filename
-   - 2–3 line summary of key decisions that survived
+The full specification with field semantics and template lives in `discovery/README.md`.
 
-If open hypotheses remain, the discovery stays in `active/` and updates happen in place.
+### 3.2 Lifecycle
+
+1. **Created** when a new hypothesis or area of investigation is opened. Header populated with `status: En investigación` and body skeleton (Objetivo + Contexto) filled at first save or shortly after.
+2. **Iterated** while the hypothesis is being validated. Multiple sessions may add findings, refine the question, or branch into related hypotheses. Each iteration updates `updated_at`.
+3. **Concluded** when the hypothesis is validated, discarded, or sufficiently defined. At conclusion, the system **must propagate** the relevant findings to the affected feature file(s) in `features/`.
+
+A discovery file is **not deleted at conclusion**. It stays in `discovery/` as a historical record. The `status` field reflects its current state:
+
+- `En investigación` — hypothesis is being actively tested.
+- `Concluida` — findings have been incorporated into the relevant feature file(s).
+- `Descartada` — the hypothesis was rejected. The discovery stays as a record of why.
+
+### 3.3 Critical propagation rule
+
+When a hypothesis is concluded, the system must always propose **propagating the conclusion to the affected feature file(s)**. A validated learning that doesn't update `features/` is a leak.
+
+If a single discovery impacts multiple features, the propagation step must update every affected feature file.
 
 ---
 
@@ -139,7 +151,7 @@ Use the affected core application or area as the scope. Examples:
 - `feat(clp): add Earn FCI sub-feature spec`
 - `docs(framework): update marco-contable to reflect new ARS regulation`
 - `chore(repo): standardize prototype filenames to kebab-case`
-- `refactor(discovery): align rfq-prime-desk filename with feature spec`
+- `refactor(discovery): split lex-discovery into per-feature investigations`
 - `feat(workflows): add Miles slash command handler`
 
 If the change is repository-wide, use `repo` as the scope.
@@ -180,6 +192,7 @@ For gated paths:
 - If a folder is missing a file you expect (e.g. an entity is mentioned in a session but `entities/[name].md` does not exist), **flag it and propose creating it**. Do not silently work without context.
 - If a naming convention does not seem to fit a new file you need to create, **propose an extension to this document** rather than inventing a new pattern in isolation.
 - If `framework/` documents seem out of sync with reality (e.g. a new bank, a new license, a regulatory change), **flag it to the Head of Product** — do not edit `framework/` directly.
+- If a discovery's findings don't seem to map cleanly to an existing feature file, **propose creating a new feature file** rather than dumping the findings into the global `features/[aplicacion]/README.md`.
 
 ---
 

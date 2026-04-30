@@ -1,10 +1,17 @@
+---
+name: Observabilidad — Living Discovery Document
+features: []
+status: En investigación
+owner: Yasmani Rodriguez
+created_at: 2026-04-30
+updated_at: 2026-04-17
+---
+
 # Observabilidad — Living Discovery Document
 
 > Dominio: Observabilidad, Eventos, Alertas y Trazabilidad (transversal)
 > Iniciativa: REQ-38 — Ardua Analytics
-> Requerimiento fundacional: REQ-32
-> Status: REQ-32 In Review — enriquecido, listo para hand-off a Tecnología
-> Last updated: 2026-04-17
+> Requerimiento fundacional: REQ-32 (In Review — enriquecido, listo para hand-off a Tecnología)
 
 ---
 

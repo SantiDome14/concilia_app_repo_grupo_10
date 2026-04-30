@@ -1,6 +1,13 @@
-# Client Portal (CLP) — Session Context
+---
+name: Client Portal (CLP) — Session Context
+features: [CLP]
+status: En investigación
+owner: Yasmani Rodriguez
+created_at: 2026-04-30
+updated_at: 2026-04-10
+---
 
-> Última actualización: 10/04/2026 | Estado: En definición activa — prototipo v3 completado
+# Client Portal (CLP) — Session Context
 
 ---
 

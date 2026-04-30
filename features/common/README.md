@@ -1,0 +1,81 @@
+# COMMON — Features transversales
+
+> Última actualización: 2026-04-30
+> Estado: En definición progresiva
+
+---
+
+## Propósito
+
+Esta carpeta agrupa **features transversales** del financial-core: capacidades que cruzan más de una aplicación (CLP, TRD, LEX, OPS, FIN) y deben definirse de manera unificada en lugar de duplicarse en cada producto. Ejemplos: notificaciones, alertas, inboxes, sistema de acciones, reporting compartido, dashboards.
+
+COMMON no es una aplicación. Es la convención que evita duplicar la definición de capacidades cross-product cuando una misma feature aparece en varios productos del financial-core con la misma semántica.
+
+---
+
+## Diferencia con sistemas transversales de infraestructura
+
+| Tipo | Ejemplo | Vive en |
+|---|---|---|
+| **Feature transversal** (capacidad cross-product) | Sistema unificado de notificaciones, Inbox transversal, Alertas | `features/common/` |
+| **Sistema transversal de infraestructura** (no es feature) | `core-template-frontend`, `jira-automations`, `observabilidad` | Solo `discovery/` (sin features ni prototipo) |
+
+La regla operativa: si la capacidad se expone al usuario final en múltiples productos del financial-core, vive en `features/common/`. Si es infraestructura técnica o tooling interno, vive solo en `discovery/`.
+
+---
+
+## Módulos / capacidades transversales
+
+> Por completar. Listar las features transversales con su estado actual.
+
+| Capacidad | Estado | Feature file | Productos afectados |
+|---|---|---|---|
+| _Por completar_ | _—_ | _—_ | _—_ |
+
+---
+
+## Convención de nombres dentro de `features/common/`
+
+```
+features/common/[capacidad].md
+```
+
+Reglas:
+
+- Todo en **kebab-case** y ASCII only.
+- **Sin prefijo de aplicación** — la carpeta `common/` ya define el contexto. La feature sí indica las aplicaciones afectadas en su body o frontmatter.
+- El nombre describe la capacidad transversal (`notificaciones.md`, `alertas.md`, `inbox.md`), no a qué producto se aplica.
+
+**Ejemplos esperados:**
+
+```
+features/common/notificaciones.md         ← sistema unificado de notificaciones
+features/common/alertas.md                ← motor de alertas con perfiles A/B/C/D
+features/common/inbox.md                  ← inbox transversal (canónico OPS-Inbox como base)
+features/common/acciones.md               ← mecanismo Acción · Registro · Capability
+```
+
+---
+
+## Relación con prototipo
+
+A diferencia de las carpetas de productos del financial-core, **COMMON no tiene un prototipo único**: cada feature transversal se refleja dentro del prototipo de **cada producto** que la implementa. Por ejemplo, el sistema de Alertas se ve dentro de `prototypes/lex/`, `prototypes/ops/`, `prototypes/trd/`, etc.
+
+Si una feature transversal lo amerita, puede crearse un prototipo de referencia en `prototypes/common/[capacidad]/` que muestre el comportamiento aislado, pero no es obligatorio.
+
+---
+
+## Cuándo se crea un archivo en `features/common/`
+
+Cuando una capacidad cumple las dos condiciones siguientes:
+
+1. Se expone al usuario final.
+2. Aparece en **dos o más productos** del financial-core con la misma semántica.
+
+Si una capacidad solo vive en un producto, va en la carpeta de ese producto (`features/[aplicacion]/[aplicacion]-[capacidad].md`), no en `features/common/`. Si más adelante se replica a otros productos, se promueve a `features/common/`.
+
+---
+
+## Frentes abiertos
+
+> Por completar. Hipótesis transversales bajo investigación, con referencia al discovery correspondiente.

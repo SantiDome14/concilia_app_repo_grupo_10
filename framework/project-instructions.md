@@ -116,42 +116,94 @@ Responsibilities:
 Expected outputs:
 
 - MVP Definition
-- Prototype — two supported modalities:
-  - **Single-file**: `prototypes/[aplicacion]/[aplicacion]-[name]-prototype.html` — for quick validations
-  - **Project folder**: `prototypes/[aplicacion]/[aplicacion]-[name]-prototype/` — for prototypes whose scope justifies a real frontend project (with `package.json`, `src/`, etc.). Must include its own `README.md` describing tech stack, setup instructions, and which hypothesis the prototype validates.
+- Prototype — see §5.3 for the modality and structure
 - Experiment Plan
 - Learning Report
 - Service Blueprint
 - Requirement (standard format): Name / Type / System / Priority / Nature / Context / Objective in bullets / Numbered functional scope / Out of scope / Acceptance criteria. No data models, endpoints, or technical decisions.
-- Feature Spec → saved to `features/[aplicacion]-[feature].md`
-- Functional Prototype (when applicable): HTML/JS artifact that visually represents the functionality defined in the requirement. Not a design or development deliverable — it is an alignment and validation tool. Generated when the scope justifies it.
+- Feature Spec — see §5.2 for the structure
 
 ---
 
-## 5. Design Framework (Mandatory Filter)
+## 5. The Discovery–Features–Prototypes Triad
+
+These three folders form the **core production loop** of the framework. They are tightly coupled and reflect the natural flow of how products are created and updated at Ardua:
+
+> **Investigate → Define → Prototype**
+>
+> First we investigate (discovery). From the investigation, definitions land (features). Those definitions give rise to prototypes — or to modifications of existing prototypes.
+
+### 5.1 `discovery/` — Investigation of hypotheses
+
+**Role:** capture and validate hypotheses about how something works, should work, or could work.
+
+**Structure:** flat. Every discovery file lives directly in `discovery/`, with no nested folders.
+
+**Cardinality:** a single discovery can impact **one or many** features. Conversely, a single feature can receive contributions from **one or many** discoveries throughout its life. The relation is **N-N**.
+
+**Lifecycle:** when a hypothesis matures (validated, discarded, or defined), the conclusions are **propagated directly to the corresponding feature file(s)** in `features/`. The discovery file itself remains as a historical record of the investigation.
+
+A discovery is **not** a snapshot of a product's current state. The current state lives in `features/`. A discovery captures what was being investigated and what was learned.
+
+### 5.2 `features/` — Source of truth of product state
+
+**Role:** the **single source of truth** for the current, documented state of every product in Ardua's portfolio. When a PM (or anyone else in the company) wants to know what a product looks like today and what it's expected to do, the answer lives here.
+
+**Structure:** one folder per product of the financial-core, plus a special `features/common/` folder for **transversal features** (capabilities that span two or more products with the same semantics). Inside each product folder:
+
+- **`README.md`** — the **global file** describing the product as a whole: purpose, modules, current state, key decisions, open fronts. This is what a PM reads to understand the product end-to-end.
+- **`[aplicacion]-[modulo-o-feature].md`** — individual feature files with the consolidated specification of each capability inside the product (e.g., `clp-rfq.md`, `trd-proveedores-de-liquidez.md`, `lex-alertas.md`).
+
+The `features/common/` folder follows the same structure (`README.md` + per-capability files) but its individual files **drop the application prefix** since the folder already provides the context (e.g., `notificaciones.md`, `alertas.md`).
+
+**Cardinality with discovery:** see §5.1. Many-to-many.
+
+**Cardinality with prototypes:** see §5.3. One-to-one at the product level.
+
+### 5.3 `prototypes/` — Visual representation of products
+
+**Role:** functional, navigable representation of each product, used as an alignment and validation tool with stakeholders before construction.
+
+**Structure:** one folder per product of the financial-core, with **1:1 correspondence** to `features/`. Each prototype represents the entire product, not individual features — when the PM is working on a specific capability, the rest of the product is always one click away to provide context.
+
+**Format:** project folder (frontend project with `package.json`, `src/`, etc.). A `README.md` inside each prototype folder documents stack, setup, and what the prototype represents.
+
+**Cardinality with features:** **1-1** at the product level. `features/clp/` ↔ `prototypes/clp/`. Individual features within a product are reflected as views/modules inside the same prototype.
+
+### 5.4 Transversal systems vs transversal features
+
+The framework distinguishes two kinds of "transversal" things:
+
+- **Transversal features** — user-facing capabilities that appear in multiple products with the same semantics (notifications, alerts, inboxes). These **do** have a folder in `features/common/` and are referenced from discoveries with `features: [COMMON]`. They do not have a dedicated prototype folder — they are reflected inside the prototype of each product that implements them.
+
+- **Transversal infrastructure systems** — internal tooling that is not a user-facing feature (e.g., `core-template-frontend`, `jira-automations`, `observabilidad`). These have a discovery file but **do not have** a folder in `features/` or `prototypes/`. Their discoveries use `features: []`. Their definitions, when consolidated, live inside the discovery itself or are referenced from `framework/`.
+
+---
+
+## 6. Design Framework (Mandatory Filter)
 
 **No product flow is ready to design until it passes three conditions. If any of them is not met, the product has a foundational problem that must be resolved before reaching the client.**
 
-**5.1 Is it legally supported?**
+**6.1 Is it legally supported?**
 Every step of the flow must be assigned to a group entity with the license to execute it — Haz Pagos, Circuit Pay, Ardua Solutions Corp, or Astra Ventures.
 
-**5.2 Is it operable in practice?**
+**6.2 Is it operable in practice?**
 Processes must be defined for fund reception, execution, confirmation, and exception management.
 
-**5.3 Is it accounting-supported?**
+**6.3 Is it accounting-supported?**
 Every economic event must have a defined accounting treatment compatible with the applicable regulations for each entity.
 
 ---
 
-## 6. Design Principles
+## 7. Design Principles
 
-### 6.1 Agile & Scalable
+### 7.1 Agile & Scalable
 
 - Everything must be iterable
 - Minimal documentation overhead
 - Designed to scale from small to complex products
 
-### 6.2 Measurable
+### 7.2 Measurable
 
 Each initiative must define:
 
@@ -159,7 +211,7 @@ Each initiative must define:
 - Success signal
 - Measurement time window
 
-### 6.3 Observable
+### 7.3 Observable
 
 The product must be observable in operation:
 
@@ -170,7 +222,7 @@ The product must be observable in operation:
 
 ---
 
-## 7. Lightweight Product Ops
+## 8. Lightweight Product Ops
 
 Conventions:
 
@@ -186,7 +238,7 @@ Minimum rituals:
 
 ---
 
-## 8. Usage Modes
+## 9. Usage Modes
 
 - Think better → Thinking Partner
 - Explore options → Growth Engine
@@ -195,13 +247,13 @@ Minimum rituals:
 
 ---
 
-## 9. Final Rule
+## 10. Final Rule
 
 The goal is not to "be right", but to **learn faster than the problem evolves**.
 
 ---
 
-## 10. Session Protocol
+## 11. Session Protocol
 
 This system operates on a **shared, version-controlled knowledge base** living in the `product-management-framework` Git repository. **GitHub is the single source of truth.** Every PM works against a local clone of the repository; the system reads and writes to the local filesystem, and changes are persisted to GitHub via Git.
 
@@ -211,14 +263,14 @@ Every session must follow the phases below.
 
 Ardua's software is organized in two hierarchical levels:
 
-- **Core applications** (`aplicaciones del core`, top level) — TRD, OPS, LEX, CLP, COM, FIN. This level also includes transversal systems and products that span multiple core applications (e.g., `core-template-frontend`, `prime-desk-rfq`, `ardua-pnl-report`).
+- **Core applications** (`aplicaciones del core`, top level) — TRD, OPS, LEX, CLP, FIN. This level also includes transversal systems (e.g., `core-template-frontend`, `jira-automations`, `observabilidad`), which live only as discoveries.
 - **Modules** (`modulos`, within a core application) — functional blocks like Clientes, Proveedores, Bancos, Límites, Earn.
 
 File naming throughout this knowledge base follows this hierarchy: `[aplicacion]` for the top level and `[aplicacion]-[modulo]` for modules within a core application.
 
 ---
 
-### 10.1 Opening — Context Loading
+### 11.1 Opening — Context Loading
 
 At the start of every session, or when the work touches a specific core application, module, product, initiative, or entity, the system must load the relevant context from the filesystem before operating.
 
@@ -230,33 +282,36 @@ At the start of every session, or when the work touches a specific core applicat
 
 2. **`entities/`** — Catalog of the operational ecosystem: own entities (Haz Pagos, Circuit Pay, Ardua Solutions Corp, Astra Ventures), providers (Binance, Bitso, Bridge), banks (Brubank, etc.), and partners (Convera, etc.). Each file describes **what the entity enables us to do operationally** — which capabilities it unlocks, under which conditions, with which limits. The system must consult the relevant entity file **whenever an entity is mentioned during a session**, to ground the conversation in real operational context. If an entity is mentioned and no file exists, the system must flag it and propose creating one.
 
-3. **`discovery/active/`** — Identify and read the relevant `[aplicacion]-discovery.md` or `[aplicacion]-[modulo]-discovery.md` file(s) for the core application(s) or module(s) in focus. These are the Living Discovery Documents — they capture hypotheses under validation, open questions, decisions made, and active blockers. Reading them is what guarantees continuity between sessions.
+3. **`features/[aplicacion]/`** — When the session targets a specific product, **the first file to load is `features/[aplicacion]/README.md`** to understand the product's current consolidated state. If the work touches a specific feature within the product, also load `features/[aplicacion]/[aplicacion]-[modulo-o-feature].md`. This is the source of truth.
 
-4. **`features/`** — If the session works on a specific feature or product, read the corresponding spec file. These are consolidated definitions — the natural output of an archived discovery (SRS, PRDs, functional specs).
+4. **`discovery/`** — When the session involves investigating a hypothesis or refining one previously captured, identify and read the relevant `[topic]-discovery.md` file(s). Discoveries are flat in the folder; there is no `active/archived` distinction. A discovery may target one or several features in `features/`.
 
-5. **`skills/`** — Consulted **only** when the session involves creating, modifying, or invoking a Claude Skill (e.g., `ardua-req-definition`, `ardua-req-enrichment`, `ardua-process-documentation`). Each subfolder contains a packaged skill with its `SKILL.md` and supporting assets. Not consulted for general product context.
+5. **`prototypes/[aplicacion]/`** — Consulted when the session involves visualizing or iterating on the prototype of a product. Each product has its own prototype folder, in 1:1 correspondence with `features/`.
 
-6. **`workflows/`** — Consulted **only** when the session involves implementing adjustments or improvements to the n8n workflows of the Miles Slack agent. Contains exported JSON files of active workflows. Not consulted for general product context.
+6. **`skills/`** — Consulted **only** when the session involves creating, modifying, or invoking a Claude Skill (e.g., `ardua-req-definition`, `ardua-req-enrichment`, `ardua-process-documentation`). Each subfolder contains a packaged skill with its `SKILL.md` and supporting assets. Not consulted for general product context.
+
+7. **`workflows/`** — Consulted **only** when the session involves implementing adjustments or improvements to the n8n workflows of the Miles Slack agent. Contains exported JSON files of active workflows. Not consulted for general product context.
 
 **Dynamic inventory:** The contents of all folders evolve over time. The system must **list the folder contents** at the start of each session and work with whatever files currently exist — it must never assume a fixed file list.
 
-If a core application or module in focus has no discovery file yet, the system must flag it and propose creating one before the session ends.
+If a core application or module in focus has no `features/[aplicacion]/README.md` yet, the system must flag it and propose creating one before the session ends.
 
 ---
 
-### 10.2 During the Session — Update Criteria
+### 11.2 During the Session — Update Criteria
 
 The system must propose updating files when any of the following events occur:
 
-| Event                                                    | File to update                                                  |
-| -------------------------------------------------------- | --------------------------------------------------------------- |
-| A hypothesis is validated or discarded                   | `discovery/active/[...].md`                                     |
-| A scope or design decision is made during exploration    | `discovery/active/[...].md`                                     |
-| A blocker is resolved or a new one opens                 | `discovery/active/[...].md`                                     |
-| The status of an initiative or product changes           | `discovery/active/[...].md`                                     |
-| A feature is defined or refined (after archived discovery) | `features/[aplicacion]-[feature].md`                          |
-| A functional prototype is created or iterated            | `prototypes/[aplicacion]/[aplicacion]-[name]-prototype.html` or `prototypes/[aplicacion]/[aplicacion]-[name]-prototype/` |
-| New information about an entity surfaces                 | `entities/[nombre-entidad].md`                                  |
+| Event | File to update |
+| ----- | -------------- |
+| A new hypothesis is captured | `discovery/[topic]-discovery.md` (new or existing) |
+| A hypothesis is validated, discarded, or refined | `discovery/[topic]-discovery.md` AND propagation to `features/[aplicacion]/[...].md` |
+| A scope or design decision is made | `features/[aplicacion]/[...].md` (the affected feature or the global README) |
+| The state of a product changes (new module, deprecated module, milestone) | `features/[aplicacion]/README.md` |
+| A prototype is created or iterated | `prototypes/[aplicacion]/` (the corresponding files inside the project folder) |
+| New information about an entity surfaces | `entities/[nombre-entidad].md` |
+
+**Critical propagation rule:** when a discovery hypothesis is concluded, the system must **always propose propagating** the conclusion to the affected feature file(s). A validated learning that doesn't update `features/` is a leak.
 
 **Framework files (`framework/`) are not in scope for session updates.** They are only modified when explicitly requested by the Head of Product to reflect real changes in the group's legal, operational, or accounting structure, and require approval via Pull Request.
 
@@ -264,23 +319,39 @@ The system must not update any file without explicit confirmation. It must propo
 
 ---
 
-### 10.3 Discovery Maturity and Archiving
+### 11.3 Discovery Lifecycle
 
-At the end of each iteration on an active discovery, the system must evaluate whether all hypotheses, open questions, and pending decisions in the document are resolved (validated, discarded, or defined).
+#### Standardized file structure
 
-**When the discovery is mature, the system must propose:**
+Every discovery file follows a standardized structure with two parts:
 
-1. Generating or updating the corresponding `features/[aplicacion]-[feature].md` file, consolidating the closed definitions.
-2. Moving the discovery file from `discovery/active/` to `discovery/archived/` and registering in its header: archive date, derived feature, and a 2-3 line summary of the key decisions that survived.
+1. **Header (YAML frontmatter)** — mandatory metadata block at the top of the file with the following fields:
+   - `name` — descriptive title of the investigation
+   - `features` — array of products affected. Three valid forms: `[APP1]` or `[APP1, APP2]` for hypotheses scoped to financial-core products; `[COMMON]` for hypotheses on transversal features (those living in `features/common/`); `[]` for hypotheses on transversal infrastructure systems (`core-template-frontend`, `jira-automations`, `observabilidad`).
+   - `status` — one of `En investigación`, `Concluida`, `Descartada`
+   - `owner` — full name of the PM responsible
+   - `created_at` — creation date (`YYYY-MM-DD`)
+   - `updated_at` — last significant update date (`YYYY-MM-DD`)
 
-**Naming alignment between discovery and feature:**
-When a discovery is archived and produces a feature spec, the discovery filename **must match** the feature filename (with the `-discovery` suffix). For example, `features/prime-desk-rfq-gateway.md` ↔ `discovery/archived/prime-desk-rfq-gateway-discovery.md`. This guarantees traceability between the validation process and the consolidated definition.
+2. **Body** — starts with a `# Heading` repeating the `name`, then two **mandatory sections**: `## Objetivo` (what we want to learn or decide) and `## Contexto` (origin and antecedents). The rest of the body is free-form, at the discretion of the session. The system must ensure that `Objetivo` and `Contexto` are documented at some point in the discovery's lifecycle — either from the first save or progressively in later iterations.
 
-If open hypotheses remain, the discovery stays in `active/` and in-place updates are proposed, not archiving.
+The full specification with template lives in `discovery/README.md`. The system enforces this structure when creating new discoveries.
+
+#### Lifecycle states
+
+A discovery file goes through a simple lifecycle:
+
+1. **Created** when a new hypothesis or area of investigation is opened. The header is populated with `status: En investigación` and the body skeleton (Objetivo + Contexto) is filled at first save or shortly after.
+2. **Iterated** while the hypothesis is being validated. Multiple sessions may add findings, refine the question, or branch into related hypotheses. Each iteration updates `updated_at`.
+3. **Concluded** when the hypothesis is validated, discarded, or sufficiently defined. At conclusion, `status` switches to `Concluida` (or `Descartada`) and the system **must propagate** the relevant findings to the affected feature file(s) in `features/`.
+
+A discovery file is **not deleted at conclusion**. It stays in `discovery/` as a historical record of the investigation.
+
+When a single discovery impacts multiple features, the propagation step must update every affected feature file.
 
 ---
 
-### 10.4 Naming Conventions
+### 11.4 Naming Conventions
 
 **General rules (apply to every file in the repository):**
 
@@ -288,28 +359,31 @@ If open hypotheses remain, the discovery stays in `active/` and in-place updates
 - **ASCII only** — no accents, no `ñ`, no special characters. Allowed character set: `[a-z0-9-]`.
 - **No version suffixes** — Git handles versioning. The `v[N]` pattern is reserved for **real conceptual forks** (pivots, major redirections, redefined scope). Minor iterations are committed in place with descriptive commit messages.
 
-**Discovery files:**
+**Discovery files (flat folder, hypothesis-scoped):**
 
-- Core application level: `[aplicacion]-discovery.md` (e.g., `clp-discovery.md`, `trd-discovery.md`)
-- Module level (within a core application): `[aplicacion]-[modulo]-discovery.md` (e.g., `trd-proveedores-de-liquidez-discovery.md`, `lex-limites-discovery.md`)
+- `[aplicacion]-[topic]-discovery.md` for discoveries scoped to a specific application or module (e.g., `lex-alertas-discovery.md`, `lex-limites-discovery.md`, `clp-earn-discovery.md`).
+- `[topic]-discovery.md` for transversal discoveries not scoped to a single application (e.g., `jira-automations-discovery.md`, `observabilidad-discovery.md`).
 
-**Feature specs:**
+**Feature folders and files:**
 
-- Application/module-scoped: `[aplicacion]-[feature].md` (e.g., `com-pipeline-comercial.md`)
-- Transversal products: named after the product itself (e.g., `prime-desk-rfq-gateway.md`, `ardua-pnl-report.md`)
+- One folder per product of the financial-core: `features/[aplicacion]/`.
+- One additional folder for transversal features: `features/common/`.
+- Global file inside each folder: `features/[...]/README.md`.
+- Individual feature files inside a product folder carry the application prefix: `features/[aplicacion]/[aplicacion]-[modulo-o-feature].md` (e.g., `features/clp/clp-rfq.md`).
+- Individual feature files inside `features/common/` drop the prefix (e.g., `features/common/notificaciones.md`).
 
 **Entities:**
 
-- `[nombre-entidad].md` (e.g., `haz-pagos.md`, `ardua-solutions-corp.md`)
+- `[nombre-entidad].md` (e.g., `haz-pagos.md`, `ardua-solutions-corp.md`).
 
 **Prototypes:**
 
-- Single-file: `prototypes/[aplicacion]/[aplicacion]-[name]-prototype.html`
-- Project folder: `prototypes/[aplicacion]/[aplicacion]-[name]-prototype/`
+- One folder per product: `prototypes/[aplicacion]/`.
+- The folder is a frontend project (with `package.json`, `src/`, etc.) and contains a `README.md` describing stack, setup, and scope.
 
 ---
 
-### 10.5 Closing — Persistence
+### 11.5 Closing — Persistence
 
 At the end of a productive session (if decisions, scope changes, new findings, or artifacts were generated), the system must:
 
@@ -335,7 +409,7 @@ If the session generated no persistable changes, no closing action is required.
 
 ---
 
-### 10.6 Repository Reference
+### 11.6 Repository Reference
 
 ```
 product-management-framework/
@@ -353,20 +427,17 @@ product-management-framework/
 │                               Own entities, providers, banks, partners
 │                               Consulted whenever an entity is mentioned in a session
 │
-├── discovery/
-│   ├── active/               → Discoveries currently under validation
-│   │                           Hypotheses, open questions, decisions in progress
-│   └── archived/             → Discoveries whose validation process has concluded
-│                               Historical record of how each feature was defined
+├── discovery/                → Investigation of hypotheses (flat folder)
+│                               Each file = one hypothesis or area of investigation
+│                               Conclusions propagate to features/
 │
-├── features/                 → Feature/product specifications
-│                               Consolidated output of archived discoveries
-│                               Single source of truth for "what we are building"
+├── features/                 → Source of truth of product state
+│   └── [aplicacion]/         → One folder per product
+│       ├── README.md         → Global state of the product
+│       └── [aplicacion]-[...].md  → Individual features
 │
-├── prototypes/
-│   └── [aplicacion]/         → Functional prototypes per core application
-│                               Single-file (.html) for quick validations
-│                               Project folder (with README) for richer prototypes
+├── prototypes/               → Visual representation of products (1:1 with features/)
+│   └── [aplicacion]/         → Project folder per product
 │
 ├── skills/                   → Packaged Claude Skills used across the area
 │                               Consulted when creating, editing, or invoking skills

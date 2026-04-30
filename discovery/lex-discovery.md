@@ -1,6 +1,15 @@
+---
+name: LEX — Legal File Management · Discovery Document
+features: [LEX]
+status: En investigación
+owner: Yasmani Rodriguez
+created_at: 2026-04-30
+updated_at: 2026-04-24
+---
+
 # LEX — Legal File Management · Discovery Document
 
-> Última actualización: 2026-04-24 PM (Ajuste de scope sobre prototipos LEX + apertura de REQ-59 transversal) | Estado: Opened — discovery a nivel aplicación LEX con los 4 REQs atómicos **enviados a desarrollo** (REQ-47, REQ-52, REQ-53, REQ-54) + **REQ-59 (Reportería — Infraestructura Transversal del Core)** recién creado como prerequisito de REQ-54. Los 4 **prototipos HTML generados** en `prototypes/lex/` pasan a una segunda iteración vía Claude Code Agent Team para reflejar los ajustes del 2026-04-24 PM (UX de Alertas en dos pestañas Nuevas/Histórico · Reportería sin alta en runtime · cambios transversales de header y breadcrumb en el template del core). El módulo **Alertas** tiene discovery hijo propio (`lex-alertas-discovery.md`). El discovery permanece en `opened/` porque siguen abiertos gaps post-v1 (G-08 a G-14) que van a alimentar iteraciones futuras.
+> Discovery a nivel aplicación LEX con los 4 REQs atómicos **enviados a desarrollo** (REQ-47, REQ-52, REQ-53, REQ-54) + **REQ-59 (Reportería — Infraestructura Transversal del Core)** recién creado como prerequisito de REQ-54. Los 4 **prototipos HTML generados** en `prototypes/lex/` pasan a una segunda iteración vía Claude Code Agent Team para reflejar los ajustes del 2026-04-24 PM (UX de Alertas en dos pestañas Nuevas/Histórico · Reportería sin alta en runtime · cambios transversales de header y breadcrumb en el template del core). El módulo **Alertas** tiene discovery hijo propio (`lex-alertas-discovery.md`). Permanece en investigación porque siguen abiertos gaps post-v1 (G-08 a G-14) que van a alimentar iteraciones futuras.
 
 ---
 

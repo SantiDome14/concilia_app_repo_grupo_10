@@ -1,6 +1,15 @@
+---
+name: LEX — Límites · Discovery Document
+features: [LEX]
+status: En investigación
+owner: Yasmani Rodriguez
+created_at: 2026-04-30
+updated_at: 2026-04-23
+---
+
 # LEX — Límites · Discovery Document
 
-> Última actualización: 2026-04-23 | Estado: Opened — hipótesis sobre el catálogo de orígenes pendiente de validación; REQ-45 en curso como segunda iniciativa del módulo
+> Hipótesis sobre el catálogo de orígenes pendiente de validación; REQ-45 en curso como segunda iniciativa del módulo.
 
 ---
 

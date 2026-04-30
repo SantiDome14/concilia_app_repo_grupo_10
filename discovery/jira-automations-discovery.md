@@ -1,6 +1,13 @@
-# Jira Automations — Session Context
+---
+name: Jira Automations — Session Context
+features: []
+status: En investigación
+owner: Yasmani Rodriguez
+created_at: 2026-04-30
+updated_at: 2026-04-22
+---
 
-> Last updated: 2026-04-22
+# Jira Automations — Session Context
 
 ## Purpose
 

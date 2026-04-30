@@ -1,6 +1,14 @@
+---
+name: core-template-frontend — Session Context
+features: []
+status: En investigación
+owner: Yasmani Rodriguez
+created_at: 2026-04-30
+updated_at: 2026-04-22
+---
+
 # core-template-frontend — Session Context
 
-> Last updated: 2026-04-22
 > Scope: Transversal frontend infrastructure — NOT a functional module
 > Related repo: `/Users/yasmani/Projects/core-template-frontend/`
 
