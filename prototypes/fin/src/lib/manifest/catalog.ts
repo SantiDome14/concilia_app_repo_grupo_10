@@ -40,14 +40,30 @@ export function listCatalogs(): string[] {
 }
 
 /**
- * Resolves a catalog by id. When the resolver is missing OR the filter
- * is null/undefined/empty-string, returns `[]` (the dropdown caller
- * decides whether to render an empty state with a hint).
+ * Sentinel returned by `resolveCatalogFilter` when the field declares
+ * NO `catalog_filter`. Distinct from `null` (which means "filter
+ * declared but antecedent missing") so the dropdown caller can render
+ * the full catalog without falling into the empty-state path.
+ */
+export const UNFILTERED_CATALOG_FILTER = Symbol('UNFILTERED_CATALOG_FILTER');
+
+/**
+ * Resolves a catalog by id.
+ *   - When `filter === UNFILTERED_CATALOG_FILTER` → invoke the resolver
+ *     with no argument (the resolver returns the full catalog).
+ *   - When `filter` is `null` / `undefined` / `''` → return `[]` so the
+ *     caller renders the "antecedent missing" empty state.
+ *   - Otherwise → invoke the resolver with the filter value verbatim.
  */
 export function resolveCatalog(
   id: string,
   filter?: unknown,
 ): CatalogEntry[] | Promise<CatalogEntry[]> {
+  if (filter === UNFILTERED_CATALOG_FILTER) {
+    const resolver = REGISTRY.get(id);
+    if (resolver === undefined) return [];
+    return resolver();
+  }
   if (filter === null || filter === undefined || filter === '') {
     return [];
   }
@@ -57,9 +73,12 @@ export function resolveCatalog(
 }
 
 /**
- * Resolves a `catalog_filter` against the live dialog state. Returns
- * `null` when the antecedent value is missing — the dropdown caller
- * MUST render the empty state in that case.
+ * Resolves a `catalog_filter` against the live dialog state. Returns:
+ *   - `UNFILTERED_CATALOG_FILTER` when the field declares NO
+ *     `catalog_filter` (the dropdown should render the entire catalog).
+ *   - `null` when a filter IS declared but the antecedent value is
+ *     missing — the dropdown caller MUST render the empty state.
+ *   - Otherwise the resolved filter value.
  *
  * Resolution rules (per Requirement 10):
  *   - `from_record: "<dot-path>"` → `resolveField(record, path)`
@@ -74,7 +93,7 @@ export function resolveCatalogFilter(
   },
 ): unknown {
   const cf = field.catalog_filter;
-  if (!cf) return null;
+  if (!cf) return UNFILTERED_CATALOG_FILTER;
   if (isFromRecord(cf)) {
     if (!state.record) return null;
     const v = resolveField(state.record, cf.from_record);

@@ -12,9 +12,9 @@ import type { Solicitud } from '@/types/genericos';
 export const INBOX_SOLICITUDES: Solicitud[] = [
   {
     id: 'SOL-001',
-    type: 'aprobacion_pago',
-    source_app: 'CORE',
-    source_module: 'inbox',
+    type: 'carga_manual_solicitud',
+    source_app: 'FIN',
+    source_module: 'tesoreria',
     owner_id: 'u-1',
     owner_name: 'Yasmani Rodríguez',
     sla_hours: 24,

@@ -20,7 +20,7 @@ import { KanbanBoard } from '@/components/kanban';
 import { ManifestActionsMenu } from '@/components/manifest';
 import type { KanbanAxis, KanbanState } from '@/types/kanban';
 import { useManifestModule } from '@/composables/useManifestModule';
-import { INBOX_MANIFEST_KEY } from '@/manifests/framework.template.inbox.actions';
+import { INBOX_MANIFEST_KEY } from '@/manifests/fin.inbox.actions';
 import { INBOX_SOLICITUDES } from '@/mocks/genericos/inbox';
 import { CURRENT_USER } from '@/mocks/genericos/users';
 import type {
@@ -40,7 +40,7 @@ import { cn } from '@/lib/cn';
 //
 // Manifest engine: actions (asignar_owner, cerrar_solicitud, rechazar)
 // and the inbox.lifecycle kanban axis are declared in the
-// `framework.template.inbox` manifest registered at boot.
+// `fin.inbox` manifest registered at boot.
 //
 // NOTE: the legacy "Activos / Histórico" Segmenter has been removed.
 // Filtering by lifecycle is expressed via the Estado filter in L3,
@@ -544,21 +544,21 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
           Información
         </h3>
         <div class="grid grid-cols-2 gap-2.5 text-sm">
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="rounded-md border border-b-2 bg-card-2 p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Tipo</div>
             <div class="text-[13px] font-semibold text-t-2">{{ drawerSolicitud.type }}</div>
           </div>
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="rounded-md border border-b-2 bg-card-2 p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Origen</div>
             <div class="text-[13px] font-semibold text-t-2">
               {{ drawerSolicitud.source_app }} · {{ drawerSolicitud.source_module }}
             </div>
           </div>
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="rounded-md border border-b-2 bg-card-2 p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Owner</div>
             <div class="text-[13px] font-semibold text-t-2">{{ drawerSolicitud.owner_name || 'Sin asignar' }}</div>
           </div>
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="rounded-md border border-b-2 bg-card-2 p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">SLA</div>
             <div class="text-[13px] font-semibold text-t-2">
               {{ drawerSolicitud.sla_hours === null ? 'Sin SLA' : `${drawerSolicitud.sla_hours}h` }}
@@ -566,14 +566,14 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
           </div>
           <div
             v-if="drawerSolicitud.summary"
-            class="col-span-2 rounded-md border border-b-2 bg-[#111] p-3"
+            class="col-span-2 rounded-md border border-b-2 bg-card-2 p-3"
           >
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Contexto</div>
             <div class="whitespace-pre-wrap text-[13px] text-t-2">{{ drawerSolicitud.summary }}</div>
           </div>
           <div
             v-if="drawerSolicitud.closure_comment"
-            class="col-span-2 rounded-md border border-b-2 bg-[#111] p-3"
+            class="col-span-2 rounded-md border border-b-2 bg-card-2 p-3"
           >
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Comentario de cierre</div>
             <div class="whitespace-pre-wrap text-[13px] text-t-2">{{ drawerSolicitud.closure_comment }}</div>

@@ -17,6 +17,7 @@ import {
 } from 'lucide-vue-next';
 import { ROUTE_PATHS, ROUTE_NAMES } from '@/config/routes';
 import { useAuth } from '@/composables/useAuth';
+import { useSettingsDialog } from '@/composables/useSettingsDialog';
 import { cn } from '@/lib/cn';
 
 // Sidebar structure (see `core-navigation` + `core-modulo-genericos`):
@@ -106,13 +107,13 @@ async function handleLogout(): Promise<void> {
   await logout();
 }
 
-// Placeholders — cada app conecta la acción real (ruta a /settings, link
-// a Help Center externo, etc.). Mantenidas como no-op para que el template
-// arranque sin dependencias.
+// Settings opens the shared dialog mounted in App.vue. Each derived app
+// MAY surface app-specific tabs by extending `<SettingsDialog>`; this
+// handler stays generic.
+const settings = useSettingsDialog();
 function handleSettings(): void {
   closeAccount();
-  // eslint-disable-next-line no-console
-  console.log('[account] Settings — implementar en cada app');
+  settings.open();
 }
 
 function handleHelp(): void {
@@ -136,7 +137,7 @@ function handleHelp(): void {
       type="button"
       :class="
         cn(
-          'absolute -right-2.5 top-[18px] z-[51] flex h-5 w-5 items-center justify-center rounded-full border border-b-3 bg-card-2 text-t-3 transition-colors hover:border-b-4 hover:bg-[#222] hover:text-t-1',
+          'absolute -right-2.5 top-[18px] z-[51] flex h-5 w-5 items-center justify-center rounded-full border border-b-3 bg-card-2 text-t-3 transition-colors hover:border-b-3 hover:bg-card hover:text-t-1',
         )
       "
       aria-label="Toggle sidebar"

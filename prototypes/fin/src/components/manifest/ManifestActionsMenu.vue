@@ -91,26 +91,27 @@ const triggerClass = computed(() =>
 
 <template>
   <Popover v-model:open="open">
-    <PopoverTrigger
-      type="button"
-      :class="triggerClass"
-      title="Acciones"
-      data-testid="manifest-actions-trigger"
-      @click.stop
-    >
-      <MoreVertical
-        :class="
-          props.variant === 'table' ? 'h-3.5 w-3.5' : 'h-3 w-3'
-        "
-      />
+    <PopoverTrigger as-child>
+      <button
+        type="button"
+        :class="triggerClass"
+        title="Acciones"
+        data-testid="manifest-actions-trigger"
+        @click.stop
+      >
+        <MoreVertical
+          :class="
+            props.variant === 'table' ? 'h-3.5 w-3.5' : 'h-3 w-3'
+          "
+        />
+      </button>
     </PopoverTrigger>
-    <PopoverContent
-      align="end"
-      :side-offset="4"
-      class="w-[260px] p-1.5"
-      data-testid="manifest-actions-menu"
-      @click.stop
-    >
+    <PopoverContent align="end" :side-offset="4" class="w-[260px] p-1.5">
+      <!-- data-testid + click-stop live on this inner div: PopoverContent
+           wraps a teleport-rooted PopoverPortal whose attrs can't be
+           auto-inherited (Vue warns), so we ground them on a real DOM
+           node here. -->
+      <div data-testid="manifest-actions-menu" @click.stop>
       <div
         class="px-3 pb-1 pt-1.5 text-[9px] font-bold uppercase tracking-[0.06em] text-t-4"
       >
@@ -169,6 +170,7 @@ const triggerClass = computed(() =>
           </span>
         </button>
       </template>
+      </div>
     </PopoverContent>
   </Popover>
 </template>

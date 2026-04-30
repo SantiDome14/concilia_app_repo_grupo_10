@@ -5,6 +5,7 @@ import {
   resolveCatalog,
   resolveCatalogFilter,
   listCatalogs,
+  UNFILTERED_CATALOG_FILTER,
   _clearCatalogRegistry,
 } from './catalog';
 import type { DialogFieldLookup } from '@/types/manifest';
@@ -113,7 +114,7 @@ describe('catalog', () => {
       expect(out).toBe('CASH');
     });
 
-    it('returns null when no catalog_filter is declared', () => {
+    it('returns the UNFILTERED sentinel when no catalog_filter is declared', () => {
       const f: DialogFieldLookup = {
         id: 'x',
         label: 'X',
@@ -124,7 +125,27 @@ describe('catalog', () => {
         record: { x: 'y' },
         formValues: {},
       });
-      expect(out).toBeNull();
+      expect(out).toBe(UNFILTERED_CATALOG_FILTER);
+    });
+
+    it('UNFILTERED sentinel resolves to the full catalog (no filter applied)', () => {
+      registerCatalog('fin.unfiltered', () => [
+        { value: 'a', label: 'A' },
+        { value: 'b', label: 'B' },
+      ]);
+      const f: DialogFieldLookup = {
+        id: 'x',
+        label: 'X',
+        type: 'lookup',
+        catalog: 'fin.unfiltered',
+      };
+      const filter = resolveCatalogFilter(f, { record: undefined, formValues: {} });
+      expect(filter).toBe(UNFILTERED_CATALOG_FILTER);
+      const out = resolveCatalog(f.catalog, filter);
+      expect(out).toEqual([
+        { value: 'a', label: 'A' },
+        { value: 'b', label: 'B' },
+      ]);
     });
 
     it('caller renders empty-state when filter is null (resolveCatalog returns [])', () => {

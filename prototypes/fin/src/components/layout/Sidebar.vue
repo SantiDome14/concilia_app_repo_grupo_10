@@ -6,9 +6,18 @@ import {
   Inbox as InboxIcon,
   BellRing,
   FileText,
-  List,
-  LayoutGrid,
-  Database,
+  ArrowDownUp,
+  ClipboardCheck,
+  ShoppingCart,
+  Wallet,
+  Banknote,
+  CreditCard,
+  Landmark,
+  TrendingUp,
+  Coins,
+  ListTree,
+  SlidersHorizontal,
+  BookOpen,
   ChevronLeft,
   ChevronDown,
   Settings,
@@ -17,6 +26,7 @@ import {
 } from 'lucide-vue-next';
 import { ROUTE_PATHS, ROUTE_NAMES } from '@/config/routes';
 import { useAuth } from '@/composables/useAuth';
+import { useSettingsDialog } from '@/composables/useSettingsDialog';
 import { cn } from '@/lib/cn';
 
 // Sidebar structure (see `core-navigation` + `core-modulo-genericos`):
@@ -36,6 +46,7 @@ interface NavItem {
   name: string;
   label: string;
   icon: typeof LayoutDashboard;
+  soon?: boolean;
 }
 
 interface NavBlock {
@@ -55,16 +66,30 @@ const generics: NavItem[] = [
 
 const blocks: NavBlock[] = [
   {
-    label: 'Bloque 1',
+    label: 'Back Office',
     items: [
-      { to: ROUTE_PATHS.MODULO_A, name: ROUTE_NAMES.MODULO_A, label: 'Módulo A', icon: List },
+      { to: ROUTE_PATHS.MOVIMIENTOS, name: ROUTE_NAMES.MOVIMIENTOS, label: 'Movimientos', icon: ArrowDownUp },
+      { to: ROUTE_PATHS.COTIZACIONES, name: ROUTE_NAMES.COTIZACIONES, label: 'Cotizaciones', icon: ClipboardCheck },
+      { to: ROUTE_PATHS.COMPRAS, name: ROUTE_NAMES.COMPRAS, label: 'Compras', icon: ShoppingCart, soon: true },
     ],
   },
   {
-    label: 'Bloque 2',
+    label: 'Tesorería',
     items: [
-      { to: ROUTE_PATHS.MODULO_B, name: ROUTE_NAMES.MODULO_B, label: 'Módulo B', icon: LayoutGrid },
-      { to: ROUTE_PATHS.MODULO_C, name: ROUTE_NAMES.MODULO_C, label: 'Módulo C', icon: Database },
+      { to: ROUTE_PATHS.TESORERIA, name: ROUTE_NAMES.TESORERIA, label: 'Disponibilidades', icon: Wallet },
+      { to: ROUTE_PATHS.COBROS, name: ROUTE_NAMES.COBROS, label: 'Cobros', icon: Banknote, soon: true },
+      { to: ROUTE_PATHS.PAGOS, name: ROUTE_NAMES.PAGOS, label: 'Pagos', icon: CreditCard, soon: true },
+      { to: ROUTE_PATHS.DEUDAS_PRESTAMOS, name: ROUTE_NAMES.DEUDAS_PRESTAMOS, label: 'Deudas / Préstamos', icon: Landmark, soon: true },
+      { to: ROUTE_PATHS.INVERSIONES, name: ROUTE_NAMES.INVERSIONES, label: 'Inversiones', icon: TrendingUp, soon: true },
+      { to: ROUTE_PATHS.MONEDAS, name: ROUTE_NAMES.MONEDAS, label: 'Monedas', icon: Coins, soon: true },
+    ],
+  },
+  {
+    label: 'Contabilidad',
+    items: [
+      { to: ROUTE_PATHS.PLAN_CUENTAS, name: ROUTE_NAMES.PLAN_CUENTAS, label: 'Plan de Cuentas', icon: ListTree, soon: true },
+      { to: ROUTE_PATHS.PARAMETRIZACIONES, name: ROUTE_NAMES.PARAMETRIZACIONES, label: 'Parametrizaciones', icon: SlidersHorizontal, soon: true },
+      { to: ROUTE_PATHS.LIBRO_DIARIO, name: ROUTE_NAMES.LIBRO_DIARIO, label: 'Libro Diario', icon: BookOpen, soon: true },
     ],
   },
 ];
@@ -106,13 +131,13 @@ async function handleLogout(): Promise<void> {
   await logout();
 }
 
-// Placeholders — cada app conecta la acción real (ruta a /settings, link
-// a Help Center externo, etc.). Mantenidas como no-op para que el template
-// arranque sin dependencias.
+// Settings opens the shared dialog mounted in App.vue. Each derived app
+// MAY surface app-specific tabs by extending `<SettingsDialog>`; this
+// handler stays generic.
+const settings = useSettingsDialog();
 function handleSettings(): void {
   closeAccount();
-  // eslint-disable-next-line no-console
-  console.log('[account] Settings — implementar en cada app');
+  settings.open();
 }
 
 function handleHelp(): void {
@@ -136,7 +161,7 @@ function handleHelp(): void {
       type="button"
       :class="
         cn(
-          'absolute -right-2.5 top-[18px] z-[51] flex h-5 w-5 items-center justify-center rounded-full border border-b-3 bg-card-2 text-t-3 transition-colors hover:border-b-4 hover:bg-[#222] hover:text-t-1',
+          'absolute -right-2.5 top-[18px] z-[51] flex h-5 w-5 items-center justify-center rounded-full border border-b-3 bg-card-2 text-t-3 transition-colors hover:border-b-3 hover:bg-card hover:text-t-1',
         )
       "
       aria-label="Toggle sidebar"
@@ -159,11 +184,11 @@ function handleHelp(): void {
       <div
         class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-brand text-xs font-extrabold text-white"
       >
-        A
+        F
       </div>
       <div v-if="!collapsed" class="flex flex-col gap-px">
-        <span class="text-[13px] font-bold tracking-tight text-t-1">APP · Ardua</span>
-        <span class="text-[10px] font-medium text-t-4">Tagline</span>
+        <span class="text-[13px] font-bold tracking-tight text-t-1">FIN · Ardua</span>
+        <span class="text-[10px] font-medium text-t-4">Finanzas y Contabilidad</span>
       </div>
     </div>
 
@@ -198,7 +223,7 @@ function handleHelp(): void {
         v-for="item in block.items"
         :key="item.to"
         :to="item.to"
-        :title="item.label"
+        :title="item.soon ? `${item.label} (Próximamente)` : item.label"
         :class="
           cn(
             'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium text-t-3 transition-colors hover:bg-card hover:text-t-2',
@@ -208,7 +233,13 @@ function handleHelp(): void {
         "
       >
         <component :is="item.icon" class="h-[15px] w-[15px] flex-shrink-0" />
-        <span v-if="!collapsed">{{ item.label }}</span>
+        <span v-if="!collapsed" class="flex-1 truncate">{{ item.label }}</span>
+        <span
+          v-if="!collapsed && item.soon"
+          class="rounded-sm border border-b-2 px-1 py-px text-[9px] font-bold uppercase tracking-wider text-t-4"
+        >
+          Soon
+        </span>
       </RouterLink>
     </template>
 

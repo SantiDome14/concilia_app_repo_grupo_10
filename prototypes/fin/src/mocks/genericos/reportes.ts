@@ -31,8 +31,8 @@ export const REPORT_CATEGORY_BY_KEY: Record<string, ReportCategoryDef> =
 export const REPORTS_CATALOG: Report[] = [
   {
     id: 'rpt_001',
-    name: 'Reporte Genérico Mensual',
-    description: 'Reporte placeholder · descripción del propósito y alcance.',
+    name: 'Posición consolidada por sociedad',
+    description: 'Saldos por cuenta y moneda agregados al cierre del mes, por sociedad del grupo.',
     category: 'INTERNO',
     periodicity: 'Mensual',
     next: '2026-05-05',
@@ -45,8 +45,8 @@ export const REPORTS_CATALOG: Report[] = [
   },
   {
     id: 'rpt_002',
-    name: 'Indicadores Operativos',
-    description: 'Métricas operativas semanales · placeholder.',
+    name: 'Movimientos por sociedad y cuenta',
+    description: 'Ledger semanal de movimientos imputados, agrupado por sociedad y cuenta.',
     category: 'OPERATIVO',
     periodicity: 'Semanal',
     next: '2026-05-04',
@@ -59,8 +59,8 @@ export const REPORTS_CATALOG: Report[] = [
   },
   {
     id: 'rpt_003',
-    name: 'Reporte Ad-hoc Ejemplo',
-    description: 'Reporte sin periodicidad fija — se genera bajo demanda.',
+    name: 'Quotes facturadas (ad-hoc)',
+    description: 'Listado de quotes con factura emitida en el rango solicitado — bajo demanda.',
     category: 'INTERNO',
     periodicity: 'On-demand',
     next: null,
@@ -71,9 +71,9 @@ export const REPORTS_CATALOG: Report[] = [
   },
   {
     id: 'rpt_004',
-    name: 'Reporte Consolidado Inter-Área',
+    name: 'Conciliación bancaria mensual',
     description:
-      'Reporte placeholder que requiere coordinación de varias apps antes de poder generarse.',
+      'Reconcilia el ledger FIN contra los extractos bancarios del período. Requiere conciliación operativa cerrada por OPS.',
     category: 'INTERNO',
     periodicity: 'Mensual',
     next: '2026-05-10',
@@ -104,9 +104,9 @@ export const REPORTS_CATALOG: Report[] = [
   },
   {
     id: 'rpt_005',
-    name: 'Análisis Especializado (Bloqueado)',
+    name: 'Plan de cuentas — auditoría (bloqueado)',
     description:
-      'Ejemplo de reporte futuro · visible en el catálogo pero no generable aún.',
+      'Reporte futuro que depende del módulo Plan de Cuentas; visible en el catálogo pero no generable aún.',
     category: 'OPERATIVO',
     periodicity: 'Mensual',
     next: null,

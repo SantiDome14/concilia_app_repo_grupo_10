@@ -18,6 +18,7 @@ import { setupRouter } from './router';
 import { setupAuth0 } from './plugins/auth0';
 import { setupQuery } from './plugins/query';
 import { setupManifests } from './plugins/manifests';
+import { setupCatalogs } from './plugins/catalogs';
 
 import './styles/globals.css';
 
@@ -27,6 +28,7 @@ async function bootstrap() {
 
   setupPinia(app);
   setupManifests();
+  setupCatalogs();
   setupRouter(app);
   setupAuth0(app);
   setupQuery(app);

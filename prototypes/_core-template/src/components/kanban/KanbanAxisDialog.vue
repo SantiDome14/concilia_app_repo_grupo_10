@@ -26,9 +26,16 @@ interface Props {
   open: boolean;
   axes: Record<string, KanbanAxis>;
   activeAxisId: string | null;
+  /** Override the default dialog title (e.g. per-module wording). */
+  title?: string;
+  /** Override the default helper description above the axis list. */
+  description?: string;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  title: 'Elegí el eje del Tablero',
+  description: 'Cada eje agrupa los registros por una máquina de estados distinta.',
+});
 
 const emit = defineEmits<{
   'update:open': [value: boolean];
@@ -77,10 +84,8 @@ const confirmDisabled = computed(() => selectedAxisId.value === null);
   <Dialog :open="props.open" @update:open="handleOpenChange">
     <DialogContent class="max-w-lg">
       <DialogHeader>
-        <DialogTitle>Elegí el eje del Tablero</DialogTitle>
-        <DialogDescription>
-          Cada eje agrupa los registros por una máquina de estados distinta.
-        </DialogDescription>
+        <DialogTitle>{{ props.title }}</DialogTitle>
+        <DialogDescription>{{ props.description }}</DialogDescription>
       </DialogHeader>
 
       <ul class="flex flex-col gap-2" role="radiogroup" aria-label="Ejes disponibles">

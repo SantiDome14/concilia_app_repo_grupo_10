@@ -33,7 +33,7 @@ export const routes: RouteRecordRaw[] = [
     path: ROUTE_PATHS.DASHBOARD,
     name: ROUTE_NAMES.DASHBOARD,
     component: () => import('@/pages/Dashboard.vue'),
-    meta: { requiresAuth: true, layout: 'shell', breadcrumb: 'Home' },
+    meta: { requiresAuth: true, layout: 'shell', breadcrumb: 'Dashboard' },
   },
   {
     path: ROUTE_PATHS.INBOX,

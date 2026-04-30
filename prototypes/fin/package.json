@@ -1,8 +1,8 @@
 {
-  "name": "core-template-frontend",
+  "name": "core-fin",
   "private": true,
-  "version": "1.0.0",
-  "description": "Ardua core frontend template — Vue 3 + TypeScript + Vite",
+  "version": "0.1.0",
+  "description": "Ardua FIN — Finanzas y Contabilidad (Vue 3 + TypeScript + Vite)",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"

@@ -1,22 +1,25 @@
 // ════════════════════════════════════════════════════════════════════
-// Inbox manifest — framework.template.inbox
+// Inbox manifest — fin.inbox
 // ────────────────────────────────────────────────────────────────────
-// Declares the canonical Solicitud lifecycle actions:
+// Declares the canonical Solicitud lifecycle actions for the FIN
+// Inbox:
 //   - asignar_owner    — free assignment (any non-terminal state)
 //   - cerrar_solicitud — terminal transition to `completed` (modal)
 //   - rechazar         — terminal transition to `rejected` (modal)
 //
-// Plus the kanban axis for the state machine. Pages import this object
-// and call `useManifestRegistryStore().register('framework.template.inbox', INBOX_MANIFEST)`.
+// Plus the kanban axis for the state machine. The actions themselves
+// stay generic — Solicitud lifecycle is domain-agnostic per
+// `core-modulo-genericos`; FIN does not change the lifecycle, only
+// the seed data (FIN-source examples in `src/mocks/fin/inbox.ts`).
 // ════════════════════════════════════════════════════════════════════
 
 import type { Manifest } from '@/types/manifest';
 
-export const INBOX_MANIFEST_KEY = 'framework.template.inbox' as const;
+export const INBOX_MANIFEST_KEY = 'fin.inbox' as const;
 
 export const INBOX_MANIFEST: Manifest = {
-  app: 'framework',
-  module: 'template.inbox',
+  app: 'fin',
+  module: 'inbox',
   scope: 'module',
   schema_version: '1',
   actions: [

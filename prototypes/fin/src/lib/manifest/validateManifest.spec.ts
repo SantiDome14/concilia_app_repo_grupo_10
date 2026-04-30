@@ -1,27 +1,22 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { execFileSync } from 'node:child_process';
 import { ManifestError, type Manifest } from '@/types/manifest';
 import { validateManifest } from './validateManifest';
-import { MODULO_A_MANIFEST } from '@/manifests/framework.template.modulo_a.actions';
-
-const PROTOTYPE_ROOT =
-  '/Users/yasmani/product-management-framework/prototypes';
-
-function loadPrototypeManifest(file: string, key: string): Manifest {
-  // Extract the JSON literal between '= ' and the trailing ';' by
-  // running sed in a subshell. Parse as JSON. This avoids any runtime
-  // dependency on the prototype path beyond test time.
-  const stdout = execFileSync(
-    'sed',
-    ['-n', `/window\\.ACTION_MANIFEST\\["${key}"\\] = {/,/^};$/p`, file],
-    { encoding: 'utf-8' },
-  );
-  const trimmed = stdout
-    .replace(/^window\.ACTION_MANIFEST\[[^\]]*\] = /, '')
-    .replace(/;\s*$/, '')
-    .trim();
-  return JSON.parse(trimmed) as Manifest;
-}
+import {
+  FIN_MOVIMIENTOS_MANIFEST,
+  FIN_MOVIMIENTOS_MANIFEST_KEY,
+} from '@/manifests/fin.movimientos.actions';
+import {
+  FIN_COTIZACIONES_MANIFEST,
+  FIN_COTIZACIONES_MANIFEST_KEY,
+} from '@/manifests/fin.cotizaciones.actions';
+import {
+  FIN_TESORERIA_MANIFEST,
+  FIN_TESORERIA_MANIFEST_KEY,
+} from '@/manifests/fin.tesoreria.actions';
+import {
+  FIN_TESORERIA_COLA_ASIGNACION_MANIFEST,
+  FIN_TESORERIA_COLA_ASIGNACION_MANIFEST_KEY,
+} from '@/manifests/fin.tesoreria.cola_asignacion.actions';
 
 const minimalManifest = (): Manifest => ({
   app: 'demo',
@@ -53,25 +48,41 @@ describe('validateManifest', () => {
       expect(result.warnings).toHaveLength(0);
     });
 
-    it('accepts the canonical Módulo A manifest with zero warnings', () => {
-      // The canonical example used to live as a JSON-strict literal at
-      // `prototypes/_core-template/manifests/ejemplo.modulo-a.actions.js`.
-      // After the template was promoted into this folder, the canonical
-      // example is the TS manifest that the engine actually loads at boot.
+    it('accepts the FIN.Movimientos manifest with zero warnings', () => {
+      // FIN.Movimientos is the largest and most predicate-heavy manifest
+      // in core-fin (9 actions, 12 record types, kanban axis). It is the
+      // best stress test for the validator.
       const result = validateManifest(
-        MODULO_A_MANIFEST,
-        'framework.template.modulo_a',
+        FIN_MOVIMIENTOS_MANIFEST,
+        FIN_MOVIMIENTOS_MANIFEST_KEY,
       );
       expect(result.warnings).toEqual([]);
       expect(result.ok).toBe(true);
     });
 
-    it('accepts the FIN acid-test manifest with zero warnings', () => {
-      const m = loadPrototypeManifest(
-        `${PROTOTYPE_ROOT}/fin/manifests/fin.operaciones.movimientos.actions.js`,
-        'fin.operaciones.movimientos',
+    it('accepts the FIN.Cotizaciones manifest with zero warnings', () => {
+      const result = validateManifest(
+        FIN_COTIZACIONES_MANIFEST,
+        FIN_COTIZACIONES_MANIFEST_KEY,
       );
-      const result = validateManifest(m, 'fin.operaciones.movimientos');
+      expect(result.warnings).toEqual([]);
+      expect(result.ok).toBe(true);
+    });
+
+    it('accepts the FIN.Tesorería module-scope manifest with zero warnings', () => {
+      const result = validateManifest(
+        FIN_TESORERIA_MANIFEST,
+        FIN_TESORERIA_MANIFEST_KEY,
+      );
+      expect(result.warnings).toEqual([]);
+      expect(result.ok).toBe(true);
+    });
+
+    it('accepts the FIN.Tesorería · Cola de Asignación manifest with zero warnings', () => {
+      const result = validateManifest(
+        FIN_TESORERIA_COLA_ASIGNACION_MANIFEST,
+        FIN_TESORERIA_COLA_ASIGNACION_MANIFEST_KEY,
+      );
       expect(result.warnings).toEqual([]);
       expect(result.ok).toBe(true);
     });

@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════════
-// Reportes manifest — framework.template.reportes
+// Reportes manifest — fin.reportes
 // ────────────────────────────────────────────────────────────────────
 // Catálogo actions:
 //   - reportes.generar_report   — start a new ReportRun from a Report.
@@ -18,11 +18,11 @@
 
 import type { Manifest } from '@/types/manifest';
 
-export const REPORTES_MANIFEST_KEY = 'framework.template.reportes' as const;
+export const REPORTES_MANIFEST_KEY = 'fin.reportes' as const;
 
 export const REPORTES_MANIFEST: Manifest = {
-  app: 'framework',
-  module: 'template.reportes',
+  app: 'fin',
+  module: 'reportes',
   scope: 'module',
   schema_version: '1',
   actions: [

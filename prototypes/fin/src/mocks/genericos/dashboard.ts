@@ -17,27 +17,27 @@ export interface DashboardKpi {
 
 export const DASHBOARD_KPIS: DashboardKpi[] = [
   {
-    id: 'volumen-mes',
-    label: 'Volumen procesado del mes',
-    value: 'USD 1.2M',
-    trend: 'up',
-    href: '/modulo-a',
-    hint: '+12% vs. mes anterior',
-  },
-  {
-    id: 'tasa-aprobacion',
-    label: 'Tasa de aprobación',
-    value: '94.7%',
-    trend: 'flat',
-    href: '/modulo-b',
-    hint: 'estable últimos 30 días',
-  },
-  {
-    id: 'tiempo-promedio',
-    label: 'Tiempo promedio de resolución',
-    value: '4.2h',
+    id: 'movimientos-pendientes',
+    label: 'Movimientos pendientes',
+    value: 7,
     trend: 'down',
-    href: '/inbox',
-    hint: '−18% vs. semana pasada',
+    href: '/movimientos',
+    hint: 'sin imputación FIN',
+  },
+  {
+    id: 'quotes-por-facturar',
+    label: 'Quotes por facturar',
+    value: 5,
+    trend: 'flat',
+    href: '/cotizaciones',
+    hint: 'ejecutados pendientes',
+  },
+  {
+    id: 'retiros-en-cola',
+    label: 'Retiros en cola',
+    value: 5,
+    trend: 'up',
+    href: '/tesoreria',
+    hint: 'esperando asignación',
   },
 ];

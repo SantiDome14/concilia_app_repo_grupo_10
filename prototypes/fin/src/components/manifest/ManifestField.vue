@@ -4,6 +4,7 @@ import { toast } from 'vue-sonner';
 import {
   resolveCatalog,
   resolveCatalogFilter,
+  UNFILTERED_CATALOG_FILTER,
   type CatalogEntry,
   type DialogField,
 } from '@/lib/manifest';
@@ -121,6 +122,10 @@ async function reloadLookup(): Promise<void> {
     record: props.record,
     formValues: props.formValues,
   });
+  // `null` means a catalog_filter is declared but the antecedent value
+  // is missing → render the empty state with hint. The unfiltered
+  // sentinel is forwarded to resolveCatalog which fetches the full
+  // catalog from the resolver.
   if (lookupFilterValue.value === null) {
     lookupEntries.value = [];
     return;
@@ -138,12 +143,47 @@ watch(lookupOpen, (open) => {
   if (open) reloadLookup();
 });
 
+// Eager label resolution: when a lookup field arrives pre-populated
+// (record already has the value, e.g. a disabled "Asignar Banco y
+// Cuenta" group on a movimiento that's already imputed), the dropdown
+// hasn't loaded any entries yet, so `lookupEntries` is empty and the
+// trigger button would fall back to displaying the raw id ('cp',
+// 'cu-cp-allaria-1'). We resolve the label once on mount and on every
+// modelValue change so the trigger renders the friendly label even
+// without user interaction. Call site uses the unfiltered catalog so
+// the resolver returns the full list and we pick the matching entry.
+const resolvedLabelByValue = ref<Record<string, string>>({});
+
+async function resolveLabelForValue(value: unknown): Promise<void> {
+  if (props.field.type !== 'lookup') return;
+  if (typeof value !== 'string' || value === '') return;
+  if (value in resolvedLabelByValue.value) return;
+  const f = props.field;
+  const out = await Promise.resolve(
+    resolveCatalog(f.catalog, UNFILTERED_CATALOG_FILTER),
+  );
+  if (!Array.isArray(out)) return;
+  const next: Record<string, string> = { ...resolvedLabelByValue.value };
+  for (const entry of out) next[entry.value] = entry.label;
+  resolvedLabelByValue.value = next;
+}
+
+watch(
+  () => props.modelValue,
+  (v) => {
+    void resolveLabelForValue(v);
+  },
+  { immediate: true },
+);
+
 const selectedLookupLabel = computed(() => {
   if (!isLookup.value) return '';
   const v = props.modelValue;
   if (typeof v !== 'string' || v === '') return '';
+  // Priority: dropdown-loaded entry → eagerly-resolved cache → raw id.
   const hit = lookupEntries.value.find((e) => e.value === v);
-  return hit?.label ?? v;
+  if (hit) return hit.label;
+  return resolvedLabelByValue.value[v] ?? v;
 });
 
 function pickLookup(entry: CatalogEntry): void {

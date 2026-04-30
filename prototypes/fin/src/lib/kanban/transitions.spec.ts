@@ -1,6 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { KanbanAxis, KanbanRecord } from '@/types/kanban';
-import { evaluateDrop, findTransition, kanbanSort } from './transitions';
+import {
+  applyFreeTransition,
+  evaluateDrop,
+  findTransition,
+  kanbanSort,
+} from './transitions';
 
 // ────────────────────────────────────────────────────────────────────
 // Test fixtures
@@ -25,6 +30,81 @@ function makeAxis(overrides: Partial<KanbanAxis> = {}): KanbanAxis {
     ...overrides,
   };
 }
+
+// ────────────────────────────────────────────────────────────────────
+// applyFreeTransition
+// ────────────────────────────────────────────────────────────────────
+
+describe('applyFreeTransition', () => {
+  it('writes the axis state_field on a top-level field', () => {
+    const record: Record<string, unknown> = { id: 'R-1', state: 'PENDING' };
+    const ok = applyFreeTransition(record, makeAxis(), 'IN_PROGRESS');
+    expect(ok).toBe(true);
+    expect(record.state).toBe('IN_PROGRESS');
+  });
+
+  it('writes the axis state_field on a nested dot-path', () => {
+    const record: Record<string, unknown> = {
+      id: 'R-1',
+      fin: { imput: 'PEND' },
+    };
+    const axis = makeAxis({
+      axis_id: 'fin.imput',
+      state_field: 'fin.imput',
+      states: [
+        { id: 'PEND', label: 'Pendiente', order: 1 },
+        { id: 'IMP', label: 'Imputado', order: 2, terminal: true },
+      ],
+      transitions: [{ from: 'PEND', to: 'IMP', mode: 'free' }],
+    });
+    const ok = applyFreeTransition(record, axis, 'IMP');
+    expect(ok).toBe(true);
+    expect((record.fin as Record<string, unknown>).imput).toBe('IMP');
+  });
+
+  it('returns false and does not mutate when the transition is mode:modal', () => {
+    const record: Record<string, unknown> = { id: 'R-1', state: 'IN_PROGRESS' };
+    const ok = applyFreeTransition(record, makeAxis(), 'COMPLETED');
+    expect(ok).toBe(false);
+    expect(record.state).toBe('IN_PROGRESS');
+  });
+
+  it('returns false and does not mutate when the axis is read-only', () => {
+    const record: Record<string, unknown> = { id: 'R-1', state: 'PENDING' };
+    const axis = makeAxis({
+      read_only: true,
+      transitions: [{ from: 'PENDING', to: 'IN_PROGRESS', mode: 'free' }],
+    });
+    const ok = applyFreeTransition(record, axis, 'IN_PROGRESS');
+    expect(ok).toBe(false);
+    expect(record.state).toBe('PENDING');
+  });
+
+  it('returns false and does not mutate when the transition is undeclared', () => {
+    const record: Record<string, unknown> = { id: 'R-1', state: 'PENDING' };
+    const ok = applyFreeTransition(record, makeAxis(), 'COMPLETED');
+    expect(ok).toBe(false);
+    expect(record.state).toBe('PENDING');
+  });
+
+  it('runs the named side_effect on the axis after a successful free write', () => {
+    const sideEffect = vi.fn();
+    const record: Record<string, unknown> = { id: 'R-1', state: 'PENDING' };
+    const axis = makeAxis({
+      transitions: [
+        {
+          from: 'PENDING',
+          to: 'IN_PROGRESS',
+          mode: 'free',
+          side_effect: 'log',
+        },
+      ],
+      side_effects: { log: sideEffect },
+    });
+    applyFreeTransition(record, axis, 'IN_PROGRESS');
+    expect(sideEffect).toHaveBeenCalledWith(record);
+  });
+});
 
 // ────────────────────────────────────────────────────────────────────
 // findTransition

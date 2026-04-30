@@ -12,7 +12,7 @@ const props = withDefaults(defineProps<Props>(), { class: '' });
   <div
     :class="
       cn(
-        'flex flex-col-reverse gap-2 border-t border-b-2 pt-4 sm:flex-row sm:justify-end sm:gap-2',
+        'flex flex-col-reverse gap-2 pt-4 sm:flex-row sm:justify-end sm:gap-2',
         props.class,
       )
     "

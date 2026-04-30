@@ -30,6 +30,7 @@ export {
   listCatalogs,
   resolveCatalog,
   resolveCatalogFilter,
+  UNFILTERED_CATALOG_FILTER,
   type CatalogEntry,
   type CatalogResolver,
 } from './catalog';
