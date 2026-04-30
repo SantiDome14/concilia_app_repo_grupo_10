@@ -32,7 +32,7 @@ const attrs = useAttrs();
     :disabled="props.disabled"
     :class="
       cn(
-        'w-full rounded-md border border-b-3 bg-[#111] px-3 py-2 text-sm text-t-1 placeholder:text-t-4 focus-visible:border-info focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50',
+        'w-full rounded-md border border-b-2 bg-card-2 px-3 py-2 text-sm text-t-1 placeholder:text-t-4 focus-visible:border-info focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50',
         props.class,
       )
     "

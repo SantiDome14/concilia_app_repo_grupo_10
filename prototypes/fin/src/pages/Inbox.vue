@@ -544,21 +544,21 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
           Información
         </h3>
         <div class="grid grid-cols-2 gap-2.5 text-sm">
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="rounded-md border border-b-2 bg-card-2 p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Tipo</div>
             <div class="text-[13px] font-semibold text-t-2">{{ drawerSolicitud.type }}</div>
           </div>
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="rounded-md border border-b-2 bg-card-2 p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Origen</div>
             <div class="text-[13px] font-semibold text-t-2">
               {{ drawerSolicitud.source_app }} · {{ drawerSolicitud.source_module }}
             </div>
           </div>
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="rounded-md border border-b-2 bg-card-2 p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Owner</div>
             <div class="text-[13px] font-semibold text-t-2">{{ drawerSolicitud.owner_name || 'Sin asignar' }}</div>
           </div>
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="rounded-md border border-b-2 bg-card-2 p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">SLA</div>
             <div class="text-[13px] font-semibold text-t-2">
               {{ drawerSolicitud.sla_hours === null ? 'Sin SLA' : `${drawerSolicitud.sla_hours}h` }}
@@ -566,14 +566,14 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
           </div>
           <div
             v-if="drawerSolicitud.summary"
-            class="col-span-2 rounded-md border border-b-2 bg-[#111] p-3"
+            class="col-span-2 rounded-md border border-b-2 bg-card-2 p-3"
           >
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Contexto</div>
             <div class="whitespace-pre-wrap text-[13px] text-t-2">{{ drawerSolicitud.summary }}</div>
           </div>
           <div
             v-if="drawerSolicitud.closure_comment"
-            class="col-span-2 rounded-md border border-b-2 bg-[#111] p-3"
+            class="col-span-2 rounded-md border border-b-2 bg-card-2 p-3"
           >
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Comentario de cierre</div>
             <div class="whitespace-pre-wrap text-[13px] text-t-2">{{ drawerSolicitud.closure_comment }}</div>

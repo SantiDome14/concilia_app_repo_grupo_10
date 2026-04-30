@@ -104,23 +104,26 @@
 
 /* ────────────────────────────────────────────────────────────────
    Light theme — opt-in via <html class="light">
-   Kept as scaffolding; dark is the default for internal tooling.
+   Selected via the Settings · Apariencia toggle (system / light / dark)
+   wired in `src/stores/preferences.ts`. Surfaces invert from the dark
+   ladder and the text ramp swaps to dark-on-light. Brand + status
+   colors keep their HSL — they read correctly on both backgrounds.
    ──────────────────────────────────────────────────────────────── */
 :root.light {
   --bg: 0 0% 100%;
   --surf: 0 0% 98%;
   --card: 0 0% 96%;
-  --card-2: 0 0% 94%;
+  --card-2: 0 0% 92%;
 
-  --b-1: 0 0% 88%;
-  --b-2: 0 0% 82%;
+  --b-1: 0 0% 90%;
+  --b-2: 0 0% 84%;
   --b-3: 0 0% 75%;
   --b-4: 0 0% 60%;
 
   --t-1: 0 0% 10%;
   --t-2: 0 0% 25%;
   --t-3: 0 0% 45%;
-  --t-4: 0 0% 65%;
+  --t-4: 0 0% 60%;
 }
 
 /* ────────────────────────────────────────────────────────────────

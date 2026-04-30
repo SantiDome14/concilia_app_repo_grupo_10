@@ -233,7 +233,7 @@ function safeParse(at: string): Date | null {
             placeholder="Escribe una respuesta…"
             :class="
               cn(
-                'w-full resize-none rounded-md border border-b-3 bg-[#111] px-3 py-2 text-sm text-t-1 placeholder:text-t-4 focus-visible:border-info focus-visible:outline-none',
+                'w-full resize-none rounded-md border border-b-2 bg-card-2 px-3 py-2 text-sm text-t-1 placeholder:text-t-4 focus-visible:border-info focus-visible:outline-none',
               )
             "
             data-testid="comment-reply-textarea"
@@ -263,7 +263,7 @@ function safeParse(at: string): Date | null {
         placeholder="Añade un comentario…"
         :class="
           cn(
-            'w-full resize-none rounded-md border border-b-3 bg-[#111] px-3 py-2 text-sm text-t-1 placeholder:text-t-4 focus-visible:border-info focus-visible:outline-none',
+            'w-full resize-none rounded-md border border-b-2 bg-card-2 px-3 py-2 text-sm text-t-1 placeholder:text-t-4 focus-visible:border-info focus-visible:outline-none',
           )
         "
         data-testid="comments-composer-textarea"

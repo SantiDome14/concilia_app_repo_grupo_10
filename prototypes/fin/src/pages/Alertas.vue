@@ -520,27 +520,27 @@ const STATE_FILTER_OPTIONS: AlertaState[] = ['new', 'in_review', 'resolved', 'di
         </h3>
         <div
           v-if="drawerAlerta.summary"
-          class="rounded-md border border-b-2 bg-[#111] p-3"
+          class="rounded-md border border-b-2 bg-card-2 p-3"
         >
           <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Contexto</div>
           <div class="whitespace-pre-wrap text-[13px] text-t-2">{{ drawerAlerta.summary }}</div>
         </div>
         <div class="grid grid-cols-2 gap-2.5 text-sm">
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="rounded-md border border-b-2 bg-card-2 p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Tipo</div>
             <div class="text-[13px] font-semibold text-t-2">{{ drawerAlerta.type }}</div>
           </div>
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="rounded-md border border-b-2 bg-card-2 p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Severidad</div>
             <Badge :variant="severityVariant(drawerAlerta.severity)">
               {{ drawerAlerta.severity ? SEVERITY_LABELS[drawerAlerta.severity] : '—' }}
             </Badge>
           </div>
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="rounded-md border border-b-2 bg-card-2 p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Perfil</div>
             <div class="text-[13px] font-semibold text-t-2">{{ drawerAlerta.profile }}</div>
           </div>
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="rounded-md border border-b-2 bg-card-2 p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Origen</div>
             <div class="text-[13px] font-semibold text-t-2">
               {{ drawerAlerta.source_app }} · {{ drawerAlerta.source_module }}
@@ -548,7 +548,7 @@ const STATE_FILTER_OPTIONS: AlertaState[] = ['new', 'in_review', 'resolved', 'di
           </div>
           <div
             v-if="drawerAlerta.closure_comment"
-            class="col-span-2 rounded-md border border-b-2 bg-[#111] p-3"
+            class="col-span-2 rounded-md border border-b-2 bg-card-2 p-3"
           >
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Justificación de cierre</div>
             <div class="whitespace-pre-wrap text-[13px] text-t-2">{{ drawerAlerta.closure_comment }}</div>
