@@ -31,3 +31,38 @@ When a derived app is created from the template, the rebrand SHALL touch three s
 - **GIVEN** a derived app whose `package.json` is `core-fin` but whose `--brand` is still the template default `0 84% 60%`
 - **WHEN** the migration PR is reviewed
 - **THEN** the change MUST be rejected — the brand surfaces SHALL be updated together
+
+### Requirement: Every core app MUST mount a singleton SettingsDialog reachable from the Sidebar account menu
+
+Every Ardua core app SHALL mount the shared `<SettingsDialog>` component once at the App root and expose it via the Sidebar account menu's `Settings` entry. The dialog SHALL host vertical side tabs scaffolded for `General`, `Account`, `Notifications`, `Security`, `Integrations`. The `General` tab is the only tab REQUIRED in the baseline; the rest MAY render as `Soon` placeholders.
+
+The `General` tab SHALL host a `Preferences` section with at minimum two entries:
+
+- **Idioma / Language** — a `<Select>` listing the available locales (`es`, `en` in v1). Persisted to the `preferences` Pinia store under `language`. When `vue-i18n` is enabled (via `VITE_FEATURE_I18N=true`), the locale switch takes effect on next render; otherwise the value is persisted but remains pending.
+- **Apariencia / Appearance** — a 3-button segmented control with the three canonical options `System` / `Light` / `Dark`. Persisted to `preferences.appearance`. Selection writes the corresponding class (`light` or `dark` resolved from `system`) onto `<html>` per the `core-theming` MODIFIED requirement above.
+
+Opening the dialog MUST be done via `useSettingsDialog().open()` — a module-singleton composable so opening from multiple sites doesn't double-mount the overlay. The dialog itself MUST live exactly once in the app tree (mounted in `src/App.vue`).
+
+#### Scenario: Sidebar account menu surfaces the Settings entry
+
+- **GIVEN** the Sidebar's account menu is rendered
+- **WHEN** the user clicks the `Settings` button
+- **THEN** `useSettingsDialog().open()` is invoked AND the singleton dialog opens to the `General` tab AND the account menu closes
+
+#### Scenario: General tab persists the appearance choice
+
+- **GIVEN** the dialog is open on the `General` tab
+- **WHEN** the user clicks the Light button on the Appearance toggle
+- **THEN** `preferences.appearance` becomes `'light'` AND the value is written to `localStorage` AND `<html>` swaps `dark` for `light` AND the toggle highlights the Light option
+
+#### Scenario: General tab persists the language choice
+
+- **GIVEN** the dialog is open and the user picks `English` in the Idioma select
+- **WHEN** the change is committed
+- **THEN** `preferences.language` becomes `'en'` AND the value is persisted; if `VITE_FEATURE_I18N` is enabled, the i18n locale also flips
+
+#### Scenario: Future tabs render as Soon placeholders
+
+- **GIVEN** an app that has not yet implemented the `Account` / `Notifications` / `Security` / `Integrations` tabs
+- **WHEN** the user opens Settings
+- **THEN** those tabs render in the side rail with a `Soon` chip and are not selectable

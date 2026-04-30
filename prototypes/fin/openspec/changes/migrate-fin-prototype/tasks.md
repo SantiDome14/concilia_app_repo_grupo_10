@@ -80,7 +80,29 @@
 - [ ] `Alertas.vue` — keep generic; seed with ≥3 FIN-source alert examples; drop the `nuevas / historico` segmenter, replaced by a state filter in L3.
 - [ ] Update existing `*.spec.ts` to reflect FIN-themed seed without weakening assertions
 
-## 11. Quality gates
+## 11. Framework evolutions surfaced during the migration
+
+- [x] `<KanbanBoard>` axis tabs — replace single "Cambiar eje" CTA with inline chip-tab strip; add `update:axisId` emit + `RO` suffix on read-only axes; `<KanbanAxisDialog>` accepts `title` / `description` props for first-time onboarding
+- [x] `applyFreeTransition(record, axis, toState)` helper in `src/lib/kanban/transitions.ts` + spec coverage; pages handle `mode === 'free'` drops without per-page boilerplate
+- [x] Catalog `UNFILTERED_CATALOG_FILTER` sentinel — `resolveCatalogFilter` distinguishes "no filter declared" (full catalog) vs. "filter unresolved" (empty state). Exported from `@/lib/manifest`
+- [x] `<ManifestField>` eager label resolution — pre-populated lookup values resolve their catalog label on mount/value-change without requiring the dropdown to open
+- [x] `<ManifestActionsMenu>` — `as-child` `<PopoverTrigger>` over a real button; `data-testid` + `@click.stop` moved off the teleport-rooted PopoverContent into an inner div (silences Vue extraneous-attrs warnings)
+- [x] `<ManifestDialog>` always renders `<DialogDescription>` (sr-only fallback) per reka-ui's a11y guard
+- [x] `<RecordDetailModal>` generic component in `src/components/modals/` — two-column labeled grid, section variant, `Cerrar` / `Editar` footer; consumed by Movimientos and Cotizaciones for click-to-detail
+- [x] Light theme tokens in `src/styles/globals.css` (`:root.light {}`) — every surface, border, and text token has a light counterpart; brand and semantic colors keep their HSL
+- [x] `usePreferencesStore` Pinia store + `useSettingsDialog` composable singleton + `<SettingsDialog>` with vertical side tabs; `General` tab hosts `Preferences` (Idioma + Apariencia 3-button toggle)
+- [x] Wire `<SettingsDialog>` in `src/App.vue` and the Sidebar account menu's `Settings` button via `useSettingsDialog().open()`
+- [x] UI primitives purge — replace every `bg-[#111]`, `bg-[#222]`, `bg-[#333]` hex literal in `src/components/ui/{input,textarea,select,checkbox,button}/`, `src/components/drawer/CommentsThread.vue`, `src/components/layout/Sidebar.vue` with theme tokens
+- [x] `<DialogFooter>` + `<SheetFooter>` strip the `border-t border-b-2` divider above the buttons — flat footers
+- [x] `setupAuth0` dev fallback user — when Auth0 not configured, seed the auth store with a user carrying every FIN role so capability gates pass in local dev
+- [x] FIN catalogs plugin (`src/plugins/catalogs.ts`) — register `framework.sociedades`, `ops.catalogo_cuentas` (with sociedad / moneda / compound estructura filters), `clp.clientes`, `fin.proveedores`, `fin.partners`, `framework.bancos_exchanges`, `fin.estructuras`
+- [x] `Asignar Banco y Cuenta` action restructured to a single 3-field cascade (Sociedad → Estructura → Cuenta); legacy `Asignar Estructura` removed; `Marcar con Diferencias` action added; conciliacion axis transitions widened
+- [x] FIN Dashboard rewrite — port the legacy 4-KPI + Posición por sociedad + Alertas activas + Próximos vencimientos + Actividad reciente layout
+- [x] Port every framework-level change above to `_core-template/` (29 files) so derived apps inherit on clone
+- [x] Smoke tests — `AppearanceToggle.spec.ts`, `preferences.spec.ts`, `RecordDetailModal.spec.ts`
+- [x] Spec deltas — `core-theming` (light mode + primitive token discipline), `core-modulo-genericos` (SettingsDialog), `core-actions-manifest` (UNFILTERED sentinel + eager labels), `core-data-tables` (column-change=field-update + axis tabs)
+
+## 12. Quality gates
 
 - [ ] `npm run lint` → exit 0
 - [ ] `npm run type-check` → exit 0
