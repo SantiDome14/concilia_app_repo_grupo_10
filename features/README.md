@@ -1,10 +1,10 @@
 # Features — Convención y criterio
 
-> Última actualización: 2026-04-23
+> Última actualización: 2026-04-29
 
 ## Propósito
 
-Esta carpeta contiene las **feature specifications** de Ardua: el output consolidado de un discovery cerrado. Cada archivo define **qué construir** para una feature o producto específico, con el nivel de detalle necesario para que Tecnología pueda proceder al diseño técnico y la implementación.
+Esta carpeta contiene las **feature specifications** de Ardua: el output consolidado de un discovery archivado. Cada archivo define **qué construir** para una feature o producto específico, con el nivel de detalle necesario para que Tecnología pueda proceder al diseño técnico y la implementación.
 
 Un feature spec responde a la pregunta: **"¿qué tenemos que construir, con qué alcance, y cómo vamos a saber que funciona?"**. No incluye modelos de datos, contratos de API, ni decisiones arquitectónicas — esas viven en el PRD técnico bajo ownership de Tecnología.
 
@@ -15,14 +15,16 @@ Un feature spec responde a la pregunta: **"¿qué tenemos que construir, con qu�
 El flujo natural es:
 
 ```
-discovery/opened/[aplicacion]-[feature]-discovery.md
+discovery/active/[aplicacion]-[feature]-discovery.md
          ↓  (cuando el discovery madura)
-features/[aplicacion]-[feature].md          ← se genera aquí
+features/[aplicacion]-[feature].md           ← se genera aquí
          ↓
-discovery/closed/[aplicacion]-[feature]-discovery.md   ← el discovery se archiva
+discovery/archived/[aplicacion]-[feature]-discovery.md   ← el discovery se archiva
 ```
 
 Un feature spec existe porque un discovery se consolidó. No se escribe un feature spec directamente sin pasar por discovery.
+
+**Trazabilidad por nombre:** el nombre del archivo de discovery archivado debe coincidir con el nombre del feature (más el sufijo `-discovery`). Ver `discovery/README.md` §"Alineación de nombre con feature".
 
 ---
 
@@ -49,6 +51,7 @@ Según las Project Instructions §4.3:
 Reglas:
 
 - Todo en **kebab-case**.
+- **ASCII only** — sin acentos, sin `ñ`, sin caracteres especiales. Set permitido: `[a-z0-9-]`.
 - El prefijo `[aplicacion]-` alinea con la aplicación del core de origen (TRD, OPS, LEX, CLP, COM, FIN) o con el nombre del producto si es transversal.
 - Si la feature es multi-aplicación o un producto completo, el prefijo refleja el producto (ej: `prime-desk-rfq-gateway.md`, `ardua-pnl-report.md`).
 
@@ -62,25 +65,20 @@ prime-desk-rfq-gateway.md              ← producto completo multi-aplicación
 
 ---
 
-## Versionado (`v[N]`)
+## Versionado
 
-- `v1` se omite. La primera versión no lleva sufijo.
-- El sufijo `v[N]` aparece **solo ante forks reales** — pivotes, cambios de dirección, scope significativamente redefinido.
-- Iteraciones menores dentro de la misma dirección se hacen en el mismo archivo, con changelog interno.
+El versionado lo maneja **Git**. Los feature specs no llevan sufijos `v[N]` para iteraciones normales — el historial vive en el log de commits.
 
-```
-features/trd-proveedores-de-liquidez.md          ← versión inicial
-features/trd-proveedores-de-liquidez-v2.md       ← solo si hubo pivote
-```
+El sufijo `v[N]` se reserva **solo para forks conceptuales reales**: pivotes, cambios de dirección, scope significativamente redefinido. En ese caso se crea un archivo nuevo con el sufijo (ej: `trd-proveedores-de-liquidez-v2.md`) y el original se mantiene como referencia histórica.
 
 ---
 
 ## Inventario vivo
 
-Lista generada el 2026-04-23. Regenerar manualmente cuando se agreguen o renombren archivos.
+Lista generada el 2026-04-29. Regenerar manualmente cuando se agreguen o renombren archivos.
 
 | Archivo | Discovery de origen | Estado |
 |---|---|---|
-| `ardua-pnl-report.md` | `discovery/closed/pnl-discovery.md` | Spec validado · Pendiente construcción |
-| `com-pipeline-comercial.md` | `discovery/opened/com-discovery.md` | En refinamiento |
-| `prime-desk-rfq-gateway.md` | `discovery/closed/rfq-prime-desk-discovery.md` | Ready for Dev (REQ-8, REQ-9, REQ-30, REQ-31) |
+| `ardua-pnl-report.md` | `discovery/archived/pnl-discovery.md` | Spec validado · Pendiente construcción |
+| `com-pipeline-comercial.md` | `discovery/active/com-discovery.md` | En refinamiento |
+| `prime-desk-rfq-gateway.md` | `discovery/archived/prime-desk-rfq-gateway-discovery.md` | Ready for Dev (REQ-8, REQ-9, REQ-30, REQ-31) |

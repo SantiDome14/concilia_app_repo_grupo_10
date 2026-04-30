@@ -1,0 +1,22 @@
+# CODEOWNERS — defines required reviewers for changes to specific paths.
+# Reference: https://docs.github.com/en/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Pattern matching is similar to .gitignore. The LAST matching pattern wins
+# for any given path, so order matters.
+
+# ─────────────────────────────────────────────────────────────────
+# Framework — foundational constraints (legal, operational, accounting,
+# mission/vision/values). Modifications must be approved by the Head of
+# Product, since these documents reflect the structural reality of the
+# group and changing them affects every product.
+# ─────────────────────────────────────────────────────────────────
+/framework/                @a1yr
+
+# ─────────────────────────────────────────────────────────────────
+# Repository governance — README, CODEOWNERS, CONTRIBUTING, .gitignore.
+# Changes here affect how the entire team works against the repository.
+# ─────────────────────────────────────────────────────────────────
+/README.md                 @a1yr
+/CODEOWNERS                @a1yr
+/CONTRIBUTING.md           @a1yr
+/.gitignore                @a1yr
