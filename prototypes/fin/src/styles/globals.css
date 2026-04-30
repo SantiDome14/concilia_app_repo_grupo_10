@@ -1,0 +1,189 @@
+/* ══════════════════════════════════════════════════════════════════
+   Global styles — Ardua Design System
+   ──────────────────────────────────────────────────────────────────
+   Tailwind 4 directives + design tokens as CSS variables.
+   Change --brand to re-theme the entire app.
+   Tokens are consumed by:
+     - Tailwind theme extensions (bg-brand, text-surf, etc.)
+     - shadcn-vue primitives (Button, Badge, Dialog, ...)
+     - Any custom component via `hsl(var(--token))`
+   ══════════════════════════════════════════════════════════════════ */
+
+@import 'tailwindcss';
+
+/* ────────────────────────────────────────────────────────────────
+   Theme — maps CSS variables to Tailwind color utilities.
+   ──────────────────────────────────────────────────────────────── */
+@theme {
+  /* Brand — change ONE variable to re-theme the app */
+  --color-brand: hsl(var(--brand));
+  --color-brand-bg: hsl(var(--brand) / 0.08);
+
+  /* Semantic surfaces */
+  --color-bg: hsl(var(--bg));
+  --color-surf: hsl(var(--surf));
+  --color-card: hsl(var(--card));
+  --color-card-2: hsl(var(--card-2));
+
+  /* Borders */
+  --color-b-1: hsl(var(--b-1));
+  --color-b-2: hsl(var(--b-2));
+  --color-b-3: hsl(var(--b-3));
+  --color-b-4: hsl(var(--b-4));
+
+  /* Text */
+  --color-t-1: hsl(var(--t-1));
+  --color-t-2: hsl(var(--t-2));
+  --color-t-3: hsl(var(--t-3));
+  --color-t-4: hsl(var(--t-4));
+
+  /* Status */
+  --color-success: hsl(var(--success));
+  --color-success-bg: hsl(var(--success) / 0.08);
+  --color-warning: hsl(var(--warning));
+  --color-warning-bg: hsl(var(--warning) / 0.09);
+  --color-danger: hsl(var(--danger));
+  --color-danger-bg: hsl(var(--danger) / 0.08);
+  --color-info: hsl(var(--info));
+  --color-info-bg: hsl(var(--info) / 0.09);
+
+  /* Typography */
+  --font-sans:
+    'DM Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Courier New', monospace;
+
+  /* Radius */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+
+  /* Animation */
+  --animate-in: enter 150ms ease-out;
+  --animate-out: exit 150ms ease-in;
+}
+
+/* ────────────────────────────────────────────────────────────────
+   Design tokens — dark theme (default).
+   ──────────────────────────────────────────────────────────────── */
+:root {
+  /* Brand — change this to re-theme (HSL triple: H S% L%)
+     OPS red:    0 84% 60%
+     TRD blue:   217 91% 60%
+     FIN green:  142 71% 45%
+     CLP purple: 258 90% 74%
+     COM amber:  38 92% 50%
+     LEX teal:   172 66% 50% */
+  --brand: 0 84% 60%;
+
+  /* Surfaces */
+  --bg: 0 0% 4%;          /* #0A0A0A */
+  --surf: 0 0% 7%;        /* #111111 */
+  --card: 0 0% 9%;        /* #181818 */
+  --card-2: 0 0% 12%;     /* #1E1E1E */
+
+  /* Borders (progressively lighter) */
+  --b-1: 0 0% 12%;        /* #1E1E1E */
+  --b-2: 0 0% 15%;        /* #272727 */
+  --b-3: 0 0% 20%;        /* #333333 */
+  --b-4: 0 0% 27%;        /* #444444 */
+
+  /* Text (progressively dimmer) */
+  --t-1: 0 0% 94%;        /* #F0F0F0 */
+  --t-2: 0 0% 75%;        /* #C0C0C0 */
+  --t-3: 0 0% 53%;        /* #888888 */
+  --t-4: 0 0% 29%;        /* #4A4A4A */
+
+  /* Status */
+  --success: 142 71% 45%;
+  --warning: 38 92% 50%;
+  --danger: 0 84% 60%;
+  --info: 217 91% 60%;
+}
+
+/* ────────────────────────────────────────────────────────────────
+   Light theme — opt-in via <html class="light">
+   Kept as scaffolding; dark is the default for internal tooling.
+   ──────────────────────────────────────────────────────────────── */
+:root.light {
+  --bg: 0 0% 100%;
+  --surf: 0 0% 98%;
+  --card: 0 0% 96%;
+  --card-2: 0 0% 94%;
+
+  --b-1: 0 0% 88%;
+  --b-2: 0 0% 82%;
+  --b-3: 0 0% 75%;
+  --b-4: 0 0% 60%;
+
+  --t-1: 0 0% 10%;
+  --t-2: 0 0% 25%;
+  --t-3: 0 0% 45%;
+  --t-4: 0 0% 65%;
+}
+
+/* ────────────────────────────────────────────────────────────────
+   Base element styles
+   ──────────────────────────────────────────────────────────────── */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    background: hsl(var(--bg));
+    color: hsl(var(--t-1));
+    font-family: var(--font-sans);
+    font-size: 14px;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #app {
+    min-height: 100vh;
+  }
+
+  /* Subtle scrollbars */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--b-3));
+    border-radius: 3px;
+  }
+
+  /* Disable default focus ring — components define their own via ring-brand */
+  :focus {
+    outline: none;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────
+   Animations (used by reka-ui primitives)
+   ──────────────────────────────────────────────────────────────── */
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes exit {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
