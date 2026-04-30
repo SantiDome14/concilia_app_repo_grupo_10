@@ -8,6 +8,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 import type { KanbanAxis, KanbanRecord, KanbanTransition, KanbanTransitionMode } from '@/types/kanban';
+import { setField } from '@/lib/manifest/dotPath';
 
 /** Block reason surfaced to telemetry. */
 export type BlockReason =
@@ -147,6 +148,62 @@ export function kanbanSort(a: KanbanRecord, b: KanbanRecord): number {
   if (!raValid && rbValid) return 1;
 
   return 0;
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Free-transition application
+// ────────────────────────────────────────────────────────────────────
+
+/**
+ * Apply a `mode: 'free'` kanban transition by writing the axis's
+ * `state_field` on the record. The caller is responsible for emitting
+ * an audit entry / toast / side-effect via the axis's `side_effects`
+ * registry — `applyFreeTransition` is intentionally side-effect-free
+ * beyond the field write so it can be unit-tested in isolation.
+ *
+ * Returns `true` when the field was written, `false` when the call was
+ * a no-op (e.g. axis is read-only, transition is undeclared, fromState
+ * already matches toState).
+ *
+ * The corresponding "column change == field update" contract is
+ * documented at `core-actions-manifest` Requirement 16-bis.
+ */
+export function applyFreeTransition(
+  record: Record<string, unknown>,
+  axis: KanbanAxis,
+  toState: string,
+): boolean {
+  const fromState =
+    (typeof record === 'object' && record !== null
+      ? readDotPath(record, axis.state_field)
+      : undefined) ?? null;
+
+  if (fromState === toState) return false;
+
+  const evalResult = evaluateDrop(axis, String(fromState ?? ''), toState);
+  if (!evalResult.allowed || evalResult.mode !== 'free') return false;
+
+  setField(record, axis.state_field, toState);
+
+  if (evalResult.transition.side_effect && axis.side_effects) {
+    const fn = axis.side_effects[evalResult.transition.side_effect];
+    if (typeof fn === 'function') fn(record);
+  }
+
+  return true;
+}
+
+function readDotPath(obj: Record<string, unknown>, path: string): unknown {
+  const parts = path.split('.');
+  let cursor: unknown = obj;
+  for (const key of parts) {
+    if (cursor && typeof cursor === 'object' && key in (cursor as Record<string, unknown>)) {
+      cursor = (cursor as Record<string, unknown>)[key];
+    } else {
+      return undefined;
+    }
+  }
+  return cursor;
 }
 
 // Re-export the runtime-mode union for downstream consumers.
