@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { Search } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 import { Badge, type BadgeVariants } from '@/components/ui/badge';
@@ -11,9 +11,9 @@ import {
   type Severity,
   type ViewMode,
 } from '@/components/views';
-import { KanbanBoard } from '@/components/kanban';
+import { KanbanBoard, KanbanAxisDialog } from '@/components/kanban';
 import { ManifestActionsMenu } from '@/components/manifest';
-import type { KanbanAxis, KanbanState } from '@/types/kanban';
+import type { KanbanAxis } from '@/types/kanban';
 import { useManifestModule } from '@/composables/useManifestModule';
 import {
   FIN_COTIZACIONES_MANIFEST_KEY,
@@ -85,43 +85,110 @@ const kpis = computed(() => {
   };
 });
 
-// ─── Documentación kanban axis ───────────────────────────────────────
-const FIN_FACTURA_KANBAN_STATES: KanbanState[] = [
-  { id: 'pendiente', label: 'Pendiente', column_label: 'Pendiente', order: 1 },
-  { id: 'facturada', label: 'Facturada', column_label: 'Facturada', order: 2, terminal: true },
-  { id: 'no-req', label: 'No facturable', column_label: 'No facturable', order: 3, terminal: true },
-];
-
+// ─── Kanban axes ─────────────────────────────────────────────────────
+// Two axes mirror the FIN.Cotizaciones tablero:
+//   - `fin.facturaState` (documentacion, FIN, drag&drop libre): drop
+//     into facturada → opens "Generar Factura"; drop into no-req →
+//     opens "Marcar No Facturable". Single-action transitions (no
+//     composite) because the dimension only has these two writers.
+//   - `quote.status` (governance, TRD, read-only): page-level only.
+//     The trading lifecycle is owned by TRD; FIN surfaces it for
+//     situational awareness — no drag, no drop targets.
 const FIN_FACTURA_KANBAN_AXIS: KanbanAxis = {
   axis_id: 'fin.facturaState',
-  label: 'Documentación',
-  description: 'Lifecycle de facturación FIN sobre el quote',
+  label: 'Documentación (FIN)',
+  description: 'Flujo de facturación del quote · drag&drop libre',
   state_field: 'fin.facturaState',
-  states: FIN_FACTURA_KANBAN_STATES,
+  states: [
+    { id: 'pendiente', label: 'Pendiente', column_label: 'Pendiente', order: 1 },
+    { id: 'facturada', label: 'Facturada', column_label: 'Facturada', order: 2, terminal: true },
+    { id: 'no-req', label: 'No facturable', column_label: 'No facturable', order: 3, terminal: true },
+  ],
   transitions: [
     { from: 'pendiente', to: 'facturada', mode: 'modal' },
     { from: 'pendiente', to: 'no-req', mode: 'modal' },
   ],
 };
 
+const TRD_STATUS_KANBAN_AXIS: KanbanAxis = {
+  axis_id: 'quote.status',
+  label: 'Trading (TRD)',
+  description: 'Estado del quote en el ciclo de TRD · read-only desde FIN',
+  state_field: 'status',
+  states: [
+    { id: 'pending', label: 'Pendiente', column_label: 'Pendiente', order: 1 },
+    { id: 'offered', label: 'Ofertada', column_label: 'Ofertada', order: 2 },
+    { id: 'executed', label: 'Ejecutada', column_label: 'Ejecutada', order: 3 },
+    { id: 'settled', label: 'Liquidada', column_label: 'Liquidada', order: 4, terminal: true },
+    { id: 'cancelled', label: 'Anulada', column_label: 'Anulada', order: 5, terminal: true },
+  ],
+  transitions: [],
+  read_only: true,
+};
+
+const KANBAN_AXES: Record<string, KanbanAxis> = {
+  [FIN_FACTURA_KANBAN_AXIS.axis_id]: FIN_FACTURA_KANBAN_AXIS,
+  [TRD_STATUS_KANBAN_AXIS.axis_id]: TRD_STATUS_KANBAN_AXIS,
+};
+
+const AXIS_PERSISTENCE_KEY = 'core-fin.cotizaciones.kanban-axis';
+
+const activeAxisId = ref<string | null>(null);
+const axisDialogOpen = ref(false);
+
+const activeAxis = computed<KanbanAxis | null>(() => {
+  if (activeAxisId.value === null) return null;
+  return KANBAN_AXES[activeAxisId.value] ?? null;
+});
+
+onMounted(() => {
+  const stored = sessionStorage.getItem(AXIS_PERSISTENCE_KEY);
+  if (stored && stored in KANBAN_AXES) {
+    activeAxisId.value = stored;
+  }
+});
+
+watch(view, (next) => {
+  if (next !== 'kanban' || activeAxisId.value !== null) return;
+  const ids = Object.keys(KANBAN_AXES);
+  if (ids.length === 1) {
+    selectAxis(ids[0] as string);
+  } else if (ids.length > 1) {
+    axisDialogOpen.value = true;
+  }
+});
+
+function selectAxis(axisId: string): void {
+  activeAxisId.value = axisId;
+  sessionStorage.setItem(AXIS_PERSISTENCE_KEY, axisId);
+}
+
+function openAxisDialog(): void {
+  axisDialogOpen.value = true;
+}
+
 function handleKanbanTransition(payload: {
   recordId: string;
   fromState: string;
   toState: string;
   mode: string;
+  axisId: string;
 }): void {
+  if (payload.mode !== 'modal') return;
   const q = quotes.value.find((row) => row.id === payload.recordId);
   if (!q) return;
-  if (payload.toState === 'facturada') {
-    cotizaciones.openDialog(
-      'fin.cotizaciones.documentacion.generar_factura',
-      q as unknown as Record<string, unknown>,
-    );
-  } else if (payload.toState === 'no-req') {
-    cotizaciones.openDialog(
-      'fin.cotizaciones.documentacion.marcar_no_facturable',
-      q as unknown as Record<string, unknown>,
-    );
+  if (payload.axisId === 'fin.facturaState') {
+    if (payload.toState === 'facturada') {
+      cotizaciones.openDialog(
+        'fin.cotizaciones.documentacion.generar_factura',
+        q as unknown as Record<string, unknown>,
+      );
+    } else if (payload.toState === 'no-req') {
+      cotizaciones.openDialog(
+        'fin.cotizaciones.documentacion.marcar_no_facturable',
+        q as unknown as Record<string, unknown>,
+      );
+    }
   }
 }
 
@@ -405,11 +472,13 @@ const kanbanRecords = computed(() =>
       <!-- KANBAN view -->
       <div v-else class="min-h-[480px]" data-testid="cotizaciones-kanban-wrapper">
         <KanbanBoard
-          :axis="FIN_FACTURA_KANBAN_AXIS"
+          :axis="activeAxis"
+          :axes="KANBAN_AXES"
           :records="kanbanRecords"
-          axis-id="fin.facturaState"
-          title="Documentación FIN"
+          title="Tablero FIN"
           @transition="handleKanbanTransition"
+          @update:axis-id="selectAxis"
+          @change-axis="openAxisDialog"
         >
           <template #card="{ record }">
             <CardItem
@@ -454,5 +523,15 @@ const kanbanRecords = computed(() =>
         </KanbanBoard>
       </div>
     </section>
+
+    <KanbanAxisDialog
+      :open="axisDialogOpen"
+      :axes="KANBAN_AXES"
+      :active-axis-id="activeAxisId"
+      title="¿Cómo querés organizar el Tablero de Cotizaciones?"
+      description="Documentación es flujo de trabajo de FIN (drag&drop libre); Trading es read-only — el ciclo del quote lo gobierna TRD."
+      @update:open="axisDialogOpen = $event"
+      @select="(axisId) => { selectAxis(axisId); axisDialogOpen = false; }"
+    />
   </div>
 </template>

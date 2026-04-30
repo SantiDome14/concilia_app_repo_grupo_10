@@ -16,8 +16,14 @@ import KanbanCard from './KanbanCard.vue';
 // ────────────────────────────────────────────────────────────────────
 // Responsibilities owned here:
 //   1. Render one <KanbanColumn> per state in axis.states (asc order).
-//   2. Render the active-axis header + "Cambiar eje" button when more
-//      than one axis is declared on the page.
+//   2. Render the active-axis header + inline axis tabs (one chip per
+//      axis, with a "read-only" suffix where applicable) when more
+//      than one axis is declared on the page. Click a tab → emit
+//      `update:axisId` with the new axis id. The legacy "Cambiar eje"
+//      CTA + `change-axis` event is kept as a back-compat path that
+//      pages MAY use to open a richer picker dialog (per
+//      `<KanbanAxisDialog>`); when the page does not listen, the tabs
+//      are the only switcher.
 //   3. Bind native HTML5 drag/drop events; on drop, run evaluateDrop
 //      and emit the `transition` event with the canonical payload.
 //   4. Render an empty state when `axis` is null.
@@ -56,6 +62,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   transition: [payload: KanbanTransitionPayload];
   'change-axis': [];
+  'update:axisId': [axisId: string];
 }>();
 
 // ────────────────────────────────────────────────────────────────────
@@ -174,22 +181,25 @@ function handleColumnDrop(event: DragEvent, state: KanbanState): void {
 }
 
 // ────────────────────────────────────────────────────────────────────
-// Header — axis label + "Cambiar eje" button
+// Header — axis tabs + active label
 // ────────────────────────────────────────────────────────────────────
 
-const showChangeAxisButton = computed(() => {
-  if (!props.axes) return false;
-  return Object.keys(props.axes).length > 1;
+const axisEntries = computed<KanbanAxis[]>(() => {
+  if (!props.axes) return [];
+  return Object.values(props.axes);
 });
 
-function emitChangeAxis(): void {
-  emit('change-axis');
+const showAxisTabs = computed(() => axisEntries.value.length > 1);
+
+function selectAxis(axisId: string): void {
+  if (axisId === props.axis?.axis_id) return;
+  emit('update:axisId', axisId);
 }
 </script>
 
 <template>
   <div :class="cn('flex h-full flex-col gap-3', props.class)">
-    <header class="flex items-center justify-between gap-2">
+    <header class="flex flex-wrap items-center justify-between gap-3">
       <div class="flex flex-col">
         <p v-if="props.title" class="text-[10px] font-bold uppercase tracking-wider text-t-3">
           {{ props.title }}
@@ -198,15 +208,40 @@ function emitChangeAxis(): void {
           Organizando por: {{ props.axis.label }}
         </p>
       </div>
-      <button
-        v-if="showChangeAxisButton && props.axis"
-        type="button"
-        class="rounded border border-b-1 px-2 py-1 text-xs text-t-2 hover:bg-card-2"
-        data-testid="kanban-change-axis"
-        @click="emitChangeAxis"
+      <nav
+        v-if="showAxisTabs"
+        role="tablist"
+        aria-label="Ejes del Tablero"
+        class="flex flex-wrap items-center gap-1 rounded-lg border border-b-1 bg-card-2 p-1"
+        data-testid="kanban-axis-tabs"
       >
-        Cambiar eje
-      </button>
+        <button
+          v-for="entry in axisEntries"
+          :key="entry.axis_id"
+          type="button"
+          role="tab"
+          :aria-selected="props.axis?.axis_id === entry.axis_id"
+          :data-axis-id="entry.axis_id"
+          :data-testid="`kanban-axis-tab-${entry.axis_id}`"
+          :class="
+            cn(
+              'flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-t-3 transition-colors hover:text-t-1',
+              props.axis?.axis_id === entry.axis_id
+                ? 'bg-brand-bg font-semibold text-brand'
+                : 'hover:bg-card',
+            )
+          "
+          @click="selectAxis(entry.axis_id)"
+        >
+          <span class="truncate">{{ entry.label }}</span>
+          <span
+            v-if="entry.read_only"
+            class="rounded bg-card px-1 py-px text-[9px] font-bold uppercase tracking-wider text-t-4"
+          >
+            RO
+          </span>
+        </button>
+      </nav>
     </header>
 
     <div

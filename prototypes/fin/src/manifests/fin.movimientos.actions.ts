@@ -71,6 +71,12 @@ export const FIN_MOVIMIENTOS_MANIFEST: Manifest = {
       drop_target_state: 'IMP',
       states: ['PEND', 'PARC', 'IMP'],
     },
+    {
+      axis_id: 'fin.conc',
+      dimension: 'conciliacion',
+      drop_target_state: 'CONC',
+      states: ['PEND', 'DIFF', 'CONC'],
+    },
   ],
 
   actions: [

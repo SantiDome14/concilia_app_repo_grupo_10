@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { Search } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 import { Badge, type BadgeVariants } from '@/components/ui/badge';
@@ -11,9 +11,9 @@ import {
   type Severity,
   type ViewMode,
 } from '@/components/views';
-import { KanbanBoard } from '@/components/kanban';
+import { KanbanBoard, KanbanAxisDialog } from '@/components/kanban';
 import { ManifestActionsMenu } from '@/components/manifest';
-import type { KanbanAxis, KanbanState } from '@/types/kanban';
+import type { KanbanAxis } from '@/types/kanban';
 import { useManifestModule } from '@/composables/useManifestModule';
 import {
   FIN_MOVIMIENTOS_MANIFEST_KEY,
@@ -43,7 +43,7 @@ import type {
 // declared in the `fin.movimientos` manifest registered at boot.
 // ════════════════════════════════════════════════════════════════════
 
-useManifestModule(FIN_MOVIMIENTOS_MANIFEST_KEY);
+const movimientosMod = useManifestModule(FIN_MOVIMIENTOS_MANIFEST_KEY);
 
 // ─── Page state ──────────────────────────────────────────────────────
 const view = ref<ViewMode>('list');
@@ -118,22 +118,29 @@ const kpis = computed(() => {
   };
 });
 
-// ─── Imputation kanban axis ──────────────────────────────────────────
-const FIN_IMPUT_KANBAN_STATES: KanbanState[] = [
-  { id: 'PEND', label: 'Pendiente', column_label: 'Pendiente', order: 1 },
-  { id: 'PARC', label: 'Parcial', column_label: 'Parcial', order: 2 },
-  { id: 'IMP', label: 'Imputado', column_label: 'Imputado', order: 3, terminal: true },
-];
-
+// ─── Kanban axes ─────────────────────────────────────────────────────
+// Three axes mirror the prototype's tablero options for Movimientos:
+//   - `fin.imput` (imputacion, FIN, drag&drop libre): composite-dialog
+//     flow bundles every pending imputation action (Asignar Estructura
+//     / Banco-Cuenta / Cliente / ...) into a single modal per
+//     `core-actions-manifest` Requirement 16. Declared in the manifest.
+//   - `fin.conc` (conciliacion, FIN, drag&drop libre): drop into CONC
+//     opens the composite-dialog of the conciliacion dimension (today,
+//     just `Marcar Conciliado`). Declared in the manifest.
+//   - `ops.status` (operativo, OPS, read-only): page-level only. FIN
+//     surfaces the rail-side operational state for situational
+//     awareness; the field is owned by OPS and FIN cannot mutate it,
+//     so this axis is NOT declared in the FIN manifest.
 const FIN_IMPUT_KANBAN_AXIS: KanbanAxis = {
   axis_id: 'fin.imput',
-  label: 'Imputación',
-  description: 'Lifecycle de imputación FIN sobre el movimiento',
+  label: 'Imputación contable (FIN)',
+  description: 'Flujo de trabajo de imputación contable · drag&drop libre',
   state_field: 'fin.imput',
-  states: FIN_IMPUT_KANBAN_STATES,
-  // Drop transitions are open between states; the page's onTransition
-  // handler delegates to the manifest engine's composite-dialog flow
-  // (one bundled dialog per pending imputation action).
+  states: [
+    { id: 'PEND', label: 'Pendiente', column_label: 'Pendiente', order: 1 },
+    { id: 'PARC', label: 'Parcial', column_label: 'Parcial', order: 2 },
+    { id: 'IMP', label: 'Imputado', column_label: 'Imputado', order: 3, terminal: true },
+  ],
   transitions: [
     { from: 'PEND', to: 'PARC', mode: 'modal' },
     { from: 'PEND', to: 'IMP', mode: 'modal' },
@@ -141,21 +148,100 @@ const FIN_IMPUT_KANBAN_AXIS: KanbanAxis = {
   ],
 };
 
+const FIN_CONC_KANBAN_AXIS: KanbanAxis = {
+  axis_id: 'fin.conc',
+  label: 'Conciliación bancaria (FIN)',
+  description: 'Flujo de conciliación contra extractos · drag&drop libre',
+  state_field: 'fin.conc',
+  states: [
+    { id: 'PEND', label: 'Pendiente', column_label: 'Pendiente', order: 1 },
+    { id: 'DIFF', label: 'Diferencias', column_label: 'Diferencias', order: 2 },
+    { id: 'CONC', label: 'Conciliado', column_label: 'Conciliado', order: 3, terminal: true },
+  ],
+  // Only inbound transitions to CONC are allowed; FIN's `Marcar Conciliado`
+  // action enables for null/PEND/DIFF and writes CONC. There is no FIN
+  // action that returns a movement to PEND or DIFF, so those drops stay
+  // blocked by the absence of a declared transition.
+  transitions: [
+    { from: 'PEND', to: 'CONC', mode: 'modal' },
+    { from: 'DIFF', to: 'CONC', mode: 'modal' },
+  ],
+};
+
+const OPS_STATUS_KANBAN_AXIS: KanbanAxis = {
+  axis_id: 'ops.status',
+  label: 'Estado operativo (OPS)',
+  description: 'Estado del rail al confirmar la transacción · read-only desde FIN',
+  state_field: 'status',
+  states: [
+    { id: 'PENDING', label: 'Pendiente', column_label: 'Pendiente', order: 1 },
+    { id: 'COMPLETED', label: 'Completado', column_label: 'Completado', order: 2, terminal: true },
+    { id: 'FAILED', label: 'Fallido', column_label: 'Fallido', order: 3, terminal: true },
+  ],
+  transitions: [],
+  read_only: true,
+};
+
+const KANBAN_AXES: Record<string, KanbanAxis> = {
+  [FIN_IMPUT_KANBAN_AXIS.axis_id]: FIN_IMPUT_KANBAN_AXIS,
+  [FIN_CONC_KANBAN_AXIS.axis_id]: FIN_CONC_KANBAN_AXIS,
+  [OPS_STATUS_KANBAN_AXIS.axis_id]: OPS_STATUS_KANBAN_AXIS,
+};
+
+const AXIS_PERSISTENCE_KEY = 'core-fin.movimientos.kanban-axis';
+
+const activeAxisId = ref<string | null>(null);
+const axisDialogOpen = ref(false);
+
+const activeAxis = computed<KanbanAxis | null>(() => {
+  if (activeAxisId.value === null) return null;
+  return KANBAN_AXES[activeAxisId.value] ?? null;
+});
+
+onMounted(() => {
+  const stored = sessionStorage.getItem(AXIS_PERSISTENCE_KEY);
+  if (stored && stored in KANBAN_AXES) {
+    activeAxisId.value = stored;
+  }
+});
+
+// First-time activation of the kanban view: when no axis is chosen,
+// open the picker (≥ 2 axes) or auto-pick the only one (1 axis).
+watch(view, (next) => {
+  if (next !== 'kanban' || activeAxisId.value !== null) return;
+  const ids = Object.keys(KANBAN_AXES);
+  if (ids.length === 1) {
+    selectAxis(ids[0] as string);
+  } else if (ids.length > 1) {
+    axisDialogOpen.value = true;
+  }
+});
+
+function selectAxis(axisId: string): void {
+  activeAxisId.value = axisId;
+  sessionStorage.setItem(AXIS_PERSISTENCE_KEY, axisId);
+}
+
+function openAxisDialog(): void {
+  axisDialogOpen.value = true;
+}
+
 function handleKanbanTransition(payload: {
   recordId: string;
   fromState: string;
   toState: string;
   mode: string;
+  axisId: string;
 }): void {
-  // The full composite-dialog flow (bundling all pending imputation
-  // actions for the dropped record into a single modal) is out of
-  // scope for this baseline migration. For now, dragging a card opens
-  // its actions menu via the row-actions UI.
-  // eslint-disable-next-line no-console
-  console.info(
-    '[fin.movimientos] kanban drop',
-    payload,
-    '— composite-dialog flow pending (open the row’s ⋮ menu to apply individual actions).',
+  if (payload.mode !== 'modal') return;
+  const record = movimientos.value.find((m) => m.id === payload.recordId);
+  if (!record) return;
+  // Composite-dialog flow per core-actions-manifest Requirement 16:
+  // openComposite collects every pending action of the axis dimension,
+  // dedupes fields, and runs ONE recompute + ONE audit on confirm.
+  movimientosMod.openComposite(
+    record as unknown as Record<string, unknown>,
+    payload.axisId,
   );
 }
 
@@ -439,11 +525,13 @@ const kanbanRecords = computed(() =>
         data-testid="movimientos-kanban-wrapper"
       >
         <KanbanBoard
-          :axis="FIN_IMPUT_KANBAN_AXIS"
+          :axis="activeAxis"
+          :axes="KANBAN_AXES"
           :records="kanbanRecords"
-          axis-id="fin.imput"
-          title="Imputación FIN"
+          title="Tablero FIN"
           @transition="handleKanbanTransition"
+          @update:axis-id="selectAxis"
+          @change-axis="openAxisDialog"
         >
           <template #card="{ record }">
             <CardItem
@@ -494,5 +582,16 @@ const kanbanRecords = computed(() =>
         </KanbanBoard>
       </div>
     </section>
+
+    <!-- Axis picker — opens on first kanban activation and via tabs/CTA -->
+    <KanbanAxisDialog
+      :open="axisDialogOpen"
+      :axes="KANBAN_AXES"
+      :active-axis-id="activeAxisId"
+      title="¿Cómo querés organizar el Tablero de Movimientos?"
+      description="Cada eje refleja una máquina de estados distinta: las dos primeras son flujos de trabajo de FIN (drag&drop libre); el estado OPS viene del rail y es solo lectura."
+      @update:open="axisDialogOpen = $event"
+      @select="(axisId) => { selectAxis(axisId); axisDialogOpen = false; }"
+    />
   </div>
 </template>

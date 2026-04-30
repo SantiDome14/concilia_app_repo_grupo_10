@@ -30,6 +30,11 @@ export const FIN_COTIZACIONES_MANIFEST: Manifest = {
       drop_target_state: 'facturada',
       states: ['pendiente', 'facturada', 'no-req'],
     },
+    {
+      axis_id: 'quote.status',
+      dimension: 'governance',
+      states: ['pending', 'offered', 'executed', 'settled', 'cancelled'],
+    },
   ],
 
   actions: [

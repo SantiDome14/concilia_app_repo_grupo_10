@@ -51,7 +51,7 @@ describe('KanbanBoard', () => {
     expect(wrapper.findAll('[data-state-id]')).toHaveLength(0);
   });
 
-  it('shows "Cambiar eje" only when axes has more than one entry', () => {
+  it('shows axis tabs only when axes has more than one entry', () => {
     const single = mount(KanbanBoard, {
       props: {
         axis: makeAxis(),
@@ -59,7 +59,7 @@ describe('KanbanBoard', () => {
         records: [],
       },
     });
-    expect(single.find('[data-testid="kanban-change-axis"]').exists()).toBe(false);
+    expect(single.find('[data-testid="kanban-axis-tabs"]').exists()).toBe(false);
 
     const multi = mount(KanbanBoard, {
       props: {
@@ -71,10 +71,15 @@ describe('KanbanBoard', () => {
         records: [],
       },
     });
-    expect(multi.find('[data-testid="kanban-change-axis"]').exists()).toBe(true);
+    const tabs = multi.find('[data-testid="kanban-axis-tabs"]');
+    expect(tabs.exists()).toBe(true);
+    expect(tabs.findAll('[role="tab"]')).toHaveLength(2);
+    const active = tabs.find('[aria-selected="true"]');
+    expect(active.exists()).toBe(true);
+    expect(active.attributes('data-axis-id')).toBe('workflow');
   });
 
-  it('emits change-axis when the "Cambiar eje" button is clicked', async () => {
+  it('emits update:axisId when a non-active axis tab is clicked', async () => {
     const wrapper = mount(KanbanBoard, {
       props: {
         axis: makeAxis(),
@@ -85,8 +90,40 @@ describe('KanbanBoard', () => {
         records: [],
       },
     });
-    await wrapper.find('[data-testid="kanban-change-axis"]').trigger('click');
-    expect(wrapper.emitted('change-axis')).toBeTruthy();
+    await wrapper.find('[data-testid="kanban-axis-tab-imputacion"]').trigger('click');
+    const events = wrapper.emitted('update:axisId');
+    expect(events).toBeTruthy();
+    expect(events?.[0]).toEqual(['imputacion']);
+  });
+
+  it('does NOT emit update:axisId when the active axis tab is clicked', async () => {
+    const wrapper = mount(KanbanBoard, {
+      props: {
+        axis: makeAxis(),
+        axes: {
+          workflow: makeAxis(),
+          imputacion: makeAxis({ axis_id: 'imputacion', label: 'Imputación' }),
+        },
+        records: [],
+      },
+    });
+    await wrapper.find('[data-testid="kanban-axis-tab-workflow"]').trigger('click');
+    expect(wrapper.emitted('update:axisId')).toBeUndefined();
+  });
+
+  it('marks read-only axis tabs with the RO suffix chip', () => {
+    const wrapper = mount(KanbanBoard, {
+      props: {
+        axis: makeAxis(),
+        axes: {
+          workflow: makeAxis(),
+          ops: makeAxis({ axis_id: 'ops', label: 'OPS', read_only: true }),
+        },
+        records: [],
+      },
+    });
+    const tab = wrapper.find('[data-testid="kanban-axis-tab-ops"]');
+    expect(tab.text()).toContain('RO');
   });
 
   it('emits "Organizando por: <label>" in the header when axis is set', () => {
