@@ -199,15 +199,16 @@ function selectAxis(axisId: string): void {
 
 <template>
   <div :class="cn('flex h-full flex-col gap-3', props.class)">
-    <header class="flex flex-wrap items-center justify-between gap-3">
-      <div class="flex flex-col">
-        <p v-if="props.title" class="text-[10px] font-bold uppercase tracking-wider text-t-3">
-          {{ props.title }}
-        </p>
-        <p v-if="props.axis" class="text-sm font-semibold text-t-1">
-          Organizando por: {{ props.axis.label }}
-        </p>
-      </div>
+    <header class="flex flex-wrap items-center gap-3">
+      <!-- Multi-axis: a small "Ejes" label introduces the tab strip;
+           the tab strip itself is the active-axis indicator, so the
+           "Organizando por:" pointer is dropped. -->
+      <span
+        v-if="showAxisTabs"
+        class="text-[10px] font-bold uppercase tracking-wider text-t-3"
+      >
+        Ejes
+      </span>
       <nav
         v-if="showAxisTabs"
         role="tablist"
@@ -242,6 +243,17 @@ function selectAxis(axisId: string): void {
           </span>
         </button>
       </nav>
+
+      <!-- Single-axis fallback: no tabs to switch between, so we keep
+           the textual "Organizando por:" pointer for the user. -->
+      <div v-else-if="props.axis" class="flex flex-col">
+        <p v-if="props.title" class="text-[10px] font-bold uppercase tracking-wider text-t-3">
+          {{ props.title }}
+        </p>
+        <p class="text-sm font-semibold text-t-1">
+          Organizando por: {{ props.axis.label }}
+        </p>
+      </div>
     </header>
 
     <div
