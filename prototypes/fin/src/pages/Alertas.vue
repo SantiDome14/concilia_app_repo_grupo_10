@@ -20,7 +20,7 @@ import { KanbanBoard } from '@/components/kanban';
 import { ManifestActionsMenu } from '@/components/manifest';
 import type { KanbanAxis, KanbanState } from '@/types/kanban';
 import { useManifestModule } from '@/composables/useManifestModule';
-import { ALERTAS_MANIFEST_KEY } from '@/manifests/framework.template.alertas.actions';
+import { ALERTAS_MANIFEST_KEY } from '@/manifests/fin.alertas.actions';
 import { ALERTS } from '@/mocks/genericos/alertas';
 import { CURRENT_USER } from '@/mocks/genericos/users';
 import type {

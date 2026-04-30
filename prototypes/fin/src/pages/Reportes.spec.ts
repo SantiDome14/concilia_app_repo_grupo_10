@@ -7,7 +7,7 @@ import { useManifestRegistryStore } from '@/stores/manifestRegistry';
 import {
   REPORTES_MANIFEST,
   REPORTES_MANIFEST_KEY,
-} from '@/manifests/framework.template.reportes.actions';
+} from '@/manifests/fin.reportes.actions';
 import { useAuthStore } from '@/stores/auth';
 import { ROUTE_PATHS } from '@/config/routes';
 

@@ -8,22 +8,26 @@
 
 ## Project Overview
 
-`core-template-frontend` is Ardua's official frontend template — the foundation every new Ardua core app is built on, and the target architecture that `core-app`, `core-lex`, `core-ops`, and `core-trd` will migrate to.
+`core-fin` is Ardua's Finance & Accounting frontend — the operational app for Finanzas y Contabilidad, derived from `core-template-frontend` and bound by every capability in `openspec/specs/`. It replaces the legacy `prototypes/fin-old/fin-prototype.html` monolith with a Vue 3 + TypeScript + Vite + manifest-engine implementation.
 
-It is **not an application** but a **scaffold**: a complete, pre-wired Vue 3 + TypeScript + Vite project with the Ardua UI patterns (layout, navigation, tables, modals, actions, theming, forms, auth, API, error handling) contractualized via OpenSpec capabilities. Apps derived from this template MUST comply with those capabilities.
+Scope (active modules, declared in this baseline migration):
 
-Its purpose is fourfold:
+- **Operaciones / Movimientos** — back-office life cycle of every `movimiento` (deposits, withdrawals, fees, taxes, rebates, transfers); 9 governance + imputation actions.
+- **Cotizaciones** — outgoing quotes' invoicing workflow; 4 actions and a kanban over `documentacion` state.
+- **Tesorería / Disponibilidades** — cash position, treasury movements, and the assignment queue for unassigned withdrawals.
+- **Reportes**, **Inbox**, **Alertas**, **Dashboard** — the four cross-cutting standard modules from `core-modulo-genericos`, FIN-themed.
 
-1. **GitHub template repository** — clonable via "Use this template" for every new core app.
-2. **Base commit** for migrating the four existing Ardua core frontends.
-3. **Scaffold for backend-first developers** — the pre-wired architecture plus OpenSpec plus project-specific skills let backend developers implement frontend features via Claude Code without deep frontend expertise.
-4. **Governance layer** — OpenSpec specs are the contract that locks the visual and interaction patterns of the Ardua core across every app.
+Placeholder modules registered behind a `Próximamente` stub: Compras, Cobros, Pagos, Deudas / Préstamos, Inversiones, Monedas (Tesorería); Plan de Cuentas, Parametrizaciones, Libro Diario (Contabilidad).
+
+This app does NOT ship its own contracts — it is a **consumer** of the 13 capabilities defined in `openspec/specs/`. Any UI or behavior change MUST satisfy those contracts; non-trivial changes flow through the OpenSpec workflow described below.
 
 ## Branding
 
-- **Project name:** `core-template-frontend` (all lowercase, kebab-case).
+- **Project name:** `core-fin` (all lowercase, kebab-case).
 - **Parent organization:** Ardua Solutions.
-- **Derived apps:** `core-app`, `core-lex`, `core-ops`, `core-trd`, `core-fin`, `core-com` (naming convention: `core-<module>`).
+- **Module prefix:** FIN (uppercase in enums, headers, and visual brand references; lowercase as the identifier).
+- **Brand color:** `--brand: 142 71% 45%` (FIN canonical green per `core-theming`).
+- **Sibling apps:** `core-app` (CLP), `core-lex`, `core-ops`, `core-trd`, `core-com`. Naming convention: `core-<module>`.
 - In documentation and code, **always write module names in lowercase** (`ops`, `lex`, `trd`, `clp`, `fin`, `com`). Uppercase is only used in enums and in brand references (e.g. the L1 page header may display the module name in uppercase as a style choice, but the identifier is lowercase).
 - **Exception:** capitalize only at the beginning of a sentence when grammatically required.
 

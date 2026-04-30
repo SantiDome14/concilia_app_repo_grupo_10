@@ -20,7 +20,7 @@ import { KanbanBoard } from '@/components/kanban';
 import { ManifestActionsMenu } from '@/components/manifest';
 import type { KanbanAxis, KanbanState } from '@/types/kanban';
 import { useManifestModule } from '@/composables/useManifestModule';
-import { INBOX_MANIFEST_KEY } from '@/manifests/framework.template.inbox.actions';
+import { INBOX_MANIFEST_KEY } from '@/manifests/fin.inbox.actions';
 import { INBOX_SOLICITUDES } from '@/mocks/genericos/inbox';
 import { CURRENT_USER } from '@/mocks/genericos/users';
 import type {
@@ -40,7 +40,7 @@ import { cn } from '@/lib/cn';
 //
 // Manifest engine: actions (asignar_owner, cerrar_solicitud, rechazar)
 // and the inbox.lifecycle kanban axis are declared in the
-// `framework.template.inbox` manifest registered at boot.
+// `fin.inbox` manifest registered at boot.
 //
 // NOTE: the legacy "Activos / Histórico" Segmenter has been removed.
 // Filtering by lifecycle is expressed via the Estado filter in L3,

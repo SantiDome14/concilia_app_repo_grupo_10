@@ -7,7 +7,7 @@ import { useManifestRegistryStore } from '@/stores/manifestRegistry';
 import {
   ALERTAS_MANIFEST,
   ALERTAS_MANIFEST_KEY,
-} from '@/manifests/framework.template.alertas.actions';
+} from '@/manifests/fin.alertas.actions';
 import { useAuthStore } from '@/stores/auth';
 import { useManifestDialog, _resetManifestDialogState } from '@/composables/useManifestDialog';
 import { ROUTE_PATHS } from '@/config/routes';

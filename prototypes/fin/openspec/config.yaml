@@ -4,14 +4,17 @@ schema: spec-driven
 # Project context — shown to AI agents when creating artifacts
 # ════════════════════════════════════════════════════════════════════
 context: |
-  ## Project: core-template-frontend
+  ## Project: core-fin
 
-  Ardua's official frontend template for every core financial app (core-app,
-  core-lex, core-ops, core-trd, and future core apps). Serves three purposes:
-    1. GitHub template repository — clonable via "Use this template".
-    2. Base commit for migrating the four existing Ardua core frontends.
-    3. Scaffold that allows backend-first developers to implement frontend
-       features via Claude Code + OpenSpec without deep frontend expertise.
+  Ardua's Finance & Accounting frontend (FIN module), derived from
+  `core-template-frontend` and consuming every capability in `openspec/specs/`.
+  Replaces the legacy single-HTML prototype `prototypes/fin-old/fin-prototype.html`
+  with a Vue 3 + TypeScript + Vite + manifest-engine implementation. Active
+  modules: Operaciones (movimientos), Cotizaciones, Tesorería (Disponibilidades),
+  plus the four cross-cutting standard modules (Dashboard, Inbox, Alertas,
+  Reportes). Placeholder modules behind a `Próximamente` stub: Compras, Cobros,
+  Pagos, Deudas/Préstamos, Inversiones, Monedas (Tesorería); Plan de Cuentas,
+  Parametrizaciones, Libro Diario (Contabilidad).
 
   ## Canonical project memory (READ FIRST)
 

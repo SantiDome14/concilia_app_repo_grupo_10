@@ -15,10 +15,21 @@ export const ROUTE_PATHS = {
   INBOX: '/inbox',
   ALERTAS: '/alertas',
   REPORTES: '/reportes',
-  // Domain modules (template examples).
-  MODULO_A: '/modulo-a',
-  MODULO_B: '/modulo-b',
-  MODULO_C: '/modulo-c',
+  // ─── Back Office ─────────────────────────────────────────────────
+  MOVIMIENTOS: '/movimientos',
+  COTIZACIONES: '/cotizaciones',
+  COMPRAS: '/compras',
+  // ─── Tesorería ───────────────────────────────────────────────────
+  TESORERIA: '/tesoreria',
+  COBROS: '/cobros',
+  PAGOS: '/pagos',
+  DEUDAS_PRESTAMOS: '/deudas-prestamos',
+  INVERSIONES: '/inversiones',
+  MONEDAS: '/monedas',
+  // ─── Contabilidad ────────────────────────────────────────────────
+  PLAN_CUENTAS: '/plan-cuentas',
+  PARAMETRIZACIONES: '/parametrizaciones',
+  LIBRO_DIARIO: '/libro-diario',
   NOT_FOUND: '/:pathMatch(.*)*',
 } as const;
 
@@ -28,9 +39,18 @@ export const ROUTE_NAMES = {
   INBOX: 'inbox',
   ALERTAS: 'alertas',
   REPORTES: 'reportes',
-  MODULO_A: 'modulo-a',
-  MODULO_B: 'modulo-b',
-  MODULO_C: 'modulo-c',
+  MOVIMIENTOS: 'movimientos',
+  COTIZACIONES: 'cotizaciones',
+  COMPRAS: 'compras',
+  TESORERIA: 'tesoreria',
+  COBROS: 'cobros',
+  PAGOS: 'pagos',
+  DEUDAS_PRESTAMOS: 'deudas-prestamos',
+  INVERSIONES: 'inversiones',
+  MONEDAS: 'monedas',
+  PLAN_CUENTAS: 'plan-cuentas',
+  PARAMETRIZACIONES: 'parametrizaciones',
+  LIBRO_DIARIO: 'libro-diario',
   NOT_FOUND: 'not-found',
 } as const;
 

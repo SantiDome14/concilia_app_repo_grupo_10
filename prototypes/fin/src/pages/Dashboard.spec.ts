@@ -18,8 +18,9 @@ function makeRouter() {
       { path: ROUTE_PATHS.INBOX, name: 'inbox', component: { template: '<div />' } },
       { path: ROUTE_PATHS.ALERTAS, name: 'alertas', component: { template: '<div />' } },
       { path: ROUTE_PATHS.REPORTES, name: 'reportes', component: { template: '<div />' } },
-      { path: ROUTE_PATHS.MODULO_A, component: { template: '<div />' } },
-      { path: ROUTE_PATHS.MODULO_B, component: { template: '<div />' } },
+      { path: ROUTE_PATHS.MOVIMIENTOS, component: { template: '<div />' } },
+      { path: ROUTE_PATHS.COTIZACIONES, component: { template: '<div />' } },
+      { path: ROUTE_PATHS.TESORERIA, component: { template: '<div />' } },
     ],
   });
   return router;

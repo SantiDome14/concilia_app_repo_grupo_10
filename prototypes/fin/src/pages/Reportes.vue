@@ -16,7 +16,7 @@ import ReporteCard from '@/components/reportes/ReporteCard.vue';
 import ReporteDetailModal from '@/components/reportes/ReporteDetailModal.vue';
 import { ManifestActionsMenu } from '@/components/manifest';
 import { useManifestModule } from '@/composables/useManifestModule';
-import { REPORTES_MANIFEST_KEY } from '@/manifests/framework.template.reportes.actions';
+import { REPORTES_MANIFEST_KEY } from '@/manifests/fin.reportes.actions';
 import {
   REPORTS_CATALOG,
   REPORT_RUNS,

@@ -7,7 +7,7 @@ import { useManifestRegistryStore } from '@/stores/manifestRegistry';
 import {
   INBOX_MANIFEST,
   INBOX_MANIFEST_KEY,
-} from '@/manifests/framework.template.inbox.actions';
+} from '@/manifests/fin.inbox.actions';
 import { useAuthStore } from '@/stores/auth';
 import { ROUTE_PATHS } from '@/config/routes';
 

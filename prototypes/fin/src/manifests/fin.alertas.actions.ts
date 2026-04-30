@@ -1,20 +1,22 @@
 // ════════════════════════════════════════════════════════════════════
-// Alertas manifest — framework.template.alertas
+// Alertas manifest — fin.alertas
 // ────────────────────────────────────────────────────────────────────
-// Declares the canonical Alerta lifecycle actions for profiles A and B:
+// Declares the canonical Alerta lifecycle actions for profiles A and B
+// in the FIN app:
 //   - marcar_resolved   — terminal transition to `resolved` (modal,
 //                         requires justification ≥10 chars)
 //   - marcar_dismissed  — terminal transition to `dismissed` (modal,
 //                         requires justification ≥10 chars)
+// The lifecycle stays generic per `core-modulo-genericos`.
 // ════════════════════════════════════════════════════════════════════
 
 import type { Manifest } from '@/types/manifest';
 
-export const ALERTAS_MANIFEST_KEY = 'framework.template.alertas' as const;
+export const ALERTAS_MANIFEST_KEY = 'fin.alertas' as const;
 
 export const ALERTAS_MANIFEST: Manifest = {
-  app: 'framework',
-  module: 'template.alertas',
+  app: 'fin',
+  module: 'alertas',
   scope: 'module',
   schema_version: '1',
   actions: [
