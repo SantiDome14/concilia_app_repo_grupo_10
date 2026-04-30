@@ -9,24 +9,11 @@
 
 import type { Sociedad } from '@/types/fin';
 
+// Nombres + sub-titles aligned with `prototypes/ops/ops-acciones-prototype.html`
+// (the OPS module is the upstream source of truth for Sociedad identity).
 export const SOCIEDADES: Sociedad[] = [
-  { id: 'hp', nombre: 'Haz Pagos', cuit: '30-71234567-8', sub: 'PSP · Argentina · ARS' },
-  {
-    id: 'cp',
-    nombre: 'Circuit Pay',
-    cuit: '30-72345678-9',
-    sub: 'PSAV · Argentina · USDC/USDT',
-  },
-  {
-    id: 'asc',
-    nombre: 'Ardua Solutions Corp',
-    cuit: '30-73456789-0',
-    sub: 'Holding · Delaware · USD',
-  },
-  {
-    id: 'av',
-    nombre: 'Astra Ventures',
-    cuit: '30-74567890-1',
-    sub: 'Trading · Argentina · MULTI',
-  },
+  { id: 'cp', nombre: 'Circuit Pay SA', cuit: '30-72345678-9', sub: 'PSAV · Argentina' },
+  { id: 'hp', nombre: 'Haz Pagos SA', cuit: '30-71234567-8', sub: 'PSP · Argentina' },
+  { id: 'asc', nombre: 'Ardua Solutions Corp', cuit: '30-73456789-0', sub: 'MSB · Canadá' },
+  { id: 'av', nombre: 'Astra Ventures', cuit: '30-74567890-1', sub: 'VASP · Polonia' },
 ];

@@ -147,7 +147,13 @@ async function onConfirm(): Promise<void> {
     <DialogContent :class="cn(widthClass)">
       <DialogHeader>
         <DialogTitle>{{ title }}</DialogTitle>
-        <DialogDescription v-if="description">{{ description }}</DialogDescription>
+        <!-- DialogDescription is rendered unconditionally (sr-only when
+             empty) because reka-ui's accessibility guard logs a warning
+             whenever DialogContent has neither a Description nor an
+             explicit `aria-describedby`. -->
+        <DialogDescription :class="description ? '' : 'sr-only'">
+          {{ description ?? '' }}
+        </DialogDescription>
       </DialogHeader>
 
       <!-- Optional info banner — between header and form fields -->

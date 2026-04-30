@@ -12,6 +12,9 @@ import {
   type ViewMode,
 } from '@/components/views';
 import { KanbanBoard, KanbanAxisDialog } from '@/components/kanban';
+import { applyFreeTransition } from '@/lib/kanban/transitions';
+import { RecordDetailModal, type DetailField } from '@/components/modals';
+import { resolveCuenta } from '@/mocks/fin/cuentas';
 import { ManifestActionsMenu } from '@/components/manifest';
 import type { KanbanAxis } from '@/types/kanban';
 import { useManifestModule } from '@/composables/useManifestModule';
@@ -158,12 +161,15 @@ const FIN_CONC_KANBAN_AXIS: KanbanAxis = {
     { id: 'DIFF', label: 'Diferencias', column_label: 'Diferencias', order: 2 },
     { id: 'CONC', label: 'Conciliado', column_label: 'Conciliado', order: 3, terminal: true },
   ],
-  // Only inbound transitions to CONC are allowed; FIN's `Marcar Conciliado`
-  // action enables for null/PEND/DIFF and writes CONC. There is no FIN
-  // action that returns a movement to PEND or DIFF, so those drops stay
-  // blocked by the absence of a declared transition.
+  // Each non-terminal column transition is supported by exactly one FIN
+  // writer action in the manifest (Marcar Conciliado / Marcar con
+  // Diferencias). DIFF → PEND is a `free` transition (re-open without
+  // user input — the column change *is* the field update). CONC is
+  // terminal so no outgoing transitions.
   transitions: [
+    { from: 'PEND', to: 'DIFF', mode: 'modal' },
     { from: 'PEND', to: 'CONC', mode: 'modal' },
+    { from: 'DIFF', to: 'PEND', mode: 'free' },
     { from: 'DIFF', to: 'CONC', mode: 'modal' },
   ],
 };
@@ -226,6 +232,16 @@ function openAxisDialog(): void {
   axisDialogOpen.value = true;
 }
 
+// Per-axis routing for kanban drops. The `imputacion` axis bundles
+// multiple writer actions of its dimension into ONE composite dialog
+// (per core-actions-manifest Requirement 16). The `conciliacion` axis
+// has a 1:1 mapping from drop target → specific writer action, so the
+// page routes directly to that action's single-action dialog.
+const FIN_CONC_DROP_ACTIONS: Record<string, string> = {
+  CONC: 'fin.movimientos.conciliacion.marcar_conciliado',
+  DIFF: 'fin.movimientos.conciliacion.marcar_diferencia',
+};
+
 function handleKanbanTransition(payload: {
   recordId: string;
   fromState: string;
@@ -233,12 +249,36 @@ function handleKanbanTransition(payload: {
   mode: string;
   axisId: string;
 }): void {
-  if (payload.mode !== 'modal') return;
   const record = movimientos.value.find((m) => m.id === payload.recordId);
   if (!record) return;
-  // Composite-dialog flow per core-actions-manifest Requirement 16:
-  // openComposite collects every pending action of the axis dimension,
-  // dedupes fields, and runs ONE recompute + ONE audit on confirm.
+  const axis = KANBAN_AXES[payload.axisId];
+  if (!axis) return;
+
+  if (payload.mode === 'free') {
+    applyFreeTransition(
+      record as unknown as Record<string, unknown>,
+      axis,
+      payload.toState,
+    );
+    return;
+  }
+
+  if (payload.mode !== 'modal') return;
+
+  // fin.conc — single-action-per-drop-target routing.
+  if (payload.axisId === 'fin.conc') {
+    const actionId = FIN_CONC_DROP_ACTIONS[payload.toState];
+    if (actionId) {
+      movimientosMod.openDialog(
+        actionId,
+        record as unknown as Record<string, unknown>,
+      );
+    }
+    return;
+  }
+
+  // fin.imput — composite-dialog flow bundles every pending imputation
+  // action across the dimension into ONE modal.
   movimientosMod.openComposite(
     record as unknown as Record<string, unknown>,
     payload.axisId,
@@ -268,6 +308,81 @@ function sociedadLabel(id: string | null | undefined): string {
   if (!id) return '—';
   return SOCIEDADES.find((s) => s.id === id)?.nombre ?? id;
 }
+
+function cuentaLabel(id: string | null | undefined): string {
+  return resolveCuenta(id)?.label ?? '—';
+}
+
+// ─── Detail modal ────────────────────────────────────────────────────
+const detailRecord = ref<Movimiento | null>(null);
+
+function openDetail(record: Movimiento): void {
+  detailRecord.value = record;
+}
+
+function closeDetail(value: boolean): void {
+  if (!value) detailRecord.value = null;
+}
+
+const detailFields = computed<DetailField[]>(() => {
+  const m = detailRecord.value;
+  if (!m) return [];
+  // Mirrors the legacy prototype's `openMDetail` layout: an OPS section
+  // for the rail-side read-only fields, then a FIN section for the
+  // managed imputation / conciliation state.
+  return [
+    { label: 'Datos OPS · origen (read-only)', variant: 'section' },
+    { label: 'ID', value: m.id, variant: 'mono' },
+    { label: 'Fecha', value: m.fecha },
+    { label: 'Tipo', value: m.tipo },
+    { label: 'Moneda', value: m.moneda },
+    { label: 'Monto', value: m.monto, variant: 'mono', span: 2 },
+    {
+      label: 'Estado OPS',
+      value: m.status,
+      variant: 'badge',
+      badge:
+        m.status === 'COMPLETED'
+          ? 'success'
+          : m.status === 'FAILED'
+            ? 'danger'
+            : 'warning',
+    },
+    { label: 'Rail', value: m.ops.rail },
+    { label: 'Cuenta', value: m.ops.account, variant: 'mono' },
+    { label: 'Provider', value: m.ops.provider },
+    { label: 'Cliente OPS', value: m.ops.client },
+    { label: 'Counterparty', value: m.ops.counterparty, span: 2 },
+
+    { label: 'Gestión FIN', variant: 'section' },
+    { label: 'Sociedad', value: sociedadLabel(m.fin.sociedad_id) },
+    {
+      label: 'Imputación',
+      value: imputLabel(m.fin.imput),
+      variant: 'badge',
+      badge: imputVariant(m.fin.imput),
+    },
+    { label: 'Cuenta asignada', value: cuentaLabel(m.fin.cuenta_id) },
+    {
+      label: 'Conciliación',
+      value:
+        m.fin.conc === 'CONC'
+          ? 'Conciliado'
+          : m.fin.conc === 'DIFF'
+            ? 'Diferencias'
+            : 'Pendiente',
+      variant: 'badge',
+      badge:
+        m.fin.conc === 'CONC' ? 'success' : m.fin.conc === 'DIFF' ? 'warning' : 'neutral',
+    },
+    {
+      label: 'Nota imputación cliente',
+      value: m.fin.cliente_imputation_note,
+      span: 2,
+    },
+    { label: 'Nota conciliación', value: m.fin.conc_note, span: 2 },
+  ];
+});
 
 function imputSeverity(state: ImputacionState | null | undefined): Severity | undefined {
   switch (state) {
@@ -439,8 +554,9 @@ const kanbanRecords = computed(() =>
             <tr
               v-for="m in filtered"
               :key="m.id"
-              class="border-b border-b-1 transition-colors last:border-b-0 hover:bg-white/[0.02]"
+              class="cursor-pointer border-b border-b-1 transition-colors last:border-b-0 hover:bg-white/[0.02]"
               :data-testid="`row-${m.id}`"
+              @click="openDetail(m)"
             >
               <td class="px-[18px] py-2.5">
                 <span class="font-mono text-xs text-t-3">{{ m.id }}</span>
@@ -481,6 +597,7 @@ const kanbanRecords = computed(() =>
           :record="m as unknown as Record<string, unknown>"
           :severity="imputSeverity(m.fin.imput)"
           :data-testid="`card-${m.id}`"
+          @click="openDetail(m)"
         >
           <template #header>
             <div class="flex min-w-0 flex-1 items-center gap-2">
@@ -537,6 +654,7 @@ const kanbanRecords = computed(() =>
             <CardItem
               :record="record"
               :severity="imputSeverity((record as unknown as Movimiento).fin.imput)"
+              @click="openDetail(record as unknown as Movimiento)"
             >
               <template #header>
                 <div class="flex min-w-0 flex-1 items-center gap-2">
@@ -582,6 +700,19 @@ const kanbanRecords = computed(() =>
         </KanbanBoard>
       </div>
     </section>
+
+    <!-- Detail modal — opened on row/card/kanban-card click -->
+    <RecordDetailModal
+      :open="detailRecord !== null"
+      :title="
+        detailRecord ? `Detalle del movimiento` : ''
+      "
+      :subtitle="
+        detailRecord ? `${detailRecord.id} · ${detailRecord.ops.rail}` : ''
+      "
+      :fields="detailFields"
+      @update:open="closeDetail"
+    />
 
     <!-- Axis picker — opens on first kanban activation and via tabs/CTA -->
     <KanbanAxisDialog

@@ -111,6 +111,58 @@ describe('KanbanBoard', () => {
     expect(wrapper.emitted('update:axisId')).toBeUndefined();
   });
 
+  it('emits transition with correct payload when a card is dropped on a valid target column', async () => {
+    const axis = makeAxis({
+      axis_id: 'fin.conc',
+      label: 'Conciliación bancaria (FIN)',
+      state_field: 'fin.conc',
+      states: [
+        { id: 'PEND', label: 'Pendiente', order: 1 },
+        { id: 'CONC', label: 'Conciliado', order: 2, terminal: true },
+      ],
+      transitions: [{ from: 'PEND', to: 'CONC', mode: 'modal' }],
+    });
+    const record = {
+      id: 'M-001',
+      fin: { conc: 'PEND' },
+    };
+    const wrapper = mount(KanbanBoard, {
+      props: {
+        axis,
+        records: [record],
+      },
+    });
+
+    const sourceCard = wrapper.find('[data-record-id="M-001"]');
+    expect(sourceCard.exists()).toBe(true);
+    // JSDOM doesn't ship a real DataTransfer; stub the minimal surface
+    // used by KanbanCard.handleDragStart and KanbanBoard.handleColumnDrop.
+    const store: Record<string, string> = {};
+    const dt = {
+      getData: (k: string) => store[k] ?? '',
+      setData: (k: string, v: string) => {
+        store[k] = v;
+      },
+      effectAllowed: 'move',
+      dropEffect: 'move',
+    };
+    await sourceCard.trigger('dragstart', { dataTransfer: dt });
+    const targetColumn = wrapper.find('[data-state-id="CONC"]');
+    expect(targetColumn.exists()).toBe(true);
+    await targetColumn.trigger('dragover', { dataTransfer: dt });
+    await targetColumn.trigger('drop', { dataTransfer: dt });
+
+    const events = wrapper.emitted('transition');
+    expect(events).toBeTruthy();
+    expect(events?.[0]?.[0]).toMatchObject({
+      recordId: 'M-001',
+      fromState: 'PEND',
+      toState: 'CONC',
+      mode: 'modal',
+      axisId: 'fin.conc',
+    });
+  });
+
   it('marks read-only axis tabs with the RO suffix chip', () => {
     const wrapper = mount(KanbanBoard, {
       props: {

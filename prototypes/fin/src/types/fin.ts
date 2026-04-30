@@ -221,11 +221,18 @@ export interface Sociedad {
 export interface CuentaBancaria {
   id: string;
   sociedad_id: string;
+  /** Bank / exchange / custodian (e.g. `BIND`, `COINAG`, `BITGO`). */
   banco: string;
   numero: string;
   moneda: Moneda;
-  /** Display label used by the `ops.catalogo_cuentas` lookup. */
+  /** Full label including the bank prefix (`COINAG · ARS · Cta 10.045`).
+   *  Consumed by the Detail modal and by lookups that don't pre-filter
+   *  by estructura. */
   label: string;
+  /** Short label without the bank prefix (`ARS · Cta 10.045`). Consumed
+   *  by the cuenta dropdown when the user has already chosen an
+   *  estructura — the bank is implicit. */
+  label_short: string;
 }
 
 // ────────────────────────────────────────────────────────────────────

@@ -12,6 +12,7 @@ import {
   type ViewMode,
 } from '@/components/views';
 import { KanbanBoard, KanbanAxisDialog } from '@/components/kanban';
+import { RecordDetailModal, type DetailField } from '@/components/modals';
 import { ManifestActionsMenu } from '@/components/manifest';
 import type { KanbanAxis } from '@/types/kanban';
 import { useManifestModule } from '@/composables/useManifestModule';
@@ -242,6 +243,51 @@ function fmtMonto(q: Quote): string {
   return `${q.moneda} ${q.monto.toLocaleString('es-AR')}`;
 }
 
+// ─── Detail modal ────────────────────────────────────────────────────
+const detailRecord = ref<Quote | null>(null);
+
+function openDetail(q: Quote): void {
+  detailRecord.value = q;
+}
+
+function closeDetail(value: boolean): void {
+  if (!value) detailRecord.value = null;
+}
+
+const detailFields = computed<DetailField[]>(() => {
+  const q = detailRecord.value;
+  if (!q) return [];
+  // Mirrors the legacy prototype's `openQDetail` two-section layout:
+  // TRD-native (read-only from FIN) + FIN-managed.
+  return [
+    { label: 'Datos TRD · origen (read-only)', variant: 'section' },
+    { label: 'ID', value: q.id, variant: 'mono' },
+    { label: 'Fecha', value: q.fecha },
+    { label: 'Cliente', value: q.cliente_nombre },
+    { label: 'Par', value: q.par },
+    { label: 'Volumen', value: fmtMonto(q), variant: 'mono' },
+    { label: 'Spread (bps)', value: q.spread_bps, variant: 'mono' },
+    {
+      label: 'Estado TRD',
+      value: STATUS_LABEL[q.status],
+      variant: 'badge',
+      badge: statusVariant(q.status),
+    },
+
+    { label: 'Gestión FIN', variant: 'section' },
+    {
+      label: 'Estado factura',
+      value: facturaLabel(q.fin.facturaState),
+      variant: 'badge',
+      badge: facturaVariant(q.fin.facturaState),
+    },
+    { label: 'Nº Factura', value: q.fin.factura, variant: 'mono' },
+    { label: 'Fecha de facturación', value: q.fin.fact_at, span: 2 },
+    { label: 'Motivo no facturable', value: q.fin.no_factura_motivo, span: 2 },
+    { label: 'Motivo de anulación', value: q.fin.anulacion_motivo, span: 2 },
+  ];
+});
+
 function quoteSeverity(q: Quote): Severity | undefined {
   if (q.status === 'cancelled') return 'low';
   if (q.fin.facturaState === 'pendiente' && (q.status === 'executed' || q.status === 'settled')) {
@@ -387,8 +433,9 @@ const kanbanRecords = computed(() =>
             <tr
               v-for="q in filtered"
               :key="q.id"
-              class="border-b border-b-1 transition-colors last:border-b-0 hover:bg-white/[0.02]"
+              class="cursor-pointer border-b border-b-1 transition-colors last:border-b-0 hover:bg-white/[0.02]"
               :data-testid="`row-${q.id}`"
+              @click="openDetail(q)"
             >
               <td class="px-[18px] py-2.5">
                 <span class="font-mono text-xs text-t-3">{{ q.id }}</span>
@@ -432,6 +479,7 @@ const kanbanRecords = computed(() =>
           :record="q as unknown as Record<string, unknown>"
           :severity="quoteSeverity(q)"
           :data-testid="`card-${q.id}`"
+          @click="openDetail(q)"
         >
           <template #header>
             <div class="flex min-w-0 flex-1 items-center gap-2">
@@ -484,6 +532,7 @@ const kanbanRecords = computed(() =>
             <CardItem
               :record="record"
               :severity="quoteSeverity(record as unknown as Quote)"
+              @click="openDetail(record as unknown as Quote)"
             >
               <template #header>
                 <div class="flex min-w-0 flex-1 items-center gap-2">
@@ -523,6 +572,14 @@ const kanbanRecords = computed(() =>
         </KanbanBoard>
       </div>
     </section>
+
+    <RecordDetailModal
+      :open="detailRecord !== null"
+      :title="detailRecord ? 'Detalle del Quote' : ''"
+      :subtitle="detailRecord ? `${detailRecord.id} · ${detailRecord.cliente_nombre}` : ''"
+      :fields="detailFields"
+      @update:open="closeDetail"
+    />
 
     <KanbanAxisDialog
       :open="axisDialogOpen"

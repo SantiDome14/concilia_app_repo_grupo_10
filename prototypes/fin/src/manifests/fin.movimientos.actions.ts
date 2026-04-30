@@ -80,63 +80,25 @@ export const FIN_MOVIMIENTOS_MANIFEST: Manifest = {
   ],
 
   actions: [
-    // ─── 1 · Asignar Estructura (target: fin.sociedad_id) ────────────
-    {
-      id: 'fin.movimientos.imputacion.asignar_estructura',
-      dimension: 'imputacion',
-      label: 'Asignar Estructura',
-      description: 'Imputá el movimiento a una de las sociedades del grupo.',
-      icon: 'building',
-      target_field: 'fin.sociedad_id',
-      show_when: { record_type_in: [...RECORD_TYPES_ALL] },
-      enable_when: { field_is_null: 'fin.sociedad_id' },
-      disable_reason: 'El movimiento ya está imputado a una sociedad',
-      disable_tag: 'Asignada',
-      capabilities: {
-        required_role_any_of: [
-          'OPS_OFFICER',
-          'ADMIN_OPS',
-          'ADMIN_FIN',
-          'ANALISTA_CONTABLE',
-          'ADMIN',
-        ],
-      },
-      dialog: {
-        title: 'Asignar Estructura',
-        description: 'Identificá la sociedad del grupo a la que pertenece el movimiento.',
-        fields: [
-          {
-            id: 'fin.sociedad_id',
-            label: 'Sociedad',
-            type: 'lookup',
-            catalog: 'framework.sociedades',
-            required: true,
-            placeholder: 'Buscar sociedad...',
-          },
-        ],
-        confirm_label: 'Asignar',
-      },
-      on_confirm: {
-        update_fields: ['fin.sociedad_id'],
-        recompute: ['imputacion'],
-        audit: true,
-        toast: 'Estructura asignada',
-      },
-    },
-
-    // ─── 2 · Asignar Banco y Cuenta (target: fin.cuenta_id) ──────────
+    // ─── 1 · Asignar Banco y Cuenta (3-field cascade) ────────────────
+    // Mirrors `prototypes/ops/ops-acciones-prototype.html`: a single
+    // action with three cascading lookups — Sociedad → Estructura →
+    // Cuenta — that captures the funding source in one shot. The
+    // `_estructura` field is a transient form-only key (compound
+    // `sociedad_id:ESTRUCTURA`) used to filter the cuenta dropdown; it
+    // is NOT listed in `update_fields` so it never lands on the record.
     {
       id: 'fin.movimientos.imputacion.asignar_banco_cuenta',
       dimension: 'imputacion',
       label: 'Asignar Banco y Cuenta',
-      description: 'Imputá el movimiento a una cuenta física de la sociedad.',
+      description:
+        'Imputá el movimiento a una sociedad, una estructura/banco y una cuenta física en un solo paso.',
       icon: 'credit-card',
       target_field: 'fin.cuenta_id',
       show_when: { record_type_in: [...RECORD_TYPES_ALL] },
       enable_when: { field_is_null: 'fin.cuenta_id' },
       disable_reason: 'El movimiento ya tiene cuenta asignada',
       disable_tag: 'Asignada',
-      prerequisites: [{ field: 'fin.sociedad_id', message: 'Asigná Estructura primero' }],
       capabilities: {
         required_role_any_of: [
           'OPS_OFFICER',
@@ -148,26 +110,44 @@ export const FIN_MOVIMIENTOS_MANIFEST: Manifest = {
       },
       dialog: {
         title: 'Asignar Banco y Cuenta',
-        description:
-          'Elegí la cuenta física de la sociedad. La lista se filtra por la Estructura asignada.',
+        description: 'Origen de fondos — Sociedad / Estructura / Cuenta del movimiento.',
         fields: [
+          {
+            id: 'fin.sociedad_id',
+            label: 'Sociedad',
+            type: 'lookup',
+            catalog: 'framework.sociedades',
+            required: true,
+            placeholder: 'Seleccionar sociedad...',
+          },
+          {
+            id: '_estructura',
+            label: 'Estructura / Banco',
+            type: 'lookup',
+            catalog: 'fin.estructuras',
+            required: true,
+            catalog_filter: { field: 'sociedad_id', from_form: 'fin.sociedad_id' },
+            placeholder: 'Seleccionar estructura / banco...',
+            hint: 'Exchange, banco, ALyC u otro custodio de la sociedad',
+          },
           {
             id: 'fin.cuenta_id',
             label: 'Cuenta',
             type: 'lookup',
             catalog: 'ops.catalogo_cuentas',
             required: true,
-            catalog_filter: { field: 'sociedad_id', from_record: 'fin.sociedad_id' },
-            placeholder: 'Buscar cuenta...',
+            catalog_filter: { field: 'estructura_compound', from_form: '_estructura' },
+            placeholder: 'Seleccionar cuenta...',
+            hint: 'Moneda y número de cuenta',
           },
         ],
-        confirm_label: 'Asignar',
+        confirm_label: 'Confirmar asignación',
       },
       on_confirm: {
-        update_fields: ['fin.cuenta_id'],
+        update_fields: ['fin.sociedad_id', 'fin.cuenta_id'],
         recompute: ['imputacion'],
         audit: true,
-        toast: 'Cuenta asignada',
+        toast: 'Sociedad / Estructura / Cuenta asignadas',
       },
     },
 
@@ -432,7 +412,58 @@ export const FIN_MOVIMIENTOS_MANIFEST: Manifest = {
       },
     },
 
-    // ─── 9 · Marcar Conciliado ───────────────────────────────────────
+    // ─── 9 · Marcar con Diferencias ──────────────────────────────────
+    {
+      id: 'fin.movimientos.conciliacion.marcar_diferencia',
+      dimension: 'conciliacion',
+      label: 'Marcar con Diferencias',
+      description:
+        'Marca el movimiento como diferente del extracto bancario; queda pendiente de investigación.',
+      icon: 'alert-triangle',
+      target_field: 'fin.conc',
+      show_when: { record_type_in: [...RECORD_TYPES_ALL] },
+      enable_when: {
+        any: [
+          { field_is_null: 'fin.conc' },
+          { field_equals: { field: 'fin.conc', value: 'PEND' } },
+        ],
+      },
+      disable_reason: 'El movimiento ya fue conciliado o ya está marcado con diferencias',
+      disable_tag: 'Estado',
+      capabilities: {
+        required_role_any_of: [
+          'OPS_OFFICER',
+          'FINANCE',
+          'ADMIN_FIN',
+          'ANALISTA_CONTABLE',
+          'ADMIN',
+        ],
+      },
+      dialog: {
+        title: 'Marcar movimiento con Diferencias',
+        description:
+          'Indicá la diferencia detectada respecto al extracto bancario. La acción registra la decisión en el audit log.',
+        fields: [
+          {
+            id: 'fin.conc_note',
+            label: 'Nota de diferencia',
+            type: 'textarea',
+            required: true,
+            max_length: 500,
+            placeholder: 'Describí la discrepancia detectada...',
+          },
+        ],
+        confirm_label: 'Marcar diferencia',
+      },
+      on_confirm: {
+        update_fields: ['fin.conc_note'],
+        set_fields: { 'fin.conc': 'DIFF', 'fin.conc_at': '$now' },
+        audit: true,
+        toast: 'Movimiento marcado con diferencias',
+      },
+    },
+
+    // ─── 10 · Marcar Conciliado ──────────────────────────────────────
     {
       id: 'fin.movimientos.conciliacion.marcar_conciliado',
       dimension: 'conciliacion',
