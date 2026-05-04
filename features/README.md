@@ -1,6 +1,6 @@
 # Features — Convención y criterio
 
-> Última actualización: 2026-04-30
+> Última actualización: 2026-05-04
 
 ## Propósito
 
@@ -14,14 +14,14 @@ Esta carpeta es la **fuente de verdad del estado actual** de cada producto del f
 
 ```
 Investigar → Definir → Prototipar
-discovery/    features/   prototypes/
+discoveries/    features/   prototypes/
 ```
 
-`features/` es el **eje** del bucle. Las hipótesis de `discovery/` propagan sus conclusiones acá; los prototipos en `prototypes/` reflejan lo que está acá.
+`features/` es el **eje** del bucle. Las hipótesis de `discoveries/` propagan sus conclusiones acá; los prototipos en `prototypes/` reflejan lo que está acá.
 
 ### Cardinalidad
 
-- **Discovery → Features: N-N.** Un feature puede recibir aportes de varios discoveries. Un discovery puede impactar varios features. Ver `discovery/README.md`.
+- **Discovery → Features: N-N.** Un feature puede recibir aportes de varios discoveries. Un discovery puede impactar varios features. Ver `discoveries/README.md`.
 - **Features → Prototypes: 1-1 a nivel producto.** `features/clp/` ↔ `prototypes/clp/`. Cada producto tiene un prototipo único; los features individuales se reflejan como vistas/módulos dentro del mismo prototipo.
 
 ---

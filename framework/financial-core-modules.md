@@ -1,6 +1,6 @@
 # Módulos Genéricos del Financial-Core
 
-> **Versión:** 1.2.1 · **Última actualización:** 27/04/2026
+> **Versión:** 1.2.2 · **Última actualización:** 04/05/2026
 > **Estado:** Convención formal · vinculante para todos los prototipos del core
 > **Owner:** Head of Product
 
@@ -662,17 +662,17 @@ Si un caso de uso parece requerir alejarse del patrón:
 
 ### 15.1 Prototipos canónicos y de referencia
 
-- **Prototipo canónico de Alertas:** `/Users/yasmani/Products/agents/prototypes/lex/lex_alertas_prototype.html`
-- **Prototipo canónico de Reportes:** `/Users/yasmani/Products/agents/prototypes/lex/lex_reporteria_prototype.html`
-- **Prompt canónico de Inbox (en disco, pendiente ejecución):** `/Users/yasmani/Products/agents/prototypes/ops/ops-inbox-PROMPT.md` (v1)
-- **Prototipo FIN (incluye los 4 genéricos):** `/Users/yasmani/Products/agents/prototypes/fin/fin-prototype.html` + prompt v4 en `prototypes/fin/PROMPT.md`
-- **Template base UI del core:** `/Users/yasmani/Products/agents/prototypes/_core-template/_core-template.html` (v1.7+)
+- **Prototipo canónico de Alertas:** `prototypes/lex/lex_alertas_prototype.html`
+- **Prototipo canónico de Reportes:** `prototypes/lex/lex_reporteria_prototype.html`
+- **Prompt canónico de Inbox (en disco, pendiente ejecución):** `prototypes/ops/ops-inbox-PROMPT.md` (v1)
+- **Prototipo FIN (incluye los 4 genéricos):** `prototypes/fin/fin-prototype.html` + prompt v4 en `prototypes/fin/PROMPT.md`
+- **Template base UI del core:** `prototypes/_core-template/_core-template.html` (v1.7+)
 
 ### 15.2 Discoveries relacionados
 
-- **Discovery FIN:** `/Users/yasmani/Products/agents/discovery/opened/fin-discovery.md`
-- **Discovery OPS:** `/Users/yasmani/Products/agents/discovery/opened/ops-discovery.md`
-- **Discovery LEX-Alertas:** `/Users/yasmani/Products/agents/discovery/opened/lex-alertas-discovery.md`
+- **Discovery FIN:** `discoveries/fin-discovery.md`
+- **Discovery OPS:** `discoveries/ops-discovery.md`
+- **Discovery LEX-Alertas:** `discoveries/lex-alertas-discovery.md`
 
 ### 15.3 REQs activos
 
@@ -692,3 +692,4 @@ Si un caso de uso parece requerir alejarse del patrón:
 | 1.1 | 27/04/2026 | Reescritura mayor para incorporar el modelo "núcleo + capacidades opcionales": cada genérico se define como un kernel obligatorio + capacidades que cada app activa según necesidad. Nueva §3 con el modelo y los 4 perfiles típicos (A·Notification-only / B·Workflow / C·Auto-system / D·Hybrid) — el perfil se declara por tipo de alerta, no por aplicación. Reescritura de §7 (Alertas) y §8 (Reportes) bajo esta lente. Nuevas §9 (Inbox) y §10 (Dashboard) con núcleo + capacidades. Incorporación en §8 de los conceptos pendientes: criterios para distinguir reportes simples de centralizados (§8.2), modelo de dependencias inter-área (§8.5), integración Reportes↔Alertas vía tipo `REPORT_DEPENDENCY` con perfil Auto-system (§8.6). Tabla de §11 ampliada con columna de perfil declarado. Nuevas referencias a REQ-59 y REQ-33. |
 | **1.2** | **27/04/2026** | **Cambios mayores derivados de la sesión de definición de prototipos del financial-core: (a) §6 reescrita — los 4 genéricos van al tope del sidebar al mismo nivel sin agruparlos bajo `<div class="sb-section">`; los bloques se reservan para módulos del dominio. Convención cerrada para todas las apps del core sin excepción. (b) §9 (Inbox) reescrita y enriquecida: nueva §9.0 con la nomenclatura normalizada "Solicitudes" (lo que se gestiona en el módulo no son "items" ni "tareas"), nueva §9.2 con set canónico de estados específico de Inbox (`pending` / `in_progress` / `completed`, distinto al de Alertas), nueva §9.4 con drag & drop híbrido entre columnas Kanban, nueva §9.5 con modal de cierre por radio buttons que varían por tipo. (c) §9.7 actualizada con estado real de implementación: OPS-Inbox será el primer canónico (prompt v1 en disco), FIN-Inbox como skeleton funcional en su prototipo, template con placeholder enriquecido. (d) Nueva §11 "Mecanismo transversal — Acciones (Acción · Registro · Capability)": documenta el patrón de menú de Acciones con habilitación por capability del usuario + reglas intrínsecas del registro, hoy disperso en cada prototipo, pendiente formalizar como infra transversal. (e) Nueva §13 "Trabajo transversal en horizonte — REQs pendientes" con inventario de los 5 REQs que materializan estas convenciones: update REQ-59 + Reportes ya tramitado, REQ Dashboard transversal nuevo, REQ Inbox transversal nuevo, REQ Alertas transversal nuevo (unifica REQ-52 LEX + REQ-33 TRD), REQ Acciones transversal nuevo. (f) Tabla §12.1 actualizada con FIN.Inbox activo, OPS.Inbox con prompt canónico en disco. (g) §15 referencias actualizadas (renumerada). Renumeración de secciones afectadas: la §11 anterior pasa a §12, la §12 anterior pasa a §14, la §13 anterior pasa a §15.** |
 | **1.2.1** | **27/04/2026** | **Patch derivado de la auditoría del prototipo FIN regenerado con prompt v4: (a) §9.0 reescrita para reforzar que "Solicitudes" es denominación universal y vinculante para todas las apps del core (no nomenclatura local de FIN/OPS), aplicable a UI, modelos de datos, specs Jira y conversaciones con stakeholders sin excepción.** |
+| **1.2.2** | **04/05/2026** | **Sweep de referencias residuales tras el rename `discovery/` → `discoveries/` y la migración del repo a `atlas-ai-product-management-framework`: §15.1 convierte rutas absolutas (`/Users/yasmani/Products/agents/...`) a relativas dentro del repo. §15.2 actualiza referencias a discoveries del esquema viejo `discovery/opened/[...]-discovery.md` al esquema flat actual `discoveries/[...]-discovery.md`.** |

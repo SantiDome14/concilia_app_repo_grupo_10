@@ -1,6 +1,6 @@
 # FIN — Finance
 
-> Última actualización: 2026-04-30
+> Última actualización: 2026-05-04
 > Estado: En definición progresiva
 
 ---
@@ -18,10 +18,10 @@
 | Módulo | Estado | Feature file | Referencias |
 |---|---|---|---|
 | Bancos | _Pendiente — primera feature a construir_ | _Pendiente_ | _—_ |
-| Contabilidad | _En discovery_ | _Pendiente_ | `discovery/fin-discovery.md` |
-| Tesorería | _En discovery_ | _Pendiente_ | `discovery/fin-discovery.md` |
-| Finanzas / Reporting | _En discovery_ | _Pendiente_ | `discovery/fin-discovery.md` |
-| Compras | _En discovery_ | _Pendiente_ | `discovery/fin-discovery.md` |
+| Contabilidad | _En discovery_ | _Pendiente_ | `discoveries/fin-discovery.md` |
+| Tesorería | _En discovery_ | _Pendiente_ | `discoveries/fin-discovery.md` |
+| Finanzas / Reporting | _En discovery_ | _Pendiente_ | `discoveries/fin-discovery.md` |
+| Compras | _En discovery_ | _Pendiente_ | `discoveries/fin-discovery.md` |
 
 ---
 
@@ -39,7 +39,7 @@
 
 ## Frentes abiertos
 
-> Por completar. Hipótesis bajo investigación que pueden modificar el estado actual del producto. Cada frente debe referenciar el discovery correspondiente en `discovery/`.
+> Por completar. Hipótesis bajo investigación que pueden modificar el estado actual del producto. Cada frente debe referenciar el discovery correspondiente en `discoveries/`.
 
 ---
 
@@ -53,4 +53,4 @@
 
 Mientras se completa la migración del modelo agregado al modelo nuevo, la fuente de contexto histórico del producto vive en:
 
-- `discovery/fin-discovery.md` — discovery agregado de FIN (modelo previo). Incluye taxonomía v3 con Contabilidad como bloque y el Anexo de modelo conceptual de dimensiones del registro. El estado actual del producto se irá migrando desde acá hacia este `README.md` y los feature files individuales.
+- `discoveries/fin-discovery.md` — discovery agregado de FIN (modelo previo). Incluye taxonomía v3 con Contabilidad como bloque y el Anexo de modelo conceptual de dimensiones del registro. El estado actual del producto se irá migrando desde acá hacia este `README.md` y los feature files individuales.

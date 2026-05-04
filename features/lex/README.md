@@ -1,6 +1,6 @@
 # LEX — Legal & Compliance
 
-> Última actualización: 2026-04-30
+> Última actualización: 2026-05-04
 > Estado: En definición progresiva
 
 ---
@@ -17,8 +17,8 @@
 
 | Módulo | Estado | Feature file | Referencias |
 |---|---|---|---|
-| Alertas | _En discovery_ | _Pendiente_ | `discovery/lex-alertas-discovery.md` |
-| Límites | _En discovery_ | _Pendiente_ | `discovery/lex-limites-discovery.md` |
+| Alertas | _En discovery_ | _Pendiente_ | `discoveries/lex-alertas-discovery.md` |
+| Límites | _En discovery_ | _Pendiente_ | `discoveries/lex-limites-discovery.md` |
 | _Otros por completar_ | _—_ | _—_ | _—_ |
 
 ---
@@ -37,7 +37,7 @@
 
 ## Frentes abiertos
 
-> Por completar. Hipótesis bajo investigación que pueden modificar el estado actual del producto. Cada frente debe referenciar el discovery correspondiente en `discovery/`.
+> Por completar. Hipótesis bajo investigación que pueden modificar el estado actual del producto. Cada frente debe referenciar el discovery correspondiente en `discoveries/`.
 
 ---
 
@@ -51,6 +51,6 @@
 
 Mientras se completa la migración del modelo agregado al modelo nuevo, la fuente de contexto histórico del producto vive en:
 
-- `discovery/lex-discovery.md` — discovery agregado de LEX (modelo previo). El estado actual del producto se irá migrando desde acá hacia este `README.md` y los feature files individuales.
-- `discovery/lex-alertas-discovery.md` — discovery del módulo Alertas (canónico Perfil B Workflow del financial-core). Su estado consolidado se migrará a `features/lex/lex-alertas.md`.
-- `discovery/lex-limites-discovery.md` — discovery del módulo Límites. Su estado consolidado se migrará a `features/lex/lex-limites.md`.
+- `discoveries/lex-discovery.md` — discovery agregado de LEX (modelo previo). El estado actual del producto se irá migrando desde acá hacia este `README.md` y los feature files individuales.
+- `discoveries/lex-alertas-discovery.md` — discovery del módulo Alertas (canónico Perfil B Workflow del financial-core). Su estado consolidado se migrará a `features/lex/lex-alertas.md`.
+- `discoveries/lex-limites-discovery.md` — discovery del módulo Límites. Su estado consolidado se migrará a `features/lex/lex-limites.md`.
