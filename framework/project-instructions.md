@@ -133,11 +133,11 @@ These three folders form the **core production loop** of the framework. They are
 >
 > First we investigate (discovery). From the investigation, definitions land (features). Those definitions give rise to prototypes — or to modifications of existing prototypes.
 
-### 5.1 `discovery/` — Investigation of hypotheses
+### 5.1 `discoveries/` — Investigation of hypotheses
 
 **Role:** capture and validate hypotheses about how something works, should work, or could work.
 
-**Structure:** flat. Every discovery file lives directly in `discovery/`, with no nested folders.
+**Structure:** flat. Every discovery file lives directly in `discoveries/`, with no nested folders.
 
 **Cardinality:** a single discovery can impact **one or many** features. Conversely, a single feature can receive contributions from **one or many** discoveries throughout its life. The relation is **N-N**.
 
@@ -255,7 +255,7 @@ The goal is not to "be right", but to **learn faster than the problem evolves**.
 
 ## 11. Session Protocol
 
-This system operates on a **shared, version-controlled knowledge base** living in the `product-management-framework` Git repository. **GitHub is the single source of truth.** Every PM works against a local clone of the repository; the system reads and writes to the local filesystem, and changes are persisted to GitHub via Git.
+This system operates on a **shared, version-controlled knowledge base** living in the `atlas-ai-product-management-framework` Git repository. **GitHub is the single source of truth.** Every PM works against a local clone of the repository; the system reads and writes to the local filesystem, and changes are persisted to GitHub via Git.
 
 Every session must follow the phases below.
 
@@ -284,7 +284,7 @@ At the start of every session, or when the work touches a specific core applicat
 
 3. **`features/[aplicacion]/`** — When the session targets a specific product, **the first file to load is `features/[aplicacion]/README.md`** to understand the product's current consolidated state. If the work touches a specific feature within the product, also load `features/[aplicacion]/[aplicacion]-[modulo-o-feature].md`. This is the source of truth.
 
-4. **`discovery/`** — When the session involves investigating a hypothesis or refining one previously captured, identify and read the relevant `[topic]-discovery.md` file(s). Discoveries are flat in the folder; there is no `active/archived` distinction. A discovery may target one or several features in `features/`.
+4. **`discoveries/`** — When the session involves investigating a hypothesis or refining one previously captured, identify and read the relevant `[topic]-discovery.md` file(s). Discoveries are flat in the folder; there is no `active/archived` distinction. A discovery may target one or several features in `features/`.
 
 5. **`prototypes/[aplicacion]/`** — Consulted when the session involves visualizing or iterating on the prototype of a product. Each product has its own prototype folder, in 1:1 correspondence with `features/`.
 
@@ -304,8 +304,8 @@ The system must propose updating files when any of the following events occur:
 
 | Event | File to update |
 | ----- | -------------- |
-| A new hypothesis is captured | `discovery/[topic]-discovery.md` (new or existing) |
-| A hypothesis is validated, discarded, or refined | `discovery/[topic]-discovery.md` AND propagation to `features/[aplicacion]/[...].md` |
+| A new hypothesis is captured | `discoveries/[topic]-discovery.md` (new or existing) |
+| A hypothesis is validated, discarded, or refined | `discoveries/[topic]-discovery.md` AND propagation to `features/[aplicacion]/[...].md` |
 | A scope or design decision is made | `features/[aplicacion]/[...].md` (the affected feature or the global README) |
 | The state of a product changes (new module, deprecated module, milestone) | `features/[aplicacion]/README.md` |
 | A prototype is created or iterated | `prototypes/[aplicacion]/` (the corresponding files inside the project folder) |
@@ -335,7 +335,7 @@ Every discovery file follows a standardized structure with two parts:
 
 2. **Body** — starts with a `# Heading` repeating the `name`, then two **mandatory sections**: `## Objetivo` (what we want to learn or decide) and `## Contexto` (origin and antecedents). The rest of the body is free-form, at the discretion of the session. The system must ensure that `Objetivo` and `Contexto` are documented at some point in the discovery's lifecycle — either from the first save or progressively in later iterations.
 
-The full specification with template lives in `discovery/README.md`. The system enforces this structure when creating new discoveries.
+The full specification with template lives in `discoveries/README.md`. The system enforces this structure when creating new discoveries.
 
 #### Lifecycle states
 
@@ -345,7 +345,7 @@ A discovery file goes through a simple lifecycle:
 2. **Iterated** while the hypothesis is being validated. Multiple sessions may add findings, refine the question, or branch into related hypotheses. Each iteration updates `updated_at`.
 3. **Concluded** when the hypothesis is validated, discarded, or sufficiently defined. At conclusion, `status` switches to `Concluida` (or `Descartada`) and the system **must propagate** the relevant findings to the affected feature file(s) in `features/`.
 
-A discovery file is **not deleted at conclusion**. It stays in `discovery/` as a historical record of the investigation.
+A discovery file is **not deleted at conclusion**. It stays in `discoveries/` as a historical record of the investigation.
 
 When a single discovery impacts multiple features, the propagation step must update every affected feature file.
 
@@ -394,7 +394,7 @@ At the end of a productive session (if decisions, scope changes, new findings, o
 5. Provide the PM with a ready-to-execute Git command block to persist the changes to GitHub:
 
    ```bash
-   cd /path/to/product-management-framework
+   cd /path/to/atlas-ai-product-management-framework
    git add -A
    git status --short
    git commit -m "<conventional commit message>"
@@ -412,7 +412,7 @@ If the session generated no persistable changes, no closing action is required.
 ### 11.6 Repository Reference
 
 ```
-product-management-framework/
+atlas-ai-product-management-framework/
 ├── README.md                 → Repository overview, structure, and onboarding
 ├── CODEOWNERS                → Approval gates (framework/ reserved to Head of Product)
 ├── CONTRIBUTING.md           → Conventions, naming rules, contribution flow
@@ -427,7 +427,7 @@ product-management-framework/
 │                               Own entities, providers, banks, partners
 │                               Consulted whenever an entity is mentioned in a session
 │
-├── discovery/                → Investigation of hypotheses (flat folder)
+├── discoveries/              → Investigation of hypotheses (flat folder)
 │                               Each file = one hypothesis or area of investigation
 │                               Conclusions propagate to features/
 │
