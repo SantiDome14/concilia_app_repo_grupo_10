@@ -232,7 +232,7 @@ Reflejo en CLP
 
 Todas las aplicaciones del core (OPS, TRD, FIN, CLP, COM, LEX) siguen una arquitectura base común. La definición detallada de este estándar es **transversal** y candidata a formalizarse en `framework/` como un documento de design system (pendiente — ver §13).
 
-**Template base del core:** `/Users/yasmani/Products/claude/prototypes/_core-template/` — punto de partida para todos los prototipos del core.
+**Template base del core:** `../prototypes/_core-template/` — punto de partida para todos los prototipos del core.
 
 ### 8.1 Layout base
 
@@ -285,7 +285,7 @@ Stack: Vue 3 + Vite + Auth0 + Tailwind
 
 ### 9.2 Prototipo vigente
 
-**Archivo:** `/Users/yasmani/Products/claude/prototypes/ops/ops-acciones-prototype.html`
+**Archivo:** `../prototypes/ops/ops-acciones-prototype.html`
 Sirve como fuente de verdad visual/funcional para las iteraciones pendientes del frontend.
 
 **Sidebar:**
@@ -407,8 +407,8 @@ Cuando OPS-Inbox se ejecute, valide y se considere maduro, **se promueve a canó
 
 | Artefacto | Path | Estado |
 |---|---|---|
-| Prompt del prototipo | `/Users/yasmani/Products/agents/prototypes/ops/ops-inbox-PROMPT.md` | v1 · 27/04/2026 · listo para ejecutar |
-| Prototipo HTML | `/Users/yasmani/Products/agents/prototypes/ops/ops-inbox-prototype.html` | Pendiente — se genera al ejecutar el prompt |
+| Prompt del prototipo | `../prototypes/ops/ops-inbox-PROMPT.md` | v1 · 27/04/2026 · listo para ejecutar |
+| Prototipo HTML | `../prototypes/ops/ops-inbox-prototype.html` | Pendiente — se genera al ejecutar el prompt |
 
 ### 16.3 Decisiones cerradas en el prompt v1
 

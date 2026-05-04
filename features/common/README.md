@@ -1,6 +1,6 @@
 # COMMON — Features transversales
 
-> Última actualización: 2026-04-30
+> Última actualización: 2026-05-04
 > Estado: En definición progresiva
 
 ---
@@ -18,9 +18,9 @@ COMMON no es una aplicación. Es la convención que evita duplicar la definició
 | Tipo | Ejemplo | Vive en |
 |---|---|---|
 | **Feature transversal** (capacidad cross-product) | Sistema unificado de notificaciones, Inbox transversal, Alertas | `features/common/` |
-| **Sistema transversal de infraestructura** (no es feature) | `core-template-frontend`, `jira-automations`, `observabilidad` | Solo `discovery/` (sin features ni prototipo) |
+| **Sistema transversal de infraestructura** (no es feature) | `core-template-frontend`, `jira-automations`, `observabilidad` | Solo `discoveries/` (sin features ni prototipo) |
 
-La regla operativa: si la capacidad se expone al usuario final en múltiples productos del financial-core, vive en `features/common/`. Si es infraestructura técnica o tooling interno, vive solo en `discovery/`.
+La regla operativa: si la capacidad se expone al usuario final en múltiples productos del financial-core, vive en `features/common/`. Si es infraestructura técnica o tooling interno, vive solo en `discoveries/`.
 
 ---
 

@@ -1,6 +1,6 @@
 # Entities — Convención y criterio
 
-> Última actualización: 2026-04-23
+> Última actualización: 2026-05-04
 
 ## Propósito
 
@@ -12,7 +12,7 @@ Un archivo de entity responde a la pregunta: **"¿qué nos permite hacer esta en
 
 ## Cuándo se consulta
 
-Según las Project Instructions §10.1:
+Según las Project Instructions §11.1:
 
 > **Cuando una entidad es mencionada durante una sesión**, el sistema debe consultar su archivo correspondiente para aterrizar la conversación en contexto operativo real.
 

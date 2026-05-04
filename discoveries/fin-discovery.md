@@ -577,7 +577,7 @@ Ver `framework/marco-contable.md` para el detalle de pendientes por entidad.
 - **CUENTAS_ESTRUCTURAS.xlsx** — carga inicial del catálogo de cuentas. 69 cuentas de Circuit Pay + Haz Pagos. Faltan ASC + Astra; columnas incompletas vs. REQ-42 (gap FIN-07).
 - **Feature spec P&L:** `features/ardua-pnl-report.md`.
 - **Marco contable** (framework): pendientes C-01 a C-16. Bloquean parcialmente el scope completo de FIN.Contabilidad.
-- **Framework de módulos genéricos del financial-core:** `/Users/yasmani/Products/agents/framework/financial-core-modules.md` (v1.2). Define los 4 módulos transversales (Dashboard, Inbox, Alertas, Reportes), el modelo núcleo + capacidades, y la infraestructura transversal de Acciones.
+- **Framework de módulos genéricos del financial-core:** `../framework/financial-core-modules.md` (v1.2). Define los 4 módulos transversales (Dashboard, Inbox, Alertas, Reportes), el modelo núcleo + capacidades, y la infraestructura transversal de Acciones.
 
 ---
 
@@ -607,8 +607,8 @@ Esta sección consolida el estado del prototipo FIN al 27/04/2026 — las decisi
 
 | Artefacto | Path | Estado |
 |---|---|---|
-| Prompt del prototipo | `/Users/yasmani/Products/agents/prototypes/fin/PROMPT.md` | v4 · alineado con framework v1.2 |
-| Prototipo HTML | `/Users/yasmani/Products/agents/prototypes/fin/fin-prototype.html` | Generado con prompt v3 — requiere regeneración con v4 para reflejar las decisiones cerradas |
+| Prompt del prototipo | `../prototypes/fin/PROMPT.md` | v4 · alineado con framework v1.2 |
+| Prototipo HTML | `../prototypes/fin/fin-prototype.html` | Generado con prompt v3 — requiere regeneración con v4 para reflejar las decisiones cerradas |
 
 ### 14.2 Convenciones del sidebar (alineadas con framework §6)
 

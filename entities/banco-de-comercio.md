@@ -1,6 +1,6 @@
 # Banco de Comercio
 
-> Última actualización: 2026-04-23
+> Última actualización: 2026-05-04
 > Tipo: Banco
 > Jurisdicción(es): Argentina
 > Estado de la relación: Activa
@@ -51,4 +51,4 @@ Banco de Comercio es uno de los bancos sponsor del esquema PSP de Ardua (junto c
 - **Referencias públicas**:
   - Sitio web corporativo: https://bancodecomercio.com.ar/
   - BCRA — Listado de entidades financieras: entidad 432
-- **Discovery relacionado**: `discovery/opened/ops-discovery.md` (esquema PSP descrito con detalle)
+- **Discovery relacionado**: `discoveries/ops-discovery.md` (esquema PSP descrito con detalle)

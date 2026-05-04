@@ -1,6 +1,6 @@
 # COINAG
 
-> Última actualización: 2026-04-23
+> Última actualización: 2026-05-04
 > Tipo: Banco
 > Jurisdicción(es): Argentina
 > Estado de la relación: Activa
@@ -57,4 +57,4 @@ COINAG es **el banco sponsor más maduro** del módulo PSP de Ops de Ardua — e
 - **Referencias públicas**:
   - Banco Coinag: https://www.bancocoinag.com/
   - Cooperativa Coinag: https://cooperativacoinag.com/
-- **Discovery relacionado**: `discovery/opened/ops-discovery.md` (esquema PSP descrito con detalle)
+- **Discovery relacionado**: `discoveries/ops-discovery.md` (esquema PSP descrito con detalle)

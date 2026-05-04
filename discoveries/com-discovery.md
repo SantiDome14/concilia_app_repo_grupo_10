@@ -210,7 +210,7 @@ Registro de eventos propios y de terceros.
 
 | Artefacto | Ruta | Estado |
 |---|---|---|
-| Prototipo HTML | `/Users/yasmani/Products/prototypes/com/com_prototype.html` | Validado — iteración activa |
+| Prototipo HTML | `../prototypes/com/com_prototype.html` | Validado — iteración activa |
 | Requirement Jira | REQ-18 | In Review — actualizado, 14 criterios de aceptación |
 
 ---

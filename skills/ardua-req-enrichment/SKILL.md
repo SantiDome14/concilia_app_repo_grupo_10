@@ -62,24 +62,26 @@ ask_user_input(
 
 ## Base de conocimientos del proyecto
 
-Las fuentes de conocimiento, en orden de lectura, viven todas bajo `/Users/yasmani/Products/agents/`. Antes de cargar cada carpeta, listar su contenido con `Filesystem:list_directory` — no asumir qué archivos existen.
+Las fuentes de conocimiento, en orden de lectura, viven todas bajo `/Users/yasmani/atlas-ai-product-management-framework/`. Antes de cargar cada carpeta, listar su contenido con `Filesystem:list_directory` — no asumir qué archivos existen.
 
 ### 1. `framework/` — constraints foundational
-`/Users/yasmani/Products/agents/framework/`
+`/Users/yasmani/atlas-ai-product-management-framework/framework/`
 
 Leer **todos** los archivos presentes. Definen el marco legal, operativo, contable, la misión, visión, valores y el roadmap del proyecto. Son constraints de diseño — toda decisión del requerimiento debe validarse contra ellos.
 
 ### 2. `entities/` — catálogo del ecosistema operativo
-`/Users/yasmani/Products/agents/entities/`
+`/Users/yasmani/atlas-ai-product-management-framework/entities/`
 
 Consultar **cuando el requerimiento menciona una entidad** (Haz Pagos, Circuit Pay, Ardua Solutions Corp, Astra Ventures, Binance, Bitso, Bridge, Convera, Brubank, etc.). Leer el archivo `[nombre-entidad].md` correspondiente — describe qué capacidades operativas habilita esa entidad.
 
 Si el requerimiento menciona una entidad y no existe el archivo → flaguearlo al cierre y proponer crearlo.
 
-### 3. `discovery/opened/` — Living Discovery Documents activos
-`/Users/yasmani/Products/agents/discovery/opened/`
+### 3. `discoveries/` — Living Discovery Documents (estado: En investigación)
+`/Users/yasmani/atlas-ai-product-management-framework/discoveries/`
 
-Identificar y leer el discovery relevante al requerimiento:
+La carpeta es **flat**: no hay subcarpetas `opened/` ni `closed/`. El estado de cada discovery se declara en el campo `status` del YAML frontmatter (`En investigación`, `Concluida`, `Descartada`).
+
+Identificar y leer el discovery relevante al requerimiento (filtrar mentalmente por `status: En investigación` para el contexto activo):
 - Aplicación del core: `[aplicacion]-discovery.md` (ej: `trd-discovery.md`, `clp-discovery.md`)
 - Módulo específico dentro de una aplicación: `[aplicacion]-[modulo]-discovery.md` (ej: `trd-proveedores-de-liquidez-discovery.md`, `lex-limites-discovery.md`)
 
@@ -89,11 +91,11 @@ Los discoveries capturan hipótesis bajo validación, preguntas abiertas, decisi
 
 > *"No encontré discovery para [aplicación/módulo]. Como es la fuente de contexto del dominio, tiene sentido crearlo antes de enriquecer el REQ. ¿Arrancamos con un discovery básico y después retomamos el enriquecimiento?"*
 
-### 4. `discovery/closed/` — discoveries cerrados (histórico)
-Consultar solo si el requerimiento referencia explícitamente una feature ya consolidada y se necesita entender cómo se llegó a la definición actual.
+### 4. `discoveries/` — discoveries históricos (estado: Concluida / Descartada)
+La misma carpeta `discoveries/`. Consultar los archivos cuyo `status` sea `Concluida` o `Descartada` solo si el requerimiento referencia explícitamente una feature ya consolidada y se necesita entender cómo se llegó a la definición actual.
 
 ### 5. `features/` — specs consolidadas
-`/Users/yasmani/Products/agents/features/`
+`/Users/yasmani/atlas-ai-product-management-framework/features/`
 
 Leer los feature specs relevantes para la aplicación o feature del requerimiento.
 
@@ -254,18 +256,18 @@ Independientemente del modo o de si hay hilo, cargar la base de conocimiento cor
 
 **Secuencia de lectura:**
 
-1. Listar `/Users/yasmani/Products/agents/framework/` y leer **todos** los archivos.
+1. Listar `/Users/yasmani/atlas-ai-product-management-framework/framework/` y leer **todos** los archivos.
 
-2. **Identificar entidades mencionadas** en el summary, description o hilo del requerimiento. Para cada entidad, leer el archivo correspondiente en `/Users/yasmani/Products/agents/entities/[nombre-entidad].md`. Si una entidad es mencionada y no existe archivo → registrarlo para flaguear al cierre.
+2. **Identificar entidades mencionadas** en el summary, description o hilo del requerimiento. Para cada entidad, leer el archivo correspondiente en `/Users/yasmani/atlas-ai-product-management-framework/entities/[nombre-entidad].md`. Si una entidad es mencionada y no existe archivo → registrarlo para flaguear al cierre.
 
 3. **Identificar la aplicación del core del requerimiento** (TRD, OPS, LEX, CLP, COM, FIN o producto transversal). Si no es evidente del ticket, inferirla de los triggers/keywords en el hilo.
 
-4. Listar `/Users/yasmani/Products/agents/discovery/opened/` y leer:
+4. Listar `/Users/yasmani/atlas-ai-product-management-framework/discoveries/` y leer:
    - El discovery de la aplicación (`[aplicacion]-discovery.md`)
    - Si aplica, el discovery del módulo específico (`[aplicacion]-[modulo]-discovery.md`)
    - **Si no existe ninguno para la aplicación/módulo → aplicar Discovery-First Principle** (ver sección "Base de conocimientos" arriba): proponer crear el discovery antes de avanzar.
 
-5. Listar `/Users/yasmani/Products/agents/features/` y leer los feature specs relevantes.
+5. Listar `/Users/yasmani/atlas-ai-product-management-framework/features/` y leer los feature specs relevantes.
 
 6. Complementar con `Notion:notion-search` si los pasos anteriores no alcanzaron.
 
@@ -358,7 +360,7 @@ Producir el requerimiento completo siguiendo la estructura REQ-1 (ver sección "
 
 - **Solicitante:** Inferido del hilo de Slack (quién envió a Miles) o del ticket si no hay hilo.
 
-- **Prototipo:** Solo incluir si ya existe en `/Users/yasmani/Products/agents/prototypes/[aplicacion]/`. Si no existe, omitir el campo.
+- **Prototipo:** Solo incluir si ya existe en `/Users/yasmani/atlas-ai-product-management-framework/prototypes/[aplicacion]/`. Si no existe, omitir el campo.
 
 ---
 
@@ -505,7 +507,7 @@ El enriquecimiento **no genera discoveries por default**. Los discoveries son do
 | Escenario | Qué hacer |
 |---|---|
 | La información específica del REQ emerge durante el proceso | Va al ticket de Jira — es lo que ya hace el enriquecimiento |
-| Información que **trasciende el REQ** emerge (decisión arquitectónica, blocker que afecta otras features del módulo, hipótesis nueva sobre el dominio) | Proponer **actualizar un discovery existente** en `opened/`. Si no existe, proponer crearlo (Discovery-First) |
+| Información que **trasciende el REQ** emerge (decisión arquitectónica, blocker que afecta otras features del módulo, hipótesis nueva sobre el dominio) | Proponer **actualizar un discovery existente**. Si no existe, proponer crearlo (Discovery-First) |
 
 **No se crean discoveries para cerrarlos en la misma sesión.** Si un discovery se crea durante el enriquecimiento, permanece abierto y evoluciona en sesiones futuras, cerrándose naturalmente cuando todas sus hipótesis estén resueltas y derive en una feature spec.
 
@@ -538,7 +540,7 @@ El enriquecimiento **no genera discoveries por default**. Los discoveries son do
 [Cargar knowledge base]
    • framework/ (todos los archivos)
    • entities/ (por cada entidad mencionada)
-   • discovery/opened/ (aplicación + módulo)
+   • discoveries/ (aplicación + módulo)
    • features/ (relevantes)
    • Notion (complementario)
       ↓

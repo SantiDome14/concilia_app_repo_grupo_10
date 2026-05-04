@@ -1,6 +1,6 @@
 # Discovery — Convención y criterio
 
-> Última actualización: 2026-04-30
+> Última actualización: 2026-05-04
 
 ## Propósito
 

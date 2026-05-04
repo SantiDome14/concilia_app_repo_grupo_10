@@ -1,6 +1,6 @@
 # OPS — Operations
 
-> Última actualización: 2026-04-30
+> Última actualización: 2026-05-04
 > Estado: En definición progresiva
 
 ---
@@ -35,7 +35,7 @@
 
 ## Frentes abiertos
 
-> Por completar. Hipótesis bajo investigación que pueden modificar el estado actual del producto. Cada frente debe referenciar el discovery correspondiente en `discovery/`.
+> Por completar. Hipótesis bajo investigación que pueden modificar el estado actual del producto. Cada frente debe referenciar el discovery correspondiente en `discoveries/`.
 
 ---
 
@@ -49,4 +49,4 @@
 
 Mientras se completa la migración del modelo agregado al modelo nuevo, la fuente de contexto histórico del producto vive en:
 
-- `discovery/ops-discovery.md` — discovery agregado de OPS (modelo previo). El estado actual del producto se irá migrando desde acá hacia este `README.md` y los feature files individuales. Incluye el primer canónico de Inbox del financial-core (OPS-Inbox).
+- `discoveries/ops-discovery.md` — discovery agregado de OPS (modelo previo). El estado actual del producto se irá migrando desde acá hacia este `README.md` y los feature files individuales. Incluye el primer canónico de Inbox del financial-core (OPS-Inbox).

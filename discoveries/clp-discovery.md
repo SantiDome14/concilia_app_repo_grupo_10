@@ -398,7 +398,7 @@ Los prototipos avanzaron significativamente en esta sesión pero los issues de J
 | `clp_rfq_prototype.html` | v2 — Flujo RFQ base (13 escenas) | Superado por v3 |
 | `clp_rfq_prototype_v3.html` | v3 — RFQ completo + módulo Quotes | ✅ Activo — pendiente sync Jira |
 
-**Ubicación:** `/Users/yasmani/Products/claude/prototypes/clp/`
+**Ubicación:** `../prototypes/clp/`
 
 ---
 

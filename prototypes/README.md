@@ -1,6 +1,6 @@
 # Prototypes — Convención y criterio
 
-> Última actualización: 2026-04-30
+> Última actualización: 2026-05-04
 
 ## Propósito
 
@@ -14,7 +14,7 @@ Un prototipo responde a la pregunta: **"¿esto es lo que acordamos?"**.
 
 ```
 Investigar → Definir → Prototipar
-discovery/    features/   prototypes/
+discoveries/    features/   prototypes/
 ```
 
 Los prototipos son la **expresión visual** de lo definido en `features/`. Existen para validar que la definición funciona end-to-end y que es comprensible para los stakeholders no técnicos.
@@ -66,7 +66,7 @@ Cada `prototypes/[aplicacion]/README.md` documenta:
 
 - Cuando se agrega o cambia una feature en `features/[aplicacion]/`.
 - Cuando una validación con stakeholders revela que el flujo no se entiende como se acordó.
-- Cuando una hipótesis de `discovery/` se concluye y modifica visualmente el producto.
+- Cuando una hipótesis de `discoveries/` se concluye y modifica visualmente el producto.
 
 **No se itera un prototipo:**
 

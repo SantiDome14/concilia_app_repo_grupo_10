@@ -1,6 +1,6 @@
 # CLP — Client Portal
 
-> Última actualización: 2026-04-30
+> Última actualización: 2026-05-04
 > Estado: En definición progresiva
 
 ---
@@ -35,7 +35,7 @@
 
 ## Frentes abiertos
 
-> Por completar. Hipótesis bajo investigación que pueden modificar el estado actual del producto. Cada frente debe referenciar el discovery correspondiente en `discovery/`.
+> Por completar. Hipótesis bajo investigación que pueden modificar el estado actual del producto. Cada frente debe referenciar el discovery correspondiente en `discoveries/`.
 
 ---
 
@@ -49,5 +49,5 @@
 
 Mientras se completa la migración del modelo agregado al modelo nuevo, la fuente de contexto histórico del producto vive en:
 
-- `discovery/clp-discovery.md` — discovery agregado de CLP (modelo previo). El estado actual del producto se irá migrando desde acá hacia este `README.md` y los feature files individuales.
-- `discovery/pnl-discovery.md` — pendiente de absorción dentro de CLP.
+- `discoveries/clp-discovery.md` — discovery agregado de CLP (modelo previo). El estado actual del producto se irá migrando desde acá hacia este `README.md` y los feature files individuales.
+- `discoveries/pnl-discovery.md` — pendiente de absorción dentro de CLP.

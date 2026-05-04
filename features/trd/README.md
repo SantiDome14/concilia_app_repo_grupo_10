@@ -1,6 +1,6 @@
 # TRD — Trading Desk
 
-> Última actualización: 2026-04-30
+> Última actualización: 2026-05-04
 > Estado: En definición progresiva
 
 ---
@@ -35,7 +35,7 @@
 
 ## Frentes abiertos
 
-> Por completar. Hipótesis bajo investigación que pueden modificar el estado actual del producto. Cada frente debe referenciar el discovery correspondiente en `discovery/`.
+> Por completar. Hipótesis bajo investigación que pueden modificar el estado actual del producto. Cada frente debe referenciar el discovery correspondiente en `discoveries/`.
 
 ---
 
@@ -49,6 +49,6 @@
 
 Mientras se completa la migración del modelo agregado al modelo nuevo, la fuente de contexto histórico del producto vive en:
 
-- `discovery/trd-discovery.md` — discovery agregado de TRD (modelo previo). El estado actual del producto se irá migrando desde acá hacia este `README.md` y los feature files individuales.
-- `discovery/trd-proveedores-de-liquidez-discovery.md` — discovery del módulo Proveedores de Liquidez. Su estado consolidado se migrará a `features/trd/trd-proveedores-de-liquidez.md`.
-- `discovery/prime-desk-rfq-gateway-discovery.md` — pendiente de absorción dentro de TRD.
+- `discoveries/trd-discovery.md` — discovery agregado de TRD (modelo previo). El estado actual del producto se irá migrando desde acá hacia este `README.md` y los feature files individuales.
+- `discoveries/trd-proveedores-de-liquidez-discovery.md` — discovery del módulo Proveedores de Liquidez. Su estado consolidado se migrará a `features/trd/trd-proveedores-de-liquidez.md`.
+- `discoveries/prime-desk-rfq-gateway-discovery.md` — pendiente de absorción dentro de TRD.

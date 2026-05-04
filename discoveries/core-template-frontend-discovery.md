@@ -209,7 +209,7 @@ Additional `package.json` scripts: `spec:check`, `spec:list`, `spec:status`.
 
 ### OPS original work (not this context file)
 
-The session was originally motivated by "cambios que se vienen para OPS" but diverged entirely into this transversal template work. Whatever specific OPS change was planned (new product flow, module refactor, Jira REQ tied to OPS) is still pending. Next step: dedicated OPS session, read `discovery/ops-session-context.md`, define the concrete change, and proceed via `/opsx:propose` on whatever repo is in scope (likely the current legacy `core-ops` until its migration, then the migrated one).
+The session was originally motivated by "cambios que se vienen para OPS" but diverged entirely into this transversal template work. Whatever specific OPS change was planned (new product flow, module refactor, Jira REQ tied to OPS) is still pending. Next step: dedicated OPS session, read `ops-discovery.md`, define the concrete change, and proceed via `/opsx:propose` on whatever repo is in scope (likely the current legacy `core-ops` until its migration, then the migrated one).
 
 ### Template-related follow-ups (continue in this context)
 
