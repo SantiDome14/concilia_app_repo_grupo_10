@@ -1,4 +1,4 @@
-# product-management-framework
+# atlas-ai-product-management-framework
 
 Ardua's Product Management operating framework — principles, protocols, and the living knowledge base that guides how we discover problems, design solutions, and ship products.
 
@@ -19,7 +19,7 @@ The **canonical reference** for how this framework operates is [`framework/proje
 ## Repository structure
 
 ```
-product-management-framework/
+atlas-ai-product-management-framework/
 ├── README.md                 ← You are here
 ├── CODEOWNERS                ← Approval gates (framework/ reserved to Head of Product)
 ├── CONTRIBUTING.md           ← Conventions, naming rules, contribution flow
@@ -27,7 +27,7 @@ product-management-framework/
 │
 ├── framework/                ← Foundational constraints (gated by CODEOWNERS)
 ├── entities/                 ← Catalog of the operational ecosystem
-├── discovery/                ← Investigation of hypotheses (flat folder)
+├── discoveries/              ← Investigation of hypotheses (flat folder)
 ├── features/                 ← Source of truth of product state
 │   ├── [aplicacion]/         ←   One folder per product
 │   └── common/               ←   Transversal features (cross-product)
@@ -57,9 +57,9 @@ These three folders form the **core production loop** of the framework. They ref
 >
 > First we investigate (discovery). From the investigation, definitions land (features). Those definitions give rise to prototypes — or to modifications of existing prototypes.
 
-#### `discovery/`
+#### `discoveries/`
 
-Investigation of hypotheses. Flat folder — every discovery file lives directly under `discovery/`. A single discovery can impact one or many features; a single feature can receive contributions from one or many discoveries. The relation is **N-N**.
+Investigation of hypotheses. Flat folder — every discovery file lives directly under `discoveries/`. A single discovery can impact one or many features; a single feature can receive contributions from one or many discoveries. The relation is **N-N**.
 
 A discovery is **not** a snapshot of a product's current state — that lives in `features/`. A discovery captures what was being investigated and what was learned. When a hypothesis matures, its conclusions are propagated to the affected feature file(s).
 
@@ -96,8 +96,8 @@ n8n workflow exports for the Miles Slack agent (the area's requirement-capture b
 1. **Clone the repository** to a local path of your choice.
 
    ```bash
-   git clone git@github.com:a1yr/product-management-framework.git
-   cd product-management-framework
+   git clone git@github.com:a1yr/atlas-ai-product-management-framework.git
+   cd atlas-ai-product-management-framework
    ```
 
 2. **Read the canonical reference**: [`framework/project-instructions.md`](framework/project-instructions.md). This is _the_ document that defines how the framework operates.

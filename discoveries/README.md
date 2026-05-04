@@ -14,10 +14,10 @@ Un discovery responde a la pregunta: **"¿qué hipótesis estamos validando, y q
 
 ```
 Investigar → Definir → Prototipar
-discovery/    features/   prototypes/
+discoveries/  features/   prototypes/
 ```
 
-Las tres carpetas forman el **bucle de producción** del framework. Cada hipótesis nace en `discovery/`. Cuando madura, sus conclusiones se **propagan** al feature correspondiente en `features/[aplicacion]/`. El estado consolidado del producto vive en `features/`; el rastro del proceso de validación vive en `discovery/`.
+Las tres carpetas forman el **bucle de producción** del framework. Cada hipótesis nace en `discoveries/`. Cuando madura, sus conclusiones se **propagan** al feature correspondiente en `features/[aplicacion]/`. El estado consolidado del producto vive en `features/`; el rastro del proceso de validación vive en `discoveries/`.
 
 ### Cardinalidad
 
@@ -29,7 +29,7 @@ Las tres carpetas forman el **bucle de producción** del framework. Cada hipóte
 
 ## Estructura
 
-La carpeta es **plana**. Todo discovery vive directamente bajo `discovery/`, sin subcarpetas. No existe distinción `active/archived` — el estado de cada discovery se captura en su header (ver §"Estructura del archivo").
+La carpeta es **plana**. Todo discovery vive directamente bajo `discoveries/`, sin subcarpetas. No existe distinción `active/archived` — el estado de cada discovery se captura en su header (ver §"Estructura del archivo").
 
 ---
 
@@ -196,7 +196,7 @@ El sufijo `v[N]` se reserva **solo para forks conceptuales reales**: pivotes, ca
 
 Algunos discoveries describen **sistemas transversales** que no son productos del financial-core (p. ej. `core-template-frontend`, `jira-automations`, `observabilidad`). Estos discoveries:
 
-- Existen como cualquier otro archivo en `discovery/`.
+- Existen como cualquier otro archivo en `discoveries/`.
 - **No tienen carpeta correspondiente en `features/` ni en `prototypes/`.**
 - Sus definiciones, cuando se consolidan, viven dentro del propio discovery o se referencian desde `framework/`.
 
@@ -209,7 +209,7 @@ Algunos discoveries actuales (heredados del modelo previo) son **agregados por a
 Bajo el nuevo modelo, esos archivos se separan progresivamente cuando cada producto se toque en una sesión real:
 
 1. El **estado actual** del producto se migra a `features/[aplicacion]/README.md` y a los feature files individuales.
-2. Las **hipótesis activas** quedan en `discovery/` como discoveries scoped (`[aplicacion]-[topic]-discovery.md`).
+2. Las **hipótesis activas** quedan en `discoveries/` como discoveries scoped (`[aplicacion]-[topic]-discovery.md`).
 3. El archivo agregado original puede archivarse o mantenerse como referencia histórica según el caso.
 
 No se hace una migración en bloque — se separa cuando hay una sesión real que lo justifique.
@@ -220,7 +220,7 @@ No se hace una migración en bloque — se separa cuando hay una sesión real qu
 
 Antes de crear uno nuevo:
 
-1. Listar `discovery/` y verificar si ya existe un discovery sobre el mismo dominio o hipótesis.
+1. Listar `discoveries/` y verificar si ya existe un discovery sobre el mismo dominio o hipótesis.
 2. Si existe → actualizar el archivo existente, no duplicar.
 3. Si no existe → crear con el patrón de naming correspondiente y declarar el estado inicial en el header (`En investigación`).
 

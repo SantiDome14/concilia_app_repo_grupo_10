@@ -1,4 +1,4 @@
-# Contributing to `product-management-framework`
+# Contributing to `atlas-ai-product-management-framework`
 
 This document captures the conventions and contribution flow for working on this repository. **It complements `framework/project-instructions.md`** — that document defines _what_ the framework is and how the system thinks; this one defines _how_ we collaborate around the repo.
 
@@ -15,7 +15,7 @@ The repository is the **shared operating system** of the Product area. Every PM 
 1. **Pull at the start of every session.**
 
    ```bash
-   cd /path/to/product-management-framework
+   cd /path/to/atlas-ai-product-management-framework
    git pull
    ```
 
@@ -56,7 +56,7 @@ These rules apply to **every file in the repository** and are non-negotiable. Th
 |---|---|---|
 | `framework/` | `[topic].md` | `marco-legal.md`, `mision-vision.md` |
 | `entities/` | `[entity-name].md` | `haz-pagos.md`, `ardua-solutions-corp.md` |
-| `discovery/` | `[aplicacion]-[topic]-discovery.md` | `lex-alertas-discovery.md`, `clp-earn-discovery.md` |
+| `discoveries/` | `[aplicacion]-[topic]-discovery.md` | `lex-alertas-discovery.md`, `clp-earn-discovery.md` |
 |  | `[topic]-discovery.md` (transversal) | `jira-automations-discovery.md` |
 | `features/[aplicacion]/` | `README.md` (global state) | `features/clp/README.md` |
 |  | `[aplicacion]-[modulo-o-feature].md` | `features/clp/clp-rfq.md`, `features/trd/trd-proveedores-de-liquidez.md` |
@@ -100,7 +100,7 @@ Every discovery file has two parts:
 - **YAML frontmatter** with metadata: `name`, `features`, `status`, `owner`, `created_at`, `updated_at`.
 - **Body** starting with `# Heading` matching `name`, followed by two mandatory sections (`## Objetivo`, `## Contexto`). The rest of the body is free-form.
 
-The full specification with field semantics and template lives in `discovery/README.md`.
+The full specification with field semantics and template lives in `discoveries/README.md`.
 
 ### 3.2 Lifecycle
 
@@ -108,7 +108,7 @@ The full specification with field semantics and template lives in `discovery/REA
 2. **Iterated** while the hypothesis is being validated. Multiple sessions may add findings, refine the question, or branch into related hypotheses. Each iteration updates `updated_at`.
 3. **Concluded** when the hypothesis is validated, discarded, or sufficiently defined. At conclusion, the system **must propagate** the relevant findings to the affected feature file(s) in `features/`.
 
-A discovery file is **not deleted at conclusion**. It stays in `discovery/` as a historical record. The `status` field reflects its current state:
+A discovery file is **not deleted at conclusion**. It stays in `discoveries/` as a historical record. The `status` field reflects its current state:
 
 - `En investigación` — hypothesis is being actively tested.
 - `Concluida` — findings have been incorporated into the relevant feature file(s).
@@ -151,7 +151,7 @@ Use the affected core application or area as the scope. Examples:
 - `feat(clp): add Earn FCI sub-feature spec`
 - `docs(framework): update marco-contable to reflect new ARS regulation`
 - `chore(repo): standardize prototype filenames to kebab-case`
-- `refactor(discovery): split lex-discovery into per-feature investigations`
+- `refactor(discoveries): split lex-discovery into per-feature investigations`
 - `feat(workflows): add Miles slash command handler`
 
 If the change is repository-wide, use `repo` as the scope.
