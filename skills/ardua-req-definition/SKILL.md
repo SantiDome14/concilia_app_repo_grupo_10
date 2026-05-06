@@ -185,7 +185,9 @@ Una vez confirmado el resumen, mostrar el mensaje final y el canal destino, y pe
 
 > *"Voy a enviar este mensaje al canal #[canal]. ¿Lo enviamos?"*
 
-**Formato del mensaje a Slack:**
+**Formato del mensaje a Slack — OBLIGATORIO Y SIN EXCEPCIONES:**
+
+El mensaje DEBE seguir exactamente esta estructura de bloques con emojis Unicode. **Nunca usar bullets (`•`) ni el formato `_Label:_ valor en la misma línea`.** Cada sección es un encabezado emoji en una línea, seguido del contenido en la(s) línea(s) siguiente(s).
 
 ```
 <@U0ANEJ5BRPZ> nuevo requerimiento 👋
@@ -196,23 +198,33 @@ Una vez confirmado el resumen, mostrar el mensaje final y el canal destino, y pe
 [Nombre — Rol] · [Área]
 
 🔍 *Problema*
-[problema]
+[descripción del problema — en líneas separadas del encabezado, nunca en la misma línea]
 
 🧭 *Contexto*
-[contexto relevante]
+[contexto relevante — en líneas separadas del encabezado]
 
 ⚠️ *Impacto*
-[impacto actual]
+[impacto actual — en líneas separadas del encabezado]
 
 ✅ *Resultado esperado*
-[resultado esperado]
+[resultado esperado — en líneas separadas del encabezado]
 
 🚨 *Urgencia*
 [Crítico / Alto / Normal / Bajo]
 
 [📎 *Evidencia*
 [descripción breve] — incluir SOLO si el usuario adjuntó evidencia]
+
+**Nota sobre la firma:** NO agregar ninguna línea de "Sent using" ni "Enviado usando" al final del mensaje. Slack agrega esa firma automáticamente al enviarlo. Si la agregás manualmente, aparece duplicada.
 ```
+
+**⚠️ FORMATO CRÍTICO — leer antes de generar el mensaje:**
+- Cada campo es un emoji + label en negrita en su propia línea, y el valor va en la(s) línea(s) siguiente(s)
+- **NUNCA** escribir `• _Problema:_ [valor]` ni `• _Impacto:_ [valor]` — ese formato no lo procesa Miles
+- **NUNCA** poner el valor en la misma línea que el emoji/label
+- Ejemplo correcto: `🔍 *Problema*\n[el texto del problema]`
+- Ejemplo incorrecto: `• _Problema:_ [el texto del problema]`
+- Miles parsea el mensaje buscando cada emoji como delimitador de bloque; si el formato es incorrecto, el ticket en Jira llega vacío
 
 **Reglas sobre el campo Evidencia:**
 - Claude **no puede adjuntar archivos** en mensajes de Slack. La evidencia siempre la adjunta el usuario manualmente en el hilo.
