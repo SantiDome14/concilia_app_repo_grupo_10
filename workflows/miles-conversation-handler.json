@@ -2,592 +2,391 @@
   "name": "[MILES] Conversation Handler",
   "nodes": [
     {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "req-conversation",
-        "responseMode": "responseNode",
-        "options": {}
-      },
-      "id": "b37b9ce9-fdfb-4fad-98b8-9e8036dbac2b",
+      "parameters": {"httpMethod": "POST","path": "req-conversation","responseMode": "responseNode","options": {}},
+      "id": "bf4f6eba-b007-4026-9dd2-20e53bc81e82",
       "name": "Trigger — Conversation Event",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [-2880, 896],
+      "position": [-560, 1808],
       "webhookId": "miles-req-conversation"
     },
     {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "{\"ok\": true}",
-        "options": {}
-      },
-      "id": "c0fea856-3469-49ee-8b6a-704841d924b1",
+      "parameters": {"respondWith": "json","responseBody": "{\"ok\": true}","options": {}},
+      "id": "1ab325fb-9ce7-42e3-ac2a-1431ad9cc0d1",
       "name": "Respond — Acknowledge",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [-2672, 704]
+      "position": [-352, 1616]
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
-            { "id": "1", "name": "thread_ts",    "value": "={{ $json.body.thread_ts }}",    "type": "string" },
-            { "id": "2", "name": "channel_id",   "value": "={{ $json.body.channel_id }}",   "type": "string" },
-            { "id": "3", "name": "user_id",      "value": "={{ $json.body.user_id }}",      "type": "string" },
-            { "id": "4", "name": "message_text", "value": "={{ $json.body.message_text }}", "type": "string" },
-            {
-              "id": "5",
-              "name": "source",
-              "value": "={{ (() => { const t = $json.body.message_text || ''; const fromRouter = $json.body.source || ''; if (fromRouter === 'claude') return 'claude'; if (fromRouter === 'mention') return 'mention'; if (fromRouter === 'thread_reply') return 'thread_reply'; if (t.includes('Sent using') && t.includes('U0AHZHTQE22')) return 'claude'; return 'human'; })() }}",
-              "type": "string"
-            }
-          ]
-        },
+        "assignments": {"assignments": [
+          {"id": "1","name": "thread_ts","value": "={{ $json.body.thread_ts }}","type": "string"},
+          {"id": "2","name": "channel_id","value": "={{ $json.body.channel_id }}","type": "string"},
+          {"id": "3","name": "user_id","value": "={{ $json.body.user_id }}","type": "string"},
+          {"id": "4","name": "message_text","value": "={{ $json.body.message_text }}","type": "string"},
+          {"id": "5","name": "source","value": "={{ (() => { const t = $json.body.message_text || ''; const fromRouter = $json.body.source || ''; const signatures = ['Sent using','Sent with','Sent via','Sent from','Sent by','Enviado usando','Enviado mediante','Enviado con','Enviado vía','Enviado via','Enviado por','Enviado desde']; const hasSig = signatures.some(s => t.includes(s)); if (hasSig && t.includes('U0AHZHTQE22')) return 'claude'; if (fromRouter === 'claude') return 'claude'; if (fromRouter === 'mention') return 'mention'; if (fromRouter === 'thread_reply') return 'thread_reply'; return 'human'; })() }}","type": "string"}
+        ]},
         "options": {}
       },
-      "id": "7c5fa4ac-760a-42f0-b3a2-35bed3f9c033",
+      "id": "2c3a36a9-c4d4-47ef-9e02-b937540da627",
       "name": "Extract Event Data",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [-2672, 1072]
+      "position": [-352, 1984]
     },
     {
       "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
-          "conditions": [{ "id": "cond-source-claude", "leftValue": "={{ $json.source }}", "rightValue": "claude", "operator": { "type": "string", "operation": "equals" } }],
-          "combinator": "and"
-        },
+        "conditions": {"options": {"caseSensitive": true,"leftValue": "","typeValidation": "strict"},"conditions": [{"id": "cond-source-claude","leftValue": "={{ $json.source }}","rightValue": "claude","operator": {"type": "string","operation": "equals"}}],"combinator": "and"},
         "options": {}
       },
-      "id": "6cdd2a93-2de6-4d94-aa6c-1a8bc3f6c945",
+      "id": "bbcd4341-b995-410f-983f-3658d158a9a2",
       "name": "Is Source Claude?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [-2432, 1072]
+      "position": [-112, 1984]
     },
     {
       "parameters": {
-        "jsCode": "// Limpiar el texto\nconst rawText = $('Extract Event Data').item.json.message_text || '';\nconst text = rawText\n  .replace(/<@[A-Z0-9]+\\|[^>]+>/g, '')\n  .replace(/<@[A-Z0-9]+>/g, '')\n  .replace(/\\*?Sent using\\*?[^\\n]*/g, '')\n  .replace(/\\*?Sent with\\*?[^\\n]*/g, '')\n  .replace(/\\*?Sent via\\*?[^\\n]*/g, '')\n  .replace(/\\*?Enviado[^\\n]*/g, '')\n  .trim();\n\nconst channel_id = $('Extract Event Data').item.json.channel_id || '';\nconst thread_ts  = $('Extract Event Data').item.json.thread_ts  || '';\n\nconst channelMap = {\n  'C0AJ2599DA6': 'Finance & Accounting',\n  'C0AJ67HK0ES': 'Legal & Compliance',\n  'C0AK2PW5BGQ': 'Operations',\n  'C0AKNPCNNSU': 'Sales & Partnerships',\n  'C0AJMRFP0TD': 'Trading Desk',\n  'C0ARDGP8134': 'Management'\n};\nconst area = channelMap[channel_id] || '';\n\n// FIX 1 — extractBlock soporta 3 formatos:\n// Formato A: \"• _Label:_ valor\" (bullets — Legales)\n// Formato B: \":shortcode: _Label_\\ncontenido\" (shortcodes Slack — Finance)\n// Formato C: \"🔍 Label\\ncontenido\" (emoji Unicode)\nconst extractBlock = (emojiLabel, bulletLabel, slackShortcodes) => {\n  // Formato C: emoji Unicode bloque\n  const emojiEscaped = emojiLabel.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n  const blockRegex = new RegExp(\n    emojiEscaped + '\\\\s*\\\\n([\\\\s\\\\S]*?)(?=\\\\n:[a-z_]+:|\\\\n[\\uD83D\\uDD0D\\uD83E\\uDDED\\u26A0\\u2705\\uD83D\\uDEA8\\uD83D\\uDCCE\\uD83D\\uDC64]|$)',\n    'i'\n  );\n  const blockMatch = text.match(blockRegex);\n  if (blockMatch && blockMatch[1].trim()) return blockMatch[1].trim();\n\n  // Formato B: shortcode de Slack bloque\n  for (const sc of (slackShortcodes || [])) {\n    const scEscaped = sc.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n    const scBlockRegex = new RegExp(\n      scEscaped + '\\\\s*(?:_[^_]+_)?\\\\s*\\\\n([\\\\s\\\\S]*?)(?=\\\\n:[a-z_]+:|$)',\n      'i'\n    );\n    const scMatch = text.match(scBlockRegex);\n    if (scMatch && scMatch[1].trim()) return scMatch[1].trim();\n  }\n\n  // Formato A: bullet inline\n  const bulletEscaped = bulletLabel.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n  const bulletRegex = new RegExp(\n    '(?:\\u2022\\\\s*_?' + bulletEscaped + ':?_?\\\\*?|\\\\*' + bulletEscaped + ':\\\\*)\\\\s*([^\\\\n]+)',\n    'i'\n  );\n  const bulletMatch = text.match(bulletRegex);\n  return bulletMatch ? bulletMatch[1].trim() : '';\n};\n\n// FIX 6 — urgencia: soporta shortcode inline/bloque, bullet y texto extra\nconst extractUrgencia = () => {\n  const inline = text.match(/:(?:zap|rotating_light|alarm_clock)[^:]*:\\s*_?Urgencia:?_?\\s*([^\\n]+)/i);\n  if (inline) return inline[1].trim();\n  const block = text.match(/:(?:zap|rotating_light|alarm_clock)[^:]*:\\s*_?Urgencia_?\\s*\\n([^\\n:]+)/i);\n  if (block) return block[1].trim();\n  const bullet = text.match(/[\\u2022\\-]\\s*_?Urgencia:?_?\\s*([^\\n]+)/i);\n  if (bullet) return bullet[1].trim();\n  return '';\n};\n\nconst solicitante = extractBlock('\\uD83D\\uDC64 Solicitante',        'Solicitante', [':bust_in_silhouette:']);\nconst problema    = extractBlock('\\uD83D\\uDD0D Problema',           'Problema',    [':red_circle:', ':mag:']);\nconst contexto    = extractBlock('\\uD83E\\uDDED Contexto',           'Contexto',    [':pushpin:', ':compass:']);\nconst impacto     = extractBlock('\\u26A0\\uFE0F Impacto',            'Impacto',     [':bar_chart:', ':warning:']);\nconst resultado   = extractBlock('\\u2705 Resultado esperado', 'Resultado esperado', [':white_check_mark:']);\nconst urgencia    = extractUrgencia();\n\nconst problemaFull = problema + (contexto ? '\\n\\nContexto: ' + contexto : '');\n\n// FIX 6 — prioridad con includes() para tolerar texto extra\nconst urgLower = (urgencia || '').toLowerCase();\nlet priority_id = '3';\nif (urgLower.includes('cr\\u00edtico') || urgLower.includes('critico')) priority_id = '1';\nelse if (urgLower.includes('alto')) priority_id = '2';\nelse if (urgLower.includes('bajo')) priority_id = '4';\n\nconst areaIdMap = {\n  'Finance & Accounting': '10020',\n  'Legal & Compliance':   '10021',\n  'Operations':           '10022',\n  'Sales & Partnerships': '10023',\n  'Trading Desk':         '10024',\n  'Management':           '10095'\n};\nconst business_area_id = areaIdMap[area] || '';\n\nconst thread_url = 'https://arduasolutions.slack.com/archives/' + channel_id + '/p' + thread_ts.replace('.', '');\n\n// FIX 5 — jira_summary: cortar en espacio natural\nconst rawSummary = '[Miles] ' + (area ? area + ' \\u2014 ' : '') + problemaFull.replace(/\\n/g, ' ');\nconst jira_summary = rawSummary.length > 150\n  ? rawSummary.substring(0, rawSummary.lastIndexOf(' ', 150)) + '\\u2026'\n  : rawSummary;\n\nreturn [{ json: {\n  channel_id,\n  thread_ts,\n  area,\n  solicitante,\n  captured_area:      area,\n  captured_problema:  problemaFull,\n  captured_impacto:   impacto,\n  captured_resultado: resultado,\n  captured_urgencia:  urgencia,\n  priority_id,\n  business_area_id,\n  thread_url,\n  jira_summary\n}}];"
+        "jsCode": "// ============================================================\n// FIX: Parse Claude Message — soporta 3 formatos de mensaje\n// A: bullets  \"• _Label:_ valor\"  (Legales)\n// B: shortcodes \":red_circle: _Label_\\ncontenido\"  (Finance)\n// C: emoji Unicode \"🔍 Label\\ncontenido\"  (formato estándar)\n// ============================================================\nconst rawText = $('Extract Event Data').item.json.message_text || '';\nconst text = rawText\n  .replace(/<@[A-Z0-9]+\\|[^>]+>/g, '')\n  .replace(/<@[A-Z0-9]+>/g, '')\n  .replace(/\\*?Sent using\\*?[^\\n]*/g, '')\n  .replace(/\\*?Sent with\\*?[^\\n]*/g, '')\n  .replace(/\\*?Sent via\\*?[^\\n]*/g, '')\n  .replace(/\\*?Enviado[^\\n]*/g, '')\n  .trim();\n\nconst channel_id = $('Extract Event Data').item.json.channel_id || '';\nconst thread_ts  = $('Extract Event Data').item.json.thread_ts  || '';\n\nconst channelMap = {\n  'C0AJ2599DA6': 'Finance & Accounting',\n  'C0AJ67HK0ES': 'Legal & Compliance',\n  'C0AK2PW5BGQ': 'Operations',\n  'C0AKNPCNNSU': 'Sales & Partnerships',\n  'C0AJMRFP0TD': 'Trading Desk',\n  'C0ARDGP8134': 'Management'\n};\nconst area = channelMap[channel_id] || '';\n\nconst extractBlock = (emojiLabel, bulletLabel, slackShortcodes) => {\n  // Formato C: emoji Unicode bloque\n  const emojiEscaped = emojiLabel.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n  const blockRegex = new RegExp(\n    emojiEscaped + '\\\\s*\\\\n([\\\\s\\\\S]*?)(?=\\\\n:[a-z_]+:|\\\\n[\\uD83D\\uDD0D\\uD83E\\uDDED\\u26A0\\u2705\\uD83D\\uDEA8\\uD83D\\uDCCE\\uD83D\\uDC64]|$)',\n    'i'\n  );\n  const blockMatch = text.match(blockRegex);\n  if (blockMatch && blockMatch[1].trim()) return blockMatch[1].trim();\n\n  // Formato B: shortcode de Slack bloque\n  for (const sc of (slackShortcodes || [])) {\n    const scEscaped = sc.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n    const scBlockRegex = new RegExp(\n      scEscaped + '\\\\s*(?:_[^_]+_)?\\\\s*\\\\n([\\\\s\\\\S]*?)(?=\\\\n:[a-z_]+:|$)',\n      'i'\n    );\n    const scMatch = text.match(scBlockRegex);\n    if (scMatch && scMatch[1].trim()) return scMatch[1].trim();\n  }\n\n  // Formato A: bullet inline\n  const bulletEscaped = bulletLabel.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n  const bulletRegex = new RegExp(\n    '(?:\\u2022\\\\s*_?' + bulletEscaped + ':?_?\\\\*?|\\\\*' + bulletEscaped + ':\\\\*)\\\\s*([^\\\\n]+)',\n    'i'\n  );\n  const bulletMatch = text.match(bulletRegex);\n  return bulletMatch ? bulletMatch[1].trim() : '';\n};\n\nconst extractUrgencia = () => {\n  const inline = text.match(/:(?:zap|rotating_light|alarm_clock)[^:]*:\\s*_?Urgencia:?_?\\s*([^\\n]+)/i);\n  if (inline) return inline[1].trim();\n  const block = text.match(/:(?:zap|rotating_light|alarm_clock)[^:]*:\\s*_?Urgencia_?\\s*\\n([^\\n:]+)/i);\n  if (block) return block[1].trim();\n  const bullet = text.match(/[\\u2022\\-]\\s*_?Urgencia:?_?\\s*([^\\n]+)/i);\n  if (bullet) return bullet[1].trim();\n  return '';\n};\n\nconst solicitante = extractBlock('\\uD83D\\uDC64 Solicitante', 'Solicitante', [':bust_in_silhouette:']);\nconst problema    = extractBlock('\\uD83D\\uDD0D Problema',    'Problema',    [':red_circle:', ':mag:']);\nconst contexto    = extractBlock('\\uD83E\\uDDED Contexto',    'Contexto',    [':pushpin:', ':compass:']);\nconst impacto     = extractBlock('\\u26A0\\uFE0F Impacto',     'Impacto',     [':bar_chart:', ':warning:']);\nconst resultado   = extractBlock('\\u2705 Resultado esperado','Resultado esperado', [':white_check_mark:']);\nconst urgencia    = extractUrgencia();\n\nconst problemaFull = problema + (contexto ? '\\n\\nContexto: ' + contexto : '');\n\nconst urgLower = (urgencia || '').toLowerCase();\nlet priority_id = '3';\nif (urgLower.includes('cr\\u00edtico') || urgLower.includes('critico')) priority_id = '1';\nelse if (urgLower.includes('alto')) priority_id = '2';\nelse if (urgLower.includes('bajo')) priority_id = '4';\n\nconst areaIdMap = {\n  'Finance & Accounting': '10020',\n  'Legal & Compliance':   '10021',\n  'Operations':           '10022',\n  'Sales & Partnerships': '10023',\n  'Trading Desk':         '10024',\n  'Management':           '10095'\n};\nconst business_area_id = areaIdMap[area] || '';\n\nconst thread_url = 'https://arduasolutions.slack.com/archives/' + channel_id + '/p' + thread_ts.replace('.', '');\n\nconst rawSummary = '[Miles] ' + (area ? area + ' \\u2014 ' : '') + problemaFull.replace(/\\n/g, ' ');\nconst jira_summary = rawSummary.length > 150\n  ? rawSummary.substring(0, rawSummary.lastIndexOf(' ', 150)) + '\\u2026'\n  : rawSummary;\n\nreturn [{ json: {\n  channel_id, thread_ts, area, solicitante,\n  captured_area:      area,\n  captured_problema:  problemaFull,\n  captured_impacto:   impacto,\n  captured_resultado: resultado,\n  captured_urgencia:  urgencia,\n  priority_id, business_area_id, thread_url, jira_summary\n}}];"
       },
-      "id": "ef45d04c-b604-4335-83a7-4ed5645e610d",
+      "id": "68dc63f0-8def-40f7-befd-0071f0ab752d",
       "name": "Parse Claude Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-2192, 896]
+      "position": [128, 1808]
     },
     {
       "parameters": {
         "url": "https://slack.com/api/conversations.replies",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "authentication": "genericCredentialType","genericAuthType": "httpHeaderAuth",
         "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            { "name": "channel", "value": "={{ $('Extract Event Data').item.json.channel_id }}" },
-            { "name": "ts",      "value": "={{ $('Extract Event Data').item.json.thread_ts }}" }
-          ]
-        },
+        "queryParameters": {"parameters": [{"name": "channel","value": "={{ $('Extract Event Data').item.json.channel_id }}"},{"name": "ts","value": "={{ $('Extract Event Data').item.json.thread_ts }}"}]},
         "options": {}
       },
-      "id": "6f705815-420d-4570-baef-6e5467771695",
+      "id": "62714de9-2b5e-4566-a40f-14af3f0a3b63",
       "name": "Fetch Thread History",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-2192, 1264],
-      "credentials": { "httpHeaderAuth": { "id": "MX2QZHGzOYBtt41s", "name": "Slack Bot Token — Miles" } }
+      "position": [128, 2176],
+      "credentials": {"httpHeaderAuth": {"id": "MX2QZHGzOYBtt41s","name": "Slack Bot Token — Miles"}}
     },
     {
       "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
-          "conditions": [{ "id": "cond-closed", "leftValue": "={{ ($json.messages || []).some(m => m.text && m.text.includes('Requerimiento creado exitosamente')) }}", "rightValue": true, "operator": { "type": "boolean", "operation": "true" } }],
-          "combinator": "and"
-        },
+        "conditions": {"options": {"caseSensitive": true,"leftValue": "","typeValidation": "strict"},"conditions": [{"id": "cond-closed","leftValue": "={{ ($json.messages || []).some(m => m.text && m.text.includes('Requerimiento creado exitosamente')) }}","rightValue": true,"operator": {"type": "boolean","operation": "true"}}],"combinator": "and"},
         "options": {}
       },
-      "id": "06a2318e-2fe4-4fe6-b93a-0b2b13d1a517",
+      "id": "cdfdadfb-04fe-4a12-bca4-726e0535eb32",
       "name": "Is Session Closed?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [-2192, 1072]
+      "position": [128, 1984]
     },
     {
       "parameters": {},
-      "id": "15cde9ad-bf8d-4935-ae21-440f1eaca86c",
+      "id": "4291157a-915d-4574-9c9d-d18babd56234",
       "name": "Ignore — Session Closed",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [-1952, 1264]
+      "position": [368, 2176]
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "p1",
-              "name": "prompt",
-              "type": "string",
-              "value": "={{ `Sos Miles, el asistente de requerimientos de Ardua Solutions.\n\n=== CONTEXTO COMPLETO DEL THREAD ===\n${$json.messages.filter(m => m.text && m.text.trim()).map(m => (m.bot_id ? \"Miles\" : \"Usuario\") + \": \" + m.text.replace(/\\*/g, \"\")).join(\"\\n\")}\n\nÚltimo mensaje del usuario: \"${$('Extract Event Data').item.json.message_text}\"\n\nCanal de origen: ${$('Extract Event Data').item.json.channel_id}\n\nMapeo canal → área:\nC0AJ2599DA6 = Finance & Accounting\nC0AJ67HK0ES = Legal & Compliance\nC0AK2PW5BGQ = Operations\nC0AKNPCNNSU = Sales & Partnerships\nC0AJMRFP0TD = Trading Desk\nC0ARDGP8134 = Management\n\n=== PASO 0: PRE-ANÁLISIS OBLIGATORIO ===\n\nAntes de cualquier otra cosa, revisá el thread completo y hacé este inventory check campo por campo:\n\nCAMPO area:\n- ¿Podés inferirlo del canal usando el mapeo de arriba? Si sí: CAPTURADO.\n- ¿El usuario ya confirmó el área explícita o implícitamente (\"si\", \"correcto\", nombre del área)? Si sí: CAPTURADO.\n\nCAMPO problema:\n- ¿Algún mensaje del thread (aunque esté dirigido al equipo y no a Miles, aunque sea el primer mensaje) describe una situación actual, un dolor, una necesidad operativa, un módulo a construir, o una mejora? Si sí: CAPTURADO. Usá ese contenido directamente.\n- REGLA CLAVE: El primer mensaje del thread es la fuente primaria de contexto. Si describe un problema o necesidad, está CAPTURADO aunque el usuario no lo haya repetido en respuesta a Miles.\n\nCAMPO impacto:\n- ¿Algún mensaje menciona consecuencias, riesgos, limitaciones, frases como \"ya no escala\", \"no podemos\", \"genera inconsistencias\", \"riesgo de\", \"imposibilidad de\", \"no hay trazabilidad\"? Si sí: CAPTURADO.\n\nCAMPO resultado_esperado:\n- ¿Algún mensaje describe qué debería funcionar, qué módulos se necesitan, qué capacidades se quieren, cuál es el alcance de la solución? Si sí: CAPTURADO.\n\nCAMPO urgencia:\n- ¿Algún mensaje menciona Crítico, Alto, Normal, Bajo, o frases equivalentes como \"es urgente\", \"bloquea operaciones\", \"necesitamos ya\"? Si sí: CAPTURADO.\n\nREGLA DE CONTINUIDAD — CRÍTICA:\nSi Miles ya preguntó un campo en un mensaje anterior Y el usuario respondió en el siguiente → CAPTURADO, sin excepción. No importa si la respuesta fue \"Si\", \"correcto\", el valor directo, o una frase que lo implica. No re-preguntes ese campo.\n\nDESPUÉS del inventory:\n- 5/5 capturados → generá el resumen directamente, is_complete=true, confirmed=false\n- 4/5 capturados → preguntá ÚNICAMENTE el campo faltante\n- 3/5 o menos → preguntá el primer campo faltante en orden: area → problema → impacto → resultado_esperado → urgencia\n\n=== PASO 1: DETERMINAR INTENT ===\n\nReglas de prioridad (evaluá en orden estricto):\n1. ¿El último mensaje menciona REQ-N (ej: REQ-12)? → intent=\"req-status\" SIEMPRE\n2. ¿El último mensaje contiene \"ver\", \"listar\", \"mostrar\", \"cuáles son\", \"qué tickets\", \"mis requerimientos\", \"listado\"? → intent=\"req-list\" SIEMPRE\n3. ¿El thread ya tiene un intent establecido (Miles en medio de req-new)? → continuá ese intent\n4. ¿Algún mensaje del thread describe un problema, necesidad o mejora? → intent=\"req-new\"\n5. Si ninguna aplica → intent=\"unclear\"\n\n=== EJEMPLOS FEW-SHOT ===\n\nEJEMPLO A — Primer mensaje con todo el contexto:\nThread:\n  Usuario: \"Necesitamos establecer un sistema de alertas AML. El monitoreo se hace manualmente, no hay trazabilidad. Reguladores exigen registro completo. Necesitamos que LEX genere alertas automáticas en Slack. Urgencia: Crítico\"\nInventory:\n  area: CAPTURADO (canal = Legal & Compliance)\n  problema: CAPTURADO (monitoreo manual sin trazabilidad)\n  impacto: CAPTURADO (incumplimiento regulatorio)\n  resultado_esperado: CAPTURADO (alertas automáticas desde LEX a Slack)\n  urgencia: CAPTURADO (Crítico)\n→ Respuesta: is_complete=true, generar resumen y pedir confirmación. NO hacer preguntas.\n\nEJEMPLO B — Contexto parcial, conversación en curso:\nThread:\n  Usuario: \"Necesitamos exportar reportes de movimientos desde LEX\"\n  Miles: \"¿Es un requerimiento del área de Legal & Compliance?\"\n  Usuario: \"Si\"\n  Miles: \"¿Cuál es el impacto actual?\"\n  Usuario: \"Cuando nos piden información judicial no podemos responder a tiempo\"\nInventory:\n  area: CAPTURADO (\"Si\" confirma Legal & Compliance)\n  problema: CAPTURADO (no se pueden exportar reportes)\n  impacto: CAPTURADO (no pueden responder requerimientos judiciales)\n  resultado_esperado: NO CAPTURADO\n  urgencia: NO CAPTURADO\n→ Respuesta: preguntar resultado_esperado (primer faltante en orden).\n\nEJEMPLO C — Primer mensaje rico, un solo campo faltante:\nThread:\n  Usuario: \"Necesitamos acceso a la PSP nueva con: blacklist de CUITs, reporte de movimientos descargable, y reporting de CVUs creados por día. Lo teníamos en la PSP vieja.\"\nInventory:\n  area: CAPTURADO (inferido del canal)\n  problema: CAPTURADO (no tienen acceso a funcionalidades de PSP nueva)\n  impacto: CAPTURADO (perdieron capacidades operativas que tenían)\n  resultado_esperado: CAPTURADO (blacklist, reporte de movimientos, reporting CVUs)\n  urgencia: NO CAPTURADO\n→ Respuesta: preguntar ÚNICAMENTE urgencia.\n\n=== PASO 2: ACTUAR SEGÚN INTENT ===\n\n[req-new]\nAplicar inventory check del Paso 0. Preguntar SOLO los campos no capturados, de a uno por vez.\nCuando todos los campos están capturados → generar resumen, is_complete=true, confirmed=false.\nCuando el usuario confirma → confirmed=true.\nÁreas válidas: Finance & Accounting, Legal & Compliance, Management, Operations, Sales & Partnerships, Trading Desk.\n\n[req-list]\nInferir área del canal → list_area=[área exacta], list_ready=true.\n\n[req-status]\nSi mencionó REQ-N → status_issue_key=\"REQ-N\". Si no → preguntar el número.\n\n[unclear]\nDevolver next_message con las tres opciones disponibles.\n\n=== REGLAS GLOBALES ===\n- Analizá el historial COMPLETO antes de responder.\n- El primer mensaje del thread puede contener todo el contexto aunque no esté dirigido a Miles.\n- NUNCA re-preguntes lo que ya está en el historial.\n- El JSON DEBE ser 100% válido. Saltos de línea en strings: \\\\n. NUNCA uses saltos reales dentro de strings JSON.\n- Respondé ÚNICAMENTE con JSON válido, sin markdown, sin texto adicional.\n\nEstructura base:\n{\"intent\":\"[req-new|req-list|req-status|unclear]\",\"confirmed\":false,\"is_complete\":false,\"next_message\":\"[mensaje]\",\"current_step\":0,\"field_captured\":null,\"field_value\":null,\"is_valid\":true,\"next_step\":0,\"summary\":null,\"fields\":null,\"list_area\":null,\"list_ready\":false,\"status_issue_key\":null}\n\nCuando req-new is_complete=true:\n{\"intent\":\"req-new\",\"confirmed\":false,\"is_complete\":true,\"current_step\":5,\"fields\":{\"area\":\"[v]\",\"problema\":\"[v]\",\"impacto\":\"[v]\",\"resultado_esperado\":\"[v]\",\"urgencia\":\"[v]\"},\"summary\":\"[resumen]\",\"next_message\":\"Perfecto, tengo todo. Acá va el resumen:\\\\n\\\\n• Área: [v]\\\\n• Problema: [v]\\\\n• Impacto: [v]\\\\n• Resultado esperado: [v]\\\\n• Urgencia: [v]\\\\n\\\\n¿Confirmás este requerimiento?\",\"list_area\":null,\"list_ready\":false,\"status_issue_key\":null}\n\nCuando req-new confirmed=true:\n{\"intent\":\"req-new\",\"confirmed\":true,\"is_complete\":true,\"current_step\":5,\"fields\":{\"area\":\"[v]\",\"problema\":\"[v]\",\"impacto\":\"[v]\",\"resultado_esperado\":\"[v]\",\"urgencia\":\"[v]\"},\"summary\":\"[resumen]\",\"next_message\":\"Listo, estoy creando el requerimiento en Jira...\",\"list_area\":null,\"list_ready\":false,\"status_issue_key\":null}\n\nCuando req-list list_ready=true:\n{\"intent\":\"req-list\",\"is_complete\":true,\"confirmed\":false,\"current_step\":0,\"list_area\":\"[área exacta]\",\"list_ready\":true,\"next_message\":\"Consultando requerimientos de [área]...\",\"fields\":null,\"summary\":null,\"status_issue_key\":null}\n\nCuando req-status con clave identificada:\n{\"intent\":\"req-status\",\"is_complete\":true,\"confirmed\":false,\"current_step\":0,\"status_issue_key\":\"REQ-N\",\"next_message\":\"Consultando el estado de REQ-N...\",\"list_area\":null,\"list_ready\":false,\"fields\":null,\"summary\":null}` }}"
-            }
-          ]
-        },
+        "assignments": {"assignments": [{"id": "p1","name": "prompt","type": "string","value": "={{ `Sos Miles, el asistente de requerimientos de Ardua Solutions.\n\n=== CONTEXTO COMPLETO DEL THREAD ===\n${$json.messages.filter(m => m.text && m.text.trim()).map(m => (m.bot_id ? \"Miles\" : \"Usuario\") + \": \" + m.text.replace(/\\*/g, \"\")).join(\"\\n\")}\n\nÚltimo mensaje del usuario: \"${$('Extract Event Data').item.json.message_text}\"\n\nCanal de origen: ${$('Extract Event Data').item.json.channel_id}\n\nMapeo canal → área:\nC0AJ2599DA6 = Finance & Accounting\nC0AJ67HK0ES = Legal & Compliance\nC0AK2PW5BGQ = Operations\nC0AKNPCNNSU = Sales & Partnerships\nC0AJMRFP0TD = Trading Desk\nC0ARDGP8134 = Management\n\n=== PASO 0: PRE-ANÁLISIS OBLIGATORIO ===\n\nAntes de cualquier otra cosa, revisá el thread completo y hacé este inventory check campo por campo:\n\nCAMPO area:\n- ¿Podés inferirlo del canal usando el mapeo de arriba? Si sí: CAPTURADO.\n- ¿El usuario ya confirmó el área explícita o implícitamente (\"si\", \"correcto\", nombre del área)? Si sí: CAPTURADO.\n\nCAMPO problema:\n- ¿Algún mensaje del thread (aunque esté dirigido al equipo y no a Miles, aunque sea el primer mensaje) describe una situación actual, un dolor, una necesidad operativa, un módulo a construir, o una mejora? Si sí: CAPTURADO. Usá ese contenido directamente.\n- REGLA CLAVE: El primer mensaje del thread es la fuente primaria de contexto. Si describe un problema o necesidad, está CAPTURADO aunque el usuario no lo haya repetido en respuesta a Miles.\n\nCAMPO impacto:\n- ¿Algún mensaje menciona consecuencias, riesgos, limitaciones, frases como \"ya no escala\", \"no podemos\", \"genera inconsistencias\", \"riesgo de\", \"imposibilidad de\", \"no hay trazabilidad\"? Si sí: CAPTURADO.\n\nCAMPO resultado_esperado:\n- ¿Algún mensaje describe qué debería funcionar, qué módulos se necesitan, qué capacidades se quieren, cuál es el alcance de la solución? Si sí: CAPTURADO.\n\nCAMPO urgencia:\n- ¿Algún mensaje menciona Crítico, Alto, Normal, Bajo, o frases equivalentes como \"es urgente\", \"bloquea operaciones\", \"necesitamos ya\"? Si sí: CAPTURADO.\n\nREGLA DE CONTINUIDAD — CRÍTICA:\nSi Miles ya preguntó un campo en un mensaje anterior Y el usuario respondió en el siguiente → CAPTURADO, sin excepción. No importa si la respuesta fue \"Si\", \"correcto\", el valor directo, o una frase que lo implica. No re-preguntes ese campo.\n\nDESPUÉS del inventory:\n- 5/5 capturados → generá el resumen directamente, is_complete=true, confirmed=false\n- 4/5 capturados → preguntá ÚNICAMENTE el campo faltante\n- 3/5 o menos → preguntá el primer campo faltante en orden: area → problema → impacto → resultado_esperado → urgencia\n\n=== PASO 1: DETERMINAR INTENT ===\n\nReglas de prioridad (evaluá en orden estricto):\n1. ¿El último mensaje menciona REQ-N (ej: REQ-12)? → intent=\"req-status\" SIEMPRE\n2. ¿El último mensaje contiene \"ver\", \"listar\", \"mostrar\", \"cuáles son\", \"qué tickets\", \"mis requerimientos\", \"listado\"? → intent=\"req-list\" SIEMPRE\n3. ¿El thread ya tiene un intent establecido (Miles en medio de req-new)? → continuá ese intent\n4. ¿Algún mensaje del thread describe un problema, necesidad o mejora? → intent=\"req-new\"\n5. Si ninguna aplica → intent=\"unclear\"\n\n=== EJEMPLOS FEW-SHOT ===\n\nEJEMPLO A — Primer mensaje con todo el contexto:\nThread:\n  Usuario: \"Necesitamos establecer un sistema de alertas AML. El monitoreo se hace manualmente, no hay trazabilidad. Reguladores exigen registro completo. Necesitamos que LEX genere alertas automáticas en Slack. Urgencia: Crítico\"\nInventory:\n  area: CAPTURADO (canal = Legal & Compliance)\n  problema: CAPTURADO (monitoreo manual sin trazabilidad)\n  impacto: CAPTURADO (incumplimiento regulatorio)\n  resultado_esperado: CAPTURADO (alertas automáticas desde LEX a Slack)\n  urgencia: CAPTURADO (Crítico)\n→ Respuesta: is_complete=true, generar resumen y pedir confirmación. NO hacer preguntas.\n\nEJEMPLO B — Contexto parcial, conversación en curso:\nThread:\n  Usuario: \"Necesitamos exportar reportes de movimientos desde LEX\"\n  Miles: \"¿Es un requerimiento del área de Legal & Compliance?\"\n  Usuario: \"Si\"\n  Miles: \"¿Cuál es el impacto actual?\"\n  Usuario: \"Cuando nos piden información judicial no podemos responder a tiempo\"\nInventory:\n  area: CAPTURADO (\"Si\" confirma Legal & Compliance)\n  problema: CAPTURADO (no se pueden exportar reportes)\n  impacto: CAPTURADO (no pueden responder requerimientos judiciales)\n  resultado_esperado: NO CAPTURADO\n  urgencia: NO CAPTURADO\n→ Respuesta: preguntar resultado_esperado (primer faltante en orden).\n\nEJEMPLO C — Primer mensaje rico, un solo campo faltante:\nThread:\n  Usuario: \"Necesitamos acceso a la PSP nueva con: blacklist de CUITs, reporte de movimientos descargable, y reporting de CVUs creados por día. Lo teníamos en la PSP vieja.\"\nInventory:\n  area: CAPTURADO (inferido del canal)\n  problema: CAPTURADO (no tienen acceso a funcionalidades de PSP nueva)\n  impacto: CAPTURADO (perdieron capacidades operativas que tenían)\n  resultado_esperado: CAPTURADO (blacklist, reporte de movimientos, reporting CVUs)\n  urgencia: NO CAPTURADO\n→ Respuesta: preguntar ÚNICAMENTE urgencia.\n\n=== PASO 2: ACTUAR SEGÚN INTENT ===\n\n[req-new]\nAplicar inventory check del Paso 0. Preguntar SOLO los campos no capturados, de a uno por vez.\nCuando todos los campos están capturados → generar resumen, is_complete=true, confirmed=false.\nCuando el usuario confirma → confirmed=true.\nÁreas válidas: Finance & Accounting, Legal & Compliance, Management, Operations, Sales & Partnerships, Trading Desk.\n\n[req-list]\nInferir área del canal → list_area=[área exacta], list_ready=true.\n\n[req-status]\nSi mencionó REQ-N → status_issue_key=\"REQ-N\". Si no → preguntar el número.\n\n[unclear]\nDevolver next_message con las tres opciones disponibles.\n\n=== REGLAS GLOBALES ===\n- Analizá el historial COMPLETO antes de responder.\n- El primer mensaje del thread puede contener todo el contexto aunque no esté dirigido a Miles.\n- NUNCA re-preguntes lo que ya está en el historial.\n- El JSON DEBE ser 100% válido. Saltos de línea en strings: \\\\n. NUNCA uses saltos reales dentro de strings JSON.\n- Respondé ÚNICAMENTE con JSON válido, sin markdown, sin texto adicional.\n\nEstructura base:\n{\"intent\":\"[req-new|req-list|req-status|unclear]\",\"confirmed\":false,\"is_complete\":false,\"next_message\":\"[mensaje]\",\"current_step\":0,\"field_captured\":null,\"field_value\":null,\"is_valid\":true,\"next_step\":0,\"summary\":null,\"fields\":null,\"list_area\":null,\"list_ready\":false,\"status_issue_key\":null}\n\nCuando req-new is_complete=true:\n{\"intent\":\"req-new\",\"confirmed\":false,\"is_complete\":true,\"current_step\":5,\"fields\":{\"area\":\"[v]\",\"problema\":\"[v]\",\"impacto\":\"[v]\",\"resultado_esperado\":\"[v]\",\"urgencia\":\"[v]\"},\"summary\":\"[resumen]\",\"next_message\":\"Perfecto, tengo todo. Acá va el resumen:\\\\n\\\\n• Área: [v]\\\\n• Problema: [v]\\\\n• Impacto: [v]\\\\n• Resultado esperado: [v]\\\\n• Urgencia: [v]\\\\n\\\\n¿Confirmás este requerimiento?\",\"list_area\":null,\"list_ready\":false,\"status_issue_key\":null}\n\nCuando req-new confirmed=true:\n{\"intent\":\"req-new\",\"confirmed\":true,\"is_complete\":true,\"current_step\":5,\"fields\":{\"area\":\"[v]\",\"problema\":\"[v]\",\"impacto\":\"[v]\",\"resultado_esperado\":\"[v]\",\"urgencia\":\"[v]\"},\"summary\":\"[resumen]\",\"next_message\":\"Listo, estoy creando el requerimiento en Jira...\",\"list_area\":null,\"list_ready\":false,\"status_issue_key\":null}\n\nCuando req-list list_ready=true:\n{\"intent\":\"req-list\",\"is_complete\":true,\"confirmed\":false,\"current_step\":0,\"list_area\":\"[área exacta]\",\"list_ready\":true,\"next_message\":\"Consultando requerimientos de [área]...\",\"fields\":null,\"summary\":null,\"status_issue_key\":null}\n\nCuando req-status con clave identificada:\n{\"intent\":\"req-status\",\"is_complete\":true,\"confirmed\":false,\"current_step\":0,\"status_issue_key\":\"REQ-N\",\"next_message\":\"Consultando el estado de REQ-N...\",\"list_area\":null,\"list_ready\":false,\"fields\":null,\"summary\":null}` }}"}]},
         "options": {}
       },
-      "id": "f5c82279-4e32-4534-bcd4-f791955dcd06",
+      "id": "932c0db0-84c9-48a1-87c8-7b9903b6a84e",
       "name": "Build Prompt with History",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [-1952, 1072]
+      "position": [368, 1984]
     },
     {
-      "parameters": {
-        "jsCode": "const msg = ($('Extract Event Data').item.json.message_text || '').toLowerCase().trim();\n\nconst channelMap = {\n  'C0AJ2599DA6': 'Finance & Accounting',\n  'C0AJ67HK0ES': 'Legal & Compliance',\n  'C0AK2PW5BGQ': 'Operations',\n  'C0AKNPCNNSU': 'Sales & Partnerships',\n  'C0AJMRFP0TD': 'Trading Desk',\n  'C0ARDGP8134': 'Management'\n};\nconst channelId = $('Extract Event Data').item.json.channel_id || '';\nconst area = channelMap[channelId] || '';\n\n// === FAST PATH: Confirmation detection ===\nconst threadMessages = (() => {\n  try { return $('Fetch Thread History').item.json.messages || []; }\n  catch(e) { return []; }\n})();\n\nconst botMessages = threadMessages.filter(m => m.bot_id);\nconst lastBotMsg = botMessages.length > 0 ? botMessages[botMessages.length - 1] : null;\nconst isConfirmationPending = lastBotMsg &&\n  (lastBotMsg.text || '').includes('este requerimiento');\nconst isAffirmative = /^(s[ií]|ok|dale|confirmo|correcto|listo|yes|sip|sep|afirmativo|claro)\\s*[.!?,]*\\s*$/i.test(msg);\n\nif (isConfirmationPending && isAffirmative) {\n  const summaryText = lastBotMsg.text || '';\n  const extract = (label) => {\n    const re = new RegExp('[•\\\\-]\\\\s*' + label + ':\\\\s*(.+)', 'i');\n    const m = summaryText.match(re);\n    return m ? m[1].trim() : '';\n  };\n\n  return [{ json: {\n    ...$input.item.json,\n    fast_intent: 'req-confirm',\n    fast_issue_key: '',\n    fast_area: area,\n    confirm_area: extract('Área') || extract('Area'),\n    confirm_problema: extract('Problema'),\n    confirm_impacto: extract('Impacto'),\n    confirm_resultado: extract('Resultado esperado'),\n    confirm_urgencia: extract('Urgencia')\n  }}];\n}\n\n// === FAST PATH: req-status ===\nconst reqMatch = msg.match(/\\breq-(\\d+)\\b/i);\nif (reqMatch) {\n  return [{ json: { ...$input.item.json, fast_intent: 'req-status', fast_issue_key: 'REQ-' + reqMatch[1], fast_area: area } }];\n}\n\n// === FAST PATH: req-list ===\nif (/\\b(ver|listar|mostrar|listado)\\b/.test(msg) || /mis requerimientos|requerimientos del.rea|qu[eé] tickets|cu[aá]les son/.test(msg)) {\n  return [{ json: { ...$input.item.json, fast_intent: 'req-list', fast_issue_key: '', fast_area: area } }];\n}\n\nreturn [{ json: { ...$input.item.json, fast_intent: '', fast_issue_key: '', fast_area: area } }];"
-      },
-      "id": "35afb3e9-9488-4d53-b9c6-b93a8c43b398",
+      "parameters": {"jsCode": "const msg = ($('Extract Event Data').item.json.message_text || '').toLowerCase().trim();\n\nconst channelMap = {\n  'C0AJ2599DA6': 'Finance & Accounting',\n  'C0AJ67HK0ES': 'Legal & Compliance',\n  'C0AK2PW5BGQ': 'Operations',\n  'C0AKNPCNNSU': 'Sales & Partnerships',\n  'C0AJMRFP0TD': 'Trading Desk',\n  'C0ARDGP8134': 'Management'\n};\nconst channelId = $('Extract Event Data').item.json.channel_id || '';\nconst area = channelMap[channelId] || '';\n\nconst threadMessages = (() => {\n  try { return $('Fetch Thread History').item.json.messages || []; }\n  catch(e) { return []; }\n})();\n\nconst botMessages = threadMessages.filter(m => m.bot_id);\nconst lastBotMsg = botMessages.length > 0 ? botMessages[botMessages.length - 1] : null;\nconst isConfirmationPending = lastBotMsg && (lastBotMsg.text || '').includes('este requerimiento');\nconst isAffirmative = /^(s[ií]|ok|dale|confirmo|correcto|listo|yes|sip|sep|afirmativo|claro)\\s*[.!?,]*\\s*$/i.test(msg);\n\nif (isConfirmationPending && isAffirmative) {\n  const summaryText = lastBotMsg.text || '';\n  const extract = (label) => {\n    const re = new RegExp('[•\\\\-]\\\\s*' + label + ':\\\\s*(.+)', 'i');\n    const m = summaryText.match(re);\n    return m ? m[1].trim() : '';\n  };\n  return [{ json: { ...$input.item.json, fast_intent: 'req-confirm', fast_issue_key: '', fast_area: area, confirm_area: extract('Área') || extract('Area'), confirm_problema: extract('Problema'), confirm_impacto: extract('Impacto'), confirm_resultado: extract('Resultado esperado'), confirm_urgencia: extract('Urgencia') }}];\n}\n\nconst reqMatch = msg.match(/\\breq-(\\d+)\\b/i);\nif (reqMatch) return [{ json: { ...$input.item.json, fast_intent: 'req-status', fast_issue_key: 'REQ-' + reqMatch[1], fast_area: area } }];\n\nif (/\\b(ver|listar|mostrar|listado)\\b/.test(msg) || /mis requerimientos|requerimientos del.rea|qu[eé] tickets|cu[aá]les son/.test(msg)) {\n  return [{ json: { ...$input.item.json, fast_intent: 'req-list', fast_issue_key: '', fast_area: area } }];\n}\n\nreturn [{ json: { ...$input.item.json, fast_intent: '', fast_issue_key: '', fast_area: area } }];"},
+      "id": "033b8d91-0ff6-40ee-b776-e05a5915136e",
       "name": "Detect Intent",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-1712, 1072]
+      "position": [608, 1984]
     },
     {
-      "parameters": { "promptType": "define", "text": "={{ $json.prompt }}" },
-      "id": "d939c397-5af4-4b0e-a87b-b2ea0f5df526",
+      "parameters": {"promptType": "define","text": "={{ $json.prompt }}"},
+      "id": "f00e6bea-15a1-4cb8-beb2-fa445725e6f1",
       "name": "LLM Chain — Process Step",
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.4,
-      "position": [-1472, 1072]
+      "position": [848, 1984]
     },
     {
-      "parameters": { "model": "llama-3.3-70b-versatile", "options": { "temperature": 0.3 } },
-      "id": "9a718d48-9a13-4533-b85e-c3c678604def",
+      "parameters": {"model": "llama-3.3-70b-versatile","options": {"temperature": 0.3}},
+      "id": "6084ece8-4404-4d5a-9529-9819a5c12396",
       "name": "Groq — Llama 3.3 70B",
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
-      "position": [-1472, 1264],
-      "credentials": { "groqApi": { "id": "qHxYgDy2Guy89SQR", "name": "Groq API — Miles" } }
+      "position": [848, 2176],
+      "credentials": {"groqApi": {"id": "qHxYgDy2Guy89SQR","name": "Groq API — Miles"}}
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
-            { "id": "r1",  "name": "next_message",     "type": "string",  "value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; if(fi==='req-confirm') return 'Listo, estoy creando el requerimiento en Jira...'; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); return JSON.parse(t).next_message; } catch(e) { const m=$json.text.match(/\"next_message\"\\s*:\\s*\"([\\s\\S]*?)\"\\s*(?:,\\s*\"|[}\\s])/); if(m) return m[1].replace(/\\\\n/g,'\\n'); return $json.text; } })() }}" },
-            { "id": "r2",  "name": "confirmed",        "type": "boolean", "value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; if(fi==='req-confirm') return true; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); return JSON.parse(t).confirmed===true; } catch(e) { return false; } })() }}" },
-            { "id": "r3",  "name": "summary",          "type": "string",  "value": "={{ (() => { try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); return JSON.parse(t).summary||''; } catch(e) { return ''; } })() }}" },
-            { "id": "r4",  "name": "captured_area",    "type": "string",  "value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; if(fi==='req-confirm') return $('Detect Intent').item.json.confirm_area||''; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); const p=JSON.parse(t); return (p.fields&&p.fields.area)||''; } catch(e) { return ''; } })() }}" },
-            { "id": "r5",  "name": "captured_problema","type": "string",  "value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; if(fi==='req-confirm') return $('Detect Intent').item.json.confirm_problema||''; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); const p=JSON.parse(t); return (p.fields&&p.fields.problema)||''; } catch(e) { return ''; } })() }}" },
-            { "id": "r6",  "name": "captured_impacto", "type": "string",  "value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; if(fi==='req-confirm') return $('Detect Intent').item.json.confirm_impacto||''; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); const p=JSON.parse(t); return (p.fields&&p.fields.impacto)||''; } catch(e) { return ''; } })() }}" },
-            { "id": "r7",  "name": "captured_resultado","type": "string", "value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; if(fi==='req-confirm') return $('Detect Intent').item.json.confirm_resultado||''; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); const p=JSON.parse(t); return (p.fields&&p.fields.resultado_esperado)||''; } catch(e) { return ''; } })() }}" },
-            { "id": "r8",  "name": "captured_urgencia","type": "string",  "value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; if(fi==='req-confirm') return $('Detect Intent').item.json.confirm_urgencia||''; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); const p=JSON.parse(t); return (p.fields&&p.fields.urgencia)||''; } catch(e) { return ''; } })() }}" },
-            { "id": "r9",  "name": "intent",           "type": "string",  "value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; if(fi==='req-confirm') return 'req-new'; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); return JSON.parse(t).intent||'unclear'; } catch(e) { return 'unclear'; } })() }}" },
-            { "id": "r10", "name": "list_area",        "type": "string",  "value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; if(fi==='req-list') return $('Detect Intent').item.json.fast_area||''; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); return JSON.parse(t).list_area||''; } catch(e) { return ''; } })() }}" },
-            { "id": "r11", "name": "list_ready",       "type": "boolean", "value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; if(fi==='req-list') return true; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); return JSON.parse(t).list_ready===true; } catch(e) { return false; } })() }}" },
-            { "id": "r12", "name": "status_issue_key", "type": "string",  "value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; const fk=$('Detect Intent').item.json.fast_issue_key||''; if(fi==='req-status'&&fk) return fk; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); return JSON.parse(t).status_issue_key||''; } catch(e) { return ''; } })() }}" },
-            { "id": "r13", "name": "route",            "type": "string",  "value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; const fk=($('Detect Intent').item.json.fast_issue_key||'').trim(); if(fi==='req-confirm') return 'create-req'; if(fi==='req-list') return 'list-req'; if(fi==='req-status'&&fk) return 'status-req'; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); const p=JSON.parse(t); const i=p.intent||''; const c=p.confirmed===true; const lr=p.list_ready===true; const sk=(p.status_issue_key||'').trim(); if(i==='req-new'&&c) return 'create-req'; if(i==='req-list'&&lr) return 'list-req'; if(i==='req-status'&&sk) return 'status-req'; return 'next-msg'; } catch(e) { return 'next-msg'; } })() }}" }
-          ]
-        },
+        "assignments": {"assignments": [
+          {"id": "r1","name": "next_message","type": "string","value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; if(fi==='req-confirm') return 'Listo, estoy creando el requerimiento en Jira...'; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); return JSON.parse(t).next_message; } catch(e) { const m=$json.text.match(/\"next_message\"\\s*:\\s*\"([\\s\\S]*?)\"\\s*(?:,\\s*\"|[}\\s])/); if(m) return m[1].replace(/\\\\n/g,'\\n'); return $json.text; } })() }}"},
+          {"id": "r2","name": "confirmed","type": "boolean","value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; if(fi==='req-confirm') return true; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); return JSON.parse(t).confirmed===true; } catch(e) { return false; } })() }}"},
+          {"id": "r3","name": "summary","type": "string","value": "={{ (() => { try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); return JSON.parse(t).summary||''; } catch(e) { return ''; } })() }}"},
+          {"id": "r4","name": "captured_area","type": "string","value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; if(fi==='req-confirm') return $('Detect Intent').item.json.confirm_area||''; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); const p=JSON.parse(t); return (p.fields&&p.fields.area)||''; } catch(e) { return ''; } })() }}"},
+          {"id": "r5","name": "captured_problema","type": "string","value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; if(fi==='req-confirm') return $('Detect Intent').item.json.confirm_problema||''; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); const p=JSON.parse(t); return (p.fields&&p.fields.problema)||''; } catch(e) { return ''; } })() }}"},
+          {"id": "r6","name": "captured_impacto","type": "string","value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; if(fi==='req-confirm') return $('Detect Intent').item.json.confirm_impacto||''; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); const p=JSON.parse(t); return (p.fields&&p.fields.impacto)||''; } catch(e) { return ''; } })() }}"},
+          {"id": "r7","name": "captured_resultado","type": "string","value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; if(fi==='req-confirm') return $('Detect Intent').item.json.confirm_resultado||''; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); const p=JSON.parse(t); return (p.fields&&p.fields.resultado_esperado)||''; } catch(e) { return ''; } })() }}"},
+          {"id": "r8","name": "captured_urgencia","type": "string","value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; if(fi==='req-confirm') return $('Detect Intent').item.json.confirm_urgencia||''; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); const p=JSON.parse(t); return (p.fields&&p.fields.urgencia)||''; } catch(e) { return ''; } })() }}"},
+          {"id": "r9","name": "intent","type": "string","value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; if(fi==='req-confirm') return 'req-new'; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); return JSON.parse(t).intent||'unclear'; } catch(e) { return 'unclear'; } })() }}"},
+          {"id": "r10","name": "list_area","type": "string","value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; if(fi==='req-list') return $('Detect Intent').item.json.fast_area||''; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); return JSON.parse(t).list_area||''; } catch(e) { return ''; } })() }}"},
+          {"id": "r11","name": "list_ready","type": "boolean","value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; if(fi==='req-list') return true; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); return JSON.parse(t).list_ready===true; } catch(e) { return false; } })() }}"},
+          {"id": "r12","name": "status_issue_key","type": "string","value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; const fk=$('Detect Intent').item.json.fast_issue_key||''; if(fi==='req-status'&&fk) return fk; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); return JSON.parse(t).status_issue_key||''; } catch(e) { return ''; } })() }}"},
+          {"id": "r13","name": "route","type": "string","value": "={{ (() => { const fi=$('Detect Intent').item.json.fast_intent||''; const fk=($('Detect Intent').item.json.fast_issue_key||'').trim(); if(fi==='req-confirm') return 'create-req'; if(fi==='req-list') return 'list-req'; if(fi==='req-status'&&fk) return 'status-req'; try { const t=$json.text.replace(/```json\\n?/g,'').replace(/```/g,'').trim(); const p=JSON.parse(t); const i=p.intent||''; const c=p.confirmed===true; const lr=p.list_ready===true; const sk=(p.status_issue_key||'').trim(); if(i==='req-new'&&c) return 'create-req'; if(i==='req-list'&&lr) return 'list-req'; if(i==='req-status'&&sk) return 'status-req'; return 'next-msg'; } catch(e) { return 'next-msg'; } })() }}"}
+        ]},
         "options": {}
       },
-      "id": "a0ec07e5-5e79-4e6c-a092-34eb666a8a0c",
+      "id": "48c2e64d-01e6-435a-afd1-692825e66f2c",
       "name": "Parse AI Response",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [-1232, 1072]
+      "position": [1088, 1984]
     },
     {
-      "parameters": {
-        "dataType": "string",
-        "value1": "={{ $json.route }}",
-        "rules": { "rules": [{ "value2": "create-req" }, { "value2": "list-req", "output": 1 }, { "value2": "status-req", "output": 2 }] },
-        "fallbackOutput": 3
-      },
-      "id": "d1b2729d-00c6-4e92-851a-4c1501419d49",
+      "parameters": {"dataType": "string","value1": "={{ $json.route }}","rules": {"rules": [{"value2": "create-req"},{"value2": "list-req","output": 1},{"value2": "status-req","output": 2}]},"fallbackOutput": 3},
+      "id": "31f6ba58-f45f-4d1f-815c-0791fce97a6c",
       "name": "Switch — Intent Router",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 1,
-      "position": [-992, 1040]
+      "position": [1328, 1952]
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
-            { "id": "j1", "name": "jira_summary",      "type": "string", "value": "={{ (() => { const a=$('Parse AI Response').item.json.captured_area||''; const p=($('Parse AI Response').item.json.captured_problema||$('Parse AI Response').item.json.summary||'').replace(/\\n/g,' ').replace(/\\r/g,'').trim(); const raw='[Miles] '+(a?a+' — ':'')+p; return raw.length>150 ? raw.substring(0,raw.lastIndexOf(' ',150))+'…' : raw; })() }}" },
-            { "id": "j2", "name": "business_area_id",  "type": "string", "value": "={{ (() => { const a=$('Parse AI Response').item.json.captured_area||''; const m={'Finance & Accounting':'10020','Legal & Compliance':'10021','Operations':'10022','Sales & Partnerships':'10023','Sales':'10023','Trading Desk':'10024','Products':'10062','Management':'10095'}; return m[a]||''; })() }}" },
-            { "id": "j3", "name": "priority_id",       "type": "string", "value": "={{ (() => { const u=($('Parse AI Response').item.json.captured_urgencia||'').toLowerCase(); if(u.includes('critico')||u.includes('crítico')) return '1'; if(u.includes('alto')) return '2'; if(u.includes('bajo')) return '4'; return '3'; })() }}" },
-            { "id": "j4", "name": "thread_url",        "type": "string", "value": "={{ 'https://arduasolutions.slack.com/archives/'+$('Extract Event Data').item.json.channel_id+'/p'+$('Extract Event Data').item.json.thread_ts.replace('.','') }}" },
-            { "id": "j5", "name": "target_channel_id", "type": "string", "value": "={{ (() => { const a=$('Parse AI Response').item.json.captured_area||''; const m={'Finance & Accounting':'C0AJ2599DA6','Legal & Compliance':'C0AJ67HK0ES','Operations':'C0AK2PW5BGQ','Sales':'C0AKNPCNNSU','Sales & Partnerships':'C0AKNPCNNSU','Trading Desk':'C0AJMRFP0TD','Products':'C0AQAARNP1Q','Management':'C0ARDGP8134'}; return m[a]||'C0AQAARNP1Q'; })() }}" }
-          ]
-        },
+        "assignments": {"assignments": [
+          {"id": "j1","name": "jira_summary","type": "string","value": "={{ (() => { const a=$('Parse AI Response').item.json.captured_area||''; const p=($('Parse AI Response').item.json.captured_problema||$('Parse AI Response').item.json.summary||'').replace(/\\n/g,' ').replace(/\\r/g,'').trim(); const raw='[Miles] '+(a?a+' — ':'')+p; return raw.length>150?raw.substring(0,raw.lastIndexOf(' ',150))+'…':raw; })() }}"},
+          {"id": "j2","name": "business_area_id","type": "string","value": "={{ (() => { const a=$('Parse AI Response').item.json.captured_area||''; const m={'Finance & Accounting':'10020','Legal & Compliance':'10021','Operations':'10022','Sales & Partnerships':'10023','Sales':'10023','Trading Desk':'10024','Products':'10062','Management':'10095'}; return m[a]||''; })() }}"},
+          {"id": "j3","name": "priority_id","type": "string","value": "={{ (() => { const u=($('Parse AI Response').item.json.captured_urgencia||'').toLowerCase(); if(u.includes('critico')||u.includes('crítico')) return '1'; if(u.includes('alto')) return '2'; if(u.includes('bajo')) return '4'; return '3'; })() }}"},
+          {"id": "j4","name": "thread_url","type": "string","value": "={{ 'https://arduasolutions.slack.com/archives/'+$('Extract Event Data').item.json.channel_id+'/p'+$('Extract Event Data').item.json.thread_ts.replace('.','') }}"},
+          {"id": "j5","name": "target_channel_id","type": "string","value": "={{ (() => { const a=$('Parse AI Response').item.json.captured_area||''; const m={'Finance & Accounting':'C0AJ2599DA6','Legal & Compliance':'C0AJ67HK0ES','Operations':'C0AK2PW5BGQ','Sales':'C0AKNPCNNSU','Sales & Partnerships':'C0AKNPCNNSU','Trading Desk':'C0AJMRFP0TD','Products':'C0AQAARNP1Q','Management':'C0ARDGP8134'}; return m[a]||'C0AQAARNP1Q'; })() }}"}
+        ]},
         "options": {}
       },
-      "id": "e9455562-59dd-450b-9992-2eb190e7c8e4",
+      "id": "e8127c12-1fa2-499c-86be-f582380bfa52",
       "name": "Build Jira Payload",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [-992, 816]
+      "position": [1328, 1728]
     },
     {
       "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
-          "conditions": [
-            { "id": "cond-has-problema", "leftValue": "={{ $('Parse AI Response').item.json.captured_problema }}", "rightValue": "", "operator": { "type": "string", "operation": "notEmpty" } },
-            { "id": "cond-has-area",     "leftValue": "={{ $('Parse AI Response').item.json.captured_area }}",    "rightValue": "", "operator": { "type": "string", "operation": "notEmpty" } }
-          ],
-          "combinator": "and"
-        },
+        "conditions": {"options": {"caseSensitive": false,"leftValue": "","typeValidation": "loose"},"conditions": [{"id": "cond-has-problema","leftValue": "={{ $('Parse AI Response').item.json.captured_problema }}","rightValue": "","operator": {"type": "string","operation": "notEmpty"}},{"id": "cond-has-area","leftValue": "={{ $('Parse AI Response').item.json.captured_area }}","rightValue": "","operator": {"type": "string","operation": "notEmpty"}}],"combinator": "and"},
         "options": {}
       },
-      "id": "1f8e6009-02a1-4dfa-84e3-cccc1592c503",
+      "id": "c7685658-c9cf-4129-ac33-8d79ed5734f7",
       "name": "Has Minimum Context?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [-1088, 480]
+      "position": [1232, 1392]
     },
     {
-      "parameters": {
-        "jsCode": "const isClaude = (() => {\n  try { return $('Parse Claude Message').item !== undefined; } catch(e) { return false; }\n})();\n\nlet bp, pr;\n\nif (isClaude) {\n  pr = $('Parse Claude Message').first().json;\n  bp = {\n    jira_summary:     pr.jira_summary,\n    business_area_id: pr.business_area_id,\n    priority_id:      pr.priority_id,\n    thread_url:       pr.thread_url\n  };\n} else {\n  bp = $('Build Jira Payload').first().json;\n  pr = $('Parse AI Response').first().json;\n}\n\nconst clean = (s) => (s || '').replace(/\\n/g, ' ').replace(/\\r/g, '').replace(/\\t/g, ' ').trim() || '-';\n\nconst desc = {\n  type: 'doc', version: 1,\n  content: [\n    { type: 'paragraph', content: [{ type: 'text', text: 'Capturado por Miles via Slack', marks: [{ type: 'em' }] }] },\n    { type: 'paragraph', content: [{ type: 'text', text: '\\uD83D\\uDD17 Ver hilo en Slack', marks: [{ type: 'link', attrs: { href: bp.thread_url } }] }] },\n    { type: 'rule' },\n    { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Problema' }] },\n    { type: 'paragraph', content: [{ type: 'text', text: clean(pr.captured_problema) }] },\n    { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Impacto' }] },\n    { type: 'paragraph', content: [{ type: 'text', text: clean(pr.captured_impacto) }] },\n    { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Resultado esperado' }] },\n    { type: 'paragraph', content: [{ type: 'text', text: clean(pr.captured_resultado) }] },\n    { type: 'rule' },\n    { type: 'paragraph', content: [{ type: 'text', text: 'Urgencia: ' + clean(pr.captured_urgencia) }] }\n  ]\n};\n\nconst fields = {\n  project:    { key: 'REQ' },\n  issuetype:  { name: 'Requirement' },\n  summary:    bp.jira_summary,\n  priority:   { id: bp.priority_id || '3' },\n  customfield_10171: { id: '10026' },\n  description: desc\n};\n\nif (bp.business_area_id) {\n  fields.customfield_10170 = { id: bp.business_area_id };\n}\n\nreturn [{ json: { jira_body: JSON.stringify({ fields }) } }];"
-      },
-      "id": "dea207d6-c1a6-4c22-b9f4-6a23f8a87e4b",
+      "parameters": {"jsCode": "const isClaude = (() => {\n  try { return $('Parse Claude Message').item !== undefined; } catch(e) { return false; }\n})();\n\nlet bp, pr;\n\nif (isClaude) {\n  pr = $('Parse Claude Message').first().json;\n  bp = { jira_summary: pr.jira_summary, business_area_id: pr.business_area_id, priority_id: pr.priority_id, thread_url: pr.thread_url };\n} else {\n  bp = $('Build Jira Payload').first().json;\n  pr = $('Parse AI Response').first().json;\n}\n\nconst clean = (s) => (s || '').replace(/\\n/g, ' ').replace(/\\r/g, '').replace(/\\t/g, ' ').trim() || '-';\n\nconst desc = {\n  type: 'doc', version: 1,\n  content: [\n    { type: 'paragraph', content: [{ type: 'text', text: 'Capturado por Miles via Slack', marks: [{ type: 'em' }] }] },\n    { type: 'paragraph', content: [{ type: 'text', text: '🔗 Ver hilo en Slack', marks: [{ type: 'link', attrs: { href: bp.thread_url } }] }] },\n    { type: 'rule' },\n    { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Problema' }] },\n    { type: 'paragraph', content: [{ type: 'text', text: clean(pr.captured_problema) }] },\n    { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Impacto' }] },\n    { type: 'paragraph', content: [{ type: 'text', text: clean(pr.captured_impacto) }] },\n    { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Resultado esperado' }] },\n    { type: 'paragraph', content: [{ type: 'text', text: clean(pr.captured_resultado) }] },\n    { type: 'rule' },\n    { type: 'paragraph', content: [{ type: 'text', text: 'Urgencia: ' + clean(pr.captured_urgencia) }] }\n  ]\n};\n\nconst fields = { project: { key: 'REQ' }, issuetype: { name: 'Requirement' }, summary: bp.jira_summary, priority: { id: bp.priority_id || '3' }, customfield_10171: { id: '10026' }, description: desc };\n\nif (bp.business_area_id) fields.customfield_10170 = { id: bp.business_area_id };\n\nreturn [{ json: { jira_body: JSON.stringify({ fields }) } }];"},
+      "id": "4625ff93-08d0-49a4-b98b-c35f5120bb65",
       "name": "Code — Build Jira Body",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-752, 560]
+      "position": [1568, 1472]
     },
     {
-      "parameters": {
-        "method": "POST",
-        "url": "https://arduasolutions.atlassian.net/rest/api/3/issue",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpBasicAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ $json.jira_body }}",
-        "options": {}
-      },
-      "id": "f109625c-92d1-4fdb-a539-d87fa8f2a2cb",
+      "parameters": {"method": "POST","url": "https://arduasolutions.atlassian.net/rest/api/3/issue","authentication": "genericCredentialType","genericAuthType": "httpBasicAuth","sendBody": true,"specifyBody": "json","jsonBody": "={{ $json.jira_body }}","options": {}},
+      "id": "79498784-1c29-40dc-888e-764c6a6aec72",
       "name": "Create REQ in Jira",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-512, 560],
-      "credentials": { "httpBasicAuth": { "id": "S3p1Xv6Sya0RMRAH", "name": "Atlassian API — Miles" } }
+      "position": [1808, 1472],
+      "credentials": {"httpBasicAuth": {"id": "S3p1Xv6Sya0RMRAH","name": "Atlassian API — Miles"}}
     },
     {
-      "parameters": {
-        "method": "POST",
-        "url": "https://slack.com/api/chat.postMessage",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channel: $('Extract Event Data').item.json.channel_id, thread_ts: $('Extract Event Data').item.json.thread_ts, text: '🎉 Requerimiento creado exitosamente!\\n\\n*Ticket:* ' + $json.key + '\\n*Link:* https://arduasolutions.atlassian.net/browse/' + $json.key + '\\n\\n📎 Podés sumar _documentos, capturas, links o consideraciones adicionales_ directamente en este hilo — todo ese contexto será tenido en cuenta durante el proceso de refinamiento del requerimiento por parte del equipo de Producto.\\n\\nCuando el requerimiento esté listo para desarrollo, te avisaré por acá.', mrkdwn: true }) }}",
-        "options": {}
-      },
-      "id": "c64ba2c9-2c50-4914-8284-28a4c5e12a0a",
+      "parameters": {"method": "POST","url": "https://slack.com/api/chat.postMessage","authentication": "genericCredentialType","genericAuthType": "httpHeaderAuth","sendBody": true,"specifyBody": "json","jsonBody": "={{ JSON.stringify({ channel: $('Extract Event Data').item.json.channel_id, thread_ts: $('Extract Event Data').item.json.thread_ts, text: '🎉 Requerimiento creado exitosamente!\\n\\n*Ticket:* ' + $json.key + '\\n*Link:* https://arduasolutions.atlassian.net/browse/' + $json.key + '\\n\\n📎 Podés sumar _documentos, capturas, links o consideraciones adicionales_ directamente en este hilo — todo ese contexto será tenido en cuenta durante el proceso de refinamiento del requerimiento por parte del equipo de Producto.\\n\\nCuando el requerimiento esté listo para desarrollo, te avisaré por acá.', mrkdwn: true }) }}","options": {}},
+      "id": "8809cc4d-2fdf-4c70-a263-ab7d90e2ae10",
       "name": "Post Success to Thread",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-272, 560],
-      "credentials": { "httpHeaderAuth": { "id": "MX2QZHGzOYBtt41s", "name": "Slack Bot Token — Miles" } }
+      "position": [2048, 1472],
+      "credentials": {"httpHeaderAuth": {"id": "MX2QZHGzOYBtt41s","name": "Slack Bot Token — Miles"}}
     },
     {
-      "parameters": {
-        "method": "POST",
-        "url": "https://slack.com/api/chat.postMessage",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channel: $('Extract Event Data').item.json.channel_id, thread_ts: $('Extract Event Data').item.json.thread_ts, text: 'Hmm, parece que no tengo suficiente información para crear el requerimiento. ¿Podés contarme cuál es el problema o la necesidad? 😊', mrkdwn: true }) }}",
-        "options": {}
-      },
-      "id": "3d00be29-e69d-4c1a-abec-16085e643020",
+      "parameters": {"method": "POST","url": "https://slack.com/api/chat.postMessage","authentication": "genericCredentialType","genericAuthType": "httpHeaderAuth","sendBody": true,"specifyBody": "json","jsonBody": "={{ JSON.stringify({ channel: $('Extract Event Data').item.json.channel_id, thread_ts: $('Extract Event Data').item.json.thread_ts, text: 'Hmm, parece que no tengo suficiente información para crear el requerimiento. ¿Podés contarme cuál es el problema o la necesidad? 😊', mrkdwn: true }) }}","options": {}},
+      "id": "d8d8e90c-4df2-4710-a610-db26aa1192f6",
       "name": "Post — Context Missing",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-752, 368],
-      "credentials": { "httpHeaderAuth": { "id": "MX2QZHGzOYBtt41s", "name": "Slack Bot Token — Miles" } }
+      "position": [1568, 1280],
+      "credentials": {"httpHeaderAuth": {"id": "MX2QZHGzOYBtt41s","name": "Slack Bot Token — Miles"}}
     },
     {
-      "parameters": {
-        "method": "POST",
-        "url": "https://slack.com/api/chat.postMessage",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channel: $('Extract Event Data').item.json.channel_id, thread_ts: $('Extract Event Data').item.json.thread_ts, text: $('Parse AI Response').item.json.next_message, mrkdwn: true }) }}",
-        "options": {}
-      },
-      "id": "4115f86c-cfcf-4e82-be40-d800ac633441",
+      "parameters": {"method": "POST","url": "https://slack.com/api/chat.postMessage","authentication": "genericCredentialType","genericAuthType": "httpHeaderAuth","sendBody": true,"specifyBody": "json","jsonBody": "={{ JSON.stringify({ channel: $('Extract Event Data').item.json.channel_id, thread_ts: $('Extract Event Data').item.json.thread_ts, text: $('Parse AI Response').item.json.next_message, mrkdwn: true }) }}","options": {}},
+      "id": "5fdb1b29-e8bf-40ef-b525-29dd3eba90e4",
       "name": "Post Next Message to Slack",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-752, 1264],
-      "credentials": { "httpHeaderAuth": { "id": "MX2QZHGzOYBtt41s", "name": "Slack Bot Token — Miles" } }
+      "position": [1568, 2176],
+      "credentials": {"httpHeaderAuth": {"id": "MX2QZHGzOYBtt41s","name": "Slack Bot Token — Miles"}}
     },
     {
-      "parameters": {
-        "url": "https://arduasolutions.atlassian.net/rest/api/3/search/jql",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpBasicAuth",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            { "name": "jql",        "value": "={{ 'project = REQ AND cf[10170] = \"' + $('Parse AI Response').item.json.list_area + '\" ORDER BY created DESC' }}" },
-            { "name": "maxResults", "value": "15" },
-            { "name": "fields",     "value": "key,summary,status,priority,created" }
-          ]
-        },
-        "options": {}
-      },
-      "id": "fe13593e-5e9f-4caf-a660-e9398c4a3fe9",
+      "parameters": {"url": "https://arduasolutions.atlassian.net/rest/api/3/search/jql","authentication": "genericCredentialType","genericAuthType": "httpBasicAuth","sendQuery": true,"queryParameters": {"parameters": [{"name": "jql","value": "={{ 'project = REQ AND cf[10170] = \"' + $('Parse AI Response').item.json.list_area + '\" ORDER BY created DESC' }}"},{"name": "maxResults","value": "15"},{"name": "fields","value": "key,summary,status,priority,created"}]},"options": {}},
+      "id": "3506f639-c648-430d-9702-554287baf377",
       "name": "Fetch Issues — req-list",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-752, 896],
-      "credentials": { "httpBasicAuth": { "id": "S3p1Xv6Sya0RMRAH", "name": "Atlassian API — Miles" } }
+      "position": [1568, 1808],
+      "credentials": {"httpBasicAuth": {"id": "S3p1Xv6Sya0RMRAH","name": "Atlassian API — Miles"}}
     },
     {
-      "parameters": {
-        "assignments": {
-          "assignments": [{ "id": "fl1", "name": "slack_message", "type": "string", "value": "={{ (() => { const issues=$json.issues||[]; const area=$('Parse AI Response').item.json.list_area||''; if(issues.length===0) return 'No hay requerimientos registrados para *'+area+'*.'; const lines=issues.map(i=>{ const st=i.fields.status?i.fields.status.name:'—'; const s=(i.fields.summary||'').replace(/^\\[Miles\\] /,'').replace(/^[\\w & ]+ — /,''); return '• *'+i.key+'* — '+s+' _('+st+')_'; }).join('\\n'); return '📋 *Requerimientos — '+area+'*\\n\\n'+lines+'\\n\\n_'+issues.length+' requerimiento(s) encontrado(s)_'; })() }}" }]
-        },
-        "options": {}
-      },
-      "id": "bfba2f5e-ddec-455b-acea-ec94ff86161b",
+      "parameters": {"assignments": {"assignments": [{"id": "fl1","name": "slack_message","type": "string","value": "={{ (() => { const issues=$json.issues||[]; const area=$('Parse AI Response').item.json.list_area||''; if(issues.length===0) return 'No hay requerimientos registrados para *'+area+'*.'; const lines=issues.map(i=>{ const st=i.fields.status?i.fields.status.name:'—'; const s=(i.fields.summary||'').replace(/^\\[Miles\\] /,'').replace(/^[\\w & ]+ — /,''); return '• *'+i.key+'* — '+s+' _('+st+')_'; }).join('\\n'); return '📋 *Requerimientos — '+area+'*\\n\\n'+lines+'\\n\\n_'+issues.length+' requerimiento(s) encontrado(s)_'; })() }}"}]},"options": {}},
+      "id": "3eb07e22-2c5a-45fa-9255-323f48b78493",
       "name": "Format — req-list",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [-512, 896]
+      "position": [1808, 1808]
     },
     {
-      "parameters": {
-        "method": "POST",
-        "url": "https://slack.com/api/chat.postMessage",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channel: $('Extract Event Data').item.json.channel_id, thread_ts: $('Extract Event Data').item.json.thread_ts, text: $json.slack_message, mrkdwn: true }) }}",
-        "options": {}
-      },
-      "id": "f122a13d-256b-4a28-a764-ed90ac9d2724",
+      "parameters": {"method": "POST","url": "https://slack.com/api/chat.postMessage","authentication": "genericCredentialType","genericAuthType": "httpHeaderAuth","sendBody": true,"specifyBody": "json","jsonBody": "={{ JSON.stringify({ channel: $('Extract Event Data').item.json.channel_id, thread_ts: $('Extract Event Data').item.json.thread_ts, text: $json.slack_message, mrkdwn: true }) }}","options": {}},
+      "id": "d7f333f1-3c1a-4dcb-bbee-365203684357",
       "name": "Post — req-list",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-272, 896],
-      "credentials": { "httpHeaderAuth": { "id": "MX2QZHGzOYBtt41s", "name": "Slack Bot Token — Miles" } }
+      "position": [2048, 1808],
+      "credentials": {"httpHeaderAuth": {"id": "MX2QZHGzOYBtt41s","name": "Slack Bot Token — Miles"}}
     },
     {
-      "parameters": {
-        "url": "={{ 'https://arduasolutions.atlassian.net/rest/api/3/issue/' + $('Parse AI Response').item.json.status_issue_key }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpBasicAuth",
-        "sendQuery": true,
-        "queryParameters": { "parameters": [{ "name": "fields", "value": "key,summary,status,priority,customfield_10170,created" }] },
-        "options": {}
-      },
-      "id": "b1c473e4-5b4a-4e0f-bc53-4b864d08ac2c",
+      "parameters": {"url": "={{ 'https://arduasolutions.atlassian.net/rest/api/3/issue/' + $('Parse AI Response').item.json.status_issue_key }}","authentication": "genericCredentialType","genericAuthType": "httpBasicAuth","sendQuery": true,"queryParameters": {"parameters": [{"name": "fields","value": "key,summary,status,priority,customfield_10170,created"}]},"options": {}},
+      "id": "620e777c-6313-4b10-b90b-6ae5990ed368",
       "name": "Fetch Issue — req-status",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-752, 1072],
-      "credentials": { "httpBasicAuth": { "id": "S3p1Xv6Sya0RMRAH", "name": "Atlassian API — Miles" } }
+      "position": [1568, 1984],
+      "credentials": {"httpBasicAuth": {"id": "S3p1Xv6Sya0RMRAH","name": "Atlassian API — Miles"}}
     },
     {
-      "parameters": {
-        "assignments": {
-          "assignments": [{ "id": "fs1", "name": "slack_message", "type": "string", "value": "={{ (() => { const k=$json.key; const f=$json.fields||{}; const s=(f.summary||'').replace(/^\\[Miles\\] /,'').replace(/^[\\w & ]+ — /,''); const st=f.status?f.status.name:'—'; const pr=f.priority?f.priority.name:'—'; const area=f.customfield_10170?f.customfield_10170.value:'—'; const link='https://arduasolutions.atlassian.net/browse/'+k; return '📌 *'+k+' — '+s+'*\\n\\n*Estado:* '+st+'\\n*Prioridad:* '+pr+'\\n*Área:* '+area+'\\n\\n<'+link+'|Ver en Jira>'; })() }}" }]
-        },
-        "options": {}
-      },
-      "id": "0ccfbb3d-e26a-433c-83ba-d7b4dd4d7865",
+      "parameters": {"assignments": {"assignments": [{"id": "fs1","name": "slack_message","type": "string","value": "={{ (() => { const k=$json.key; const f=$json.fields||{}; const s=(f.summary||'').replace(/^\\[Miles\\] /,'').replace(/^[\\w & ]+ — /,''); const st=f.status?f.status.name:'—'; const pr=f.priority?f.priority.name:'—'; const area=f.customfield_10170?f.customfield_10170.value:'—'; const link='https://arduasolutions.atlassian.net/browse/'+k; return '📌 *'+k+' — '+s+'*\\n\\n*Estado:* '+st+'\\n*Prioridad:* '+pr+'\\n*Área:* '+area+'\\n\\n<'+link+'|Ver en Jira>'; })() }}"}]},"options": {}},
+      "id": "bb01057a-a85e-4596-8fb4-d04470bf45d2",
       "name": "Format — req-status",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [-512, 1072]
+      "position": [1808, 1984]
     },
     {
-      "parameters": {
-        "method": "POST",
-        "url": "https://slack.com/api/chat.postMessage",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channel: $('Extract Event Data').item.json.channel_id, thread_ts: $('Extract Event Data').item.json.thread_ts, text: $json.slack_message, mrkdwn: true }) }}",
-        "options": {}
-      },
-      "id": "f2bc7f77-b22d-482b-b4fd-dd98410a297a",
+      "parameters": {"method": "POST","url": "https://slack.com/api/chat.postMessage","authentication": "genericCredentialType","genericAuthType": "httpHeaderAuth","sendBody": true,"specifyBody": "json","jsonBody": "={{ JSON.stringify({ channel: $('Extract Event Data').item.json.channel_id, thread_ts: $('Extract Event Data').item.json.thread_ts, text: $json.slack_message, mrkdwn: true }) }}","options": {}},
+      "id": "90730342-47e5-459a-a855-199a874144ab",
       "name": "Post — req-status",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-272, 1072],
-      "credentials": { "httpHeaderAuth": { "id": "MX2QZHGzOYBtt41s", "name": "Slack Bot Token — Miles" } }
+      "position": [2048, 1984],
+      "credentials": {"httpHeaderAuth": {"id": "MX2QZHGzOYBtt41s","name": "Slack Bot Token — Miles"}}
     },
     {
-      "parameters": {
-        "url": "https://slack.com/api/conversations.replies",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            { "name": "channel", "value": "={{ $('Extract Event Data').item.json.channel_id }}" },
-            { "name": "ts",      "value": "={{ $('Extract Event Data').item.json.thread_ts }}" }
-          ]
-        },
-        "options": {}
-      },
-      "id": "91eef5f4-db65-4487-8b9c-481ddce4c53b",
+      "parameters": {"url": "https://slack.com/api/conversations.replies","authentication": "genericCredentialType","genericAuthType": "httpHeaderAuth","sendQuery": true,"queryParameters": {"parameters": [{"name": "channel","value": "={{ $('Extract Event Data').item.json.channel_id }}"},{"name": "ts","value": "={{ $('Extract Event Data').item.json.thread_ts }}"}]},"options": {}},
+      "id": "017186c2-3fb6-4196-9b71-d1d9e70263a2",
       "name": "Fetch Thread — Claude Path",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-1936, 864],
-      "credentials": { "httpHeaderAuth": { "id": "MX2QZHGzOYBtt41s", "name": "Slack Bot Token — Miles" } }
+      "position": [384, 1776],
+      "credentials": {"httpHeaderAuth": {"id": "MX2QZHGzOYBtt41s","name": "Slack Bot Token — Miles"}}
     },
     {
-      "parameters": {
-        "jsCode": "// FIX 3 — Deduplicación mejorada: chequea si Miles ya respondió en el hilo\n// Cubre race conditions cuando llegan dos eventos casi simultáneos\nconst msgs = ($json.messages || []);\nconst thread_ts = $('Extract Event Data').item.json.thread_ts;\n\n// Check: hay algún reply de bot (Miles) que no sea el mensaje padre\nconst milesAlreadyReplied = msgs.some(m =>\n  m.bot_id &&\n  m.ts !== thread_ts\n);\n\nreturn [{ json: { ...$json, is_duplicate: milesAlreadyReplied } }];"
-      },
-      "id": "af703f87-0e60-4ab6-b5bb-423cca065cc5",
+      "parameters": {"jsCode": "const msgs = ($json.messages || []);\nconst thread_ts = $('Extract Event Data').item.json.thread_ts;\nconst milesAlreadyReplied = msgs.some(m => m.bot_id && m.ts !== thread_ts);\nreturn [{ json: { ...$json, is_duplicate: milesAlreadyReplied } }];"},
+      "id": "c979c0cc-c896-4482-b249-16f37e3a73ab",
       "name": "Is Duplicate? (Claude Path)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-1712, 640]
+      "position": [608, 1552]
     },
     {
-      "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
-          "conditions": [{ "id": "cond-is-dup", "leftValue": "={{ $json.is_duplicate }}", "rightValue": true, "operator": { "type": "boolean", "operation": "true" } }],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "64ee0626-2aa0-48b4-9907-99f8625a1022",
+      "parameters": {"conditions": {"options": {"caseSensitive": true,"leftValue": "","typeValidation": "strict"},"conditions": [{"id": "cond-is-dup","leftValue": "={{ $json.is_duplicate }}","rightValue": true,"operator": {"type": "boolean","operation": "true"}}],"combinator": "and"},"options": {}},
+      "id": "349f6376-1cf2-4c22-af02-42876d546f18",
       "name": "Skip if Duplicate? (Claude Path)",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [-1488, 640]
+      "position": [832, 1552]
     },
     {
-      "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
-          "conditions": [{ "id": "cond-closed-claude", "leftValue": "={{ ($json.messages || []).some(m => m.text && m.text.includes('Requerimiento creado exitosamente')) }}", "rightValue": true, "operator": { "type": "boolean", "operation": "true" } }],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "c0ed2f1e-eea5-477e-aa9f-dbed1ed31a11",
+      "parameters": {"conditions": {"options": {"caseSensitive": true,"leftValue": "","typeValidation": "strict"},"conditions": [{"id": "cond-closed-claude","leftValue": "={{ ($json.messages || []).some(m => m.text && m.text.includes('Requerimiento creado exitosamente')) }}","rightValue": true,"operator": {"type": "boolean","operation": "true"}}],"combinator": "and"},"options": {}},
+      "id": "62ec5bee-e3ef-4ceb-b611-a59a7c0bf608",
       "name": "Is Session Closed — Claude Path?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [-1600, 880]
+      "position": [720, 1792]
     },
     {
-      "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
-          "conditions": [{ "id": "cond-is-mention", "leftValue": "={{ $('Extract Event Data').item.json.source }}", "rightValue": "mention", "operator": { "type": "string", "operation": "equals" } }],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "9563799d-cf76-4816-aacb-bf98b8763819",
+      "parameters": {"conditions": {"options": {"caseSensitive": true,"leftValue": "","typeValidation": "strict"},"conditions": [{"id": "cond-is-mention","leftValue": "={{ $('Extract Event Data').item.json.source }}","rightValue": "mention","operator": {"type": "string","operation": "equals"}}],"combinator": "and"},"options": {}},
+      "id": "f0c84e6e-1cee-4ae9-9864-0873dadc3fbb",
       "name": "Is Mention Source?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [-1952, 1328]
+      "position": [368, 2240]
     },
     {
-      "parameters": {
-        "method": "POST",
-        "url": "https://slack.com/api/chat.postMessage",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channel: $('Extract Event Data').item.json.channel_id, thread_ts: $('Extract Event Data').item.json.thread_ts, text: 'Este hilo ya tiene un requerimiento creado ✅\\n\\nSi necesitás cambios o querés agregar contexto, escribilo directamente en este hilo — será tenido en cuenta en la próxima sesión de enriquecimiento.\\n\\nPara nuevos requerimientos, abrí un nuevo hilo mencionándome 👋', mrkdwn: true }) }}",
-        "options": {}
-      },
-      "id": "e31124e0-78ec-4cef-813e-e49ce3da3381",
+      "parameters": {"method": "POST","url": "https://slack.com/api/chat.postMessage","authentication": "genericCredentialType","genericAuthType": "httpHeaderAuth","sendBody": true,"specifyBody": "json","jsonBody": "={{ JSON.stringify({ channel: $('Extract Event Data').item.json.channel_id, thread_ts: $('Extract Event Data').item.json.thread_ts, text: 'Este hilo ya tiene un requerimiento creado ✅\\n\\nSi necesitás cambios o querés agregar contexto, escribilo directamente en este hilo — será tenido en cuenta en la próxima sesión de enriquecimiento.\\n\\nPara nuevos requerimientos, abrí un nuevo hilo mencionándome 👋', mrkdwn: true }) }}","options": {}},
+      "id": "f62821d6-b271-422a-927d-9159f92278ac",
       "name": "Post — Thread Has REQ",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-1712, 1264],
-      "credentials": { "httpHeaderAuth": { "id": "MX2QZHGzOYBtt41s", "name": "Slack Bot Token — Miles" } }
+      "position": [608, 2176],
+      "credentials": {"httpHeaderAuth": {"id": "MX2QZHGzOYBtt41s","name": "Slack Bot Token — Miles"}}
     },
     {
-      "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
-          "conditions": [{ "id": "cond-is-notification", "leftValue": "={{ (() => { const msgs = $json.messages || []; if (msgs.length === 0) return false; const parent = msgs[0].text || ''; const markers = ['Nuevo requerimiento listo para desarrollo', 'requerimiento completado y disponible', 'en progreso —', 'completado —']; return markers.some(m => parent.includes(m)); })() }}", "rightValue": true, "operator": { "type": "boolean", "operation": "true" } }],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "7987d821-e8e8-4a24-b047-6b0232f4aae5",
+      "parameters": {"conditions": {"options": {"caseSensitive": false,"leftValue": "","typeValidation": "loose"},"conditions": [{"id": "cond-is-notification","leftValue": "={{ (() => { const msgs = $json.messages || []; if (msgs.length === 0) return false; const parent = msgs[0].text || ''; const markers = ['Nuevo requerimiento listo para desarrollo', 'requerimiento completado y disponible', 'en progreso —', 'completado —']; return markers.some(m => parent.includes(m)); })() }}","rightValue": true,"operator": {"type": "boolean","operation": "true"}}],"combinator": "and"},"options": {}},
+      "id": "b1bb7fa0-4c4d-4ddc-86b4-267b333a19a9",
       "name": "Is Notification Thread?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [-2192, 992]
+      "position": [128, 1904]
     },
     {
-      "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
-          "conditions": [{ "id": "cond-is-notification-claude", "leftValue": "={{ (() => { const msgs = $json.messages || []; if (msgs.length === 0) return false; const parent = msgs[0].text || ''; const markers = ['Nuevo requerimiento listo para desarrollo', 'requerimiento completado y disponible', 'en progreso —', 'completado —']; return markers.some(m => parent.includes(m)); })() }}", "rightValue": true, "operator": { "type": "boolean", "operation": "true" } }],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "e5d902c6-5a47-4527-afee-1c56c1704fc9",
+      "parameters": {"conditions": {"options": {"caseSensitive": false,"leftValue": "","typeValidation": "loose"},"conditions": [{"id": "cond-is-notification-claude","leftValue": "={{ (() => { const msgs = $json.messages || []; if (msgs.length === 0) return false; const parent = msgs[0].text || ''; const markers = ['Nuevo requerimiento listo para desarrollo', 'requerimiento completado y disponible', 'en progreso —', 'completado —']; return markers.some(m => parent.includes(m)); })() }}","rightValue": true,"operator": {"type": "boolean","operation": "true"}}],"combinator": "and"},"options": {}},
+      "id": "409493a4-77c6-4dcb-a76b-8f97c75e9f07",
       "name": "Is Notification Thread — Claude Path?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [-1856, 640]
+      "position": [464, 1552]
     }
   ],
   "pinData": {},
   "connections": {
-    "Trigger — Conversation Event":       { "main": [[{ "node": "Respond — Acknowledge", "type": "main", "index": 0 }, { "node": "Extract Event Data", "type": "main", "index": 0 }]] },
-    "Extract Event Data":                 { "main": [[{ "node": "Is Source Claude?", "type": "main", "index": 0 }]] },
-    "Is Source Claude?":                  { "main": [[{ "node": "Parse Claude Message", "type": "main", "index": 0 }], [{ "node": "Fetch Thread History", "type": "main", "index": 0 }]] },
-    "Parse Claude Message":               { "main": [[{ "node": "Fetch Thread — Claude Path", "type": "main", "index": 0 }]] },
-    "Fetch Thread History":               { "main": [[{ "node": "Is Notification Thread?", "type": "main", "index": 0 }]] },
-    "Is Session Closed?":                 { "main": [[{ "node": "Is Mention Source?", "type": "main", "index": 0 }], [{ "node": "Build Prompt with History", "type": "main", "index": 0 }]] },
-    "Build Prompt with History":          { "main": [[{ "node": "Detect Intent", "type": "main", "index": 0 }]] },
-    "Detect Intent":                      { "main": [[{ "node": "LLM Chain — Process Step", "type": "main", "index": 0 }]] },
-    "Groq — Llama 3.3 70B":              { "ai_languageModel": [[{ "node": "LLM Chain — Process Step", "type": "ai_languageModel", "index": 0 }]] },
-    "LLM Chain — Process Step":           { "main": [[{ "node": "Parse AI Response", "type": "main", "index": 0 }]] },
-    "Parse AI Response":                  { "main": [[{ "node": "Switch — Intent Router", "type": "main", "index": 0 }]] },
-    "Switch — Intent Router":             { "main": [[{ "node": "Build Jira Payload", "type": "main", "index": 0 }], [{ "node": "Fetch Issues — req-list", "type": "main", "index": 0 }], [{ "node": "Fetch Issue — req-status", "type": "main", "index": 0 }], [{ "node": "Post Next Message to Slack", "type": "main", "index": 0 }]] },
-    "Build Jira Payload":                 { "main": [[{ "node": "Has Minimum Context?", "type": "main", "index": 0 }]] },
-    "Has Minimum Context?":               { "main": [[{ "node": "Code — Build Jira Body", "type": "main", "index": 0 }], [{ "node": "Post — Context Missing", "type": "main", "index": 0 }]] },
-    "Code — Build Jira Body":             { "main": [[{ "node": "Create REQ in Jira", "type": "main", "index": 0 }]] },
-    "Create REQ in Jira":                 { "main": [[{ "node": "Post Success to Thread", "type": "main", "index": 0 }]] },
-    "Fetch Issues — req-list":            { "main": [[{ "node": "Format — req-list", "type": "main", "index": 0 }]] },
-    "Format — req-list":                  { "main": [[{ "node": "Post — req-list", "type": "main", "index": 0 }]] },
-    "Fetch Issue — req-status":           { "main": [[{ "node": "Format — req-status", "type": "main", "index": 0 }]] },
-    "Format — req-status":                { "main": [[{ "node": "Post — req-status", "type": "main", "index": 0 }]] },
-    "Fetch Thread — Claude Path":         { "main": [[{ "node": "Is Duplicate? (Claude Path)", "type": "main", "index": 0 }]] },
-    "Is Duplicate? (Claude Path)":        { "main": [[{ "node": "Skip if Duplicate? (Claude Path)", "type": "main", "index": 0 }]] },
-    "Skip if Duplicate? (Claude Path)":   { "main": [[{ "node": "Ignore — Session Closed", "type": "main", "index": 0 }], [{ "node": "Is Notification Thread — Claude Path?", "type": "main", "index": 0 }]] },
-    "Is Session Closed — Claude Path?":   { "main": [[{ "node": "Ignore — Session Closed", "type": "main", "index": 0 }], [{ "node": "Code — Build Jira Body", "type": "main", "index": 0 }]] },
-    "Is Mention Source?":                 { "main": [[{ "node": "Post — Thread Has REQ", "type": "main", "index": 0 }], [{ "node": "Ignore — Session Closed", "type": "main", "index": 0 }]] },
-    "Is Notification Thread?":            { "main": [[{ "node": "Ignore — Session Closed", "type": "main", "index": 0 }], [{ "node": "Is Session Closed?", "type": "main", "index": 0 }]] },
-    "Is Notification Thread — Claude Path?": { "main": [[{ "node": "Ignore — Session Closed", "type": "main", "index": 0 }], [{ "node": "Is Session Closed — Claude Path?", "type": "main", "index": 0 }]] }
+    "Trigger — Conversation Event":       {"main": [[{"node": "Respond — Acknowledge","type": "main","index": 0},{"node": "Extract Event Data","type": "main","index": 0}]]},
+    "Extract Event Data":                 {"main": [[{"node": "Is Source Claude?","type": "main","index": 0}]]},
+    "Is Source Claude?":                  {"main": [[{"node": "Parse Claude Message","type": "main","index": 0}],[{"node": "Fetch Thread History","type": "main","index": 0}]]},
+    "Parse Claude Message":               {"main": [[{"node": "Fetch Thread — Claude Path","type": "main","index": 0}]]},
+    "Fetch Thread History":               {"main": [[{"node": "Is Notification Thread?","type": "main","index": 0}]]},
+    "Is Session Closed?":                 {"main": [[{"node": "Is Mention Source?","type": "main","index": 0}],[{"node": "Build Prompt with History","type": "main","index": 0}]]},
+    "Build Prompt with History":          {"main": [[{"node": "Detect Intent","type": "main","index": 0}]]},
+    "Detect Intent":                      {"main": [[{"node": "LLM Chain — Process Step","type": "main","index": 0}]]},
+    "Groq — Llama 3.3 70B":              {"ai_languageModel": [[{"node": "LLM Chain — Process Step","type": "ai_languageModel","index": 0}]]},
+    "LLM Chain — Process Step":           {"main": [[{"node": "Parse AI Response","type": "main","index": 0}]]},
+    "Parse AI Response":                  {"main": [[{"node": "Switch — Intent Router","type": "main","index": 0}]]},
+    "Switch — Intent Router":             {"main": [[{"node": "Build Jira Payload","type": "main","index": 0}],[{"node": "Fetch Issues — req-list","type": "main","index": 0}],[{"node": "Fetch Issue — req-status","type": "main","index": 0}],[{"node": "Post Next Message to Slack","type": "main","index": 0}]]},
+    "Build Jira Payload":                 {"main": [[{"node": "Has Minimum Context?","type": "main","index": 0}]]},
+    "Has Minimum Context?":               {"main": [[{"node": "Code — Build Jira Body","type": "main","index": 0}],[{"node": "Post — Context Missing","type": "main","index": 0}]]},
+    "Code — Build Jira Body":             {"main": [[{"node": "Create REQ in Jira","type": "main","index": 0}]]},
+    "Create REQ in Jira":                 {"main": [[{"node": "Post Success to Thread","type": "main","index": 0}]]},
+    "Fetch Issues — req-list":            {"main": [[{"node": "Format — req-list","type": "main","index": 0}]]},
+    "Format — req-list":                  {"main": [[{"node": "Post — req-list","type": "main","index": 0}]]},
+    "Fetch Issue — req-status":           {"main": [[{"node": "Format — req-status","type": "main","index": 0}]]},
+    "Format — req-status":                {"main": [[{"node": "Post — req-status","type": "main","index": 0}]]},
+    "Fetch Thread — Claude Path":         {"main": [[{"node": "Is Duplicate? (Claude Path)","type": "main","index": 0}]]},
+    "Is Duplicate? (Claude Path)":        {"main": [[{"node": "Skip if Duplicate? (Claude Path)","type": "main","index": 0}]]},
+    "Skip if Duplicate? (Claude Path)":   {"main": [[{"node": "Ignore — Session Closed","type": "main","index": 0}],[{"node": "Is Notification Thread — Claude Path?","type": "main","index": 0}]]},
+    "Is Session Closed — Claude Path?":   {"main": [[{"node": "Ignore — Session Closed","type": "main","index": 0}],[{"node": "Code — Build Jira Body","type": "main","index": 0}]]},
+    "Is Mention Source?":                 {"main": [[{"node": "Post — Thread Has REQ","type": "main","index": 0}],[{"node": "Ignore — Session Closed","type": "main","index": 0}]]},
+    "Is Notification Thread?":            {"main": [[{"node": "Ignore — Session Closed","type": "main","index": 0}],[{"node": "Is Session Closed?","type": "main","index": 0}]]},
+    "Is Notification Thread — Claude Path?": {"main": [[{"node": "Ignore — Session Closed","type": "main","index": 0}],[{"node": "Is Session Closed — Claude Path?","type": "main","index": 0}]]}
   },
   "active": true,
-  "settings": { "executionOrder": "v1", "availableInMCP": true },
-  "versionId": "68d53392-98ea-4782-b08a-7eda5c7cea58",
-  "meta": { "templateCredsSetupCompleted": true, "instanceId": "95944be45d5aa5e5565d656a14e718ed8b92e30102ad1bd3fcad4cf1b1c2f383" },
+  "settings": {"executionOrder": "v1","availableInMCP": true},
+  "versionId": "a41cf8ce-f090-426c-93ba-ce3d2b61ef74",
+  "meta": {"templateCredsSetupCompleted": true,"instanceId": "95944be45d5aa5e5565d656a14e718ed8b92e30102ad1bd3fcad4cf1b1c2f383"},
   "id": "mLDlTEhHTPPKXtKD",
   "tags": [
-    { "updatedAt": "2026-04-01T15:49:24.440Z", "createdAt": "2026-04-01T15:49:24.440Z", "id": "PUW9bm4KdcIVVs8y", "name": "product-manager-app" },
-    { "updatedAt": "2026-03-25T20:09:56.359Z", "createdAt": "2026-03-25T20:09:56.439Z", "id": "m3quhhGHST3hiHGb", "name": "miles" }
+    {"updatedAt": "2026-04-01T15:49:24.440Z","createdAt": "2026-04-01T15:49:24.440Z","id": "PUW9bm4KdcIVVs8y","name": "product-manager-app"},
+    {"updatedAt": "2026-03-25T20:09:56.359Z","createdAt": "2026-03-25T20:09:56.439Z","id": "m3quhhGHST3hiHGb","name": "miles"}
   ]
 }
