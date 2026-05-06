@@ -62,11 +62,7 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
-          "conditions": [{ "id": "cond-source-claude", "leftValue": "={{ $json.source }}", "rightValue": "claude", "operator": { "type": "string", "operation": "equals" } }],
-          "combinator": "and"
-        },
+        "conditions": {"options": {"caseSensitive": true,"leftValue": "","typeValidation": "strict"},"conditions": [{"id": "cond-source-claude","leftValue": "={{ $json.source }}","rightValue": "claude","operator": {"type": "string","operation": "equals"}}],"combinator": "and"},
         "options": {}
       },
       "id": "8e768c0d-2f77-418a-a74d-ec13642f7809",
@@ -94,15 +90,9 @@
     {
       "parameters": {
         "url": "https://slack.com/api/conversations.replies",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "authentication": "genericCredentialType","genericAuthType": "httpHeaderAuth",
         "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            { "name": "channel", "value": "={{ $('Extract Event Data').item.json.channel_id }}" },
-            { "name": "ts",      "value": "={{ $('Extract Event Data').item.json.thread_ts }}" }
-          ]
-        },
+        "queryParameters": {"parameters": [{"name": "channel","value": "={{ $('Extract Event Data').item.json.channel_id }}"},{"name": "ts","value": "={{ $('Extract Event Data').item.json.thread_ts }}"}]},
         "options": {}
       },
       "id": "f857e58d-af18-4a20-a5d2-f9a0d8818770",
