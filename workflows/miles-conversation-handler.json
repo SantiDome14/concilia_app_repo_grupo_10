@@ -37,30 +37,10 @@
       "parameters": {
         "assignments": {
           "assignments": [
-            {
-              "id": "1",
-              "name": "thread_ts",
-              "value": "={{ $json.body.thread_ts }}",
-              "type": "string"
-            },
-            {
-              "id": "2",
-              "name": "channel_id",
-              "value": "={{ $json.body.channel_id }}",
-              "type": "string"
-            },
-            {
-              "id": "3",
-              "name": "user_id",
-              "value": "={{ $json.body.user_id }}",
-              "type": "string"
-            },
-            {
-              "id": "4",
-              "name": "message_text",
-              "value": "={{ $json.body.message_text }}",
-              "type": "string"
-            },
+            { "id": "1", "name": "thread_ts",    "value": "={{ $json.body.thread_ts }}",    "type": "string" },
+            { "id": "2", "name": "channel_id",   "value": "={{ $json.body.channel_id }}",   "type": "string" },
+            { "id": "3", "name": "user_id",      "value": "={{ $json.body.user_id }}",      "type": "string" },
+            { "id": "4", "name": "message_text", "value": "={{ $json.body.message_text }}", "type": "string" },
             {
               "id": "5",
               "name": "source",
@@ -83,22 +63,8 @@
     {
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "cond-source-claude",
-              "leftValue": "={{ $json.source }}",
-              "rightValue": "claude",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
-            }
-          ],
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "id": "cond-source-claude", "leftValue": "={{ $json.source }}", "rightValue": "claude", "operator": { "type": "string", "operation": "equals" } }],
           "combinator": "and"
         },
         "options": {}
@@ -133,14 +99,8 @@
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            {
-              "name": "channel",
-              "value": "={{ $('Extract Event Data').item.json.channel_id }}"
-            },
-            {
-              "name": "ts",
-              "value": "={{ $('Extract Event Data').item.json.thread_ts }}"
-            }
+            { "name": "channel", "value": "={{ $('Extract Event Data').item.json.channel_id }}" },
+            { "name": "ts",      "value": "={{ $('Extract Event Data').item.json.thread_ts }}" }
           ]
         },
         "options": {}
@@ -176,22 +136,8 @@
     {
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "cond-is-dup",
-              "leftValue": "={{ $json.is_duplicate }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "true"
-              }
-            }
-          ],
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "id": "cond-is-dup", "leftValue": "={{ $json.is_duplicate }}", "rightValue": true, "operator": { "type": "boolean", "operation": "true" } }],
           "combinator": "and"
         },
         "options": {}
@@ -208,22 +154,8 @@
     {
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": false,
-            "leftValue": "",
-            "typeValidation": "loose"
-          },
-          "conditions": [
-            {
-              "id": "cond-is-notification-claude",
-              "leftValue": "={{ (() => { const msgs = $json.messages || []; if (msgs.length === 0) return false; const parent = msgs[0].text || ''; const markers = ['Nuevo requerimiento listo para desarrollo', 'requerimiento completado y disponible', 'en progreso —', 'completado —']; return markers.some(m => parent.includes(m)); })() }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "true"
-              }
-            }
-          ],
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{ "id": "cond-is-notification-claude", "leftValue": "={{ (() => { const msgs = $json.messages || []; if (msgs.length === 0) return false; const parent = msgs[0].text || ''; const markers = ['Nuevo requerimiento listo para desarrollo', 'requerimiento completado y disponible', 'en progreso —', 'completado —']; return markers.some(m => parent.includes(m)); })() }}", "rightValue": true, "operator": { "type": "boolean", "operation": "true" } }],
           "combinator": "and"
         },
         "options": {}
