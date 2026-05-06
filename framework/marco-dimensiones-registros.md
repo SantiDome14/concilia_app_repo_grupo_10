@@ -1,6 +1,6 @@
 # Marco de Dimensiones de los Registros del Financial-Core
 
-Versión: 1.1 | Last updated: 2026-04-28
+Versión: 1.1.1 | Last updated: 2026-05-06
 Parte del Framework de Producto del Área de Producto de Ardua.
 
 ---
@@ -13,7 +13,7 @@ Este marco descompone la práctica de gestión de registros del financial-core e
 
 > El marco no es una matriz de implementación. No exige que cada módulo cubra todas las dimensiones — exige que se decida explícitamente cuáles cubre y cuáles no.
 
-**Apps en alcance:** OPS, TRD, FIN. Las apps LEX, CLP y COM tienen naturaleza distinta (compliance, customer-facing, comercial — no son apps de gestión transaccional de registros del negocio) y no aplican este marco.
+**Apps en alcance:** OPS, TRD, FIN. Las apps LEX y CLP tienen naturaleza distinta (compliance, customer-facing — no son apps de gestión transaccional de registros del negocio) y no aplican este marco. La función comercial se cubre vía integración con HubSpot — no hay app COM en el portfolio.
 
 ---
 
@@ -359,6 +359,7 @@ Cada acción derivada hereda su capability del mecanismo de Acciones (REQ Accion
 | ------- | ----------- | ------- |
 | 1.0     | 2026-04-28  | Versión inicial bajo el nombre `marco-dimensiones-finanzas.md`. Formaliza el modelo conceptual de Tesorería como checklist de discovery aplicable a los módulos del bloque Tesorería + Contabilidad de FIN. 12 preguntas en dos planos: operativo (7) y análisis (5). |
 | 1.1     | 2026-04-28  | Cambios mayores derivados de iteración: (a) **Generalización de alcance** — el marco se extiende de FIN únicamente a las apps operativas-transaccionales del financial-core (OPS, TRD, FIN). LEX, CLP y COM quedan fuera por su naturaleza distinta. Archivo renombrado a `marco-dimensiones-registros.md`. (b) **Nueva dimensión 3.7 Documentación y Notificación** — captura los outputs formales del registro hacia actores externos (facturar, notificar, enviar, firmar, comunicar). Cierre pasa a 3.8. Total: 13 preguntas (operativo 8 + análisis 5). (c) **Nueva §9 Relación con el mecanismo de Acciones** — articula explícitamente cómo el cuestionario produce directamente el manifest de Acciones del menú `⋯` del registro, alineado con `financial-core-modules.md` §11. (d) **Nuevos ejemplos aplicados** — además del caso completo de Disponibilidades, mini-casos de OPS-Movimientos y TRD-Quotes. (e) **Nuevo F-05** sobre firma electrónica como sub-tipo. |
+| 1.1.1   | 2026-05-06  | Patch de portfolio: COM se descontinúa como app del core. La función comercial pasa a cubrirse vía integración con HubSpot. Actualizado §Contexto para sacar COM de la lista de apps fuera de alcance — solo quedan LEX y CLP. |
 
 ---
 
