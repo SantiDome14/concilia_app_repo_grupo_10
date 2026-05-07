@@ -134,6 +134,24 @@ See `.claude/skills/` for the full list. Skills that do not start with `openspec
 
 ## OpenSpec Workflow
 
+> ### 🔒 Hard rule — OpenSpec is the only entry point
+>
+> **No production code is written without an active OpenSpec change.** Before editing `src/`, adding a route, creating a component, wiring an endpoint, or porting a feature from a legacy app, an OpenSpec proposal MUST exist (`openspec/changes/<change-slug>/`) with at least `proposal.md`, `design.md` (for non-trivial work), `tasks.md`, and the relevant `specs/` deltas.
+>
+> This rule applies with special force to **migrations from legacy apps** (`core-app`, `core-lex`, `core-ops`, `core-trd`). Each migrated module, page, capability, or behavior enters the new project as its own OpenSpec change — never as a direct code transplant. The legacy code is *input* to the proposal, not a substitute for it.
+>
+> **What this means in practice:**
+> - When the user asks to "migrate", "port", "bring over", "replicate", or "add" a feature, the first action is `/opsx:propose <change-slug>` — not opening an editor.
+> - When the user asks to "explore" or "investigate" a feature without committing to an approach, use `/opsx:explore <topic>` (no code, only analysis).
+> - Legacy-app inventories, screenshots, and discovery documents are reference material to **inform** proposals — they do not authorize implementation.
+> - If the user asks to skip OpenSpec for a non-trivial change, push back and ask which capability the change touches; only proceed direct-to-code for trivial fixes (typos, one-line bugs, dependency-version bumps that don't change behavior).
+>
+> Violating this rule means the change is rejected at review and reverted. There is no faster path — the proposal *is* the path.
+
+**Diagrams convention.** Specs (`openspec/specs/<capability>/spec.md`) and `design.md` files MAY include Mermaid diagrams inside a `## Context` or `## Architecture` section, before the `### Requirement:` blocks. Recommended types: `flowchart` (component trees), `sequenceDiagram` (multi-step flows like S3 uploads or Auth0 login), `stateDiagram-v2` (domain state machines), `erDiagram` (domain relationships). Diagrams are **non-normative** — `### Requirement:` and `#### Scenario:` blocks remain the only contractual surface, and Scenarios decide behaviour when a diagram and a Scenario conflict.
+
+**Requirements writing convention.** `openspec validate --strict` requires every `### Requirement:` **body** (the paragraph beneath the title) to contain at least one `SHALL` or `MUST` — having `MUST` only in the title is rejected. This bites Requirements whose body is a permission matrix or capability listing built around `MAY` / `MAY NOT` per row (typical for role-based access tables). Frame such bodies with a leading sentence like "the UI SHALL apply the following matrix" before the per-row clauses, or upgrade per-row clauses from `MAY NOT` to `MUST NOT` where it fits the semantics.
+
 Every meaningful change in this repository flows through OpenSpec. The four commands:
 
 | Slash command | What it does |
