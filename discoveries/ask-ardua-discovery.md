@@ -1,7 +1,7 @@
 ---
 name: Ask Ardua — Conectores y contexto compartido por area
 features: []
-status: En investigacion
+status: En investigación
 owner: Santino Domeniconi
 created_at: 2026-05-07
 updated_at: 2026-05-07
@@ -84,3 +84,12 @@ Estas preguntas deben responderse antes de que el equipo de Tecnologia pueda est
 | REQ | Descripcion | Estado |
 |---|---|---|
 | REQ-39 | Acceso de Claude a multiples bandejas de Gmail compartidas por area | Enriquecido — pendiente Sent to Dev |
+
+---
+
+## Changelog
+
+| Fecha | Cambio |
+|---|---|
+| 2026-05-07 | Creacion del discovery a partir del enriquecimiento de REQ-39. Hipotesis iniciales H1-H4 sobre el modelo 1:1 de conectores de Ask Ardua. Decisiones de habilitacion (Yasmani como aprobador), log de auditoria en Google Sheet, adjuntos de texto en scope v1. Preguntas tecnicas abiertas para Tecnologia. |
+| 2026-05-07 | Correcciones post-sesion: nombre del HoP especificado como Yasmani Rodriguez en todas las referencias. Metricas de exito eliminadas del discovery (sin owner definido). Decisiones de offboarding (responsabilidad del referente del area) y comportamiento ante fallo de conexion (notificacion al usuario) incorporadas a la tabla de decisiones. |
