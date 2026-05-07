@@ -58,6 +58,8 @@ Cuando Claude accede a informacion que no es de un usuario individual (bandejas 
 | El log de auditoria se almacena en un Google Sheet compartido con Yasmani (HoP) y responsable del area | Solucion sin infraestructura adicional, accesible para el area | REQ-39 |
 | La habilitacion de bandejas compartidas requiere aprobacion explicita de Yasmani (HoP) — no hay autoservicio | Control centralizado mientras el patron madura | REQ-39 |
 | El flujo de solicitud de habilitacion es: area solicita a Yasmani via Miles en Slack → Yasmani evalua y configura | Reutiliza canal existente (Miles) | REQ-39 |
+| El referente de cada area es responsable de notificar a Yasmani cuando un usuario deja el area o la empresa para revocar acceso | Offboarding manual, responsabilidad del area | REQ-39 |
+| Si la bandeja compartida no esta disponible, el usuario recibe notificacion clara y se le indica contactar a Yasmani | No silenciar errores de conexion | REQ-39 |
 | Los adjuntos de texto (PDFs, documentos) entran en alcance v1 | El caso de uso central de Legal ("mandamos el KYC?") requiere leer adjuntos, no solo el cuerpo del correo | REQ-39 |
 | Adjuntos no textuales (imagenes, audio, video) fuera de alcance v1 | Complejidad tecnica vs. valor inmediato bajo | REQ-39 |
 
@@ -76,13 +78,6 @@ Estas preguntas deben responderse antes de que el equipo de Tecnologia pueda est
 4. **Destino del log de auditoria:** se definio Google Sheet como primera aproximacion. Tecnologia puede tener una solucion mejor integrada con lo que ya existe (n8n, Kibana, webhook). La decision del destino es de Tecnologia.
 
 ---
-
-## Metricas de exito definidas (REQ-39)
-
-- **Adopcion:** al menos el 80% del equipo de Legal/Compliance usa el conector al menos una vez en las primeras dos semanas post-lanzamiento.
-- **Uso sostenido:** al menos 10 consultas semanales sobre las bandejas compartidas al cabo del primer mes.
-- **Expansion:** al menos una segunda area habilita su bandeja compartida dentro de los 30 dias posteriores al lanzamiento con Legal/Compliance.
-- **Senal cualitativa:** encuesta rapida al equipo de Legal a las dos semanas — al menos el 70% reporta reduccion percibida en el tiempo de busqueda de documentacion.
 
 ---
 
