@@ -2,7 +2,7 @@
 name: Ask Ardua — Conectores y contexto compartido por area
 features: []
 status: En investigacion
-owner: Santiago Domeniconi
+owner: Santino Domeniconi
 created_at: 2026-05-07
 updated_at: 2026-05-07
 ---
