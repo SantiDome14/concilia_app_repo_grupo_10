@@ -37,3 +37,8 @@ export {
   type UseWebSocketApi,
   type UseWebSocketOptions,
 } from './useWebSocket';
+export {
+  useDynamicForm,
+  type UseDynamicFormApi,
+  type UseDynamicFormOptions,
+} from './useDynamicForm';
