@@ -1,6 +1,6 @@
 # Modelo de Equipo — Área de Producto
 
-Versión: 1.1 | Horizonte de implementación: 9 meses | Last updated: 2026-04-13
+Versión: 1.1.1 | Horizonte de implementación: 9 meses | Last updated: 2026-05-06
 Parte del Framework de Producto del Área de Producto de Ardua.
 
 ---
@@ -26,7 +26,7 @@ Head of Product
        ↓ ambos configuran, alimentan y gobiernan
        ├── Agente: RFQ Gateway
        ├── Agente: Client Portal (CLP)
-       ├── Agente: COM (CRM Comercial)
+       ├── Agente: HubSpot Integration
        └── Agente: [producto n]
 ```
 
@@ -168,6 +168,16 @@ El valor de los agentes es proporcional a la calidad del contexto que el trident
 | Autonomía del tridente | El HoP no es cuello de botella en decisiones operativas |
 | Escalabilidad | Se incorpora un nuevo producto sin rediseñar el modelo |
 | Alineación | Los tres roles comparten el mismo entendimiento del estado de cada producto |
+
+---
+
+## Changelog
+
+| Versión | Fecha       | Cambios |
+| ------- | ----------- | ------- |
+| 1.0     | —           | Versión inicial. |
+| 1.1     | 2026-04-13  | Iteración del modelo. |
+| 1.1.1   | 2026-05-06  | Patch: el ejemplo del diagrama §2 reemplaza "Agente: COM (CRM Comercial)" por "Agente: HubSpot Integration", reflejando que la función comercial se cubre vía HubSpot y no se desarrolla como app del core. |
 
 ---
 

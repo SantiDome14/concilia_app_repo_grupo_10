@@ -1,10 +1,14 @@
 # Módulos Genéricos del Financial-Core
 
-> **Versión:** 1.2.2 · **Última actualización:** 04/05/2026
+> **Versión:** 1.3 · **Última actualización:** 06/05/2026
 > **Estado:** Convención formal · vinculante para todos los prototipos del core
 > **Owner:** Head of Product
 
 Parte del Framework Operativo de Producto de Ardua. Define los módulos transversales que aparecen en todas las aplicaciones del financial-core, su arquitectura común, y las reglas de implementación.
+
+> **Cambio estructural en v1.3 — fuente de verdad:** los prototipos `prototypes/_core-template/` y `prototypes/fin/` se consolidaron como fuente de verdad del paradigma. Las divergencias entre el framework conceptual y los specs OpenSpec del prototipo se reconciliaron a favor de los prototipos. La taxonomía de perfiles de Alertas, el set de estados de Inbox, los sub-tabs de Reportes y los Module Types (A vs B) se re-baselizan acá. Detalle completo en el Changelog.
+
+> **Decisión de portfolio (06/05/2026):** se descontinúa el desarrollo de **COM** (Comercial) como app del financial-core. La función comercial se cubre vía integración con **HubSpot**. Toda referencia residual a COM en este documento queda eliminada.
 
 ---
 
@@ -14,27 +18,41 @@ El financial-core de Ardua se compone de aplicaciones que cubren cada vertical f
 
 | Aplicación | Foco | Color brand |
 |---|---|---|
-| **OPS** | Operaciones — ejecución de movimientos de clientes | Rojo (`#EF4444`) |
-| **TRD** | Trading — mesa, lotes de liquidez, RFQ Gateway | Azul (`#3B82F6`) |
-| **LEX** | Legal & Compliance — KYC, blacklist, ROS | Teal (`#2DD4BF`) |
-| **CLP** | Client Portal — interfaz del cliente | Púrpura (`#A78BFA`) |
-| **COM** | Comercial — pipeline, leads, referenciadores | Ámbar (`#F59E0B`) |
-| **FIN** | Finanzas y Contabilidad — Tesorería, Contabilidad, Reportes | Verde (`#22C55E`) |
+| **OPS** | Operaciones — ejecución de movimientos de clientes | Rojo (`0 84% 60%`) |
+| **TRD** | Trading — mesa, lotes de liquidez, RFQ Gateway | Azul (`217 91% 60%`) |
+| **LEX** | Legal & Compliance — KYC, blacklist, ROS | Teal (`172 66% 50%`) |
+| **CLP** | Client Portal — interfaz del cliente | Púrpura (`258 90% 74%`) |
+| **FIN** | Finanzas y Contabilidad — Tesorería, Contabilidad, Reportes | Verde (`142 71% 45%`) |
+
+La función comercial (CRM, pipeline, leads, referenciadores) se cubre vía integración con HubSpot — no se construye como app del core.
 
 Cada aplicación tiene módulos específicos de su dominio (`Tesorería` en FIN, `Blacklist` en LEX, `RFQ` en TRD, etc.). Pero existen **patrones funcionales** que se repiten en todas — en lugar de implementarlos de forma aislada en cada app, se centralizan como **módulos genéricos del financial-core**.
 
 ---
 
-## 2. Los 4 módulos genéricos
+## 2. Los 4 módulos genéricos + 2 funcionalidades transversales
 
-| Módulo | Propósito | Estado canónico |
+Hay seis piezas de infraestructura transversal que componen el paradigma de las apps del core:
+
+**Módulos genéricos (4)** — secciones del sidebar presentes en toda app:
+
+| Módulo | Propósito | Type |
 |---|---|---|
-| **Dashboard** | Vista consolidada de la salud del área que cubre la aplicación, con KPIs, alertas activas, próximos vencimientos, actividad reciente. | A definir por aplicación |
-| **Inbox** | Bandeja de entrada unificada de la aplicación. Recibe solicitudes y tareas que requieren acción del usuario, originadas en otras aplicaciones del core o por usuarios internos. | Pendiente de prototipo canónico |
-| **Alertas** | Gestión de alertas del sistema. El flujo concreto depende del perfil declarado por cada tipo de alerta (notificación simple, workflow auditable, automático). | Canónico: `prototypes/lex/lex_alertas_prototype.html` (perfil B · Workflow) |
-| **Reportes** | Catálogo de reportes con metadata configurable + histórico de generaciones. Patrón de doble ownership: definición (área) vs generación (Tecnología). Soporta CRON, ejecución manual y dependencias inter-área. | Canónico: `prototypes/lex/lex_reporteria_prototype.html` |
+| **Dashboard** | Vista consolidada del estado del área que cubre la aplicación. Card-grid con KPIs, counters de los 3 list-shaped genéricos, activity widgets, evolution chart placeholder. | Especial (no L1/L2/L3) |
+| **Inbox** | Bandeja de Solicitudes — registros con owner y lifecycle que requieren decisión humana. Recibe Solicitudes originadas en otras apps del core, en usuarios internos o en el sistema. | A |
+| **Alertas** | Eventos detectados por el sistema que requieren atención humana o auto-resolución. La UI concreta depende del perfil declarado por cada tipo (A/B/C/D). | A o B según el perfil |
+| **Reportes** | Catálogo de reportes consolidados + ejecuciones (runs). Doble ownership: definición (área) vs generación (Tecnología). Soporta CRON, generación manual, dependencias inter-área. | B (Catálogo + Ejecución) |
 
-Estos módulos comparten **nombre, posición funcional, modelo de datos base, vocabulario del producto e interfaz visual del núcleo**. Lo que cambia entre aplicaciones es **el dataset, los tipos específicos del dominio y las capacidades opcionales que cada app activa** (ver §3).
+**Funcionalidades transversales (2)** — capacidades que atraviesan a los módulos:
+
+| Funcionalidad | Propósito |
+|---|---|
+| **Vistas + Ejes** | Tres vistas declarables por módulo (Lista / Tarjetas / Tablero). El Tablero es state-driven (N columnas = N estados) con drag-drop que abre el `<ClosureModal>` en transiciones a estado terminal. Los **Ejes** son el campo que determina las columnas del Tablero (estado, prioridad, tipo, etc.) y son redefinibles por el usuario. |
+| **Acciones (manifest engine)** | Catálogo declarativo `Acción × Registro × Capability` con motor de evaluación. El menú `⋯` de cada registro y los CTAs de header se renderizan a partir de manifests por módulo, no de código inline. |
+
+Estos seis ítems comparten **nombre, posición funcional, modelo de datos base, vocabulario del producto e interfaz visual del núcleo**. Lo que cambia entre aplicaciones es **el dataset, los tipos específicos del dominio y las capacidades opcionales que cada app activa** (ver §3).
+
+**Modelo de provisión:** el contrato transversal (engine, tipos canónicos, componentes compartidos, APIs) lo entrega Tecnología vía los REQs transversales del §13. Cada app del core configura ese estándar con sus propios `ALERT_TYPE`, `Solicitud.type`, registros de catálogo de reportes, manifests de acciones y cards de Dashboard — vía REQs por área que se construyen sobre el transversal.
 
 ---
 
@@ -52,32 +70,28 @@ Este modelo da **flexibilidad sin sacrificar consistencia**: el nombre, la posic
 
 Para Inbox, Reportes y Dashboard, las capacidades se activan **a nivel del módulo de la app** (FIN.Reportes activa "dependencias inter-área"; LEX.Reportes no la necesita).
 
-Para Alertas, las capacidades se activan **a nivel de tipo de alerta**. Una misma app puede tener tipos con distintos perfiles. Por ejemplo, en FIN:
+Para Alertas, las capacidades se activan **a nivel de tipo de alerta**. Una misma app puede tener tipos con perfiles distintos — por ejemplo, en FIN coexisten alertas de tipo workflow (perfil B), alertas de notificación-only (perfil A) y alertas time-series con chart (perfil C). **Una app no es de un perfil; sus tipos lo son.**
 
-- `RECONCILIATION` requiere análisis humano y justificación → perfil con asignación + timeline + cierre con comentario.
-- `BALANCE_ANOMALY` es un aviso sin proceso → perfil sin asignación, solo marcar como atendida.
-- `REPORT_DEPENDENCY` es generada y cerrada por el sistema → perfil sin intervención humana.
+### 3.2 Perfiles de Alertas (taxonomía canónica)
 
-Esto es importante: **una app no es de un perfil; sus tipos lo son**.
+> **Cambio en v1.3:** la taxonomía A/B/C/D se reconcilió con el spec `core-modulo-genericos` del prototipo. La definición previa de C como "Auto-system" y D como "Hybrid" queda **deprecada**. Hybrid se reformula como composición: una app que coexiste con tipos de perfiles distintos no tiene perfil propio — **declara cada `ALERT_TYPE` con su perfil correspondiente**. Esto es ortogonal a la app.
 
-### 3.2 Perfiles típicos como referencia
+| Perfil | Nombre | UI canónica | Caso de uso típico |
+|---|---|---|---|
+| **A** | Active triage list | Listado tipo Inbox sin owner / SLA. Acción "marcar como atendida" en un click. Sin Drawer ni Tablero por default. | Avisos sin proceso. `REPORT_DEPENDENCY` y similares: el sistema crea, el área cierra (o cierra solo cuando la dependencia se resuelve). |
+| **B** | Workflow | Master-detail: Drawer + Timeline + Comentarios. Tablero disponible. Transiciones a estado terminal van por `<ClosureModal>` con justificación obligatoria ≥ 10 chars. | Casos que requieren análisis humano y registro auditable. ROS, KYC, blacklist matches, alertas de compliance. |
+| **C** | Time-series con chart | Surface chart-first. La alerta se deriva de una métrica que cruza un umbral. Resolución automática cuando la métrica vuelve dentro del rango. La lista aparece como panel secundario compacto. | Anomalías de saldo, deviation de spreads, métricas de salud operativa. |
+| **D** | Cross-app KPI dashboard | Dashboard consolidado con KPIs por app de origen y filtros cross-app. No es lista accionable — es orientación read-only. | Utilización diaria de límites cross-app (CLP/OPS/FIN), volúmenes consolidados de operación. |
 
-La mayoría de las implementaciones caen en uno de estos perfiles. No es una taxonomía cerrada — una app puede combinar capacidades libremente — pero estos perfiles dan vocabulario compartido para hablar de implementaciones.
-
-| Perfil | Capacidades activas | Caso de uso típico |
-|---|---|---|
-| **A · Notification-only** | Listado activo + acción "marcar como atendida" | Avisos sin proceso. Severidad opcional. Sin asignación, sin timeline, sin justificación. Estados: `new` / `resolved`. |
-| **B · Workflow** | Todas las capacidades del perfil canónico LEX | Casos que requieren análisis humano y registro auditable. Asignación, drawer con timeline, comentarios, modal de cierre con justificación ≥ 10 chars. Estados: `new` / `in_review` / `resolved` / `dismissed`. |
-| **C · Auto-system** | Generación y cierre automáticos | Sin intervención humana en el ciclo de vida. Sistema crea, sistema cierra. Estados: `new` / `auto_resolved`. |
-| **D · Hybrid** | Coexistencia de perfiles A/B/C | Una app cuyo módulo Alertas tiene tipos con distintos perfiles. Ejemplo: FIN. |
+**Mezclar perfiles en un mismo `ALERT_TYPE` es violación de contrato.** Cada tipo declara exactamente uno.
 
 ### 3.3 Implicación para el implementador
 
 Cuando una app prototipa o implementa un módulo genérico, su discovery debe declarar:
 
 1. **Qué capacidades opcionales activa** (con justificación si declina alguna del perfil canónico).
-2. **Qué perfil(es) cubren sus tipos** (en el caso de Alertas).
-3. **Qué estados aplican** dado el perfil declarado.
+2. **Qué perfil cubre cada tipo de alerta** (en el caso de Alertas).
+3. **Qué estados aplican** dado el perfil declarado (Inbox tiene un set propio, distinto al de Alertas — ver §7.5 y §9.2).
 
 El template clonable implementa el perfil más completo (Workflow para Alertas, Reportes con todas las capacidades). Al clonar, cada app desactiva o simplifica las capacidades que no necesita — es más fácil quitar que agregar.
 
@@ -89,119 +103,184 @@ Tres motivos para centralizar estos patrones:
 
 **1. Coherencia transversal.** Un usuario que opera en múltiples aplicaciones (un HoP, un compliance officer, un treasurer) encuentra siempre la misma estructura: el Inbox de OPS funciona como el Inbox de FIN, las Alertas de LEX se gestionan igual que las de FIN. Reduce carga cognitiva y acelera el onboarding.
 
-**2. Eficiencia de desarrollo.** Tecnología construye una vez la infraestructura subyacente (motor de reglas de alertas, sistema de cron de reportes, ruteo de inbox, persistencia de timeline) y las aplicaciones la consumen como servicio. Sumar un nuevo tipo de alerta o un nuevo reporte es alta + función de generación, sin refactor del módulo.
+**2. Eficiencia de desarrollo.** Tecnología construye una vez la infraestructura subyacente (manifest engine de Acciones, motor de Vistas + Ejes, motor de routing de Solicitudes, motor de evaluación de dependencias de Reportes, motor de auto-cierre de Alertas) y las aplicaciones la consumen como servicio. Sumar un nuevo tipo de alerta o un nuevo reporte es alta + función de generación, sin refactor del módulo.
 
 **3. Consistencia funcional del producto.** Decisiones de diseño que ya se validaron en una aplicación (ej: el flujo de asignación → revisión → cierre con comentario obligatorio en LEX Alertas) se heredan automáticamente en las demás. Esto evita re-discutir los mismos problemas en cada aplicación nueva.
 
 ---
 
-## 5. Qué cambia entre aplicaciones
+## 5. Module Types — Type A vs Type B
 
-Lo que se mantiene constante (común a todas las apps) y lo que cambia (específico de cada app):
+> **Sección nueva en v1.3.** Formaliza el contrato `core-module-types` del prototipo. Los módulos del financial-core caen en uno de dos types según el job principal del usuario en la página.
 
-| Dimensión | Constante | Cambia por aplicación |
-|---|---|---|
-| Nombre del módulo | ✅ Siempre `Dashboard`, `Inbox`, `Alertas`, `Reportes` | — |
-| Arquitectura visual del núcleo | ✅ Sub-tabs, KPIs, drawer, modales, timeline | — |
-| Modelo de datos base | ✅ ID, estado, asignación, timeline, fechas | Campos específicos del dominio |
-| Set canónico de estados (Alertas) | ✅ Definido en §7.5 | Cada perfil usa solo los relevantes |
-| Sub-tabs del núcleo | ✅ `Nuevas` + `Histórico` (Alertas) · `Catálogo` + `Histórico` (Reportes) | — |
-| Tipos / Categorías | — | Cada app define los suyos |
-| Dataset (registros concretos) | — | Cada app pobla con sus datos |
-| Filtros del histórico | Algunos comunes (Estado, Responsable, Período) | Otros específicos del dominio |
-| Acciones por registro | Las del flujo (Asignarme, Marcar como, Comentar) | Acciones del dominio si las hay |
-| Ubicación en sidebar | — | Cada app la decide según contexto |
-| Capacidades activadas | — | Cada app declara qué capacidades opcionales habilita por módulo (y por tipo en el caso de Alertas) |
+### 5.1 Type A — Direct record management
+
+**Job:** browse, filter, act on a single record set.
+
+**Layout:** L1/L2/L3 sobre un único record set.
+- **L1** — título + actions area (un `<ViewToggle>` opcional para Lista/Tarjetas/Tablero + Main CTA).
+- **L2** — KPI strip computado sobre los registros visibles.
+- **L3** — section header (search + granular filters) + data surface.
+
+**Reglas:**
+- Una sola data model lógica por página. Componer dos record sets no relacionados es violación.
+- No hay `<Segmenter>` para segmentation sobre el record set — los filtros granulares de L3 son el único mecanismo de narrowing. Los sub-tabs `Nuevas + Histórico` o `Activos + Histórico` que existían en versiones previas del framework **están deprecados**.
+- El detail surface por registro es un modal centrado o el side `<Drawer>`, según el `meta.detail` del record type. Workflow-driven (Solicitudes, Alertas perfil B) usan Drawer.
+
+**Ejemplos en el core:** Inbox, Alertas (perfiles A y B), Movimientos (OPS / FIN), Cotizaciones (TRD / FIN), Tesorería › Cola de Asignación.
+
+### 5.2 Type B — Summary-first con record-feeding sub-tabs
+
+**Job:** ver primero el estado / disponibilidad / situación; recién después drill into los registros que produjeron esos valores.
+
+**Layout:**
+- **Page header** — título + Main CTA persistente sobre el módulo como un todo. El CTA permanece en la fila del título sin importar qué sub-tab esté activo.
+- **`<Segmenter>`** debajo del page header con dos o más **functional sub-tabs**: el primero es el summary sub-tab; los demás son record-feeding sub-tabs — cada uno con su propia data model y lifecycle.
+- **Summary sub-tab** — combina KPI cards (computadas cross data models) con uno o más non-list renderings (tree expandible, chart con overlays, widget cards). NO es una L1/L2/L3 record table — su job es resumir, no listar.
+- **Record-feeding sub-tabs** — cada uno típicamente Type-A-shaped: KPIs sobre sus registros, search + filters, data surface, paginación.
+
+**Reglas:**
+- Los sub-tabs son data models independientes con lifecycles independientes. NO son segmentation sobre un único record set.
+- Un sub-tab option PUEDE mostrar un count chip (ej: longitud de una cola pendiente) cuando el conteo es operativamente significativo.
+- Mezclar Type A y Type B en una sola página (un L1/L2/L3 con un summary banner pinned arriba) es violación de contrato — split en dos páginas.
+
+**Ejemplos en el core:** Reportes (Catálogo + Ejecución), Tesorería (Disponibilidad + sub-tabs por data model).
+
+### 5.3 Heurística de decisión
+
+Aplicar en este orden, primer match gana:
+
+1. ¿La tarea principal del usuario es browse, filter, act sobre un único record set? → **Type A**.
+2. ¿El usuario primero ve el estado / disponibilidad / situación resumida y solo después drill into los registros que produjeron esos valores? → **Type B**.
+
+Mezclar ambos patrones en una misma página es contract violation. Cuando un dominio necesita ambas funciones, split en dos páginas.
 
 ---
 
-## 6. Ubicación en el sidebar
+## 6. Vistas + Ejes (funcionalidad transversal)
 
-**Convención cerrada:** los 4 módulos genéricos van **al tope del sidebar, al mismo nivel y sin agruparlos bajo ningún `<div class="sb-section">`**. Esto vale para **todas las apps del core** (OPS, TRD, LEX, CLP, COM, FIN), sin excepciones.
+> **Sección nueva en v1.3.** Formaliza el contrato de las tres vistas y los ejes del Tablero, hoy distribuido entre los specs `core-data-tables`, `core-modals` y `core-modulo-genericos` del prototipo.
 
-Los `<div class="sb-section">` se reservan exclusivamente para los módulos del dominio específico de cada app (ej: "Operaciones" / "Contabilidad" en FIN, "Compliance" en LEX, "Operaciones" / "Gestión" en OPS).
+### 6.1 Las tres vistas
 
-**Estructura canónica:**
+Todo módulo Type A con vistas múltiples declara un array `views` con uno o más de los siguientes valores:
+
+| Vista | Cuándo activarla | Nota |
+|---|---|---|
+| **Lista** | Default. Adecuada para volumen alto y consulta densa de información. Tabla con columnas configurables, paginación, filtros. | Siempre disponible cuando el módulo expone registros. |
+| **Tarjetas** | Cuando los registros tienen información visual densa que se aprecia mejor en card (resúmenes, indicadores múltiples, fotos / iconos del dominio). | Cards grid responsive. |
+| **Tablero** | Cuando hay un campo de tipo estado o flujo operativo y vale ver los registros agrupados por ese campo. | Kanban state-driven — N columnas = N valores del eje activo. |
+
+**Comportamiento:**
+- Si el módulo declara solo una vista, `<ViewToggle>` no se renderiza.
+- Cambiar de vista NO cambia el record set — solo cambia la representación visual del mismo set filtrado.
+- Click en row (cualquier vista) abre el detail surface declarado por `meta.detail` (modal o Drawer).
+
+**Declarar `'kanban'` sin un state machine es rechazado en dev-time.** El Tablero requiere un eje válido que defina las columnas.
+
+### 6.2 Ejes — Tablero state-driven
+
+El Tablero del paradigma es state-driven: las columnas se generan dinámicamente a partir del **eje activo**, que es el campo del registro que determina las columnas.
+
+**Concepto clave:** un módulo puede declarar **múltiples ejes posibles**, y el usuario elige cuál ver. Cada eje es un campo del registro de tipo enum (estado, prioridad, tipo, sociedad, etc.). El usuario cambia de eje y el Tablero se re-renderiza con un set de columnas distinto sobre los mismos registros.
+
+**Ejemplo — Cotizaciones (FIN):**
 
 ```
-[Brand]
-· Dashboard
-· Inbox      [N]
-· Alertas    [N]
-· Reportes
-
-BLOQUE DEL DOMINIO 1
-· Módulo específico …
-· Módulo específico …
-
-BLOQUE DEL DOMINIO 2
-· Módulo específico …
-
-[spacer]
-[Account]
+ejes: [
+  { id: 'documentacion', label: 'Estado de Documentación',
+    values: ['pendiente_emision', 'emitida', 'enviada', 'cobrada'] },
+  { id: 'tipo_operacion', label: 'Tipo de Operación',
+    values: ['SWAP', 'TRANSFER', 'COMPRA', 'VENTA'] }
+]
 ```
 
-**Por qué esta convención:**
+El usuario por default ve el Tablero por estado de documentación; cambia el eje a "tipo de operación" y ve los mismos registros agrupados por tipo.
 
-1. **Reconocibilidad transversal.** Un usuario que opera en múltiples apps encuentra los 4 genéricos siempre en la misma posición física. No tiene que buscarlos contextualmente en cada app.
-2. **Separación visual clara entre lo transversal y lo del dominio.** El bloque del dominio es "lo que esta app hace que las otras no hacen"; los genéricos del tope son "lo que toda app del core tiene".
-3. **Coherencia con el breadcrumb.** Los genéricos al tope, sin bloque, generan breadcrumbs simples (`Inbox / Tablero`, `Alertas / Nuevas`) sin segmento de bloque previo. Los módulos del dominio generan breadcrumbs con bloque (`Operaciones / Movimientos`).
+**Reglas:**
+- El primer eje declarado es el eje default.
+- El selector de eje vive en la actions area de L1, junto al `<ViewToggle>`.
+- Cambiar el eje no cambia el record set ni los filtros activos.
 
-**Implicación para el helper de breadcrumb:** el componente `renderBC(segments)` del template usa `sidebarBlockOf(niEl)` que detecta automáticamente si el `.ni` activo está al tope o adentro de un bloque. **No hardcodear** el segmento de bloque en cada vista — calcularlo desde el DOM.
+### 6.3 Drag-drop con `<ClosureModal>`
+
+Las transiciones entre columnas del Tablero declaran un **mode** que determina si abren un modal o son inmediatas:
+
+| Mode | Comportamiento |
+|---|---|
+| `free` | Drag libre. La transición se aplica inmediatamente. Se loggea un `TimelineEvent { kind: 'state_change' }`. |
+| `modal` | Drag abre el `<ClosureModal>`. La transición no se aplica hasta que el usuario completa el modal. |
+
+**Cuándo usar `modal`:** transiciones a estado terminal (Inbox `* → completed`, Inbox `* → rejected`, Alertas `* → resolved`, Alertas `* → dismissed`) — cualquier transición que requiera registro auditable.
+
+**`<ClosureModal>` es shared** — el mismo componente se reusa en Inbox, Alertas y cualquier otro módulo que declare transiciones modal-mode. La justificación tiene mínimo 10 chars; en Inbox suma además radio buttons con las `closeActions` del tipo (ver §9.5).
+
+**Cuándo usar `free`:** transiciones intermedias (`pending → in_progress`) o reversibles (`in_progress → pending`).
+
+**Estado terminal es inmutable** — una vez en estado terminal, las cards no son draggables.
+
+### 6.4 Coexistencia con acciones inline
+
+Las acciones inline del menú `⋯` y los CTAs de header coexisten con el drag-drop — son la forma "rápida" de ejecutar la misma transición. La lógica de habilitación (capabilities + reglas intrínsecas del registro) la evalúa el manifest engine de Acciones (§11), no el Tablero.
 
 ---
 
 ## 7. Patrón arquitectónico — Alertas
 
-**Prototipo canónico:** `prototypes/lex/lex_alertas_prototype.html` (implementa el perfil B · Workflow completo).
+**Prototipo canónico:** `prototypes/lex/lex_alertas_prototype.html` (perfil B · Workflow completo). Spec OpenSpec: `prototypes/_core-template/openspec/specs/core-modulo-genericos/spec.md`.
 
 ### 7.1 Núcleo (siempre presente)
 
 Sin estos componentes, no hay módulo Alertas:
 
 - **Listado activo de alertas** — vista principal del módulo.
-- **Modelo de datos mínimo** — `id`, `type`, `state`, `created_at`, `last_event_at`.
-- **Acción de marcar como atendida** — toda alerta tiene un fin de vida. El cómo se marca depende del perfil (ver §7.3).
+- **Modelo de datos mínimo** — `id`, `type`, `profile`, `state`, `created_at`, `last_event_at`.
+- **Discriminador `profile: 'A' | 'B' | 'C' | 'D'`** — declarado por cada `ALERT_TYPE` en config; activa exactamente una UI canónica.
+- **Acción de resolución** — toda alerta tiene un fin de vida. El cómo se resuelve depende del perfil.
 - **Tipos definidos por la app** — el dominio determina qué se alerta.
-- **Sub-tab Nuevas activas** — alertas que aún requieren atención.
+
+Nota — no hay sub-tabs de segmentation. El filtro Estado en L3 expone los estados simultáneamente. Default: todos visibles.
 
 ### 7.2 Capacidades opcionales
 
-Cada app activa las que necesite:
+Cada `ALERT_TYPE` activa las que necesite según su perfil:
 
 | Capacidad | Cuándo activarla |
 |---|---|
 | **Severidad** (`critical`/`high`/`medium`/`low`) | Cuando hay priorización entre alertas |
-| **Sub-tab Histórico** | Cuando importa la auditoría retrospectiva |
-| **Asignación a usuario** (`Asignarme`/`Asignar a...`/`Reasignar`/`Desasignar`) | Cuando hay un dueño humano del trabajo |
+| **Asignación a usuario** (`Asignarme`/`Asignar a...`/`Reasignar`/`Desasignar`) | Cuando hay un dueño humano del trabajo (típico perfil B) |
 | **Asignación a área** (sin persona específica) | Cuando es responsabilidad colectiva sin ownership individual |
-| **Drawer lateral con timeline** | Cuando la resolución es un proceso, no un acto |
+| **Drawer lateral con timeline** | Cuando la resolución es un proceso, no un acto (típico perfil B) |
 | **Comentarios en timeline** | Cuando hay colaboración entre personas en una alerta |
-| **Modal de cierre con justificación** (≥ 10 chars) | Cuando se requiere registro auditable de la decisión |
-| **Auto-cierre por sistema** | Cuando la condición de cierre es detectable algorítmicamente |
+| **`<ClosureModal>` con justificación** (≥ 10 chars) | Cuando se requiere registro auditable de la decisión (mandatorio en perfil B) |
+| **Auto-cierre por sistema** | Cuando la condición de cierre es detectable algorítmicamente (perfil A con auto-resolution, perfil C) |
 | **Filtros del histórico** (Tipo / Severidad / Responsable / Período / Sociedad / etc.) | Cuando el volumen lo justifica |
-| **KPIs en L2** (Nuevas / En revisión / Revisadas mes / Descartadas mes) | Cuando importa visibilizar el throughput del equipo |
+| **KPIs en L2** | Cuando importa visibilizar el throughput del equipo |
+| **Tablero (Kanban)** | Cuando hay flujo y vale verlo state-driven (típico perfil B) |
+| **Chart-first surface con thresholds overlaid** | Mandatorio en perfil C |
+| **Cross-app filters** | Mandatorio en perfil D |
 
-### 7.3 Perfiles típicos
+### 7.3 UI canónica por perfil
 
-Ver §3.2 para el vocabulario compartido. Aplicado a Alertas:
-
-- **Perfil A · Notification-only** — solo núcleo + severidad opcional. Estados: `new` / `resolved`. Cierre = "marcar como atendida" sin justificación.
-- **Perfil B · Workflow** — núcleo + todas las capacidades del canónico LEX. Estados: `new` / `in_review` / `resolved` / `dismissed`. Cierre con justificación obligatoria.
-- **Perfil C · Auto-system** — núcleo + auto-cierre. Estados: `new` / `auto_resolved`. Sin intervención humana.
-- **Perfil D · Hybrid** — el módulo coexiste con tipos de distintos perfiles.
+| Perfil | UI |
+|---|---|
+| **A — Active triage** | Lista tipo Inbox sin owner / SLA. Resolver = un click. Sin Drawer ni Tablero por default. Toast confirmation per `core-error-handling`. |
+| **B — Workflow** | Drawer con Timeline + Comments al click. Tablero disponible. Transiciones `* → resolved` y `* → dismissed` van por `<ClosureModal>` con justificación ≥ 10 chars. |
+| **C — Time-series** | Página chart-first con la métrica subyacente y thresholds overlaid. Lista compacta como panel secundario. Resolución automática cuando la métrica vuelve. |
+| **D — Cross-app dashboard** | KPI cards por app de origen + cross-app filters. No hay per-row triage UI — read-only orientation. |
 
 ### 7.4 Modelo de datos
 
-**Campos del núcleo (siempre presentes):**
+**Campos del núcleo:**
 
-```
-{
-  id: string,
-  type: string,
-  state: enum (depende del perfil del tipo),
-  created_at: timestamp,
-  last_event_at: timestamp,
+```typescript
+interface Alerta {
+  id: string;
+  type: string;
+  profile: 'A' | 'B' | 'C' | 'D';
+  state: AlertState; // depende del perfil
+  created_at: number;
+  last_event_at: number;
   // ...campos del dominio
 }
 ```
@@ -213,21 +292,19 @@ Ver §3.2 para el vocabulario compartido. Aplicado a Alertas:
 | `severity` | Severidad |
 | `assignee_id`, `assigned_at` | Asignación a usuario |
 | `assigned_team` | Asignación a área |
-| `closed_at`, `closed_by`, `close_comment` | Modal de cierre con justificación |
-| `timeline: [...]` | Drawer con timeline / Comentarios |
+| `closed_at`, `closed_by`, `closure_comment` | `<ClosureModal>` con justificación |
+| `timeline: TimelineEvent[]` | Drawer con timeline / Comentarios |
 | `auto_resolved_reason` | Auto-cierre |
 
 ### 7.5 Estados — set canónico
 
-El framework define un set único de estados. Cada perfil usa solo los relevantes:
-
 | Estado | Significado | Perfiles que lo usan |
 |---|---|---|
 | `new` | Alerta sin atender | Todos |
-| `in_review` | Tomada por un usuario, en proceso | B (Workflow) |
+| `in_review` | Tomada por un usuario, en proceso | B |
 | `resolved` | Cerrada con acción | A, B |
 | `dismissed` | Descartada / falso positivo | B |
-| `auto_resolved` | Cerrada automáticamente por el sistema | C |
+| `auto_resolved` | Cerrada automáticamente por el sistema | A (con auto-resolution), C |
 
 Una vez cerrada (`resolved` / `dismissed` / `auto_resolved`), la alerta es inmutable.
 
@@ -236,24 +313,27 @@ Una vez cerrada (`resolved` / `dismissed` / `auto_resolved`), la alerta es inmut
 | Componente UI | Requiere capacidad |
 |---|---|
 | Listado activo (cards o tabla) | Núcleo |
-| Sub-tab Nuevas + Histórico | Histórico |
-| Drawer lateral | Drawer con timeline |
-| Sección Timeline en drawer | Drawer con timeline |
+| `<Drawer>` lateral | Drawer con timeline (perfil B) |
+| Sección Timeline en Drawer | Drawer con timeline |
 | Footer con textarea de comentarios | Comentarios en timeline |
-| Modal de cierre con validación | Cierre con justificación |
+| `<ClosureModal>` con validación | Cierre con justificación (perfil B mandatorio) |
 | KPIs L2 (4 cards) | KPIs |
-| Filtros portal | Filtros del histórico |
+| Filtros portal en L3 | Filtros del histórico |
 | Sistema de asignación (botones contextuales + dropdown) | Asignación |
+| Chart-first surface | Perfil C |
+| Cross-app KPI cards | Perfil D |
 
 ---
 
 ## 8. Patrón arquitectónico — Reportes
 
-**Prototipo canónico:** `prototypes/lex/lex_reporteria_prototype.html` (implementa el perfil completo con todas las capacidades activas).
+**Prototipo canónico:** `prototypes/lex/lex_reporteria_prototype.html`. Spec OpenSpec: `prototypes/_core-template/openspec/specs/core-modulo-genericos/spec.md` (sección Reportes).
+
+> **Cambio en v1.3:** los sub-tabs del módulo Reportes pasan de `Catálogo + Histórico` a **Catálogo + Ejecución** y se implementan vía Type B Tabs (Segmenter debajo del header, no en L1). El cambio de naming refleja que el segundo sub-tab no es un histórico pasivo — lista entidades activas (`ReportRun`) con su propio shape, columnas, filtros y acciones.
 
 ### 8.1 Principio rector — separación definición / generación
 
-**La definición** del reporte es ownership del área de negocio (Legal, Finanzas, Operaciones, etc.). El registro en el catálogo contiene metadata completa: nombre, descripción, categoría, entidad rectora, normativa, periodicidad, formato, política de retención, parámetros.
+**La definición** del reporte es ownership del área de negocio (Legal, Finanzas, Operaciones, etc.). El registro en el catálogo contiene metadata completa: nombre, descripción, categoría, entidad rectora, normativa, periodicidad, formato, política de retención, parámetros, dependencias.
 
 **La generación** es ownership de Tecnología: para cada registro del catálogo, Tecnología implementa una función de generación (query, enriquecimiento, template) invocable on-demand vía CTA o programada vía CRON.
 
@@ -281,11 +361,22 @@ No todo reporte va al módulo centralizado. Cada módulo de cada app puede tener
 
 ### 8.3 Núcleo (siempre presente)
 
+El módulo es Type B con dos sub-tabs canónicos:
+
+- **Catálogo** — lista entidades `Report` (templates / definiciones).
+- **Ejecución** — lista entidades `ReportRun` (generaciones realizadas).
+
+Núcleo:
+
 - **Catálogo de reportes** con metadata mínima por registro (nombre, descripción, categoría, periodicidad, formato).
-- **Sub-tabs** Catálogo + Histórico.
-- **Endpoint de generación** invocable desde CTA del módulo.
-- **Persistencia del histórico** de generaciones con metadata.
+- **Endpoint de generación** invocable desde CTA del Catálogo.
+- **Persistencia del histórico de runs** con metadata (trigger, requested_at, completed_at, status, params, output_url).
 - **Acción de descarga** sobre el archivo generado.
+
+**Reglas de Type B Tabs:**
+- El `<Segmenter>` con las dos opciones va debajo del page header, no en L1.
+- Default sub-tab: `catalogo`.
+- Cada sub-tab tiene **shape, columnas, filtros y acciones independientes** — no se comparten. La nomenclatura "Histórico" no aparece en ningún lado.
 
 ### 8.4 Capacidades opcionales
 
@@ -296,106 +387,130 @@ No todo reporte va al módulo centralizado. Cada módulo de cada app puede tener
 | **Dependencias inter-área** (ver §8.5) | Cuando algún reporte requiere coordinación con otras apps |
 | **Validación previa antes de generar** | Cuando hay parámetros complejos o pre-condiciones |
 | **Modal de detalle por reporte** | Cuando importa la trazabilidad histórica por reporte |
-| **Filtros del histórico** | Cuando el volumen lo justifica |
+| **Filtros de Ejecución** (Trigger / Estado / Período) | Cuando el volumen lo justifica |
+| **Filtros de Catálogo** (Categoría / Periodicidad / Formato) | Cuando el catálogo crece |
 | **Reportes bloqueados visibles** (`.locked`) | Cuando importa visibilizar el roadmap |
 
 ### 8.5 Dependencias inter-área para la generación
 
-Un reporte centralizado puede declarar **dependencias** — tareas que deben ejecutarse en otras apps/módulos antes de poder generarse.
+Un reporte centralizado puede declarar **dependencies** — tareas que deben ejecutarse en otras apps/módulos antes de poder generarse.
 
 **Modelo extendido del registro de catálogo:**
 
-```javascript
-{
-  id: 'rpt_001',
-  name: 'Estado de Resultados Mensual',
-  category: 'Financieros',
-  periodicity: 'Mensual',
-  // ...metadata base
-  dependencies: [
-    {
-      app: 'OPS',
-      module: 'Movimientos',
-      task: 'Conciliación operativa del mes cerrada',
-      owner_role: 'OPS_OFFICER',
-      sla_days_before: 2  // 2 días antes del vencimiento del reporte
-    },
-    {
-      app: 'FIN',
-      module: 'Tesorería',
-      task: 'Carga manual de FEEs bancarios procesada',
-      owner_role: 'TREASURY',
-      sla_days_before: 3
-    }
-  ]
+```typescript
+interface Report {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  periodicity?: string;
+  format?: string;
+  params?: Record<string, unknown>;
+  dependencies?: ReportDependency[];
+  cron_enabled?: boolean;
+  cron_active?: boolean;
+  locked?: boolean;
+  locked_reason?: string;
+}
+
+interface ReportDependency {
+  blocking_app: string;        // 'OPS' / 'FIN' / 'LEX' / ...
+  blocking_module: string;     // 'movements' / 'tesoreria' / ...
+  blocking_state: string;      // 'reconciled' / 'closed' / ...
+  sla_days_before?: number;    // anticipación al vencimiento del reporte
+  completed: boolean;
 }
 ```
 
 **Estado del reporte considerando dependencias:**
 
-- `Listo para generar` → todas las dependencias completadas → CTA Generar habilitado.
+- `Listo para generar` → todas las dependencias `completed: true` → CTA Generar habilitado.
 - `Pendiente · 2/3 dependencias` → CTA Generar deshabilitado, tag visible con detalle.
 - `Bloqueado` → alguna dependencia con vencimiento crítico no cumplida → alerta visual roja.
 
-### 8.6 Integración con el módulo Alertas — REPORT_DEPENDENCY
+### 8.6 Integración con el módulo Alertas — `REPORT_DEPENDENCY`
 
 Reportes y Alertas se integran como mecanismo de coordinación inter-aplicación.
 
-**Flujo:** cuando un reporte tiene una dependencia pendiente y se acerca su SLA, el motor de Reportes genera automáticamente una alerta de tipo `REPORT_DEPENDENCY` dirigida al área responsable. La alerta llega al **Inbox y al módulo Alertas de la app correspondiente**.
+**Flujo:** cuando el usuario clickea Generar y hay dependencias `completed: false`, el motor emite un evento `REPORT_DEPENDENCY` a la app indicada por `blocking_app`. La app destino consume el evento en su módulo Alertas y crea una `Alerta` con `type: 'report_dependency'` y `profile: 'A'`. Cuando la source completa la dependencia, la Alerta auto-cierra como `auto_resolved`.
 
-**Ejemplo:**
+**Cambio importante en v1.3:** en versiones previas se documentó el `REPORT_DEPENDENCY` como perfil C (Auto-system). En el contrato actual del prototipo, el perfil correcto es **A** — la lista del área responsable es triage activo (un click para revisar, navegación al módulo bloqueador), pero el cierre puede ser auto cuando la source completa la dependencia.
 
-- Reporte: "Estado de Resultados Mensual" (FIN.Reportes)
-- Vence: 05/05.
-- Dependencia: "Conciliación operativa del mes cerrada" — owner: OPS_OFFICER (OPS), SLA 2 días antes (= 03/05).
-- 02/05: motor detecta que la conciliación no está cerrada. Genera `REPORT_DEPENDENCY` para OPS.
-- Alerta llega a OPS.Inbox y OPS.Alertas, se asigna a un OPS_OFFICER.
-- El OPS_OFFICER cierra la conciliación en OPS.Movimientos.
-- Sistema detecta dependencia cumplida → cierra automáticamente la alerta como `auto_resolved` con comentario auto-generado: "Dependencia completada: Conciliación operativa cerrada el 02/05/2026".
-- Reporte vuelve a `Listo para generar`.
+**Modelo del evento:**
 
-**Este tipo de alerta usa el perfil C (Auto-system)** — sin asignación humana, sin cierre manual.
+```typescript
+interface ReportDependencyEvent {
+  report_id: string;
+  blocking_app: string;
+  blocking_module: string;
+  blocking_state: string;
+  sla_days_before?: number;
+  emitted_at: number;
+}
+```
 
-**Modelo:**
+**Modelo de la Alerta consumiendo el evento:**
 
-```javascript
+```typescript
 {
-  type: 'REPORT_DEPENDENCY',
+  type: 'report_dependency',
+  profile: 'A',
   state: 'new' | 'auto_resolved',
-  severity: <derivada de proximidad al SLA>,
-  context: 'Reporte "<nombre>" requiere completar tarea en <app/módulo>',
-  detail: '<descripción de la tarea pendiente>',
-  related_report_id: 'rpt_001',
-  related_dependency_index: 0,
-  owner_role: '<rol del área responsable>',
-  // resto idéntico al modelo base de alertas
+  payload: {
+    report_id: 'rpt-monthly-tax',
+    blocking_module: 'movements',
+    blocking_state: 'reconciled',
+    // ...
+  }
 }
 ```
 
 **Loop completo de los 4 módulos genéricos:**
 
-Reportes detecta el bloqueo → Alertas notifica al área responsable → Inbox la recibe → el área completa la tarea en su módulo específico → Alertas se cierra automáticamente → Reportes pasa a "Listo para generar" → Dashboard del solicitante refleja el cambio.
+Reportes detecta el bloqueo → Alertas notifica al área responsable → Inbox la recibe (cuando aplica) → el área completa la tarea en su módulo específico → Alertas se cierra automáticamente como `auto_resolved` con `closure_comment: 'auto-closed by source-app completion'` → Reportes pasa a "Listo para generar" → Dashboard del solicitante refleja el cambio.
 
 Este es el motivo por el que los 4 módulos genéricos **deben coexistir en cada app del financial-core**: ninguno funciona aislado, son piezas de un mismo mecanismo de coordinación.
 
-### 8.7 Componentes UI según capacidades
+### 8.7 `ReportRun` — modelo del sub-tab Ejecución
+
+```typescript
+interface ReportRun {
+  id: string;
+  report_id: string;
+  requested_at: number;
+  completed_at?: number;
+  status: 'ok' | 'error' | 'pending';
+  params: string;
+  trigger:
+    | { type: 'cron' }
+    | { type: 'manual'; user_id: string }
+    | { type: 'system' };
+  output_url?: string;
+  error_message?: string;
+}
+```
+
+Acciones canónicas: `Descargar` (cuando `output_url` está presente), `Reintentar` (cuando `status === 'error'`).
+
+### 8.8 Componentes UI según capacidades
 
 | Componente UI | Requiere capacidad |
 |---|---|
-| Catálogo (cards agrupados) + Histórico (tabla) | Núcleo |
+| Catálogo (cards agrupados por categoría) | Núcleo |
+| Ejecución (tabla con runs) | Núcleo |
 | Modal Editar metadata | Edición de metadata |
 | Modal Configurar CRON | CRON activable |
 | Modal Generar con parámetros | Núcleo |
 | Modal Detalle del reporte | Modal de detalle |
 | Indicador de dependencias pendientes en card | Dependencias inter-área |
-| Filtros portal | Filtros del histórico |
+| Filtros portal en cada sub-tab | Filtros |
 | Cards `.locked` con tag de bloqueo | Reportes bloqueados visibles |
 
-### 8.8 Categorías
+### 8.9 Categorías
 
 Cada aplicación define sus categorías. Recomendación: 3-5 categorías que capturen la naturaleza del consumo (Regulatorio / Interno / Operativo / Contable / Financiero).
 
-### 8.9 Reportes bloqueados
+### 8.10 Reportes bloqueados
 
 Reportes que dependen de un módulo o feature aún no implementado se muestran en el catálogo con clase `.locked`: opacidad reducida, sin botón Generar, con tag visible explicando el bloqueo (ej: `Bloqueado · requiere FIN.Contabilidad`). Da visibilidad temprana del scope futuro sin venderlos como disponibles.
 
@@ -403,45 +518,60 @@ Reportes que dependen de un módulo o feature aún no implementado se muestran e
 
 ## 9. Patrón arquitectónico — Inbox
 
-**Prototipo canónico:** *(en construcción — primer canónico será OPS-Inbox; ver §9.5).*
+**Prototipos:** Inbox de FIN (`prototypes/fin/src/pages/Inbox.vue`) ya implementado como skeleton funcional. OPS-Inbox como prompt canónico v1 en `prototypes/ops/ops-inbox-PROMPT.md`. Spec OpenSpec: `prototypes/_core-template/openspec/specs/core-modulo-genericos/spec.md` (sección Inbox).
 
-### 9.0 Nomenclatura — "Solicitudes" (denominación universal del módulo)
+### 9.1 Nomenclatura — "Solicitudes" (denominación universal)
 
-**"Solicitudes" es la denominación universal y normalizada de todos los registros que se gestionan en el módulo Inbox del financial-core**, independientemente de la app (OPS, FIN, LEX, TRD, CLP, COM) y del tipo específico de la Solicitud. No es nomenclatura local de FIN ni de OPS — es **convención global del core**.
+**"Solicitudes" es la denominación universal y normalizada de todos los registros que se gestionan en el módulo Inbox del financial-core**, independientemente de la app (OPS, FIN, LEX, TRD, CLP) y del tipo específico.
 
 Una Solicitud puede originarse en distintas fuentes (otra app del core, un usuario interno, el sistema), tener distintos tipos (withdrawal, aprobación de carga manual, matching de depósito, RFQ, dependencia de reporte, etc.) y distintas acciones de cierre — pero el **vocabulario para nombrar la entidad es siempre el mismo**: Solicitud (singular) / Solicitudes (plural).
 
-Debe aplicarse de forma consistente en:
+Aplica a:
 
 - Documentación funcional (discoveries, feature specs, este framework).
 - **Copy de UI** (labels, placeholders, mensajes vacíos, breadcrumbs internos, tooltips, contadores). Ej: "Tenés 8 Solicitudes pendientes en Inbox" — NO "8 items pendientes", NO "8 tareas", NO "8 pendientes".
-- Modelos de datos (entidad principal: `Solicitud` / `request` según convención técnica del repo).
+- Modelos de datos (entidad principal: `Solicitud`).
 - Conversaciones con stakeholders.
 - Specs Jira y comunicación con Tecnología.
 
-El término en código puede ser `request` (inglés, alineado con convenciones técnicas habituales) o `solicitud` (español, alineado con la lengua del producto). Ambos son aceptables internamente, pero el **vocabulario visible al usuario final es siempre "Solicitud"**.
+**Identifier canónico de TypeScript:** `Solicitud` (importado desde `src/types/genericos.ts`). Las apps **no redefinen** la interfaz — extienden vía `interface OpsX extends Solicitud { ... }` o vía generics `Solicitud<T>` cuando el shape varía por tipo. Esta es regla de contrato del spec `core-modulo-genericos`, no convención.
 
-**Esta nomenclatura es vinculante para todas las implementaciones del módulo Inbox en cualquier app del core.** Cuando un prototipo o implementación use otra denominación (ej: "items", "tareas", "requests" en español), se considera deuda de copy a corregir.
+### 9.2 Modelo de datos canónico
 
-### 9.1 Núcleo (siempre presente)
+```typescript
+interface Solicitud {
+  id: string;
+  type: string;              // 'withdrawal' | 'matching_deposit' | 'manual_load_approval' | ...
+  source_app: string;        // 'CLP' | 'OPS' | 'FIN' | ...
+  source_module: string;     // 'withdrawals' | 'movements' | ...
+  owner: string | null;      // user_id o null
+  sla_hours: number | null;
+  state: SolicitudState;     // ver §9.3
+  timeline: TimelineEvent[];
+  comments: Comment[];
+  closure_comment?: string;
+  // ...campos del dominio (vía extensión o payload genérico)
+}
 
-- **Lista de Solicitudes pendientes** que requieren atención del usuario o de un rol del área.
-- **Modelo de datos mínimo** — `id`, `type`, `state`, `source_app`, `source_module`, `created_at`.
-- **Acción de cerrar la Solicitud** (lleva el estado a `completed` / equivalente).
+type SolicitudState = 'pendiente' | 'en_proceso' | 'completed' | 'rejected';
+```
 
-### 9.2 Estados — set canónico de Inbox
+### 9.3 Estados — set canónico de Inbox
 
-A diferencia de Alertas (que tiene 5 estados), Inbox usa un set propio de 3 estados que mapean a las columnas Kanban:
+> **Cambio en v1.3:** Inbox pasa de 3 a 4 estados. La versión previa (`pending` / `in_progress` / `completed`) no incluía un estado terminal de rechazo, lo que forzaba a cierres bajo `completed` con `closeAction: 'rejected'`. El contrato actual del spec separa los dos estados terminales — `completed` y `rejected` — para reflejar el outcome de la decisión en el estado mismo.
 
-| Columna Kanban | Estado interno | Significado |
-|---|---|---|
-| **To Do** | `pending` | Solicitud recibida, sin tomar |
-| **In Progress** | `in_progress` | Tomada por alguien y siendo trabajada |
-| **Done** | `completed` | Atendida — la acción que requería se ejecutó |
+| Columna Kanban | Estado interno | Significado | Terminal |
+|---|---|---|---|
+| **To Do** | `pendiente` | Solicitud recibida, sin tomar | No |
+| **In Progress** | `en_proceso` | Tomada por alguien y siendo trabajada | No |
+| **Done** | `completed` | Atendida con outcome positivo (aprobada / procesada / confirmada) | Sí |
+| **Rejected** | `rejected` | Atendida con outcome negativo (rechazada / cancelada) | Sí |
 
-Estado terminal: `completed` es inmutable. Una Solicitud completada no se puede reabrir.
+Estados terminales (`completed` / `rejected`) son inmutables. Una Solicitud cerrada no se reabre.
 
-### 9.3 Capacidades opcionales
+**Override del vocabulario:** una app puede declarar su propio set de estados (ej: `received` / `reviewing` / `approved` / `denied`) siempre que al menos un estado esté marcado `terminal: true`. La regla del `<ClosureModal>` para transiciones a terminal aplica independientemente del vocabulario.
+
+### 9.4 Capacidades opcionales
 
 | Capacidad | Cuándo activarla |
 |---|---|
@@ -450,37 +580,42 @@ Estado terminal: `completed` es inmutable. Una Solicitud completada no se puede 
 | **Asignación a usuario** (Tomar / Asignar a... / Reasignar / Devolver a To Do) | Cuando hay un dueño humano del trabajo |
 | **Drawer lateral con timeline** | Cuando atender una Solicitud es un proceso, no un acto |
 | **Comentarios en timeline** | Cuando hay colaboración entre personas en una misma Solicitud |
-| **Modal de cierre con justificación** | Cuando se requiere registro auditable de la decisión de cierre |
-| **SLA visual** | Cuando las Solicitudes vencen y vale señalarlo (sin indicador / ámbar / rojo) |
-| **Vista Kanban** (`pending` / `in_progress` / `completed`) | Cuando importa la visión de flujo (default recomendado) |
-| **Vista Lista** (sub-tabs Activos / Histórico, KPIs, filtros, paginación) | Cuando importa el manejo de volumen alto y consulta histórica |
-| **Drag & drop híbrido entre columnas Kanban** | Solo cuando hay vista Kanban (ver §9.4) |
+| **`<ClosureModal>` con justificación + closeActions** | Mandatorio en transiciones a estado terminal |
+| **SLA visual** | Cuando las Solicitudes vencen y vale señalarlo |
+| **Vista Kanban** | Cuando importa la visión de flujo (default recomendado) |
+| **Vista Lista** | Cuando importa el manejo de volumen alto |
+| **Vista Tarjetas** | Cuando los datos se entienden mejor en card |
+| **Drag & drop con `<ClosureModal>` en transiciones a terminal** | Solo cuando hay vista Kanban |
 | **Auto-archive** | Cuando las Solicitudes cierran solas al cumplirse una condición |
 | **Agrupación por tipo / origen** | Cuando el volumen lo justifica |
 | **Notificación push externa** (email / Slack) | Cuando se requiere alcance fuera de la app |
 
-### 9.4 Drag & drop híbrido (cuando hay vista Kanban)
+### 9.5 Drag & drop con `<ClosureModal>` (vista Kanban)
+
+> **Patch en v1.3:** la mecánica de drag-drop se generaliza vía el contrato de Vistas + Ejes (§6.3) y se reusa el `<ClosureModal>` shared. Se mantienen las reglas de transición específicas de Inbox.
 
 **Reglas de transición** entre columnas:
 
-| Transición | Comportamiento |
-|---|---|
-| `pending → in_progress` | **Drag libre** con auto-asignación al usuario actual + evento en timeline |
-| `in_progress → completed` | **Drag abre modal de confirmación.** Requiere elegir acción de cierre (radio buttons que varían por tipo) + comentario obligatorio ≥ 10 chars |
-| `pending → completed` (directo) | Permitido pero abre modal. Auto-asigna primero al usuario actual |
-| `in_progress → pending` | **Drag libre** con desasignación + toast |
-| `completed → *` | **Bloqueado.** Las cards en Done no son draggables |
-| Drop en la misma columna | **No-op** |
+| Transición | Mode | Comportamiento |
+|---|---|---|
+| `pendiente → en_proceso` | `free` | Drag libre con auto-asignación al usuario actual + `TimelineEvent { kind: 'state_change' }` |
+| `en_proceso → completed` | `modal` | Abre `<ClosureModal>` con radio buttons de `closeActions` + comentario obligatorio ≥ 10 chars |
+| `en_proceso → rejected` | `modal` | Idem, con `closeActions` filtrados a opciones de rechazo |
+| `pendiente → completed` (directo) | `modal` | Permitido. Auto-asigna al usuario actual + abre `<ClosureModal>` |
+| `pendiente → rejected` (directo) | `modal` | Idem |
+| `en_proceso → pendiente` | `free` | Drag libre con desasignación + toast |
+| `completed → *` / `rejected → *` | bloqueado | Las cards en estados terminales no son draggables |
+| Drop en la misma columna | no-op | — |
 
-Las acciones inline (CTAs en cada card) coexisten con el drag — son la forma "rápida" de la misma transición. Implementación nativa con HTML5 Drag and Drop API, sin librerías externas.
+Las acciones inline (CTAs en cada card) coexisten con el drag — son la forma "rápida" de la misma transición. Implementación nativa con HTML5 Drag and Drop API.
 
-### 9.5 Modal de cierre — radio buttons por tipo
+### 9.6 `<ClosureModal>` — radio buttons por tipo
 
 A diferencia de Alertas (donde el cierre es "Marcar como revisada / Descartar" + justificación), en Inbox las **acciones de cierre dependen del tipo de la Solicitud**. El modal renderiza radio buttons con las opciones válidas para ese tipo, más un comentario obligatorio.
 
 Ejemplos:
 
-| Tipo de Solicitud | Acciones de cierre disponibles |
+| Tipo de Solicitud | `closeActions` |
 |---|---|
 | Solicitud de withdrawal | Aprobar y procesar / Rechazar |
 | Aprobación de carga manual | Aprobar / Rechazar |
@@ -489,9 +624,9 @@ Ejemplos:
 | Pedido de imputación retroactiva | Confirmar imputación / Rechazar |
 | Notificación de dependencia inter-área | Confirmar tarea completada |
 
-Cada tipo declara su set en el modelo de datos (`COMPLETION_ACTIONS_BY_TYPE`). El comentario es obligatorio para todas las opciones — provee auditoría de la decisión.
+Cada tipo declara su set en config (`INBOX_TYPES[type].closeActions`). El comentario es obligatorio para todas las opciones — provee auditoría de la decisión.
 
-### 9.6 Tipos de Solicitudes previstos (transversal)
+### 9.7 Tipos de Solicitudes previstos (transversal)
 
 A medida que las apps maduran, los tipos típicos son:
 
@@ -501,49 +636,59 @@ A medida que las apps maduran, los tipos típicos son:
 - Notificaciones del sistema con acción (depósito a identificar, dependencia de reporte centralizado).
 - Tareas planificadas con SLA.
 
-Los tipos concretos los define cada app en su discovery.
-
-### 9.7 Estado de implementación
-
-Inbox aún no tiene prototipo canónico ejecutado. Estado actual:
-
-- **OPS-Inbox** será el primer canónico del financial-core. Prompt completo en disco: `prototypes/ops/ops-inbox-PROMPT.md` v1 (27/04/2026), con vista Kanban + Lista, drag & drop híbrido, drawer + timeline, modal de cierre con radio buttons por tipo, dataset de 13 Solicitudes en 8 tipos cubriendo el dominio OPS (especialmente solicitudes desde CLP).
-- **FIN-Inbox** está incluido en el prototipo de FIN (`prototypes/fin/PROMPT.md` v4) como skeleton funcional con 8 Solicitudes en 8 tipos del dominio Finanzas.
-- **Template clonable** (`prototypes/_core-template/_core-template.html`) tiene un placeholder enriquecido con 5 categorías de ejemplos transversales (ver `inbox-placeholder-enrichment-PROMPT.md`) — sirve para elicitación previa, no es funcional.
-
-Cuando OPS-Inbox se ejecute, valide y se considere maduro, se promueve a canónico oficial: el placeholder del template se reemplaza por un skeleton funcional completo derivado de la implementación OPS, y los demás prototipos de apps se alinean.
+Los tipos concretos los define cada app en su discovery / REQ por área.
 
 ---
 
 ## 10. Patrón arquitectónico — Dashboard
 
-**Naturaleza:** convención de UI más que infraestructura técnica. No requiere REQ formal — se documenta acá y se materializa como skeleton del template clonable.
+> **Cambio mayor en v1.3:** Dashboard NO es L1/L2/L3. Es un card-grid responsive cuyo job es orientación, no operación. Esta convención se cierra acá y se materializa como skeleton del template clonable. Los REQs por área declaran qué cards específicas pueblan el grid de su Dashboard.
+
+**Spec OpenSpec:** `prototypes/_core-template/openspec/specs/core-modulo-genericos/spec.md` (sección Dashboard).
 
 ### 10.1 Núcleo (siempre presente)
 
-- **Vista consolidada del estado del área** que cubre la aplicación.
-- Al menos un bloque de KPIs (mínimo 3-4 indicadores).
+- **Card-grid responsive** — CSS-grid o flex auto-fit con cards como elemento primario. NO L1/L2/L3.
+- **Counters de los 3 list-shaped genéricos**:
+  - Inbox · N Solicitudes activas
+  - Alertas · N críticas
+  - Reportes · N pendientes (unfulfilled dependencies / pending runs)
+  - Cada card es clickable y navega al módulo.
+- **KPIs de los módulos de dominio activos** — cada KPI clickable, navega al módulo relevante.
+- **Una o más activity surfaces** — cualquiera de:
+  - Single timeline "Actividad reciente" cross-modules.
+  - Per-module activity widgets ("Alertas activas", "Próximos vencimientos").
+  - Combinación.
 
 ### 10.2 Capacidades opcionales
 
 | Capacidad | Cuándo activarla |
 |---|---|
-| **Cards de KPIs clickables** (cada uno navega al módulo relevante) | Cuando hay módulos de detalle a los que se quiere dar acceso rápido |
-| **Lista de alertas activas embebidas** | Cuando importa visibilizar urgencias sin entrar al módulo Alertas |
-| **Próximos vencimientos** (de Reportes u otros) | Cuando hay calendario de obligaciones |
-| **Actividad reciente** (timeline cronológico) | Cuando importa la trazabilidad del día a día |
-| **Charts** (líneas / barras / donas) | Cuando la información es comparativa o de evolución |
-| **Filtros de período** | Cuando los datos son time-series |
+| **Period selector** (Últimos 7 / 30 / 90 días) pinned top-right | Cuando hay KPIs time-based que vale recomputar por rango |
+| **Evolution chart placeholder card** (2/3-width) | Cuando la app tiene una métrica clave de evolución que mostrar; cada app la rellena con su chart específico |
+| **Activity widget "Alertas activas"** | Cuando importa visibilizar urgencias sin entrar al módulo Alertas |
+| **Activity widget "Próximos vencimientos"** | Cuando hay calendario de obligaciones (típicamente reportes) |
 
-### 10.3 Implementación
+### 10.3 Reglas (prohibiciones explícitas)
 
-Un Dashboard mínimo es solo los KPIs. Uno completo agrega todas las capacidades. La decisión depende de la madurez de la app y del valor real de cada componente para sus usuarios.
+El Dashboard es read-only orientation. Estas convenciones son contract violations:
+
+- **NO carga operaciones de dominio.** Si una funcionalidad requiere una acción sobre un registro, va en el módulo del dominio, no en Dashboard.
+- **NO filtros sobre listas.** Un filterable list pertenece al módulo que owns la data.
+- **NO sub-tabs / Segmenter / multi-segment navigation.** Eso es Type B.
+- **El period selector NO es Segmenter.** No re-segmenta listas — solo recomputa KPIs time-based del mismo Dashboard.
+
+### 10.4 Implementación
+
+Un Dashboard mínimo es: counters de los 3 genéricos + KPIs de módulos de dominio activos. Uno completo agrega period selector + evolution chart + activity widgets. La decisión depende de la madurez de la app y del valor real de cada componente para sus usuarios.
 
 ---
 
-## 11. Mecanismo transversal — Acciones (Acción · Registro · Capability)
+## 11. Mecanismo transversal — Acciones (manifest engine)
 
-**Naturaleza:** infraestructura transversal de UI y permisos que no es un módulo del sidebar pero atraviesa **todos los módulos del dominio** del financial-core (Movimientos, Quotes, Tesorería, Bancos/Cuentas, Lotes RFQ, etc.). Hoy vive disperso en cada prototipo; pendiente formalizar como spec y servicio compartido del core.
+**Naturaleza:** infraestructura transversal de UI y permisos que atraviesa **todos los módulos del dominio** del financial-core (Movimientos, Quotes, Tesorería, Bancos/Cuentas, Lotes RFQ, Inbox, Alertas, Catálogo de Reportes, etc.).
+
+> **Patch en v1.3:** la sección renombra el mecanismo a "manifest engine" para alinear con el spec OpenSpec `core-actions-manifest` y los manifests por módulo (`src/manifests/<app>.<module>.actions.ts`) ya implementados en el prototipo de FIN.
 
 ### 11.1 Qué resuelve
 
@@ -553,16 +698,20 @@ En cada listado del core, los registros tienen un menú de **Acciones** (botón 
 - **Características intrínsecas del registro** — estado, categoría, tipo, fecha (ej: una factura ya emitida no se puede regenerar; un movimiento ya conciliado no se puede des-conciliar).
 - **Habilitación por feature** — algunas acciones aún no están construidas y se muestran como `Bloqueado · V2` con tag visible.
 
-Hoy esta lógica vive **inline en el JS de cada prototipo** (objeto `can` / `reason` / `tag` dentro de `togActions()`), lo cual significa que cada app la reescribe sin contrato compartido. Esto genera divergencia inevitable entre prototipos y entre prototipos y producción.
+Sin un manifest engine compartido, esta lógica vive inline en cada vista — cada app la reescribe sin contrato compartido. Eso genera divergencia inevitable entre módulos y entre prototipos y producción.
 
-### 11.2 Modelo conceptual de la infraestructura transversal
+### 11.2 Modelo conceptual
 
 La relación a formalizar es:
 
 ```
 Acción ─── puede ejecutarse sobre ───→ Registro (de un cierto Tipo)
    │
-   └── requiere ───→ Capability (uno o más Roles)
+   ├── requiere ───→ Capability (uno o más Roles)
+   │
+   ├── puede abrir ───→ Dialog (campos, info banners, confirm/cancel)
+   │
+   └── ejecuta ───→ on_confirm (set_fields, recompute, audit, toast)
 ```
 
 **Ejemplo concreto:**
@@ -576,10 +725,11 @@ Acción ─── puede ejecutarse sobre ───→ Registro (de un cierto Tip
 
 ### 11.3 Componentes que la infraestructura debe proveer
 
-1. **Catálogo declarativo de Acciones** — registro central de todas las Acciones del core, su tipo de Registro objetivo, y las Capabilities habilitantes.
-2. **Motor de evaluación** — dado un registro y un usuario, evalúa qué Acciones están habilitadas (combinación de capability + reglas intrínsecas) y, cuando no lo están, devuelve el motivo legible.
-3. **API consumible desde frontend** — el menú de Acciones del template UI consulta este motor y renderiza solo lo habilitado, con tooltips de motivo cuando algo está deshabilitado.
-4. **Audit trail** — toda ejecución de una Acción queda registrada con usuario, registro, timestamp, parámetros — base de la trazabilidad transversal.
+1. **Manifests declarativos por módulo** — un archivo TypeScript por módulo (`src/manifests/<app>.<module>[.<recordType>].actions.ts`) que declara `actions[]`, `module_ctas[]`, `kanban_axes[]` y predicates (`enable_when`, `show_when`).
+2. **Motor de evaluación** — pure-TS, sin Vue / DOM. Dado un registro y un usuario, evalúa qué acciones están habilitadas y devuelve el motivo cuando no lo están.
+3. **Componentes UI** — `<ManifestActionsMenu>`, `<ManifestDialog>`, `<ManifestField>`, `<ManifestModuleCTAs>`, `<ManifestBatchCTA>` consumen el motor y renderizan solo lo habilitado.
+4. **Capability provider** — el motor consulta `useCapabilities()` para evaluar `capabilities` de cada acción.
+5. **Audit trail** — toda ejecución de una acción queda registrada con usuario, registro, timestamp, parámetros, outcome.
 
 ### 11.4 Por qué es transversal y no por módulo
 
@@ -592,9 +742,9 @@ Las Acciones tocan registros de varios módulos pero la lógica es la misma en t
 
 ### 11.5 Estado de implementación
 
-Infraestructura **no construida**. Hoy cada prototipo tiene su propia versión inline. Pendiente abrir REQ específico (ver §13).
+**Engine ya implementado en el prototipo de FIN** — `prototypes/fin/src/lib/manifest/` (pure-TS, sin Vue) + `prototypes/fin/src/components/manifest/` (UI) + 7 manifests (`fin.alertas`, `fin.cotizaciones`, `fin.inbox`, `fin.movimientos`, `fin.reportes`, `fin.tesoreria`, `fin.tesoreria.cola_asignacion`). El spec OpenSpec `core-actions-manifest` existe y está activo.
 
-**Lo que sí existe hoy** como referencia parcial: el patrón de UI del menú de Acciones está documentado en el README del template (`prototypes/_core-template/README.md` — sección "Menú de Acciones funcionales"), con clases `.abtn`, `.dtag`, función `togActions(event, idx)`, y la convención de tooltip nativo con motivo. Cuando el REQ se construya, ese patrón UI queda intacto y solo cambia su backend de evaluación (de `if` inline a llamada al motor centralizado).
+Lo que falta para production: el REQ transversal correspondiente (§13) que tramite la construcción de la infraestructura backend (catálogo persistido, motor server-side, audit trail, API consumible) sobre la que el frontend ya tiene el manifest engine cliente.
 
 ---
 
@@ -602,14 +752,13 @@ Infraestructura **no construida**. Hoy cada prototipo tiene su propia versión i
 
 ### 12.1 Estado actual
 
-| App | Dashboard | Inbox | Alertas (perfil) | Reportes |
+| App | Dashboard | Inbox | Alertas (perfiles activos) | Reportes |
 |---|---|---|---|---|
 | **LEX** | Placeholder | — | ✅ Canónico (REQ-52) · Perfil B | ✅ Canónico (REQ-54) |
-| **FIN** | Activo (prototipo) | Activo (prototipo · skeleton funcional) | Activo (prototipo) · Perfil D Hybrid | Activo (prototipo) |
-| **OPS** | — | Prompt canónico v1 (en disco, sin ejecutar) — futuro canónico | — | — |
-| **TRD** | — | — | (REQ-33 separado, a unificar bajo REQ Alertas transversal) | — |
+| **FIN** | Activo (prototipo migrado al template) | Activo (skeleton funcional con 8 tipos) | Activo · Perfiles A + B coexistiendo | Activo (Catálogo + Ejecución implementados) |
+| **OPS** | — | Prompt canónico v1 (en disco, sin ejecutar) | — | — |
+| **TRD** | — | — | REQ-33 separado, a unificar bajo REQ Alertas transversal | — |
 | **CLP** | — | — | — | — |
-| **COM** | — | — | — | — |
 
 ### 12.2 Roadmap
 
@@ -617,31 +766,51 @@ A medida que cada aplicación entre en fase de prototipo / spec / implementació
 
 ---
 
-## 13. Trabajo transversal en horizonte — REQs pendientes
+## 13. Trabajo transversal en horizonte — REQs en tramitación
 
-Las convenciones de este framework requieren materializarse como **infraestructura transversal del core** vía REQs en Jira. Hoy las convenciones existen y están validadas en prototipos; falta la spec formal y la construcción.
+Las convenciones de este framework requieren materializarse como **infraestructura transversal del core** vía REQs en Jira. El paradigma se compone de **6 REQs transversales** que entregan el estándar habilitante; cada app del core declara su configuración específica vía REQs por área que se construyen sobre los transversales.
 
-### 13.1 Inventario de REQs a tramitar
+### 13.1 Inventario de REQs transversales
 
-| # | REQ | Naturaleza | Scope |
+| # | REQ transversal | Naturaleza | Scope |
 |---|---|---|---|
-| 1 | **REQ-59 — Reportes (existente, requiere update)** | Update | Adaptar el spec existente a las convenciones cerradas en esta sesión: criterios §8.2 (qué reportes van al módulo), modelo de dependencias inter-área §8.5, integración con Alertas vía `REPORT_DEPENDENCY` §8.6, reconocimiento explícito como uno de los 4 módulos genéricos del core. AM-1004 (development story) también queda alineada. |
-| 2 | **REQ Dashboard transversal (nuevo)** | Nuevo | Infraestructura transversal del módulo Dashboard. Convención de UI (skeleton del template + capacidades opcionales del §10.2) + componentes compartidos. Dado que es más convención que infra técnica, podría tramitarse como REQ ligero. |
-| 3 | **REQ Inbox transversal (nuevo)** | Nuevo | Infraestructura transversal del módulo Inbox. Cubre: nomenclatura "Solicitudes", modelo de datos canónico, set de estados (`pending` / `in_progress` / `completed`), API de ingesta de Solicitudes desde otras apps del core, motor de routing por `target_role`, capacidades de §9.3 incluyendo vista Kanban + Lista con drag & drop híbrido §9.4, modal de cierre por tipo §9.5. |
-| 4 | **REQ Alertas transversal (nuevo, unifica REQ-52 LEX + REQ-33 TRD)** | Nuevo | Infraestructura transversal del módulo Alertas. Cubre el modelo núcleo + capacidades + perfiles A/B/C/D (§3 y §7). Reemplaza la fragmentación actual donde LEX y TRD tienen specs separados. Migra REQ-52 (LEX, Perfil B canónico) y REQ-33 (TRD) a este REQ unificado, manteniendo ambos como casos de implementación de la infraestructura transversal. |
-| 5 | **REQ Acciones transversal (nuevo)** | Nuevo | Mecanismo transversal de Acciones (§11). Catálogo declarativo `Acción - Registro - Capability`, motor de evaluación, API consumible desde frontend, audit trail. Atraviesa todos los módulos del dominio (Movimientos, Quotes, Tesorería, etc.) — no es de un módulo en particular. |
+| 1 | **Construir ACCIONES — Manifest Engine para Acciones por Registro** | Nuevo | Catálogo declarativo `Acción × Registro × Capability`, motor de evaluación (pure-TS), predicates `enable_when` / `show_when`, dialogs declarativos, capability gating, audit trail server-side, API consumible. Atraviesa todos los módulos del dominio y los 3 list-shaped genéricos. |
+| 2 | **Construir VISTAS — Lista, Tarjetas y Tablero con Ejes** | Nuevo | `<ViewToggle>`, contrato `views: ('list' \| 'cards' \| 'kanban')[]`, Tablero state-driven (N columnas = N estados / valores del eje activo), `kanban_axes[]` redefinibles por usuario, drag-drop con `<ClosureModal>` en transiciones a estado terminal, integración con manifest engine de Acciones. |
+| 3 | **Construir INBOX — Infraestructura Transversal del Core** | Nuevo | Tipo canónico `Solicitud`, set de estados `pendiente` / `en_proceso` / `completed` / `rejected`, transitions con mode `free` / `modal`, `<ClosureModal>` con `closeActions` por tipo, API de ingesta de Solicitudes desde otras apps, motor de routing por `target_role`, Drawer + Timeline + Comments. |
+| 4 | **Construir ALERTAS — Infraestructura Transversal del Core** | Nuevo (unifica REQ-52 + REQ-33) | Tipo canónico `Alerta` con discriminador `profile: 'A' \| 'B' \| 'C' \| 'D'`, UI canónica por perfil, `<ClosureModal>` con justificación obligatoria en perfil B, mecanismo `REPORT_DEPENDENCY` con auto-cierre cuando la source completa la dependencia, integración con Inbox y Reportes. **REQ-52 (LEX) y REQ-33 (TRD) se mantienen como casos de implementación de los `ALERT_TYPE` específicos de cada área, vinculados al transversal vía `is caused by`.** |
+| 5 | **Construir REPORTES — Infraestructura Transversal del Core** | Update de **REQ-59** | Re-baseline contra el contrato actual: split Catálogo / Ejecución vía Type B Tabs (deprecada la nomenclatura "Histórico"), tipos canónicos `Report` y `ReportRun`, `dependencies[]`, emisor de `REPORT_DEPENDENCY` events, locked reports. AM-1004 (development story) queda alineada. |
+| 6 | **Construir DASHBOARD — Infraestructura Transversal del Core** | Nuevo | Card-grid responsive (no L1/L2/L3), counters consolidados de los 3 list-shaped genéricos, evolution chart placeholder card, activity widgets (Alertas activas / Próximos vencimientos), period selector opcional top-right, prohibiciones explícitas (no operaciones de dominio, no filtros, no sub-tabs). |
 
-### 13.2 Iniciativa parent
+### 13.2 Modelo de provisión — REQ transversal vs REQ por área
 
-Estos 5 REQs probablemente deban agruparse bajo una iniciativa Jira común — candidata: nueva iniciativa **"Financial Core Generics"** o suma a **REQ-3** (Ardua Fintech) según prefiera el HoP al tramitarlos. Decisión a tomar al momento de crearlos en Jira.
+Los REQs transversales entregan el **estándar habilitante**:
+- Engines (manifest, vistas, alertas, etc.).
+- Tipos canónicos en `src/types/genericos.ts`.
+- Componentes shared (`<ClosureModal>`, `<Drawer>`, `<ManifestActionsMenu>`, etc.).
+- APIs e integraciones cross-app.
 
-### 13.3 Orden sugerido de tramitación
+Los REQs por área entregan la **configuración específica del estándar**:
+- Tipos de Solicitudes y Alertas con sus closeActions / perfiles.
+- Reportes específicos del catálogo del área.
+- KPIs y cards específicas del Dashboard del área.
+- Manifests de Acciones por módulo.
 
-1. **REQ-59 update + AM-1004 update** primero — ya está en Sent to Dev, hay momentum, y consolidar las convenciones del framework en un REQ vivo da base concreta a los demás.
-2. **REQ Inbox transversal** — la convención está madura (Kanban + Lista, transición híbrida, modal de cierre por tipo) y OPS-Inbox como primer canónico está en disco.
-3. **REQ Alertas transversal** — exige decisión de arquitectura (unificación REQ-52 + REQ-33), pero el modelo conceptual (perfiles, capacidades) está cerrado.
-4. **REQ Acciones transversal** — la conceptualización está en este framework (§11), falta el discovery de implementación y los detalles de scope v1.
-5. **REQ Dashboard transversal** — el más ligero porque es más convención que infra. Se puede dejar para el final.
+REQ-52 (LEX Alertas) y REQ-33 (TRD Alertas) pasan a ser ejemplos de REQ por área que se construyen sobre el REQ Alertas transversal. Mantienen su contenido específico del dominio; bajo el nuevo modelo no entregan la infraestructura — la consumen.
+
+### 13.3 Iniciativa parent
+
+Estos 6 REQs transversales probablemente deban agruparse bajo una iniciativa Jira común. Decisión a tomar al momento de crearlos en Jira (no resuelta acá — el HoP la cierra cuando los acomoda manualmente).
+
+### 13.4 Orden sugerido de tramitación
+
+Por dependencia técnica:
+
+1. **Construir ACCIONES** — base de los CTAs y row-actions de los 3 list-shaped genéricos.
+2. **Construir VISTAS** — el Tablero y el `<ClosureModal>` se reusan en Inbox y Alertas.
+3. **Construir INBOX** — convención madura, prototipo FIN ya implementado.
+4. **Construir ALERTAS** — perfiles A/B/C/D ya cocinados en el spec.
+5. **Construir REPORTES** (update REQ-59) — alineación con `REPORT_DEPENDENCY` perfil A.
+6. **Construir DASHBOARD** — el más liviano; puede ir al final o en paralelo.
 
 ---
 
@@ -662,23 +831,36 @@ Si un caso de uso parece requerir alejarse del patrón:
 
 ### 15.1 Prototipos canónicos y de referencia
 
-- **Prototipo canónico de Alertas:** `prototypes/lex/lex_alertas_prototype.html`
-- **Prototipo canónico de Reportes:** `prototypes/lex/lex_reporteria_prototype.html`
-- **Prompt canónico de Inbox (en disco, pendiente ejecución):** `prototypes/ops/ops-inbox-PROMPT.md` (v1)
-- **Prototipo FIN (incluye los 4 genéricos):** `prototypes/fin/fin-prototype.html` + prompt v4 en `prototypes/fin/PROMPT.md`
-- **Template base UI del core:** `prototypes/_core-template/_core-template.html` (v1.7+)
+- **Template base UI del core:** `prototypes/_core-template/` (Vue 3 + TS + Vite + OpenSpec)
+- **Prototipo FIN (canónico de migración al template):** `prototypes/fin/`
+- **Prototipo legacy de Alertas (LEX, perfil B):** `prototypes/lex/lex_alertas_prototype.html`
+- **Prototipo legacy de Reportes (LEX):** `prototypes/lex/lex_reporteria_prototype.html`
+- **Prompt canónico de Inbox (OPS, en disco):** `prototypes/ops/ops-inbox-PROMPT.md` (v1)
 
-### 15.2 Discoveries relacionados
+### 15.2 Specs OpenSpec relevantes
 
+(Vinculantes para el contrato técnico — viven en `prototypes/_core-template/openspec/specs/` y mirror en `prototypes/fin/openspec/specs/`.)
+
+- `core-modulo-genericos` — los 4 módulos genéricos
+- `core-module-types` — Type A vs Type B
+- `core-actions-manifest` — manifest engine de Acciones
+- `core-data-tables` — tabla, filtros, state machines, vistas
+- `core-modals` — Create / Detail / Edit / Confirm / `<ClosureModal>`
+- `core-layout`, `core-navigation`, `core-theming`, `core-forms`, `core-auth`, `core-api-layer`, `core-error-handling`, `core-actions-menu`
+
+### 15.3 Discoveries relacionados
+
+- **Discovery transversal del template:** `discoveries/core-template-frontend-discovery.md`
 - **Discovery FIN:** `discoveries/fin-discovery.md`
 - **Discovery OPS:** `discoveries/ops-discovery.md`
 - **Discovery LEX-Alertas:** `discoveries/lex-alertas-discovery.md`
 
-### 15.3 REQs activos
+### 15.4 REQs activos
 
-- **REQ-52** — LEX: Centro de Alertas (Perfil B · Workflow). A migrar bajo REQ Alertas transversal (§13.1).
+- **REQ-3** — Ardua Fintech (iniciativa parent candidata).
+- **REQ-52** — LEX: Centro de Alertas. Bajo el nuevo modelo, REQ por área que se construye sobre el REQ Alertas transversal. Mantiene contenido del dominio LEX.
 - **REQ-54** — LEX: Centro de Reportería Regulatoria y Operativa.
-- **REQ-33** — TRD: Módulo de Alertas. A migrar bajo REQ Alertas transversal (§13.1).
+- **REQ-33** — TRD: Módulo de Alertas. Bajo el nuevo modelo, REQ por área que se construye sobre el REQ Alertas transversal. Mantiene contenido del dominio TRD.
 - **REQ-59** — Reportería — Infraestructura Transversal del Core. Requiere update (§13.1).
 - **AM-1004** — development story de REQ-59. Requiere update también.
 
@@ -688,8 +870,9 @@ Si un caso de uso parece requerir alejarse del patrón:
 
 | Versión | Fecha | Cambios |
 |---|---|---|
-| 1.0 | 27/04/2026 | Versión inicial. Define los 4 módulos genéricos del financial-core: Dashboard, Inbox, Alertas, Reportes. Establece prototipos canónicos en LEX. Documenta convención de ubicación contextual en sidebar (no bloque "General"). |
-| 1.1 | 27/04/2026 | Reescritura mayor para incorporar el modelo "núcleo + capacidades opcionales": cada genérico se define como un kernel obligatorio + capacidades que cada app activa según necesidad. Nueva §3 con el modelo y los 4 perfiles típicos (A·Notification-only / B·Workflow / C·Auto-system / D·Hybrid) — el perfil se declara por tipo de alerta, no por aplicación. Reescritura de §7 (Alertas) y §8 (Reportes) bajo esta lente. Nuevas §9 (Inbox) y §10 (Dashboard) con núcleo + capacidades. Incorporación en §8 de los conceptos pendientes: criterios para distinguir reportes simples de centralizados (§8.2), modelo de dependencias inter-área (§8.5), integración Reportes↔Alertas vía tipo `REPORT_DEPENDENCY` con perfil Auto-system (§8.6). Tabla de §11 ampliada con columna de perfil declarado. Nuevas referencias a REQ-59 y REQ-33. |
-| **1.2** | **27/04/2026** | **Cambios mayores derivados de la sesión de definición de prototipos del financial-core: (a) §6 reescrita — los 4 genéricos van al tope del sidebar al mismo nivel sin agruparlos bajo `<div class="sb-section">`; los bloques se reservan para módulos del dominio. Convención cerrada para todas las apps del core sin excepción. (b) §9 (Inbox) reescrita y enriquecida: nueva §9.0 con la nomenclatura normalizada "Solicitudes" (lo que se gestiona en el módulo no son "items" ni "tareas"), nueva §9.2 con set canónico de estados específico de Inbox (`pending` / `in_progress` / `completed`, distinto al de Alertas), nueva §9.4 con drag & drop híbrido entre columnas Kanban, nueva §9.5 con modal de cierre por radio buttons que varían por tipo. (c) §9.7 actualizada con estado real de implementación: OPS-Inbox será el primer canónico (prompt v1 en disco), FIN-Inbox como skeleton funcional en su prototipo, template con placeholder enriquecido. (d) Nueva §11 "Mecanismo transversal — Acciones (Acción · Registro · Capability)": documenta el patrón de menú de Acciones con habilitación por capability del usuario + reglas intrínsecas del registro, hoy disperso en cada prototipo, pendiente formalizar como infra transversal. (e) Nueva §13 "Trabajo transversal en horizonte — REQs pendientes" con inventario de los 5 REQs que materializan estas convenciones: update REQ-59 + Reportes ya tramitado, REQ Dashboard transversal nuevo, REQ Inbox transversal nuevo, REQ Alertas transversal nuevo (unifica REQ-52 LEX + REQ-33 TRD), REQ Acciones transversal nuevo. (f) Tabla §12.1 actualizada con FIN.Inbox activo, OPS.Inbox con prompt canónico en disco. (g) §15 referencias actualizadas (renumerada). Renumeración de secciones afectadas: la §11 anterior pasa a §12, la §12 anterior pasa a §14, la §13 anterior pasa a §15.** |
-| **1.2.1** | **27/04/2026** | **Patch derivado de la auditoría del prototipo FIN regenerado con prompt v4: (a) §9.0 reescrita para reforzar que "Solicitudes" es denominación universal y vinculante para todas las apps del core (no nomenclatura local de FIN/OPS), aplicable a UI, modelos de datos, specs Jira y conversaciones con stakeholders sin excepción.** |
-| **1.2.2** | **04/05/2026** | **Sweep de referencias residuales tras el rename `discovery/` → `discoveries/` y la migración del repo a `atlas-ai-product-management-framework`: §15.1 convierte rutas absolutas (`/Users/yasmani/Products/agents/...`) a relativas dentro del repo. §15.2 actualiza referencias a discoveries del esquema viejo `discovery/opened/[...]-discovery.md` al esquema flat actual `discoveries/[...]-discovery.md`.** |
+| 1.0 | 27/04/2026 | Versión inicial. Define los 4 módulos genéricos del financial-core: Dashboard, Inbox, Alertas, Reportes. Establece prototipos canónicos en LEX. Documenta convención de ubicación contextual en sidebar. |
+| 1.1 | 27/04/2026 | Modelo "núcleo + capacidades opcionales" para los genéricos. Perfiles A/B/C/D para Alertas — perfil declarado por tipo. Reescritura de §7 (Alertas) y §8 (Reportes). Nuevas §9 (Inbox) y §10 (Dashboard). |
+| 1.2 | 27/04/2026 | §6 reescrita (sidebar — los 4 genéricos al tope sin bloque). §9 Inbox enriquecida (nomenclatura "Solicitudes", drag-drop híbrido, modal de cierre por tipo). Nueva §11 mecanismo de Acciones. Nueva §13 inventario de REQs. |
+| 1.2.1 | 27/04/2026 | Patch sobre §9.0 reforzando "Solicitudes" como denominación universal vinculante. |
+| 1.2.2 | 04/05/2026 | Sweep de referencias residuales tras rename `discovery/` → `discoveries/`. Actualización de paths en §15. |
+| **1.3** | **06/05/2026** | **Cambios mayores derivados de la consolidación del paradigma materializado en `prototypes/_core-template/` y `prototypes/fin/`. Los prototipos pasan a ser fuente de verdad y el framework conceptual se reconcilia con sus specs OpenSpec. (a) **COM descontinuado** — la app Comercial sale del portfolio, la función se cubre vía integración con HubSpot. Eliminada de §1, §6, §12.1 y de toda referencia residual. (b) **§2 reescrita** — el paradigma se compone de 4 módulos genéricos + 2 funcionalidades transversales (Vistas + Ejes; Acciones). Modelo de provisión explícito: REQ transversal entrega el estándar, REQ por área entrega la configuración específica. (c) **§3.2 reescrita** — taxonomía A/B/C/D reconciliada con `core-modulo-genericos`. Perfil C ahora es Time-series con chart, no Auto-system. Perfil D ahora es Cross-app KPI dashboard, no Hybrid. Hybrid se reformula como composición de tipos con perfiles distintos en una misma app. (d) **§5 nueva** — Module Types A vs B formalizados (heredado del spec `core-module-types`). (e) **§6 nueva** — Vistas + Ejes formalizados como funcionalidad transversal: tres vistas declarables, Tablero state-driven, drag-drop con `<ClosureModal>` shared. (f) **§7 reescrita** — Alertas alineadas con la nueva taxonomía. Sub-tabs `Nuevas + Histórico` deprecados; el filtro Estado en L3 expone los estados simultáneamente. UI canónica por perfil documentada. (g) **§8 actualizada** — Reportes con sub-tabs Catálogo + **Ejecución** (deprecada "Histórico") implementados vía Type B Tabs. Tipos canónicos `Report` y `ReportRun`. `REPORT_DEPENDENCY` cambia de perfil C a perfil A. (h) **§9 actualizada** — Inbox pasa de 3 a 4 estados (`pendiente` / `en_proceso` / `completed` / `rejected`). `Solicitud` reforzado como identifier canónico de TS, no solo nomenclatura de UI. Drag-drop generalizado vía §6.3. (i) **§10 reescrita** — Dashboard NO es L1/L2/L3, es card-grid responsive. Counters de los 3 list-shaped genéricos como núcleo. Period selector y evolution chart placeholder como capacidades. Prohibiciones explícitas (no filtros, no sub-tabs, no operaciones de dominio). (j) **§11 patch** — renombrada a "manifest engine"; estado de implementación actualizado al engine ya implementado en `prototypes/fin/`. (k) **§13 reescrita** — inventario de **6 REQs transversales** (incorpora REQ Acciones ya existente en §13.1 de v1.2 y agrega REQ Vistas + Ejes como sexto, separado por su naturaleza distinta del manifest engine). Nueva §13.2 explicita el modelo de provisión REQ transversal vs REQ por área. REQ-52 (LEX) y REQ-33 (TRD) reformulados como casos de implementación que consumen el REQ Alertas transversal vía `is caused by`. (l) **§15 actualizada** — refs a paths del prototipo migrado (Vue 3 + TS + Vite). Ya no referencia el `_core-template.html` legacy ni el `prototypes/fin/PROMPT.md`.** |
