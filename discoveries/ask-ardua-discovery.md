@@ -55,9 +55,9 @@ Cuando Claude accede a informacion que no es de un usuario individual (bandejas 
 
 | Decision | Razon | REQ |
 |---|---|---|
-| El log de auditoria se almacena en un Google Sheet compartido con HoP y responsable del area | Solucion sin infraestructura adicional, accesible para el area | REQ-39 |
-| La habilitacion de bandejas compartidas requiere aprobacion explicita del HoP — no hay autoservicio | Control centralizado mientras el patron madura | REQ-39 |
-| El flujo de solicitud de habilitacion es: area solicita al HoP via Miles en Slack → HoP evalua y configura | Reutiliza canal existente (Miles) | REQ-39 |
+| El log de auditoria se almacena en un Google Sheet compartido con Yasmani (HoP) y responsable del area | Solucion sin infraestructura adicional, accesible para el area | REQ-39 |
+| La habilitacion de bandejas compartidas requiere aprobacion explicita de Yasmani (HoP) — no hay autoservicio | Control centralizado mientras el patron madura | REQ-39 |
+| El flujo de solicitud de habilitacion es: area solicita a Yasmani via Miles en Slack → Yasmani evalua y configura | Reutiliza canal existente (Miles) | REQ-39 |
 | Los adjuntos de texto (PDFs, documentos) entran en alcance v1 | El caso de uso central de Legal ("mandamos el KYC?") requiere leer adjuntos, no solo el cuerpo del correo | REQ-39 |
 | Adjuntos no textuales (imagenes, audio, video) fuera de alcance v1 | Complejidad tecnica vs. valor inmediato bajo | REQ-39 |
 
