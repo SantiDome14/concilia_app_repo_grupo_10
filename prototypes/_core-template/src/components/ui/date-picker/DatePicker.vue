@@ -1,26 +1,54 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { format, parse, isValid, isAfter, isBefore, type Locale } from 'date-fns';
+import {
+  CalendarRoot,
+  CalendarHeader,
+  CalendarHeading,
+  CalendarPrev,
+  CalendarNext,
+  CalendarGrid,
+  CalendarGridHead,
+  CalendarHeadCell,
+  CalendarGridBody,
+  CalendarGridRow,
+  CalendarCell,
+  CalendarCellTrigger,
+  RangeCalendarRoot,
+  RangeCalendarHeader,
+  RangeCalendarHeading,
+  RangeCalendarPrev,
+  RangeCalendarNext,
+  RangeCalendarGrid,
+  RangeCalendarGridHead,
+  RangeCalendarHeadCell,
+  RangeCalendarGridBody,
+  RangeCalendarGridRow,
+  RangeCalendarCell,
+  RangeCalendarCellTrigger,
+  type DateRange,
+  type DateValue,
+} from 'reka-ui';
+import { format, isValid, type Locale } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar } from 'lucide-vue-next';
+import { Calendar, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { toDateValue, fromDateValue } from '@/lib/date-conversion';
 import { cn } from '@/lib/cn';
 
 // ════════════════════════════════════════════════════════════════════
-// DatePicker — canonical date input (single + range modes)
+// DatePicker — single + range modes (reka-ui Calendar / RangeCalendar)
 // ────────────────────────────────────────────────────────────────────
-// Spec: `core-forms` (extended). Built on reka-ui Popover + native
-// <input type="date"> as the keyboard-accessible fallback. No heavy
-// external date library — just date-fns for parse/format.
+// Spec: `core-forms` (extended). External API is native `Date` so
+// consumers don't deal with @internationalized/date. Internal
+// conversion is centralised in `@/lib/date-conversion`.
 // ════════════════════════════════════════════════════════════════════
 
-type DateRange = { start: Date; end: Date };
+type DateRangeNative = { start: Date; end: Date };
 
 const props = withDefaults(
   defineProps<{
-    modelValue?: Date | DateRange | null;
+    modelValue?: Date | DateRangeNative | null;
     mode?: 'single' | 'range';
     locale?: string;
     min?: Date;
@@ -40,21 +68,12 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-  'update:modelValue': [value: Date | DateRange | null];
+  'update:modelValue': [value: Date | DateRangeNative | null];
 }>();
 
 const open = ref(false);
 
-function toIsoDate(d: Date | null | undefined): string {
-  if (!d || !isValid(d)) return '';
-  return format(d, 'yyyy-MM-dd');
-}
-
-function fromIsoDate(s: string): Date | null {
-  if (!s) return null;
-  const parsed = parse(s, 'yyyy-MM-dd', new Date());
-  return isValid(parsed) ? parsed : null;
-}
+// ── Display formatting (date-fns, already in deps) ───────────────────
 
 function formatDisplay(d: Date | null | undefined): string {
   if (!d || !isValid(d)) return '';
@@ -63,70 +82,60 @@ function formatDisplay(d: Date | null | undefined): string {
   return format(d, 'dd MMM yyyy', opts);
 }
 
-function clampDate(d: Date | null): Date | null {
-  if (!d) return null;
-  if (props.min && isBefore(d, props.min)) return null;
-  if (props.max && isAfter(d, props.max)) return null;
-  return d;
-}
+const singleNative = computed<Date | null>(() =>
+  props.modelValue instanceof Date ? props.modelValue : null,
+);
 
-const singleValue = computed<Date | null>(() => {
-  if (props.mode !== 'single') return null;
-  return props.modelValue instanceof Date ? props.modelValue : null;
-});
-
-const rangeValue = computed<DateRange | null>(() => {
-  if (props.mode !== 'range') return null;
-  if (
-    props.modelValue &&
-    typeof props.modelValue === 'object' &&
-    'start' in props.modelValue &&
-    'end' in props.modelValue
-  ) {
-    return props.modelValue;
+const rangeNative = computed<DateRangeNative | null>(() => {
+  const v = props.modelValue;
+  if (v && typeof v === 'object' && !(v instanceof Date) && 'start' in v && 'end' in v) {
+    return v;
   }
   return null;
 });
 
-const displaySingle = computed(() => formatDisplay(singleValue.value));
-const displayRange = computed(() => {
-  const r = rangeValue.value;
+const displayValue = computed(() => {
+  if (props.mode === 'single') return formatDisplay(singleNative.value);
+  const r = rangeNative.value;
   if (!r) return '';
   return `${formatDisplay(r.start)} – ${formatDisplay(r.end)}`;
 });
 
-const displayValue = computed(() =>
-  props.mode === 'single' ? displaySingle.value : displayRange.value,
+// ── Bridge between native Date model and reka-ui DateValue model ─────
+
+const singleDateValue = computed<DateValue | undefined>(() =>
+  toDateValue(singleNative.value),
 );
 
-// Range mode local state (committed on confirm)
-const draftStart = ref<string>(rangeValue.value ? toIsoDate(rangeValue.value.start) : '');
-const draftEnd = ref<string>(rangeValue.value ? toIsoDate(rangeValue.value.end) : '');
+const rangeDateValue = computed<DateRange>(() => {
+  const r = rangeNative.value;
+  return {
+    start: r ? toDateValue(r.start) : undefined,
+    end: r ? toDateValue(r.end) : undefined,
+  };
+});
 
-function onSingleSelect(iso: string): void {
-  const next = clampDate(fromIsoDate(iso));
-  emit('update:modelValue', next);
-  open.value = false;
+const minDateValue = computed<DateValue | undefined>(() => toDateValue(props.min ?? null));
+const maxDateValue = computed<DateValue | undefined>(() => toDateValue(props.max ?? null));
+
+function onSingleUpdate(value: DateValue | undefined): void {
+  const date = fromDateValue(value);
+  emit('update:modelValue', date);
+  if (date) open.value = false;
 }
 
-function onRangeConfirm(): void {
-  const start = clampDate(fromIsoDate(draftStart.value));
-  const end = clampDate(fromIsoDate(draftEnd.value));
-  if (!start || !end) return;
-  if (isAfter(start, end)) return;
-  emit('update:modelValue', { start, end });
-  open.value = false;
+function onRangeUpdate(value: DateRange): void {
+  const start = fromDateValue(value.start);
+  const end = fromDateValue(value.end);
+  if (start && end) {
+    emit('update:modelValue', { start, end });
+    open.value = false;
+  } else if (!start && !end) {
+    emit('update:modelValue', null);
+  }
+  // Partial range (start picked, end pending) — don't emit yet,
+  // wait for the user to complete the second click.
 }
-
-function onClear(): void {
-  draftStart.value = '';
-  draftEnd.value = '';
-  emit('update:modelValue', null);
-  open.value = false;
-}
-
-const minIso = computed(() => toIsoDate(props.min ?? null));
-const maxIso = computed(() => toIsoDate(props.max ?? null));
 </script>
 
 <template>
@@ -142,45 +151,155 @@ const maxIso = computed(() => toIsoDate(props.max ?? null));
         {{ displayValue || props.placeholder }}
       </Button>
     </PopoverTrigger>
-    <PopoverContent class="w-auto min-w-[280px] space-y-3 p-3">
-      <template v-if="props.mode === 'single'">
-        <Input
-          type="date"
-          :value="toIsoDate(singleValue)"
-          :min="minIso || undefined"
-          :max="maxIso || undefined"
-          :disabled="props.disabled"
-          @input="(e: Event) => onSingleSelect((e.target as HTMLInputElement).value)"
-        />
-      </template>
-      <template v-else>
-        <div class="space-y-2">
-          <div>
-            <div class="mb-1 text-[10px] font-bold uppercase tracking-wider text-t-3">Desde</div>
-            <Input
-              v-model="draftStart"
-              type="date"
-              :min="minIso || undefined"
-              :max="maxIso || undefined"
-            />
-          </div>
-          <div>
-            <div class="mb-1 text-[10px] font-bold uppercase tracking-wider text-t-3">Hasta</div>
-            <Input
-              v-model="draftEnd"
-              type="date"
-              :min="minIso || undefined"
-              :max="maxIso || undefined"
-            />
-          </div>
-          <div class="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="ghost" size="sm" @click="onClear">Limpiar</Button>
-            <Button type="button" variant="primary" size="sm" @click="onRangeConfirm">
-              Aplicar
-            </Button>
-          </div>
-        </div>
-      </template>
+
+    <PopoverContent class="w-auto p-3">
+      <!-- single mode -->
+      <CalendarRoot
+        v-if="props.mode === 'single'"
+        :model-value="singleDateValue"
+        :min-value="minDateValue"
+        :max-value="maxDateValue"
+        :locale="props.locale"
+        :disabled="props.disabled"
+        class="space-y-3"
+        @update:model-value="onSingleUpdate"
+      >
+        <template #default="{ weekDays, grid }">
+          <CalendarHeader class="flex items-center justify-between">
+            <CalendarPrev as-child>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                class="h-7 w-7 p-0"
+                aria-label="Mes anterior"
+              >
+                <ChevronLeft class="h-4 w-4" />
+              </Button>
+            </CalendarPrev>
+            <CalendarHeading class="text-sm font-semibold capitalize text-t-1" />
+            <CalendarNext as-child>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                class="h-7 w-7 p-0"
+                aria-label="Mes siguiente"
+              >
+                <ChevronRight class="h-4 w-4" />
+              </Button>
+            </CalendarNext>
+          </CalendarHeader>
+
+          <CalendarGrid v-for="month in grid" :key="month.value.toString()">
+            <CalendarGridHead>
+              <CalendarGridRow class="flex">
+                <CalendarHeadCell
+                  v-for="day in weekDays"
+                  :key="day"
+                  class="w-9 text-center text-[10px] font-bold uppercase tracking-wider text-t-4"
+                >
+                  {{ day }}
+                </CalendarHeadCell>
+              </CalendarGridRow>
+            </CalendarGridHead>
+            <CalendarGridBody>
+              <CalendarGridRow
+                v-for="(weekDates, idx) in month.rows"
+                :key="idx"
+                class="flex"
+              >
+                <CalendarCell
+                  v-for="weekDate in weekDates"
+                  :key="weekDate.toString()"
+                  :date="weekDate"
+                  class="text-center"
+                >
+                  <CalendarCellTrigger
+                    :day="weekDate"
+                    :month="month.value"
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-md text-sm text-t-1 transition-colors hover:bg-card-2 focus-visible:bg-card-2 focus-visible:outline-none data-[disabled]:cursor-not-allowed data-[outside-view]:text-t-4 data-[disabled]:opacity-40 data-[selected]:bg-brand data-[selected]:text-white data-[unavailable]:line-through"
+                  />
+                </CalendarCell>
+              </CalendarGridRow>
+            </CalendarGridBody>
+          </CalendarGrid>
+        </template>
+      </CalendarRoot>
+
+      <!-- range mode -->
+      <RangeCalendarRoot
+        v-else
+        :model-value="rangeDateValue"
+        :min-value="minDateValue"
+        :max-value="maxDateValue"
+        :locale="props.locale"
+        :disabled="props.disabled"
+        class="space-y-3"
+        @update:model-value="onRangeUpdate"
+      >
+        <template #default="{ weekDays, grid }">
+          <RangeCalendarHeader class="flex items-center justify-between">
+            <RangeCalendarPrev as-child>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                class="h-7 w-7 p-0"
+                aria-label="Mes anterior"
+              >
+                <ChevronLeft class="h-4 w-4" />
+              </Button>
+            </RangeCalendarPrev>
+            <RangeCalendarHeading class="text-sm font-semibold capitalize text-t-1" />
+            <RangeCalendarNext as-child>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                class="h-7 w-7 p-0"
+                aria-label="Mes siguiente"
+              >
+                <ChevronRight class="h-4 w-4" />
+              </Button>
+            </RangeCalendarNext>
+          </RangeCalendarHeader>
+
+          <RangeCalendarGrid v-for="month in grid" :key="month.value.toString()">
+            <RangeCalendarGridHead>
+              <RangeCalendarGridRow class="flex">
+                <RangeCalendarHeadCell
+                  v-for="day in weekDays"
+                  :key="day"
+                  class="w-9 text-center text-[10px] font-bold uppercase tracking-wider text-t-4"
+                >
+                  {{ day }}
+                </RangeCalendarHeadCell>
+              </RangeCalendarGridRow>
+            </RangeCalendarGridHead>
+            <RangeCalendarGridBody>
+              <RangeCalendarGridRow
+                v-for="(weekDates, idx) in month.rows"
+                :key="idx"
+                class="flex"
+              >
+                <RangeCalendarCell
+                  v-for="weekDate in weekDates"
+                  :key="weekDate.toString()"
+                  :date="weekDate"
+                  class="text-center"
+                >
+                  <RangeCalendarCellTrigger
+                    :day="weekDate"
+                    :month="month.value"
+                    class="inline-flex h-9 w-9 items-center justify-center text-sm text-t-1 transition-colors hover:bg-card-2 focus-visible:bg-card-2 focus-visible:outline-none data-[disabled]:cursor-not-allowed data-[outside-view]:text-t-4 data-[disabled]:opacity-40 data-[highlighted]:bg-brand/20 data-[selected]:bg-brand data-[selected]:text-white data-[selection-start]:rounded-l-md data-[selection-end]:rounded-r-md data-[unavailable]:line-through"
+                  />
+                </RangeCalendarCell>
+              </RangeCalendarGridRow>
+            </RangeCalendarGridBody>
+          </RangeCalendarGrid>
+        </template>
+      </RangeCalendarRoot>
     </PopoverContent>
   </Popover>
 </template>

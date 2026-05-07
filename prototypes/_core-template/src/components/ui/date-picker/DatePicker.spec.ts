@@ -43,3 +43,19 @@ describe('DatePicker — range mode', () => {
     expect(wrapper.text()).toContain('Período…');
   });
 });
+
+describe('DatePicker — Date ⇄ DateValue conversion', () => {
+  it('renders the formatted date for a given Date prop', () => {
+    const wrapper = mount(DatePicker, {
+      props: { modelValue: new Date(2026, 2, 15) }, // 15 March 2026 local
+    });
+    expect(wrapper.text()).toMatch(/15 mar 2026/);
+  });
+
+  it('exposes the trigger as a button (Popover sees `open` is closed by default)', () => {
+    const wrapper = mount(DatePicker);
+    const trigger = wrapper.find('button');
+    expect(trigger.exists()).toBe(true);
+    expect(trigger.attributes('aria-expanded')).toBe('false');
+  });
+});
