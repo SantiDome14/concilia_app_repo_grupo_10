@@ -30,3 +30,4 @@ export {
   type UseStepUpApi,
   type RequestStepUpOptions,
 } from './useStepUp';
+export { useWizard, type UseWizardApi } from './useWizard';
