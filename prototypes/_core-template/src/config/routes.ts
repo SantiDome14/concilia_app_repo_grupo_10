@@ -19,6 +19,10 @@ export const ROUTE_PATHS = {
   MODULO_A: '/modulo-a',
   MODULO_B: '/modulo-b',
   MODULO_C: '/modulo-c',
+  // Component playground (dev mode only — gated in Sidebar by import.meta.env.DEV).
+  PLAYGROUND_FORMS: '/playground/forms',
+  PLAYGROUND_CHARTS: '/playground/charts',
+  PLAYGROUND_LAYOUT: '/playground/layout',
   NOT_FOUND: '/:pathMatch(.*)*',
 } as const;
 
@@ -31,6 +35,9 @@ export const ROUTE_NAMES = {
   MODULO_A: 'modulo-a',
   MODULO_B: 'modulo-b',
   MODULO_C: 'modulo-c',
+  PLAYGROUND_FORMS: 'playground-forms',
+  PLAYGROUND_CHARTS: 'playground-charts',
+  PLAYGROUND_LAYOUT: 'playground-layout',
   NOT_FOUND: 'not-found',
 } as const;
 

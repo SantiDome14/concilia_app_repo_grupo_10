@@ -69,9 +69,16 @@ describe('ManifestField', () => {
     expect(inp.attributes('max')).toBe('10');
   });
 
-  it('renders a date input for type:"date"', () => {
+  it('renders a DatePicker (Popover trigger button) for type:"date"', () => {
     const w = mountField({ id: 'when', label: 'Fecha', type: 'date' });
-    expect(w.find('input[type="date"]').exists()).toBe(true);
+    // Post-refactor (8977e32): the `date` field type renders the custom
+    // <DatePicker> (reka-ui CalendarRoot inside a Popover) instead of a
+    // native <input type="date">. The trigger is a button with the
+    // calendar icon and the placeholder text.
+    const triggers = w.findAll('button').filter((b) =>
+      b.text().toLowerCase().includes('seleccionar fecha'),
+    );
+    expect(triggers.length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders a checkbox for type:"boolean"', () => {
