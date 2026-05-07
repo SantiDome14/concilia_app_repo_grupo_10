@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Dropzone } from '@/components/ui/dropzone';
 import {
   Select,
   SelectContent,
@@ -219,6 +220,25 @@ const textValue = computed({
 const numberValue = computed(() =>
   typeof props.modelValue === 'number' ? String(props.modelValue) : '',
 );
+
+// ── file / multifile coercion ────────────────────────────────────────
+
+const fileValue = computed<File | null>({
+  get: () => (props.modelValue instanceof File ? props.modelValue : null),
+  set: (v) => emit('update:modelValue', v),
+});
+
+const multifileValue = computed<File[]>({
+  get: () =>
+    Array.isArray(props.modelValue) && props.modelValue.every((f) => f instanceof File)
+      ? (props.modelValue as File[])
+      : [],
+  set: (v) => emit('update:modelValue', v),
+});
+
+function onDropzoneUpdate(value: File | File[] | null): void {
+  emit('update:modelValue', value);
+}
 </script>
 
 <template>
@@ -315,6 +335,32 @@ const numberValue = computed(() =>
         </SelectItem>
       </SelectContent>
     </Select>
+
+    <!-- file (single) -->
+    <Dropzone
+      v-else-if="props.field.type === 'file'"
+      :model-value="fileValue"
+      :multiple="false"
+      :max-files="1"
+      :accept="props.field.accept"
+      :max-size="props.field.max_size"
+      :disabled="props.disabled"
+      :aria-label="props.field.placeholder ?? 'Arrastrá un archivo aquí o hacé click para seleccionar'"
+      @update:model-value="onDropzoneUpdate"
+    />
+
+    <!-- multifile -->
+    <Dropzone
+      v-else-if="props.field.type === 'multifile'"
+      :model-value="multifileValue"
+      multiple
+      :accept="props.field.accept"
+      :max-size="props.field.max_size"
+      :max-files="props.field.max_files"
+      :disabled="props.disabled"
+      :aria-label="props.field.placeholder ?? 'Arrastrá archivos aquí o hacé click para seleccionar'"
+      @update:model-value="onDropzoneUpdate"
+    />
 
     <!-- lookup -->
     <Popover

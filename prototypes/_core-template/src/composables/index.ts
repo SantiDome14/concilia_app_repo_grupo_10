@@ -19,3 +19,4 @@ export {
   type UseManifestDialogApi,
 } from './useManifestDialog';
 export { useAuditLog, type UseAuditLogApi } from './useAuditLog';
+export { useFileUpload, type UseFileUploadApi } from './useFileUpload';

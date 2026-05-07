@@ -75,6 +75,7 @@ source_repo: C:\Users\Yasmani\atlas-ai-product-management-framework\core-lex-fro
 src/
 ├── main.js                       # entry — Auth0 setup, router init
 ├── App.vue                       # root — auth state, layout shell
+├── Login.vue                     # Auth0 login page (referenced by /login route)
 │
 ├── api/
 │   ├── api.js                    # createApi factory
@@ -88,8 +89,8 @@ src/
 │   ├── clientes.vue              # 1,419 LOC — Clientes + CVUs tabs
 │   ├── client-details.vue        # 267 LOC — single client tabbed view
 │   ├── altas.vue                 # 1,036 LOC — pending-review queue
-│   ├── usuarios.vue              # users list
-│   └── blacklist.vue             # CUIT blacklist
+│   ├── usuarios.vue              # 363 LOC — users list
+│   └── blacklist.vue             # 531 LOC — CUIT blacklist
 │
 ├── components/
 │   ├── AppSidebar.vue            # collapsible nav (3 items + logout)
@@ -265,18 +266,54 @@ No Pinia, no Vuex. Two composables only:
 
 ## 7. API layer
 
-Single file: `src/api/services/clientService.js` (~250 LOC).
+Single file: `src/api/services/clientService.js` (~1,000 LOC, 41 exported functions).
 
-**Functions inventory**
+**Clients**
 - `getClients(params, headers)` — `GET /client`
 - `getClientById(id, headers)` — `GET /client/:id`
+- `updateClient(id, data, headers)` — `PUT /client/:id`
+- `deactivateClient(id, headers)` — `PATCH /client/:id/deactivate`
 - `deleteClient(id, headers)` — `DELETE /client/:id`
+- `mergeClients(clientId, mergeWithId, headers)` — `PUT /merge-clients/:clientId/:mergeWithId`
+- `mergeBeneficiary(params, headers)` — `PUT /merge-beneficiary` (query params)
+- `updateAIPriseStatus(id, data, headers)` — `POST /client/:id/aiprise-status`
+- `getClientTotalizer(taxId, headers)` — `GET /totalizer/:taxId`
+
+**Users**
 - `getUsers(params, headers)` — `GET /user` (transforms `id→ids`, `page+1`, sort uppercase)
+
+**Documents**
+- `getDocumentsByClientId(clientId, headers)` — `GET` documents by client
+- `downloadDocument(documentId, headers)` — download a single document
+- `deleteDocument(documentId, headers)` — `DELETE` document(s)
+- `updateDocument(documentId, metadata, headers)` — `PUT` document metadata
+- `updateDocuments(...)` — alias wrapper for `updateDocument`
 - `requestPresignedURLs(clientId, files, headers)` — `POST /document?action=request-presigned-urls`
 - `uploadFileToS3(file, presignedData, onProgress)` — `PUT presignedData.upload_url` (XHR for progress)
 - `confirmUploads(clientId, uploads, headers)` — `POST /document?action=confirm-uploads`
 - `uploadDocumentsWithPresignedURLs(...)` — orchestrator: request → parallel S3 PUT → confirm
-- (Inferred from page usage) `getCVUs`, `getNotifications`, `markNotificationsAsRead`, `getBlacklist`, `addToBlacklist`, `deleteFromBlacklist`, `uploadBlacklistBulk`
+- `uploadFolder(clientId, payload, headers)` — `POST /upload-folder/:clientId` (bulk folder)
+- `uploadToS3(...)` — **@deprecated** legacy artifact, kept for back-compat; replaced by `uploadDocumentsWithPresignedURLs`
+
+**Comments / Logs**
+- `createComment(clientId, body, headers)` — create activity comment on a client
+- `getCommentsByClientId(clientId, headers)` — fetch comments
+- `getLogsByClientId(clientId, headers)` — `GET /logs/:clientId` (audit trail)
+
+**Relationships (BENEFICIARY / CO_OWNER / GROUPER)**
+- `createRelationship(payload, headers)` — create relationship
+- `deleteRelationship(id, headers)` — delete relationship
+- `createBusinessManual(payload, headers)` — `POST /business-manual` (manual company registration)
+- `createBeneficiaryManual(clientId, payload, headers)` — `POST /create-beneficiary-manual/:clientId`
+- `createCoOwnerManual(clientId, payload, headers)` — `POST /create-co-owner-manual/:clientId`
+
+**Limits**
+- `getLimits(params, headers)` — `GET /limit`
+- `createLimit(payload, headers)` — `POST /limit`
+- `deleteLimit(limitId, headers)` — `DELETE /limit/:limitId`
+
+**Inferred from page usage (not directly inspected)**
+- `getCVUs`, `getNotifications`, `markNotificationsAsRead`, `getBlacklist`, `addToBlacklist`, `deleteFromBlacklist`, `uploadBlacklistBulk`
 
 **Error handling**
 - Mixed: some endpoints check `response.status` (401, 500), others check `response.data.status_code >= 400` or `response.data.success === false`
@@ -308,6 +345,17 @@ Cross-reference with `discoveries/lex-discovery.md` for the canonical product de
 - **CVUs** — separate entity, sponsor BIND/COINAG, lives on the second tab of Clientes
 - **Blacklist** — CUIT-level blocking; bulk import via CSV/XLSX
 - **Audit** — Actividad tab (timeline + comments), locked for COMMERCIAL_LEX
+
+### Constants helpers (not just data tables)
+
+Each `src/constants/*.js` file ships **labels + helper functions**, not bare arrays:
+
+- `clientTypes.js` — `CLIENT_TYPES`, `RELATIONSHIP_TYPES` arrays + `getClientTypeLabel(value)`, `getRelationshipTypeLabel(value)`
+- `companyTypes.js` — `COMPANY_TYPES` array + `getCompanyTypeLabel(value)`
+- `providerTemplates.js` — `TEMPLATES` (8 UUIDs) + `getTemplateName(value)`, `getTemplateShortName(value)`, `getTemplateOptions()` (returns `[{label:'Todos', value:''}, ...TEMPLATES]`), `getTemplateColor(value)` returning `{bg, text, icon}` mapped per UUID
+- `logTypes.js` — `LOG_TYPES`, `ActivityType`, `SYSTEM_LABEL`, `LOG_MESSAGES`, `LOG_TYPE_LABELS` + `getLogMessage()`, `getLogTypeLabel()` helpers
+
+These helpers are consumed throughout pages and components for label rendering, dropdown options and colour mapping. Migration target: type each constant module in TS (`as const satisfies`), keep helpers (or replace with computed `Record<>` lookups) and centralise in `src/constants/`.
 
 ---
 
@@ -342,7 +390,7 @@ These are "do not port as-is" flags. None of them imply implementation choice; t
 6. **Page bloat** — `clientes.vue` 1,419 LOC and `altas.vue` 1,036 LOC. Both must be decomposed (filter panel, KPI strip, data-table surface, pagination, modals) into the template's L1/L2/L3 page pattern.
 7. **Pagination logic duplicated** — `visiblePages` / `totalPages` / `hasNext` reimplemented in three pages. Must use `useTable` (client-side) or `@tanstack/vue-query` (server-side).
 8. **Filter logic duplicated** — debounced filter watchers reimplemented per page. Extract.
-9. **Native HTML `<select>` may exist in some forms** — forbidden by `core-forms` capability. Audit during migration.
+9. **Native HTML `<select>` exists in several places** — forbidden by `core-forms` capability. Confirmed in `pages/clientes.vue`, `pages/altas.vue`, `components/FilterButton.vue`. Replace with reka-ui `<Select>` / `<Combobox>` during migration.
 10. **No tests** — zero `*.spec.js` / `*.test.js`. Coverage target ≥ 90 % on utilities/composables in the new project.
 11. **Hardcoded values scattered** — template UUIDs, role strings, magic numbers (30 s, 300 ms, page sizes). Move to typed constants.
 12. **No accessibility audit** — icon-only buttons without `title`, missing ARIA, inconsistent label associations.

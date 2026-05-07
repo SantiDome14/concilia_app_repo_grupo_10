@@ -29,6 +29,8 @@ const CANONICAL_FIELD_TYPES: readonly DialogFieldType[] = [
   'date',
   'number',
   'boolean',
+  'file',
+  'multifile',
 ];
 
 const HEURISTIC_BANNED_ID_SUFFIXES = [

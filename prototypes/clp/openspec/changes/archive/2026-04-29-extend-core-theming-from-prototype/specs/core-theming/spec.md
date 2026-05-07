@@ -1,0 +1,95 @@
+## ADDED Requirements
+
+### Requirement: Scroll containers MUST use the subtle scrollbar utility globally
+
+Every scroll container in the application — including the Main content area, every table wrapper, the Drawer, the modal body, and the Sidebar — SHALL apply the canonical subtle scrollbar styling: `::-webkit-scrollbar` width 8px, `::-webkit-scrollbar-thumb` background tied to the `--b3` border token with rounded corners, plus `scrollbar-width: thin` and `scrollbar-color: var(--b3) transparent` for Firefox. The styling SHALL be implemented as a global `.scroll-subtle` utility class declared once in `src/styles/globals.css` (or equivalently applied via the `<body>` selector with cascading inheritance to every scroll container). Per-component scrollbar overrides are forbidden — if a container scrolls, it scrolls subtly using the canonical styling.
+
+#### Scenario: Every scroll container inherits the canonical scrollbar styling
+
+- **GIVEN** the Main content area, a table wrapper, a Drawer, a modal body, or the Sidebar renders with content that overflows
+- **WHEN** the container's scrollbar paints
+- **THEN** the scrollbar SHALL be 8px wide with a thumb that uses `var(--b3)` and rounded corners on WebKit browsers, and SHALL use `scrollbar-width: thin` plus `scrollbar-color: var(--b3) transparent` on Firefox — without any local rule needing to be re-declared in the container's component
+
+#### Scenario: Per-component scrollbar overrides are rejected
+
+- **GIVEN** a developer attempts to declare a custom `::-webkit-scrollbar` rule (or sets a different `scrollbar-color` / `scrollbar-width`) inside a single component's styles
+- **WHEN** the change is reviewed
+- **THEN** the override MUST be rejected — every scroll surface MUST use the global `.scroll-subtle` utility (or the `<body>` cascade), and any genuinely new scrollbar treatment MUST be proposed as an OpenSpec change to this requirement
+
+#### Scenario: The scrollbar uses a design token, never a raw color
+
+- **GIVEN** the canonical scrollbar styling is being authored or audited
+- **WHEN** the thumb color is selected
+- **THEN** the value SHALL reference the `--b3` token from the four-step border ramp — raw hex, rgb, or color-literal values are forbidden, in keeping with the token-driven theming rule already established in this capability
+
+### Requirement: `<Skeleton>` component MUST expose the canonical variant set
+
+The shared `<Skeleton>` Vue component SHALL expose a closed variant set: `variant: 'card' | 'button' | 'chart' | 'circle' | 'row'`. The shimmer animation SHALL be a single shared `@keyframes` declaration referenced by the base `<Skeleton>` component — every variant SHALL reuse the same animation, only differing in shape (dimensions, border radius, internal layout). Per-page custom skeleton shapes are forbidden: if a new shape is genuinely needed, it MUST be proposed as a new variant via an OpenSpec change to this requirement, never inlined per page.
+
+#### Scenario: Loading states pick from the canonical variant set
+
+- **GIVEN** a page renders a loading state for a KPI card, a CTA placeholder, a chart block, an avatar / dot, or a table row
+- **WHEN** the developer authors the skeleton
+- **THEN** the developer SHALL render `<Skeleton variant="card" />`, `<Skeleton variant="button" />`, `<Skeleton variant="chart" />`, `<Skeleton variant="circle" />`, or `<Skeleton variant="row" />` — picking from the closed set of five variants
+
+#### Scenario: All variants share the same shimmer keyframes
+
+- **GIVEN** any two `<Skeleton>` instances render on the page with different variants
+- **WHEN** their shimmer animations play
+- **THEN** both instances SHALL reference the same `@keyframes` declaration — the loading rhythm is uniform across the page and across modules, with no forked or per-variant animation timings
+
+#### Scenario: A new shape requires an OpenSpec change
+
+- **GIVEN** a developer needs a skeleton shape not covered by `card | button | chart | circle | row`
+- **WHEN** the developer considers adding a custom skeleton block inline
+- **THEN** the inline shape MUST be rejected and a new `variant` value MUST be proposed via an OpenSpec change that updates this requirement and the `<Skeleton>` component implementation
+
+### Requirement: Brand text MUST be sourced from a single `useBrand()` composable across the three placements
+
+The application brand text SHALL be sourced from a single `useBrand()` composable (or an equivalent `app.config` entry) and consumed by all three branding placements: (a) the `<SidebarBrand>` component's `name` slot rendering the brand name, (b) the `<SidebarBrand>` component's `sub` slot rendering the brand subtitle / tagline, and (c) the Topbar's dimmed prefix that visually echoes the Sidebar brand name. Hardcoding the brand text in any of the three placements is forbidden — every placement SHALL read from `useBrand()`. This requirement documents the consistency rule across the three locations; the existing `core-navigation` requirement that the Topbar omits the app brand from the emphasized breadcrumb continues to govern the Topbar dimmed prefix's visual treatment.
+
+#### Scenario: A brand swap is one edit, not three
+
+- **GIVEN** an app is being cloned from the template for a new module and the brand text needs to change
+- **WHEN** the developer updates the brand
+- **THEN** the change SHALL be a single edit to `useBrand()` (or the `app.config` entry it reads), and all three placements — `<SidebarBrand>` name slot, `<SidebarBrand>` sub slot, Topbar dimmed prefix — SHALL render the new text without any further code change
+
+#### Scenario: Hardcoded brand text in any placement is rejected
+
+- **GIVEN** a developer hardcodes the brand text directly inside `<SidebarBrand>`, the Topbar, or any other component instead of calling `useBrand()`
+- **WHEN** the change is reviewed
+- **THEN** the hardcoded text MUST be rejected — every placement consuming the brand text MUST read from `useBrand()`
+
+#### Scenario: Topbar dimmed prefix matches the Sidebar brand name
+
+- **GIVEN** the application shell renders both the Sidebar and the Topbar
+- **WHEN** the Topbar's dimmed brand prefix paints
+- **THEN** its text SHALL match the `name` value returned by `useBrand()` exactly — and the existing `core-navigation` rule that the emphasized breadcrumb omits the app brand continues to apply (the dimmed prefix is the visual echo of the Sidebar brand, not a duplicated breadcrumb segment)
+
+### Requirement: `<Badge>` component MUST follow the variant-driven palette contract
+
+The shared `<Badge>` Vue component SHALL expose a strictly typed prop surface: `variant: 'info' | 'success' | 'warning' | 'danger' | 'neutral' | 'brand'`, `tone: 'solid' | 'translucent'` (default `translucent`), `dotColor?: 'info' | 'success' | 'warning' | 'danger' | 'neutral' | 'brand'` (optional, prepends a colored dot to the badge text matching the Select dot pattern), and `size: 'sm' | 'md'` (where `sm` is 10px text for table cell density and `md` is 12px text for emphasized states). Each `variant` value SHALL map to its corresponding semantic token from `core-theming` (`--info` / `--success` / `--warning` / `--danger` / a neutral token from the surface ramp / `--brand`) plus the matching `-bg` translucent variant. Custom hex, rgb, or arbitrary color literal props are forbidden — `variant` is the only way to color a badge.
+
+#### Scenario: Badges color through the variant prop, never through raw colors
+
+- **GIVEN** a developer renders a badge in a table cell, KPI delta, segmenter count, or disabled-action explanation tag
+- **WHEN** the developer authors the component instance
+- **THEN** the badge SHALL be `<Badge variant="success" />` (or one of the six allowed variants) — passing a raw hex, rgb, or color literal as a prop MUST be rejected
+
+#### Scenario: Tone and size are picked from the closed value set
+
+- **GIVEN** a badge needs a translucent background for a dense table row, or a solid background for an emphasized header state
+- **WHEN** the developer authors the component instance
+- **THEN** the badge SHALL set `tone="translucent"` (default) or `tone="solid"`, and SHALL set `size="sm"` (10px text for table cells) or `size="md"` (12px text for emphasized states) — no other tone or size values are permitted
+
+#### Scenario: Optional dotColor prepends a status dot independent of the variant
+
+- **GIVEN** a status-typed badge needs to surface a state cue with a colored dot (matching the Select dot pattern from `core-forms`)
+- **WHEN** the developer renders `<Badge variant="neutral" :dotColor="'success'" />` or any other variant + dotColor combination
+- **THEN** the badge SHALL render a colored dot in front of the text using the `dotColor` value's semantic token, independent of the `variant` value — so a `neutral` badge MAY carry a `success` dot, a `brand` badge MAY carry a `warning` dot, and so on
+
+#### Scenario: A new variant requires an OpenSpec change
+
+- **GIVEN** a stakeholder requests a domain-specific color (e.g. "a risk-level purple") that is not in `info | success | warning | danger | neutral | brand`
+- **WHEN** the developer considers adding the color directly inside `<Badge>` props
+- **THEN** the inline color MUST be rejected and a new `variant` value MUST be proposed via an OpenSpec change that adds the matching semantic token to `core-theming` and the variant value to this requirement

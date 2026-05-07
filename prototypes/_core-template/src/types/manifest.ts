@@ -117,7 +117,9 @@ export type DialogFieldType =
   | 'select'
   | 'date'
   | 'number'
-  | 'boolean';
+  | 'boolean'
+  | 'file'
+  | 'multifile';
 
 /** Filter spec resolved at dropdown-open time for `lookup` fields. */
 export type CatalogFilter =
@@ -175,6 +177,24 @@ export type DialogFieldBoolean = DialogFieldBase & {
   type: 'boolean';
 };
 
+export type DialogFieldFile = DialogFieldBase & {
+  type: 'file';
+  /** MIME types whitelist (e.g. `['application/pdf', 'image/*']`). */
+  accept?: string[];
+  /** Max byte size for the single file. */
+  max_size?: number;
+};
+
+export type DialogFieldMultifile = DialogFieldBase & {
+  type: 'multifile';
+  /** MIME types whitelist. */
+  accept?: string[];
+  /** Max byte size per file. */
+  max_size?: number;
+  /** Max number of files allowed. */
+  max_files?: number;
+};
+
 export type DialogField =
   | DialogFieldLookup
   | DialogFieldText
@@ -182,7 +202,9 @@ export type DialogField =
   | DialogFieldSelect
   | DialogFieldDate
   | DialogFieldNumber
-  | DialogFieldBoolean;
+  | DialogFieldBoolean
+  | DialogFieldFile
+  | DialogFieldMultifile;
 
 export type DialogInfoBanner = {
   text: string;

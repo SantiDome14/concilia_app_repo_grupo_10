@@ -1,0 +1,85 @@
+{
+  "name": "core-template-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Ardua core frontend template — Vue 3 + TypeScript + Vite",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "dev": "vite --mode development",
+    "build": "run-p type-check \"build-only {@}\" --",
+    "build-only": "vite build",
+    "build:qa": "run-p type-check \"build-only -- --mode qa\"",
+    "build:prod": "run-p type-check \"build-only -- --mode production\"",
+    "preview": "vite preview",
+    "type-check": "vue-tsc --build",
+    "lint": "eslint . --fix",
+    "format": "prettier --write src/",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "spec:check": "openspec validate --all --strict",
+    "spec:list": "openspec list",
+    "spec:status": "openspec status",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "@auth0/auth0-vue": "^2.4.0",
+    "@tanstack/vue-query": "^5.59.0",
+    "@tanstack/vue-table": "^8.21.3",
+    "@vee-validate/zod": "^4.15.1",
+    "@vueuse/core": "^13.9.0",
+    "axios": "^1.7.9",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "lucide-vue-next": "^0.525.0",
+    "pinia": "^3.0.1",
+    "reka-ui": "^2.5.1",
+    "tailwind-merge": "^3.3.1",
+    "vee-validate": "^4.15.1",
+    "vue": "^3.5.17",
+    "vue-router": "^4.5.1",
+    "vue-sonner": "^2.0.2",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.11",
+    "@types/node": "^22.10.0",
+    "@vitejs/plugin-vue": "^6.0.0",
+    "@vitest/ui": "^3.0.0",
+    "@vue/eslint-config-prettier": "^10.2.0",
+    "@vue/eslint-config-typescript": "^14.2.0",
+    "@vue/test-utils": "^2.4.6",
+    "@vue/tsconfig": "^0.7.0",
+    "eslint": "^9.18.0",
+    "eslint-plugin-vue": "^10.0.0",
+    "husky": "^9.1.7",
+    "jsdom": "^26.0.0",
+    "lint-staged": "^15.3.0",
+    "npm-run-all2": "^7.0.2",
+    "prettier": "^3.4.2",
+    "prettier-plugin-tailwindcss": "^0.6.11",
+    "tailwindcss": "^4.1.11",
+    "typescript": "~5.7.2",
+    "vite": "^7.0.0",
+    "vitest": "^3.0.0",
+    "vue-tsc": "^2.2.0"
+  },
+  "optionalDependencies": {
+    "launchdarkly-vue-client-sdk": "^2.4.1",
+    "vue-i18n": "^11.1.11"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,vue,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml,css,html}": [
+      "prettier --write"
+    ]
+  }
+}
