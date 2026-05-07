@@ -20,3 +20,13 @@ export {
 } from './useManifestDialog';
 export { useAuditLog, type UseAuditLogApi } from './useAuditLog';
 export { useFileUpload, type UseFileUploadApi } from './useFileUpload';
+export {
+  useStepUp,
+  StepUpBlockedError,
+  StepUpCancelledError,
+  StepUpNetworkError,
+  StepUpRejectedError,
+  isStepUpError,
+  type UseStepUpApi,
+  type RequestStepUpOptions,
+} from './useStepUp';
