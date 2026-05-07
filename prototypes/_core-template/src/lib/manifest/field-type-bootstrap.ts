@@ -27,10 +27,14 @@ const CANONICAL = [
   'textarea',
   'select',
   'date',
+  'daterange',
   'number',
+  'money',
   'boolean',
   'file',
   'multifile',
+  'otp',
+  'key-value-array',
 ] as const;
 
 let _bootstrapped = false;

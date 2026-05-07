@@ -312,3 +312,227 @@ The `<DynamicForm>` component is the canonical primitive for rendering forms who
 - **WHEN** `<DynamicForm>` resolves and renders the field
 - **THEN** the field renders as `<MoneyInput currency="USD">`; the zod schema is derived from the same logic the build-time manifest uses for `money` fields; vee-validate scope matches
 
+### Requirement: DatePicker component MUST support single and range modes with locale-aware rendering
+
+The `<DatePicker>` component SHALL be the single canonical date input primitive in the financial-core. It SHALL accept a `mode` prop (`'single' | 'range'`, default `'single'`) — `single` returns a `Date` (or `null`) via `v-model`, `range` returns `{ start: Date, end: Date } | null`. It SHALL accept a `locale` prop (default `'es-AR'`) that drives weekday names, month names, and the locale-specific date format used in the trigger button. It SHALL honor optional `min` and `max` Date props that disable selecting dates outside the range. The component's calendar popover SHALL teleport to `document.body` with `position: fixed` and z-index ≥ 9999 so it sits above modals and drawers (same pattern `<Select>` enforces). The component SHALL integrate with vee-validate via `<FormControl>` so blur and submit validation timing matches `<Input>` and `<Select>`. Hardcoded colors, paddings, and font sizes are forbidden — every visual resolves through `core-theming` tokens. The implementation SHALL be built on reka-ui `Popover` plus a native `<input type="date">` keyboard fallback for accessibility — heavy external date libraries (e.g., `@vuepic/vue-datepicker`, `react-day-picker`) are forbidden.
+
+#### Scenario: Single mode v-models a Date
+
+- **GIVEN** a `<DatePicker v-model="birthdate">` mounted in a Create modal
+- **WHEN** the user opens the calendar and selects March 15, 2026
+- **THEN** `birthdate.value` becomes a `Date` instance representing 2026-03-15; the trigger button shows the locale-formatted date (e.g., `"15 mar 2026"` for `es-AR`)
+
+#### Scenario: Range mode v-models start and end
+
+- **GIVEN** a `<DatePicker mode="range" v-model="dateRange">` for a transaction date filter
+- **WHEN** the user picks March 1, 2026 as start and March 31, 2026 as end
+- **THEN** `dateRange.value` becomes `{ start: Date(2026-03-01), end: Date(2026-03-31) }`; the trigger button shows both dates separated by an en-dash
+
+#### Scenario: Calendar popover teleports above the modal overlay
+
+- **GIVEN** a `<DatePicker>` rendered inside a Create modal whose overlay has z-index ≥ 500
+- **WHEN** the user clicks the trigger to open the calendar
+- **THEN** the popover is teleported to `document.body` with `position: fixed` and z-index ≥ 9999, sitting visually above the modal overlay; it is not clipped by the modal's `overflow: hidden`
+
+#### Scenario: min and max disable out-of-range dates
+
+- **GIVEN** a `<DatePicker :min="today" :max="addDays(today, 30)">` (a 30-day forward window)
+- **WHEN** the user opens the calendar
+- **THEN** dates before today and dates after today+30 render as disabled (muted text, non-clickable); selecting them is impossible
+
+#### Scenario: Heavy external date libraries are forbidden
+
+- **GIVEN** a developer reaches for `@vuepic/vue-datepicker` or `react-day-picker` to implement the DatePicker
+- **WHEN** the change is reviewed
+- **THEN** the review MUST reject the implementation — the contracted stack is `reka-ui Popover` + `date-fns` + native `<input type="date">` accessibility fallback only; heavy date libraries inflate the bundle and diverge from the `core-theming` token system
+
+### Requirement: Manifest dialog `daterange` field type MUST render as DatePicker in range mode
+
+In addition to the manifest field type mappings declared in `core-forms` baseline, the action manifest engine SHALL accept `'daterange'` as a valid field type. A field declared `{ type: 'daterange', ... }` SHALL render as `<DatePicker mode="range">`. The zod schema for `daterange` SHALL be `z.object({ start: z.coerce.date(), end: z.coerce.date() }).refine(({ start, end }) => start <= end, { message: 'La fecha de inicio debe ser anterior o igual a la de fin' })`. The field SHALL honor optional `min` and `max` from the manifest declaration, applied to both endpoints.
+
+#### Scenario: `daterange` field renders as DatePicker in range mode
+
+- **GIVEN** a manifest field `{ type: 'daterange', label: 'Período', required: true }`
+- **WHEN** the dialog renders the field
+- **THEN** the field is `<DatePicker mode="range">`, the zod schema enforces `start <= end`, and a missing range produces a validation error rendered below the input in `text-danger`
+
+#### Scenario: `daterange` honors min and max from the manifest
+
+- **GIVEN** a manifest field `{ type: 'daterange', label: 'Período', min: '2026-01-01', max: '2026-12-31' }`
+- **WHEN** the dialog renders the field
+- **THEN** dates outside `[2026-01-01, 2026-12-31]` are disabled in the calendar; submitting a range whose endpoint falls outside the bounds produces a validation error
+
+### Requirement: MoneyInput component MUST format value live with locale-aware separators and emit raw numeric value
+
+The `<MoneyInput>` component SHALL be the single canonical monetary input primitive in the financial-core. It SHALL accept props `currency: string` (ISO code, e.g., `'ARS'`, `'USD'`, `'BTC'`), `decimals: number` (default `2` for fiat; SHALL be set to `8` for crypto), `locale: string` (default `'es-AR'`), `allowNegative: boolean` (default `false`), `min?: number`, `max?: number`. It SHALL format the displayed value live as the user types: thousand separators and decimal separator follow `locale` conventions (for `es-AR`: `1.234.567,89`); the currency symbol is rendered as a prefix or suffix according to the locale (in `es-AR`, ARS prefixes as `$` and USD prefixes as `US$`). The component's `v-model` SHALL emit the **raw numeric value** as a JavaScript `number` — never the formatted string. The component SHALL integrate with vee-validate via `<FormControl>`, validate via the schema declared at the consuming form, and expose `inputmode="decimal"` plus an `aria-describedby` linking to the format hint when present. Hardcoded colors, paddings, and fonts are forbidden — every visual resolves through `core-theming`.
+
+#### Scenario: Live formatting in es-AR shows thousand and decimal separators correctly
+
+- **GIVEN** a `<MoneyInput currency="ARS" :locale="'es-AR'">` and the user types `1234567.89`
+- **WHEN** the input renders the formatted value
+- **THEN** the visible text is `$ 1.234.567,89` (peso symbol prefix, dot as thousand separator, comma as decimal separator); the `v-model` value is the number `1234567.89`
+
+#### Scenario: Live formatting in en-US uses comma and period
+
+- **GIVEN** a `<MoneyInput currency="USD" :locale="'en-US'">` and the user types `1234567.89`
+- **WHEN** the input renders
+- **THEN** the visible text is `US$ 1,234,567.89`; the `v-model` value is the number `1234567.89`
+
+#### Scenario: Crypto decimals default to 8
+
+- **GIVEN** a `<MoneyInput currency="BTC" :decimals="8">` and the user types `0.12345678`
+- **WHEN** the input renders
+- **THEN** the visible text shows `0,12345678` (in `es-AR`); the `v-model` is `0.12345678`; entering a 9th decimal digit truncates to 8
+
+#### Scenario: allowNegative=false rejects minus sign
+
+- **GIVEN** a `<MoneyInput currency="ARS">` (default `allowNegative: false`) and the user types `-100`
+- **WHEN** the input processes the input
+- **THEN** the minus sign is stripped; the displayed value is `$ 100,00`; the `v-model` is the number `100`
+
+#### Scenario: allowNegative=true preserves the sign
+
+- **GIVEN** a `<MoneyInput currency="ARS" :allowNegative="true">` (used for an adjustment field) and the user types `-100.50`
+- **WHEN** the input processes the input
+- **THEN** the displayed value is `$ -100,50` (or with the negative sign per locale convention); the `v-model` is the number `-100.5`
+
+#### Scenario: v-model emits a number, never a formatted string
+
+- **GIVEN** a `<MoneyInput currency="ARS" v-model="amount">` and any user input
+- **WHEN** `amount.value` is read
+- **THEN** the value is a JavaScript `number` (e.g., `1234567.89`); reading a string `'1.234.567,89'` from `amount.value` is a contract violation — the formatting is a display concern, the binding is numeric
+
+### Requirement: Manifest dialog `money` field type MUST render as MoneyInput with currency-aware decimals
+
+The action manifest engine SHALL accept `'money'` as a valid field type. A field declared `{ type: 'money', currency: 'ARS', decimals?: 2, min?: 0, max?: 1000000, allowNegative?: false, ... }` SHALL render as `<MoneyInput>` with the declared currency / decimals / allowNegative / min / max wired through props. The zod schema for `money` SHALL be `z.coerce.number()` with `.refine()` for sign (positive when `allowNegative: false`), `.min(min)` and `.max(max)` when declared. The manifest validator SHALL reject any `money` field declaration missing the `currency` property — currency is mandatory because rendering and validation cannot be deterministic without it.
+
+#### Scenario: `money` field renders with the declared currency and limits
+
+- **GIVEN** a manifest field `{ type: 'money', currency: 'USD', label: 'Monto a transferir', min: 1, max: 50000 }`
+- **WHEN** the dialog renders the field
+- **THEN** the field is `<MoneyInput currency="USD" :min="1" :max="50000">` (with the dialog's locale defaulting to `es-AR` for the form's host app), the zod schema is `z.coerce.number().min(1).max(50000)`, and submitting a value outside the range produces a validation error
+
+#### Scenario: `money` declaration without currency is rejected by the validator
+
+- **GIVEN** a manifest field `{ type: 'money', label: 'Monto', min: 0 }` (no `currency`)
+- **WHEN** the manifest validator runs (dev mode)
+- **THEN** the validator rejects the manifest with a clear message naming the field and the missing `currency` property; the dialog refuses to render that field
+
+### Requirement: OtpInput component MUST render N independent slots with autofocus advance and paste support
+
+The `<OtpInput>` component SHALL be the single canonical multi-digit code primitive in the financial-core. It SHALL accept props `length: number` (default `6`), `mode: 'numeric' | 'alphanumeric'` (default `'numeric'`), `mask: boolean` (default `false`, when `true` displays each entered digit as a dot for shoulder-surfing protection), and SHALL render `length` independent input slots arranged horizontally. Typing a character into a slot SHALL advance focus to the next slot automatically; pressing Backspace on an empty slot SHALL retreat focus to the previous slot; pasting a string SHALL distribute its characters across slots starting at the currently-focused slot (truncated to `length`, characters not matching the mode silently dropped). The component SHALL emit the assembled value via `v-model` as a single string of length equal to `length` (or shorter when partial). It SHALL integrate with vee-validate via `<FormControl>` so blur and submit validation timing matches `<Input>`. Each slot SHALL declare `inputmode="numeric"` for numeric mode (or `"text"` with `autocapitalize="characters"` for alphanumeric), and SHALL expose `aria-label` referencing its position (e.g., `"Dígito 3 de 6"`). Hardcoded colors / paddings / fonts are forbidden — every visual resolves through `core-theming` tokens.
+
+#### Scenario: Typing advances focus across slots
+
+- **GIVEN** a `<OtpInput :length="6">` with all slots empty and focus on slot 1
+- **WHEN** the user types `1`, `2`, `3`
+- **THEN** slot 1 contains `1`, slot 2 contains `2`, slot 3 contains `3`; focus advances after each keystroke; the `v-model` binding is `"123"`
+
+#### Scenario: Backspace on empty slot retreats focus
+
+- **GIVEN** the user has filled slots 1 through 5 and focus is on slot 5 with character `5`
+- **WHEN** the user presses Backspace twice
+- **THEN** the first Backspace clears slot 5 (focus stays on slot 5); the second Backspace retreats focus to slot 4 and clears its character; the `v-model` binding is `"123"`
+
+#### Scenario: Paste distributes characters across slots
+
+- **GIVEN** an empty `<OtpInput :length="6">` with focus on slot 1
+- **WHEN** the user pastes `123456`
+- **THEN** the six slots fill sequentially with `1, 2, 3, 4, 5, 6`; the `v-model` binding is `"123456"`; focus lands on slot 6 (or stays at the end)
+
+#### Scenario: Numeric mode rejects non-digit input
+
+- **GIVEN** a `<OtpInput :mode="'numeric'">` with slot 1 focused
+- **WHEN** the user types `a` or pastes `12a45`
+- **THEN** non-digit characters are dropped silently; pasting `12a45` results in slots filled with `1, 2, 4, 5` — the `a` is skipped without error
+
+#### Scenario: Mask hides entered characters as dots
+
+- **GIVEN** a `<OtpInput :length="6" :mask="true">` and the user types `123456`
+- **WHEN** the input renders
+- **THEN** each slot shows a single dot (●) instead of the digit; the `v-model` binding is still `"123456"`; the underlying value is preserved for submit but visually obscured
+
+#### Scenario: Alphanumeric mode normalizes to uppercase
+
+- **GIVEN** a `<OtpInput :mode="'alphanumeric'">` and the user types `aB3`
+- **WHEN** the input processes the input
+- **THEN** the slots fill with `A, B, 3` (lowercase normalized to uppercase); the `v-model` binding is `"AB3"`
+
+### Requirement: Manifest dialog `otp` field type MUST render as OtpInput with the declared length
+
+The action manifest engine SHALL accept `'otp'` as a valid field type. A field declared `{ type: 'otp', length: number, mode?: 'numeric' | 'alphanumeric', label, ... }` SHALL render as `<OtpInput :length="length" :mode="mode">`. The zod schema for `otp` SHALL be `z.string().length(length).regex(/^\d+$/)` for numeric mode, and `z.string().length(length).regex(/^[A-Z0-9]+$/)` for alphanumeric mode. The manifest validator SHALL reject any `otp` field declaration without `length` or with `length < 1` or `length > 16` — outside this range OTP codes are not the right field type.
+
+#### Scenario: `otp` field renders with the declared length
+
+- **GIVEN** a manifest field `{ type: 'otp', length: 6, label: 'Código de verificación', required: true }`
+- **WHEN** the dialog renders the field
+- **THEN** the field is `<OtpInput :length="6">`, the zod schema is `z.string().length(6).regex(/^\d+$/)`, and submitting fewer than 6 digits produces a validation error
+
+#### Scenario: Manifest validator rejects out-of-range length
+
+- **GIVEN** a manifest field `{ type: 'otp', length: 32 }` (or `length: 0`)
+- **WHEN** the manifest validator runs (dev mode)
+- **THEN** the validator rejects the manifest with a clear message — `length` SHALL be between 1 and 16 inclusive
+
+### Requirement: DynamicKeyValueFields component MUST manage a reorderable list of key-value rows with per-row validation
+
+The `<DynamicKeyValueFields>` component SHALL be the single canonical primitive for capturing a variable-length list of key-value pairs. It SHALL render rows vertically; each row SHALL contain (in order, left-to-right): a drag handle, an input for `key`, an input for `value`, and a remove button. Below the last row, an "Agregar fila" button SHALL append a new empty row. The component SHALL accept props `minRows: number` (default `0`), `maxRows?: number` (no cap by default), `keyType: 'text' | 'select'` (default `'text'`), `keyOptions?: Option[]` (when `keyType === 'select'`), `valueType: ManifestFieldType` (default `'text'`, accepts any other manifest field type for value rendering), and `duplicateKeyPolicy: 'warn' | 'reject' | 'allow'` (default `'warn'`). The `v-model` SHALL emit `Array<{ key: string; value: unknown; index: number }>` where `index` is the visual order (reassigned consistently after every reorder). Reorder SHALL be implemented via `vueuse/useDraggable` (no external drag-drop library beyond vueuse). Per-row validation SHALL run via vee-validate with a nested scope per row. Hardcoded colors / paddings are forbidden — every visual resolves through `core-theming`.
+
+#### Scenario: Add row appends an empty row at the end
+
+- **GIVEN** a `<DynamicKeyValueFields v-model="attributes">` with two rows already populated
+- **WHEN** the user clicks the "Agregar fila" button
+- **THEN** a third empty row appends below; `attributes.value` becomes `[...existing, { key: '', value: '', index: 2 }]`; focus moves automatically to the new row's `key` input
+
+#### Scenario: Remove row deletes and reindexes remaining rows
+
+- **GIVEN** a list with 4 rows at indices 0, 1, 2, 3 and the user clicks remove on the row at index 1
+- **WHEN** the component processes the removal
+- **THEN** the row is removed from the array; the remaining rows reindex to 0, 1, 2 (preserving order); the `v-model` emits the updated array
+
+#### Scenario: Drag reorder reassigns indices
+
+- **GIVEN** a list with 3 rows where the user drags row 2 above row 0
+- **WHEN** the drop event fires
+- **THEN** the array reorders accordingly; `index` is reassigned `0, 1, 2` to the new positions; the `v-model` emits the updated array
+
+#### Scenario: Duplicate key with `warn` policy shows a warning chip
+
+- **GIVEN** a list configured with `:duplicateKeyPolicy="'warn'"` and the user enters the same `key` value in two rows
+- **WHEN** the component evaluates the keys
+- **THEN** the duplicate rows render a warning chip next to the duplicate `key` inputs (not an error — submission is allowed); the form remains submittable
+
+#### Scenario: Duplicate key with `reject` policy blocks submission
+
+- **GIVEN** a list configured with `:duplicateKeyPolicy="'reject'"` and the user enters duplicate keys
+- **WHEN** vee-validate runs
+- **THEN** the validation reports an error on the duplicate rows; the form's submit button is disabled until the duplicates are resolved
+
+#### Scenario: minRows enforces lower bound
+
+- **GIVEN** a list configured with `:minRows="2"` and the user attempts to remove the second row when only two rows exist
+- **WHEN** the component processes the removal
+- **THEN** the removal is blocked; the remove button on those rows is `disabled` while the count equals `minRows`
+
+#### Scenario: Custom valueType renders alternative field
+
+- **GIVEN** a list configured with `:valueType="'money'"` and `currency: 'ARS'`
+- **WHEN** the component renders rows
+- **THEN** each row's `value` slot renders `<MoneyInput currency="ARS">` instead of a plain text input; the `v-model` value for that row's `value` is a number per `core-forms` MoneyInput contract
+
+### Requirement: Manifest dialog `key-value-array` field type MUST render as DynamicKeyValueFields with the declared key/value schemas
+
+The action manifest engine SHALL accept `'key-value-array'` as a valid field type. A field declared `{ type: 'key-value-array', label, keyType?, keyOptions?, valueType?, minRows?, maxRows?, duplicateKeyPolicy?, ... }` SHALL render as `<DynamicKeyValueFields>` with the declared props wired through. The zod schema for `key-value-array` SHALL be `z.array(z.object({ key: <inferred from keyType>, value: <inferred from valueType>, index: z.number().int().nonnegative() }))` with `.min(minRows)` and `.max(maxRows)` when declared. The manifest validator SHALL reject any `key-value-array` declaration where `keyType === 'select'` is missing `keyOptions`.
+
+#### Scenario: `key-value-array` field renders with the declared schemas
+
+- **GIVEN** a manifest field `{ type: 'key-value-array', label: 'Atributos', keyType: 'text', valueType: 'text', minRows: 1, maxRows: 10 }`
+- **WHEN** the dialog renders the field
+- **THEN** the field is `<DynamicKeyValueFields :keyType="'text'" :valueType="'text'" :minRows="1" :maxRows="10">`, the zod schema enforces `1 ≤ rows ≤ 10`, both `key` and `value` are `z.string().min(1)` per row
+
+#### Scenario: `keyType: 'select'` without keyOptions is rejected
+
+- **GIVEN** a manifest field `{ type: 'key-value-array', label: 'Atributos', keyType: 'select' }` (missing `keyOptions`)
+- **WHEN** the manifest validator runs (dev mode)
+- **THEN** the validator rejects the manifest with a clear message — `keyOptions` is required when `keyType === 'select'`
+
