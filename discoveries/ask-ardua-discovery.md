@@ -79,8 +79,6 @@ Estas preguntas deben responderse antes de que el equipo de Tecnologia pueda est
 
 ---
 
----
-
 ## Requerimientos vinculados
 
 | REQ | Descripcion | Estado |
