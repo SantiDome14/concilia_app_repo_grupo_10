@@ -116,8 +116,14 @@ export type DialogFieldType =
   | 'textarea'
   | 'select'
   | 'date'
+  | 'daterange'
   | 'number'
-  | 'boolean';
+  | 'money'
+  | 'boolean'
+  | 'file'
+  | 'multifile'
+  | 'otp'
+  | 'key-value-array';
 
 /** Filter spec resolved at dropdown-open time for `lookup` fields. */
 export type CatalogFilter =
@@ -165,6 +171,13 @@ export type DialogFieldDate = DialogFieldBase & {
   type: 'date';
 };
 
+export type DialogFieldDateRange = DialogFieldBase & {
+  type: 'daterange';
+  /** Min/max ISO dates (YYYY-MM-DD); applied to both endpoints. */
+  min?: string;
+  max?: string;
+};
+
 export type DialogFieldNumber = DialogFieldBase & {
   type: 'number';
   min?: number;
@@ -175,14 +188,67 @@ export type DialogFieldBoolean = DialogFieldBase & {
   type: 'boolean';
 };
 
+export type DialogFieldFile = DialogFieldBase & {
+  type: 'file';
+  /** MIME types whitelist (e.g. `['application/pdf', 'image/*']`). */
+  accept?: string[];
+  /** Max byte size for the single file. */
+  max_size?: number;
+};
+
+export type DialogFieldMultifile = DialogFieldBase & {
+  type: 'multifile';
+  /** MIME types whitelist. */
+  accept?: string[];
+  /** Max byte size per file. */
+  max_size?: number;
+  /** Max number of files allowed. */
+  max_files?: number;
+};
+
+export type DialogFieldMoney = DialogFieldBase & {
+  type: 'money';
+  /** ISO currency code. Required. */
+  currency: string;
+  /** Decimal places (default 2 fiat, set 8 for crypto). */
+  decimals?: number;
+  allow_negative?: boolean;
+  min?: number;
+  max?: number;
+};
+
+export type DialogFieldOtp = DialogFieldBase & {
+  type: 'otp';
+  /** Number of digits (1–16). */
+  length: number;
+  mode?: 'numeric' | 'alphanumeric';
+  mask?: boolean;
+};
+
+export type DialogFieldKeyValueArray = DialogFieldBase & {
+  type: 'key-value-array';
+  key_type?: 'text' | 'select';
+  key_options?: SelectOption[];
+  value_type?: DialogFieldType;
+  min_rows?: number;
+  max_rows?: number;
+  duplicate_key_policy?: 'warn' | 'reject' | 'allow';
+};
+
 export type DialogField =
   | DialogFieldLookup
   | DialogFieldText
   | DialogFieldTextarea
   | DialogFieldSelect
   | DialogFieldDate
+  | DialogFieldDateRange
   | DialogFieldNumber
-  | DialogFieldBoolean;
+  | DialogFieldMoney
+  | DialogFieldBoolean
+  | DialogFieldFile
+  | DialogFieldMultifile
+  | DialogFieldOtp
+  | DialogFieldKeyValueArray;
 
 export type DialogInfoBanner = {
   text: string;

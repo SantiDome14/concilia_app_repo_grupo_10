@@ -23,6 +23,12 @@ const envSchema = z.object({
   VITE_AUTH0_CLIENT_ID: z.string().optional().default(''),
   VITE_AUTH0_AUDIENCE: z.string().optional().default(''),
 
+  /** Step-up elevation TTL in seconds (default 300 = 5 minutes). */
+  VITE_STEPUP_TTL_SECONDS: z.coerce.number().int().positive().default(300),
+
+  /** WebSocket endpoint. Empty = WebSocket client is inert (template default). */
+  VITE_WS_URL: z.string().optional().default(''),
+
   VITE_LAUNCHDARKLY_CLIENT_SIDE_ID: z.string().optional().default(''),
 
   VITE_FEATURE_I18N: z

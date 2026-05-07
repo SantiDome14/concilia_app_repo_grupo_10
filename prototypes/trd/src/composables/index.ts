@@ -19,3 +19,26 @@ export {
   type UseManifestDialogApi,
 } from './useManifestDialog';
 export { useAuditLog, type UseAuditLogApi } from './useAuditLog';
+export { useFileUpload, type UseFileUploadApi } from './useFileUpload';
+export {
+  useStepUp,
+  StepUpBlockedError,
+  StepUpCancelledError,
+  StepUpNetworkError,
+  StepUpRejectedError,
+  isStepUpError,
+  type UseStepUpApi,
+  type RequestStepUpOptions,
+} from './useStepUp';
+export { useWizard, type UseWizardApi } from './useWizard';
+export {
+  useWebSocket,
+  WebSocketClosedError,
+  type UseWebSocketApi,
+  type UseWebSocketOptions,
+} from './useWebSocket';
+export {
+  useDynamicForm,
+  type UseDynamicFormApi,
+  type UseDynamicFormOptions,
+} from './useDynamicForm';

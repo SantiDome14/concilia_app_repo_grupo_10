@@ -100,6 +100,18 @@
   --warning: 38 92% 50%;
   --danger: 0 84% 60%;
   --info: 217 91% 60%;
+
+  /* Chart series — 8 perceptually distinct hues. Apps may override for
+     brand alignment. Series are auto-assigned in declaration order
+     (chart-1 → first series, chart-2 → second, etc.). */
+  --chart-1: var(--brand);
+  --chart-2: 217 91% 60%;   /* blue   #2563EB */
+  --chart-3: 142 71% 45%;   /* green  #16A34A */
+  --chart-4: 38 92% 50%;    /* amber  #F59E0B */
+  --chart-5: 258 90% 74%;   /* purple #C084FC */
+  --chart-6: 172 66% 50%;   /* teal   #2DD4BF */
+  --chart-7: 340 75% 55%;   /* pink   #E11D48 */
+  --chart-8: 197 71% 73%;   /* sky    #93C5FD */
 }
 
 /* ────────────────────────────────────────────────────────────────

@@ -12,6 +12,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Dropzone } from '@/components/ui/dropzone';
+import { DatePicker } from '@/components/ui/date-picker';
+import { MoneyInput } from '@/components/ui/money-input';
+import { OtpInput } from '@/components/ui/otp-input';
+import { DynamicKeyValueFields } from '@/components/ui/dynamic-fields';
 import {
   Select,
   SelectContent,
@@ -219,6 +224,79 @@ const textValue = computed({
 const numberValue = computed(() =>
   typeof props.modelValue === 'number' ? String(props.modelValue) : '',
 );
+
+// ── file / multifile coercion ────────────────────────────────────────
+
+const fileValue = computed<File | null>({
+  get: () => (props.modelValue instanceof File ? props.modelValue : null),
+  set: (v) => emit('update:modelValue', v),
+});
+
+const multifileValue = computed<File[]>({
+  get: () =>
+    Array.isArray(props.modelValue) && props.modelValue.every((f) => f instanceof File)
+      ? (props.modelValue as File[])
+      : [],
+  set: (v) => emit('update:modelValue', v),
+});
+
+function onDropzoneUpdate(value: File | File[] | null): void {
+  emit('update:modelValue', value);
+}
+
+// ── date / daterange coercion ────────────────────────────────────────
+
+const dateValue = computed<Date | null>(() => {
+  const v = props.modelValue;
+  if (v instanceof Date) return v;
+  if (typeof v === 'string' && v) {
+    const parsed = new Date(v);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  return null;
+});
+
+const dateRangeValue = computed<{ start: Date; end: Date } | null>(() => {
+  const v = props.modelValue;
+  if (v && typeof v === 'object' && 'start' in v && 'end' in v) {
+    return v as { start: Date; end: Date };
+  }
+  return null;
+});
+
+function onDateUpdate(value: unknown): void {
+  emit('update:modelValue', value);
+}
+
+function parseDateAttr(s: string | undefined): Date | undefined {
+  if (!s) return undefined;
+  const parsed = new Date(s);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
+// ── money / otp / key-value-array coercion ───────────────────────────
+
+const moneyValue = computed<number | null>(() =>
+  typeof props.modelValue === 'number' ? props.modelValue : null,
+);
+
+const otpValue = computed<string>(() =>
+  typeof props.modelValue === 'string' ? props.modelValue : '',
+);
+
+interface KvRow {
+  key: string;
+  value: string;
+  index: number;
+}
+
+const kvValue = computed<KvRow[]>(() =>
+  Array.isArray(props.modelValue) ? (props.modelValue as KvRow[]) : [],
+);
+
+function onSimpleUpdate(value: unknown): void {
+  emit('update:modelValue', value);
+}
 </script>
 
 <template>
@@ -265,13 +343,25 @@ const numberValue = computed(() =>
     />
 
     <!-- date -->
-    <Input
+    <DatePicker
       v-else-if="props.field.type === 'date'"
-      :id="inputId"
-      v-model="textValue"
-      :placeholder="props.field.placeholder ?? ''"
+      :model-value="dateValue"
+      mode="single"
+      :placeholder="props.field.placeholder ?? 'Seleccionar fecha…'"
       :disabled="props.disabled"
-      type="date"
+      @update:model-value="onDateUpdate"
+    />
+
+    <!-- daterange -->
+    <DatePicker
+      v-else-if="props.field.type === 'daterange'"
+      :model-value="dateRangeValue"
+      mode="range"
+      :placeholder="props.field.placeholder ?? 'Seleccionar período…'"
+      :min="parseDateAttr(props.field.min)"
+      :max="parseDateAttr(props.field.max)"
+      :disabled="props.disabled"
+      @update:model-value="onDateUpdate"
     />
 
     <!-- boolean -->
@@ -315,6 +405,70 @@ const numberValue = computed(() =>
         </SelectItem>
       </SelectContent>
     </Select>
+
+    <!-- money -->
+    <MoneyInput
+      v-else-if="props.field.type === 'money'"
+      :model-value="moneyValue"
+      :currency="props.field.currency"
+      :decimals="props.field.decimals"
+      :allow-negative="props.field.allow_negative"
+      :min="props.field.min"
+      :max="props.field.max"
+      :placeholder="props.field.placeholder ?? ''"
+      :disabled="props.disabled"
+      @update:model-value="onSimpleUpdate"
+    />
+
+    <!-- otp -->
+    <OtpInput
+      v-else-if="props.field.type === 'otp'"
+      :model-value="otpValue"
+      :length="props.field.length"
+      :mode="props.field.mode"
+      :mask="props.field.mask"
+      :disabled="props.disabled"
+      @update:model-value="onSimpleUpdate"
+    />
+
+    <!-- key-value-array -->
+    <DynamicKeyValueFields
+      v-else-if="props.field.type === 'key-value-array'"
+      :model-value="kvValue"
+      :key-type="props.field.key_type"
+      :key-options="props.field.key_options"
+      :min-rows="props.field.min_rows"
+      :max-rows="props.field.max_rows"
+      :duplicate-key-policy="props.field.duplicate_key_policy"
+      :disabled="props.disabled"
+      @update:model-value="onSimpleUpdate"
+    />
+
+    <!-- file (single) -->
+    <Dropzone
+      v-else-if="props.field.type === 'file'"
+      :model-value="fileValue"
+      :multiple="false"
+      :max-files="1"
+      :accept="props.field.accept"
+      :max-size="props.field.max_size"
+      :disabled="props.disabled"
+      :aria-label="props.field.placeholder ?? 'Arrastrá un archivo aquí o hacé click para seleccionar'"
+      @update:model-value="onDropzoneUpdate"
+    />
+
+    <!-- multifile -->
+    <Dropzone
+      v-else-if="props.field.type === 'multifile'"
+      :model-value="multifileValue"
+      multiple
+      :accept="props.field.accept"
+      :max-size="props.field.max_size"
+      :max-files="props.field.max_files"
+      :disabled="props.disabled"
+      :aria-label="props.field.placeholder ?? 'Arrastrá archivos aquí o hacé click para seleccionar'"
+      @update:model-value="onDropzoneUpdate"
+    />
 
     <!-- lookup -->
     <Popover

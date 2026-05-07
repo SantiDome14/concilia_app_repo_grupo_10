@@ -27,8 +27,14 @@ const CANONICAL_FIELD_TYPES: readonly DialogFieldType[] = [
   'textarea',
   'select',
   'date',
+  'daterange',
   'number',
+  'money',
   'boolean',
+  'file',
+  'multifile',
+  'otp',
+  'key-value-array',
 ];
 
 const HEURISTIC_BANNED_ID_SUFFIXES = [

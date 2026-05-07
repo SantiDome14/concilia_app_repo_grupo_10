@@ -92,3 +92,10 @@ export type {
 } from '@/types/manifest';
 
 export { ManifestError } from '@/types/manifest';
+
+export {
+  registerFieldType,
+  resolveFieldType,
+  hasFieldType,
+  listRegisteredTypes,
+} from './field-type-registry';

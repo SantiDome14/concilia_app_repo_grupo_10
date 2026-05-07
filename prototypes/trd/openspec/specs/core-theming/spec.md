@@ -232,3 +232,47 @@ The shared `<Badge>` Vue component SHALL expose a strictly typed prop surface: `
 - **WHEN** the developer considers adding the color directly inside `<Badge>` props
 - **THEN** the inline color MUST be rejected and a new `variant` value MUST be proposed via an OpenSpec change that adds the matching semantic token to `core-theming` and the variant value to this requirement
 
+### Requirement: Chart series colors MUST be tokenized via `--chart-N` custom properties
+
+The theming layer SHALL expose 8 chart series tokens (`--chart-1` through `--chart-8`) in `:root` of `src/styles/globals.css`. The tokens SHALL be designed as a sequence of perceptually distinct hues that work together when displayed in adjacent series. Each app inheriting the template MAY override these tokens for its brand alignment but the contract holds: 8 distinct, perceptually distinguishable, all defined as CSS variables. Hardcoded chart series colors in component code (raw hex / rgb) are forbidden — every chart series resolves through `--chart-N` or through token aliases of the semantic palette (`success`, `warning`, `danger`, `info`, `neutral`).
+
+#### Scenario: Theme defines 8 chart series tokens
+
+- **GIVEN** the `globals.css` of an app derived from the template
+- **WHEN** the file is inspected
+- **THEN** `:root` includes definitions for `--chart-1` through `--chart-8`, each as an HSL or oklch value (NOT hex / rgb), with `chart-1` typically aligned to the app's `--brand` and the rest perceptually distinct
+
+#### Scenario: Hardcoded hex in chart series code is rejected
+
+- **GIVEN** a chart wrapper internal implementation hardcoding `colors: ['#1f77b4', '#ff7f0e']` (matplotlib classic palette)
+- **WHEN** the change is reviewed
+- **THEN** the review MUST reject the implementation — series colors SHALL resolve through `--chart-N` tokens; raw hex breaks brand portability
+
+#### Scenario: App overrides chart palette to match brand
+
+- **GIVEN** TRD overrides its `--chart-1` to align with the TRD blue brand
+- **WHEN** any chart in TRD renders without explicit `colors` prop
+- **THEN** the first series renders in the TRD-blue tone — the rest of the apps (OPS red, FIN green, LEX teal) keep their own palette
+
+### Requirement: Carousel dot indicators MUST resolve through `--brand` and `--b3` tokens
+
+The dot indicators rendered by `<Carousel>` (the canonical multi-item slide gallery in `core-layout`) SHALL resolve their visual states through `core-theming` tokens. The active dot's background SHALL resolve to `var(--brand)` (the active app's brand color); the inactive dots' background SHALL resolve to `var(--b3)` (the third-step border / muted border token). Hover state on inactive dots MAY brighten to `var(--b4)`. Hardcoded hex / rgb values for dot states are forbidden.
+
+#### Scenario: Active dot uses --brand and inactive uses --b3
+
+- **GIVEN** a `<Carousel>` with three dots and the active slide is index 1
+- **WHEN** the dots render
+- **THEN** the dot at index 1 fills with `var(--brand)`; dots at index 0 and 2 fill with `var(--b3)`
+
+#### Scenario: Hardcoded dot colors are rejected
+
+- **GIVEN** a developer attempts to style the dots with hex values (e.g., `background-color: #1B1B64`)
+- **WHEN** the change is reviewed
+- **THEN** the review MUST reject the implementation — every dot state SHALL resolve through `--brand` / `--b3` / `--b4` tokens; raw colors break per-app brand portability
+
+#### Scenario: Carousel inherits the app's brand automatically
+
+- **GIVEN** the same `<Carousel>` component used in TRD (blue brand) and FIN (green brand)
+- **WHEN** each app renders the carousel with no prop overrides
+- **THEN** TRD's active dot is blue (resolved from TRD's `--brand`) and FIN's active dot is green (resolved from FIN's `--brand`) — with no code change in the carousel itself
+
