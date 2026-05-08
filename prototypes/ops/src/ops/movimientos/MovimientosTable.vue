@@ -53,7 +53,7 @@ function formatAmount(value: string): string {
           <th class="px-4 py-3 text-left">Moneda</th>
           <th class="px-4 py-3 text-right">Monto</th>
           <th class="px-4 py-3 text-left">Estado</th>
-          <th class="px-4 py-3 text-left">Sponsor</th>
+          <th class="px-4 py-3 text-left">Partner</th>
           <th class="px-4 py-3 text-left">Cliente</th>
         </tr>
       </thead>

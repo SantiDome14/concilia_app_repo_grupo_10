@@ -10,18 +10,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/cn';
 import { activeSponsors } from '@/ops/psp/sponsor-catalog';
 import type { SponsorCode } from '@/ops/psp/types';
 import type { CatalogOption } from './catalog';
 
 // ════════════════════════════════════════════════════════════════════
-// MovimientosFilters — implements part of Requirement 3.
+// MovimientosFilters — implements part of the Movimientos Requirement.
 //
-// Reuses the sponsor cards visual pattern from `ops-psp` per Decision 5.
-// The cross-dashboard sponsor filter is per-dashboard (no shared state
-// with `ops-psp`) — the parent owns the local state.
+// Per `extend-ops-psp-partner-rename-default-tab-and-filter` the
+// per-partner pill cards row was REMOVED — partner is now a Select
+// alongside Tipo / Estado / Origen, sourced from `activeSponsors()`.
 //
 // Type / status / origin options come from a closed catalog (per
 // `refine-ops-psp-tab-aware-header-and-multi-sponsor`); each option
@@ -36,7 +34,6 @@ const props = defineProps<{
   type: string;
   status: string;
   origin: string;
-  countsBySponsor: Record<SponsorCode, number>;
   hasActiveFilters: boolean;
   typeOptions: ReadonlyArray<CatalogOption>;
   statusOptions: ReadonlyArray<CatalogOption>;
@@ -71,17 +68,17 @@ watch(localSearch, (v) => {
   }, 300);
 });
 
-const cards = computed(() =>
-  activeSponsors().map((sp) => ({
-    sponsor: sp,
-    count: props.countsBySponsor[sp.code] ?? 0,
-    isActive: props.sponsor === sp.code,
-  })),
+// Per `extend-ops-psp-partner-rename-default-tab-and-filter` the
+// per-partner pill-cards row is removed; partner is rendered as a
+// Select alongside Tipo / Estado / Origen.
+const partnerOptions = computed(() =>
+  activeSponsors().map((sp) => ({ value: sp.code, label: sp.label })),
 );
 
-function toggleSponsor(code: SponsorCode): void {
-  emit('update:sponsor', props.sponsor === code ? null : code);
-}
+const partnerModel = computed<string>({
+  get: () => props.sponsor || ALL,
+  set: (v) => emit('update:sponsor', v === ALL ? null : (v as SponsorCode)),
+});
 
 const typeModel = computed<string>({
   get: () => props.type || ALL,
@@ -99,30 +96,7 @@ const originModel = computed<string>({
 
 <template>
   <div class="flex flex-col gap-3" data-testid="activity-filters">
-    <!-- Per-sponsor filter cards -->
-    <div class="flex flex-wrap gap-2" data-testid="activity-sponsor-cards">
-      <button
-        v-for="card in cards"
-        :key="card.sponsor.code"
-        type="button"
-        :class="
-          cn(
-            'inline-flex items-center gap-2 rounded-full border-2 px-3 py-1.5 text-xs font-semibold transition-all',
-            card.isActive
-              ? 'border-brand bg-brand-bg text-brand'
-              : 'border-b-1 bg-card text-t-2 hover:border-b-2 hover:bg-card-2',
-          )
-        "
-        :aria-pressed="card.isActive"
-        :data-testid="`activity-sponsor-card-${card.sponsor.code}`"
-        @click="toggleSponsor(card.sponsor.code)"
-      >
-        <span>{{ card.sponsor.label }}</span>
-        <Badge variant="neutral" class="font-mono">{{ card.count }}</Badge>
-      </button>
-    </div>
-
-    <!-- Filter row -->
+    <!-- Filter row (Partner is now a Select alongside Tipo / Estado / Origen) -->
     <div class="flex flex-wrap items-center gap-2.5">
       <div class="relative w-full max-w-sm sm:w-72">
         <Search class="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-t-4" />
@@ -133,6 +107,18 @@ const originModel = computed<string>({
           data-testid="activity-search"
         />
       </div>
+
+      <Select v-model="partnerModel">
+        <SelectTrigger class="w-full sm:w-44" data-testid="activity-filter-partner">
+          <SelectValue placeholder="Partner" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem :value="ALL">Partner · Todos</SelectItem>
+          <SelectItem v-for="opt in partnerOptions" :key="opt.value" :value="opt.value">
+            {{ opt.label }}
+          </SelectItem>
+        </SelectContent>
+      </Select>
 
       <Select v-model="typeModel">
         <SelectTrigger class="w-full sm:w-40" data-testid="activity-filter-type">

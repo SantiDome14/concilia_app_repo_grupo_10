@@ -46,7 +46,7 @@ function formatAmount(value: string): string {
       <thead class="border-b border-b-2 text-[10px] font-bold uppercase tracking-wider text-t-4">
         <tr>
           <th class="px-4 py-3 text-left">Cuenta</th>
-          <th class="px-4 py-3 text-left">Sponsor</th>
+          <th class="px-4 py-3 text-left">Partner</th>
           <th class="px-4 py-3 text-left">Currency</th>
           <th class="px-4 py-3 text-right">Balance</th>
           <th class="px-4 py-3 text-left">Owner</th>

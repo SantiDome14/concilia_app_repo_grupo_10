@@ -60,7 +60,7 @@ describe('MovimientosTable', () => {
       'Moneda',
       'Monto',
       'Estado',
-      'Sponsor',
+      'Partner',
       'Cliente',
     ]);
   });

@@ -4,8 +4,12 @@ import { cn } from '@/lib/cn';
 import type { CoinagHealth } from './types';
 
 // ════════════════════════════════════════════════════════════════════
-// CoinagHealthIndicator — implements Requirement 8. Read-only header
-// indicator with three states.
+// CoinagHealthIndicator — read-only chip with three states.
+//
+// Per `extend-ops-psp-partner-rename-default-tab-and-filter` the chip
+// label is generic (`Operativo` / `Degradado` / `Caído`) — it lives
+// inside the COINAG partner's collapsible header in the Posición
+// tree, so the partner name is redundant in the label itself.
 // ════════════════════════════════════════════════════════════════════
 
 const props = defineProps<{
@@ -18,9 +22,9 @@ const props = defineProps<{
 const status = computed(() => props.health?.status ?? 'down');
 
 const STATUS_LABEL: Record<CoinagHealth['status'], string> = {
-  healthy: 'Coinag operativo',
-  degraded: 'Coinag degradado',
-  down: 'Coinag caído',
+  healthy: 'Operativo',
+  degraded: 'Degradado',
+  down: 'Caído',
 };
 
 const STATUS_DOT: Record<CoinagHealth['status'], string> = {

@@ -13,9 +13,10 @@ function makeHealth(overrides: Partial<CoinagHealth> = {}): CoinagHealth {
 }
 
 describe('CoinagHealthIndicator', () => {
-  it('renders the healthy variant with the canonical label', () => {
+  it('renders the healthy variant with the generic label (no partner-name prefix)', () => {
     const w = mount(CoinagHealthIndicator, { props: { health: makeHealth() } });
-    expect(w.text()).toContain('Coinag operativo');
+    expect(w.text()).toContain('Operativo');
+    expect(w.text()).not.toContain('Coinag');
     expect(w.html()).toContain('bg-success');
   });
 
@@ -23,7 +24,8 @@ describe('CoinagHealthIndicator', () => {
     const w = mount(CoinagHealthIndicator, {
       props: { health: makeHealth({ status: 'degraded' }) },
     });
-    expect(w.text()).toContain('Coinag degradado');
+    expect(w.text()).toContain('Degradado');
+    expect(w.text()).not.toContain('Coinag');
     expect(w.html()).toContain('bg-warning');
   });
 
@@ -31,13 +33,14 @@ describe('CoinagHealthIndicator', () => {
     const w = mount(CoinagHealthIndicator, {
       props: { health: makeHealth({ status: 'down' }) },
     });
-    expect(w.text()).toContain('Coinag caído');
+    expect(w.text()).toContain('Caído');
+    expect(w.text()).not.toContain('Coinag');
     expect(w.html()).toContain('bg-danger');
   });
 
   it('falls back to down when no health snapshot is available', () => {
     const w = mount(CoinagHealthIndicator, { props: { health: null } });
-    expect(w.text()).toContain('Coinag caído');
+    expect(w.text()).toContain('Caído');
   });
 
   it('shows the (stale) label when isStale is true', () => {

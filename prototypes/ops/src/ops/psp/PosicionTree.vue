@@ -200,18 +200,18 @@ const sponsorOptions = computed(() => {
   <div class="flex flex-col gap-2.5" data-testid="posicion-tree-wrapper">
     <!-- Filter row -->
     <div class="flex flex-wrap items-center gap-2" data-testid="posicion-section-header">
-      <span class="text-sm font-bold text-t-2">Posición por banco sponsor</span>
+      <span class="text-sm font-bold text-t-2">Posición por partner</span>
       <div class="flex-1" />
       <Select v-model="filterSponsorModel">
         <SelectTrigger
           class="h-9 w-[180px] text-xs"
-          aria-label="Filtrar por banco sponsor"
-          data-testid="filter-sponsor"
+          aria-label="Filtrar por partner"
+          data-testid="filter-partner"
         >
-          <SelectValue placeholder="Banco Sponsor · Todos" />
+          <SelectValue placeholder="Partner · Todos" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem :value="ALL">Banco Sponsor · Todos</SelectItem>
+          <SelectItem :value="ALL">Partner · Todos</SelectItem>
           <SelectItem
             v-for="opt in sponsorOptions"
             :key="opt.value"

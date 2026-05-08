@@ -74,12 +74,15 @@ describe('Psp page — tab-aware page-header right-actions', () => {
     setActivePinia(createPinia());
   });
 
-  it('Posición tab shows no main CTA and no ViewToggle', async () => {
+  it('Posición tab shows Crear Movimiento (no ViewToggle, no Crear Cuenta)', async () => {
     const { wrapper } = await mountPsp(`${ROUTE_PATHS.PSP}?tab=posicion`);
-    const actions = wrapper.find('[data-testid="psp-header-actions"]');
-    expect(actions.exists()).toBe(false);
-    expect(wrapper.find('[data-testid="psp-create-movement-cta"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="psp-header-actions"]').exists()).toBe(true);
+    // Crear Movimiento renders on Posición.
+    expect(wrapper.find('[data-testid="psp-create-movement-cta"]').exists()).toBe(true);
+    // Crear Cuenta does NOT render on Posición.
     expect(wrapper.find('[data-testid="psp-create-account-cta"]').exists()).toBe(false);
+    // ViewToggle does NOT render on Posición (informational drilldown).
+    expect(wrapper.find('[role="group"][aria-label="Vista"]').exists()).toBe(false);
   });
 
   it('Movimientos tab shows ViewToggle + Crear Movimiento (no Crear Cuenta)', async () => {
@@ -113,12 +116,27 @@ describe('Psp page — tab-aware page-header right-actions', () => {
     expect(modalAfter.props('open')).toBe(true);
   });
 
-  it('the Coinag health indicator is NOT mounted in the page header (it lives inside the Posición tree per-sponsor row)', async () => {
+  it('the Coinag health indicator is NOT mounted in the page header (it lives inside the Posición tree per-partner row)', async () => {
     const { wrapper } = await mountPsp(`${ROUTE_PATHS.PSP}?tab=posicion`);
-    // The page-header right-actions slot is empty on Posición; the indicator,
-    // if present at all, is mounted INSIDE the COINAG row of <PosicionTree>.
-    // Asserting against the page header specifically:
+    // The page-header right-actions slot may render the Crear Movimiento CTA
+    // but never the health indicator (the chip lives inside the COINAG row
+    // of <PosicionTree>).
     const headerArea = wrapper.find('[data-testid="psp-header-actions"]');
-    expect(headerArea.exists()).toBe(false);
+    if (headerArea.exists()) {
+      expect(headerArea.find('[data-testid="coinag-health-indicator"]').exists()).toBe(false);
+    }
+  });
+
+  it('Posición is the default tab even when localStorage has a different lastTab', async () => {
+    // Arrange: a previous session saved Movimientos.
+    window.localStorage.setItem('ops:psp:lastTab', 'movimientos');
+    try {
+      const { wrapper } = await mountPsp(ROUTE_PATHS.PSP);
+      // The Posición tab should be active (Crear Movimiento + no ViewToggle).
+      expect(wrapper.find('[data-testid="psp-create-movement-cta"]').exists()).toBe(true);
+      expect(wrapper.find('[role="group"][aria-label="Vista"]').exists()).toBe(false);
+    } finally {
+      window.localStorage.removeItem('ops:psp:lastTab');
+    }
   });
 });

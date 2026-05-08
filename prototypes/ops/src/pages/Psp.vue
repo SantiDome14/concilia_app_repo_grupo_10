@@ -59,7 +59,14 @@ const canCreateMovement = computed(
   () => can('psp:create-movement') || can('OPS_ADMIN'),
 );
 
-// ─── Tab state with URL + localStorage persistence (Requirement 1) ──
+// ─── Tab state with URL persistence ─────────────────────────────────
+//
+// Per `extend-ops-psp-partner-rename-default-tab-and-filter` the
+// initial tab MUST default to `posicion` whenever no `?tab=` query
+// param is set, regardless of any persisted state. We still write
+// `localStorage:ops:psp:lastTab` on tab switches (for analytics or
+// future re-introduction of saved state) but we DO NOT read it as
+// the default-tab source on mount.
 const VALID_TABS: PspTab[] = ['posicion', 'movimientos', 'cuentas'];
 const LEGACY_TAB_ALIASES: Record<string, PspTab> = {
   // Per `extend-ops-psp-posicion-shape` — the legacy ?tab=disponibilidad
@@ -75,14 +82,6 @@ function normaliseTab(value: string | undefined): PspTab | null {
   return null;
 }
 
-function readSavedTab(): PspTab | null {
-  try {
-    return normaliseTab(window.localStorage.getItem(LAST_TAB_KEY) ?? undefined);
-  } catch {
-    return null;
-  }
-}
-
 function writeSavedTab(tab: PspTab): void {
   try {
     window.localStorage.setItem(LAST_TAB_KEY, tab);
@@ -93,7 +92,6 @@ function writeSavedTab(tab: PspTab): void {
 
 const initialTab: PspTab =
   normaliseTab(typeof route.query.tab === 'string' ? route.query.tab : undefined) ??
-  readSavedTab() ??
   'posicion';
 
 const activeTab = ref<PspTab>(initialTab);
@@ -219,16 +217,6 @@ const hasActiveMovementsFilters = computed(
     Boolean(movStatus.value) ||
     Boolean(movOrigin.value),
 );
-
-// Derive per-sponsor counts from the current movements view (best-effort UI signal).
-const movementsCountsBySponsor = computed<Record<SponsorCode, number>>(() => {
-  const counts: Record<SponsorCode, number> = {};
-  for (const m of movements.value) {
-    if (!m.sponsor) continue;
-    counts[m.sponsor] = (counts[m.sponsor] ?? 0) + 1;
-  }
-  return counts;
-});
 
 // ─── Accounts query (Requirement 6) ─────────────────────────────────
 const accQueryParams = computed(() => ({
@@ -367,25 +355,28 @@ const TAB_LABELS: Record<PspTab, string> = {
 <template>
   <div class="flex flex-col gap-5 p-6">
     <!-- L1 page header — right-actions slot is tab-aware per
-         `refine-ops-psp-tab-aware-header-and-multi-sponsor`:
-         · Posición   → empty (informational drilldown)
+         `extend-ops-psp-partner-rename-default-tab-and-filter`:
+         · Posición   → Crear Movimiento (no ViewToggle)
          · Movimientos → ViewToggle + Crear Movimiento
          · Cuentas     → ViewToggle + Crear Cuenta -->
     <div class="flex items-center justify-between gap-4">
       <div>
         <h1 class="text-xl font-bold text-t-1">PSP</h1>
         <p class="text-xs text-t-4">
-          Posición, movimientos y cuentas operativas por banco sponsor.
+          Posición, movimientos y cuentas operativas por partner.
         </p>
       </div>
       <div
-        v-if="activeTab !== 'posicion'"
         class="flex items-center gap-3"
         data-testid="psp-header-actions"
       >
-        <ViewToggle v-model="viewMode" :views="['list', 'cards', 'kanban']" />
+        <ViewToggle
+          v-if="activeTab !== 'posicion'"
+          v-model="viewMode"
+          :views="['list', 'cards', 'kanban']"
+        />
         <Button
-          v-if="activeTab === 'movimientos' && canCreateMovement"
+          v-if="(activeTab === 'movimientos' || activeTab === 'posicion') && canCreateMovement"
           variant="primary"
           data-testid="psp-create-movement-cta"
           @click="onCrearMovimiento"
@@ -470,7 +461,6 @@ const TAB_LABELS: Record<PspTab, string> = {
         :type="movType"
         :status="movStatus"
         :origin="movOrigin"
-        :counts-by-sponsor="movementsCountsBySponsor"
         :has-active-filters="hasActiveMovementsFilters"
         :type-options="typeOptions"
         :status-options="statusOptions"

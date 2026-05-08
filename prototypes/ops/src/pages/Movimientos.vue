@@ -89,15 +89,6 @@ const hasActiveFilters = computed(
     Boolean(movOrigin.value),
 );
 
-const movementsCountsBySponsor = computed<Record<SponsorCode, number>>(() => {
-  const counts: Record<SponsorCode, number> = {};
-  for (const m of movements.value) {
-    if (!m.sponsor) continue;
-    counts[m.sponsor] = (counts[m.sponsor] ?? 0) + 1;
-  }
-  return counts;
-});
-
 // Closed catalog per `refine-ops-psp-tab-aware-header-and-multi-sponsor`.
 const typeOptions = MOVEMENT_TYPE_OPTIONS;
 const statusOptions = MOVEMENT_STATUS_OPTIONS;
@@ -170,7 +161,6 @@ watch(
       :type="movType"
       :status="movStatus"
       :origin="movOrigin"
-      :counts-by-sponsor="movementsCountsBySponsor"
       :has-active-filters="hasActiveFilters"
       :type-options="typeOptions"
       :status-options="statusOptions"

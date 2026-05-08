@@ -48,7 +48,7 @@ describe('AccountsTable', () => {
       props: { rows: [makeAccount()], isLoading: false, hasActiveFilters: false },
     });
     const headers = w.findAll('thead th').map((th) => th.text());
-    expect(headers).toEqual(['Cuenta', 'Sponsor', 'Currency', 'Balance', 'Owner', 'Estado']);
+    expect(headers).toEqual(['Cuenta', 'Partner', 'Currency', 'Balance', 'Owner', 'Estado']);
   });
 
   it('renders the sponsor label via getSponsorLabel', () => {
