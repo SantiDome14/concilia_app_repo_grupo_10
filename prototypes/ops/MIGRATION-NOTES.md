@@ -425,3 +425,166 @@ The `ops-clients` capability does NOT use the Módulo B shape because the
 domain shape is master-list-then-individual-detail (a client at a time), not
 treasury-style consolidation across sociedades. See
 `changes/add-ops-clients/design.md` Decision 1 for the full rationale.
+
+---
+
+## Migration completed — lessons learned (2026-05-08)
+
+The OPS migration backlog closed with **6 capabilities shipped**, **249 new
+tests**, and **~19 000 legacy LOC** replaced by **~6 800 new LOC** (64 %
+reduction). The reduction is achieved by deferring every creation/mutation
+modal in heavy modules to focused follow-up changes per the
+**read-only-first migration policy** (validated as Pattern 3 in the
+playbook).
+
+The patterns captured here are the input that produced the canonical
+**`prototypes/_core-template/MIGRATION-PLAYBOOK.md`** — the reference for
+LEX, TRD, CLP, and future migrations. **Read the playbook before starting
+any new prototype migration.**
+
+### Index of archived changes
+
+Located at `openspec/changes/archive/`:
+
+| # | Change | Capability | Tests | Net LOC |
+|---|---|---|---|---|
+| 1 | `2026-05-08-add-ops-instructions` | `ops-instructions` | 22 | -806 + 600 |
+| 2 | `2026-05-08-add-ops-clients` | `ops-clients` | 31 | -2 086 + 1 500 |
+| 3 | `2026-05-08-add-ops-statements` | `ops-statements` | 39 | -940 + 700 |
+| 4 | `2026-05-08-add-ops-account-instructions` | `ops-account-instructions` | 67 | -794 + 1 200 |
+| 5 | `2026-05-08-add-ops-psp` | `ops-psp` | 53 | -9 019 + 1 400 |
+| 6 | `2026-05-08-add-ops-financial-dashboard` | `ops-financial-dashboard` | 37 | -6 592 + 1 400 |
+
+Each archive folder contains `proposal.md`, `design.md`, `tasks.md`, and
+the frozen `specs/<capability>/spec.md`. **When migrating LEX or TRD and
+in doubt, read the archived `design.md` of the closest analogue** — every
+non-obvious decision has a `Decision N — ...` block with `Why · Alternatives
+considered · Failure modes the rule prevents · Trade-off`.
+
+### Patterns canonised in the playbook
+
+The OPS migration validated 12 patterns now codified in
+`MIGRATION-PLAYBOOK.md`. Briefly:
+
+1. **Type-A unification** — collapse legacy multi-route splits (3-route
+   `ops-instructions` → 1 page; 2-route `ops-psp` → 1 page with 3 tabs).
+2. **Módulo B shape** for treasury-style modules — sub-module tabs
+   (`Disponibilidad / Movimientos / Cuentas` over Banco Sponsor).
+3. **Read-only first** policy for ≥ 3 000 LOC pages — defer creation
+   modals to focused follow-ups (Create Movement, SWIFT Import, Pay Quote,
+   etc.).
+4. **Open-set abstractions from day one** — `Banco Sponsor` catalog
+   accepts BIND + Banco de Comercio without code change.
+5. **Drawer for read-only drill-downs** — SWIFT transactions per
+   account; NOT modal (too narrow), NOT sub-route (loses context).
+6. **Cross-capability composition** — `<WhitelistAccountModal>` from
+   `ops-clients` reused by `ops-psp`; `<MovementDetailsModal>` from
+   `ops-financial-dashboard` will be reused by future PSP follow-up.
+7. **Discriminated result types** — `WhitelistResult`,
+   `AccountInstructionResult`, `StatementResult`, `SaveResult`.
+8. **Pure helpers extracted** — `portal-status.ts`,
+   `interpolation.ts`, `quick-filters.ts`, `sponsor-catalog.ts`,
+   `range-storage.ts`, `draft-storage.ts`.
+9. **Capability gating inline** with `OPS_ADMIN` fallback until
+   `add-ops-roles` lands.
+10. **Component emits + parent mutates** — to satisfy
+    `vue/no-mutating-props` while sharing reactive state.
+11. **`core-multi-step-form` Wizard primitive** — used in
+    `ops-account-instructions`; hand-rolled override only when
+    cancel-during-submit is needed.
+12. **Modal width override justified** — `xl` for side-by-side preview
+    (account-instructions wizard); default stays `lg`.
+
+### Quality-of-life refinements landed
+
+Across the 6 changes, the following refinements were land-and-tested
+(the playbook keeps the canonical list):
+
+- **Smart single-X default** (account, currency, template) — `ops-clients`,
+  `ops-account-instructions`.
+- **Pre-submit preview card** — `ops-statements`, `ops-account-instructions`.
+- **Cancel during submit (`AbortController`)** — `ops-statements`,
+  `ops-account-instructions`.
+- **localStorage persistence** — `ops-statements` (range), `ops-psp`
+  (last tab), `ops-account-instructions` (per-client draft),
+  `ops-financial-dashboard` (last tab + sub-toggle).
+- **URL sync of state + deep-links** — every change since `ops-clients`.
+- **Re-open success toast** — `ops-statements`.
+- **Inline field-level validation mapping** — `ops-account-instructions`.
+- **Stackable + dismissible alert area** — `ops-psp` reconciliation banner.
+- **Auto-refresh 60 s** — `ops-psp` Disponibilidad balances + Coinag
+  health indicator.
+
+### Antipatterns caught and avoided
+
+The early phases of the OPS migration almost made these mistakes;
+they're now in the playbook's antipattern list:
+
+1. Re-implementing `core-data-tables` / `core-modals` instead of using the
+   primitive (caught in `ops-instructions` review).
+2. Copying `<WhitelistAccountModal>` into `ops-psp` (caught when
+   `add-ops-psp` design.md was reviewed; resolved with the picker-prefix
+   extension).
+3. Hardcoding `'COINAG'` as the only sponsor (caught in `add-ops-psp`
+   design phase; resolved with the `sponsor-catalog.ts` open-set file).
+4. Mutating props in step components (`vue/no-mutating-props` lint
+   surfaced it; resolved with emit + parent-mutates pattern).
+5. Throwing `ApiError` for domain-specific 409s (caught while wiring
+   `<WhitelistAccountModal>` confirmation; resolved with `WhitelistResult`
+   discriminated union).
+6. Promoting the Quotes sub-toggle to a third top-level tab (caught in
+   `add-ops-financial-dashboard` design phase; resolved with `?view=` URL
+   param).
+7. Step-up MFA on every mutation (caught when `ops-statements` was
+   scoped; resolved with the trust-boundary criterion — only `SignUp`
+   gets step-up because it creates portal credentials).
+8. jsdom Teleport rendering issue in modal tests (caught in
+   `MovementDetailsModal.spec.ts`; resolved with the inline-stub pattern
+   documented in the playbook).
+
+### Follow-ups nominated (NOT yet migrated)
+
+The 6 changes nominated **26 follow-ups** in their `tasks.md`. These are
+explicit deferrals, not "TBD"s; each has a name and a scope statement:
+
+- **Per-modal mutation flows** — `extend-ops-psp-create-movement`,
+  `extend-ops-financial-dashboard-create-movement` (likely coordinated),
+  `extend-ops-psp-create-coinag-account`, `extend-ops-psp-edit-label`,
+  `extend-ops-psp-swift-import`, `extend-ops-psp-csv-export`,
+  `extend-ops-psp-movement-details-modal`,
+  `extend-ops-financial-dashboard-quote-actions`,
+  `extend-ops-financial-dashboard-csv-export`.
+- **Per-feature extensions** — `extend-ops-statements-history`,
+  `extend-ops-statements-bulk`, `extend-ops-statements-audit-drawer`,
+  `extend-ops-account-instructions-edit`,
+  `extend-ops-account-instructions-letter-template-binding`,
+  `extend-ops-account-instructions-audit-drawer`,
+  `extend-ops-clients-movement-modal-integration`,
+  `extend-ops-clients-bulk-delete`,
+  `extend-ops-financial-dashboard-kanban-view`,
+  `extend-ops-instructions-create-from-client`.
+- **Cross-cutting** — `add-ops-roles` (consolidates capability strings
+  app-wide; replaces every `OPS_ADMIN` fallback).
+
+These follow-ups can land in any order; their dependencies are documented
+in each change's `tasks.md`.
+
+### Drift from playbook patterns (deliberate)
+
+For audit purposes, the following deviations from the playbook patterns
+are documented in their respective `design.md` blocks:
+
+- **`ops-account-instructions`** — hand-rolled wizard footer instead of
+  `<Wizard>` component (per Decision 3) because cancel-during-submit
+  swap isn't supported by the primitive's footer. The `useWizard`-style
+  step gating logic IS reused; only the chrome is hand-rolled.
+- **`ops-clients`** — Type-A master + Type-B detail (NOT modal detail)
+  per Decision 1 of `add-ops-clients` because the detail surface is
+  dense (info card + accounts + movements). Contrasts with
+  `ops-instructions` which uses Detail modal.
+- **`ops-financial-dashboard`** — modal width stays `lg` (no preview
+  side-by-side); contrasts with `ops-account-instructions` which
+  override to `xl` (per Decision 4 of that change).
+
+These deviations are NOT antipatterns — they're justified by the surface's
+specific shape. The playbook documents the criterion for choosing.

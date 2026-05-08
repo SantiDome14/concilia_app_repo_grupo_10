@@ -19,6 +19,28 @@ source_repo: C:\Users\Yasmani\atlas-ai-product-management-framework\core-lex-fro
 
 ---
 
+## ⚡ Read before scoping any LEX migration change
+
+Before writing the proposal for any `add-lex-*` or `migrate-lex-*` change:
+
+1. **Read the [Migration Playbook](../_core-template/MIGRATION-PLAYBOOK.md)** — the cross-prototype patterns (Type-A unification, Módulo B shape, read-only-first policy, open-set abstractions, drawer vs modal vs page, cross-capability composition, discriminated result types, pure helpers, capability gating, modal width override) validated end-to-end by the OPS migration.
+2. **Reference the closest [archived OPS change](../ops/openspec/changes/archive/)** as the worked example. Each `design.md` has `Decision N — ...` blocks with `Why · Alternatives considered · Failure modes the rule prevents · Trade-off` — the pattern your LEX change should follow.
+3. **Look at the [OPS lessons learned](../ops/MIGRATION-NOTES.md#migration-completed--lessons-learned-2026-05-08)** — the antipatterns caught during OPS (component duplication, hardcoded sponsor codes, mutating props, throwing for domain errors, etc.) are the same ones to avoid in LEX.
+
+OPS migrated **6 capabilities** with **249 tests** and **64 % LOC reduction**
+versus the legacy. The playbook is what made that possible. Apply it.
+
+| Quick analogue map (when starting an `add-lex-<x>`) | Look at OPS change |
+|---|---|
+| Master + detail of a domain entity (Clientes, Operaciones, etc.) | `add-ops-clients` (Type-A master + Type-B detail) |
+| 3-route legacy unification | `add-ops-instructions` (3 routes → 1 page + 3 modals) |
+| Multi-step creation wizard | `add-ops-account-instructions` (3-step wizard + draft persistence) |
+| Modal-only feature on top of an existing page | `add-ops-statements` (modal + 5 QoL refinements) |
+| Heavy module with 3+ sub-views (Type-A with tabs) | `add-ops-psp` (Módulo B shape + open-set catalog) |
+| Heavy 2-tab dashboard (read-only first) | `add-ops-financial-dashboard` |
+
+---
+
 ## 1. Stack & configuration
 
 **Runtime / build**

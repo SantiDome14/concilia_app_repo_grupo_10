@@ -97,7 +97,7 @@ Each migration is its own OpenSpec change with a dedicated Jira REQ ticket.
 
 ## Documentation Hierarchy
 
-This repository operates on **three coordinated layers** for AI agents and developers. Each layer has a distinct role — none replaces the others.
+This repository operates on **four coordinated layers** for AI agents and developers. Each layer has a distinct role — none replaces the others.
 
 ### Layer 1 — Contracts (enforceable)
 
@@ -120,7 +120,19 @@ openspec show core-layout
 
 Not validated by CI — but read by every AI agent on every session.
 
-### Layer 3 — Ardua-specific Skills (agent playbooks)
+### Layer 3 — Migration Playbook (cross-prototype patterns)
+
+**Where:** `MIGRATION-PLAYBOOK.md` (this file's sibling).
+**Scope:** patterns validated end-to-end by completed migrations (today: OPS — 6 capabilities, 249 tests, ~64 % LOC reduction). Architectural decisions, drill-down surface choice, refinement canon, antipattern list, PR review checklist.
+
+**Read this layer when:**
+- Scoping any `add-<app>-<module>` or `migrate-<legacy-page>` change.
+- Reviewing a migration PR (the layer's checklist is the canonical PR review).
+- Tempted to deviate from a playbook pattern (the deviation MUST be a `Decision N — ...` block in the change's `design.md` referencing the playbook pattern by name).
+
+The playbook is updated when a migration completes and surfaces a new pattern worth canonising. Per-prototype legacy inventory stays in `prototypes/<app>/MIGRATION-NOTES.md`; the playbook is the **cross-prototype** layer.
+
+### Layer 4 — Ardua-specific Skills (agent playbooks)
 
 **Where:** `.claude/skills/ardua-*/SKILL.md` (mirrored to `.cursor/skills/ardua-*/SKILL.md`)
 **Format:** YAML frontmatter + step-by-step Markdown

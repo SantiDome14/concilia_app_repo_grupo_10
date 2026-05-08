@@ -15,6 +15,43 @@ source_stack: React + TypeScript (target stack: Vue 3 + TypeScript)
 
 ---
 
+## ⚡ Read before scoping any TRD migration change
+
+Before writing the proposal for any `add-trd-*` or `migrate-trd-*` change:
+
+1. **Read the [Migration Playbook](../_core-template/MIGRATION-PLAYBOOK.md)** — the cross-prototype patterns (Type-A unification, Módulo B shape, read-only-first policy, open-set abstractions, drawer vs modal vs page, cross-capability composition, discriminated result types, pure helpers, capability gating, modal width override) validated end-to-end by the OPS migration.
+2. **Reference the closest [archived OPS change](../ops/openspec/changes/archive/)** as the worked example. Each `design.md` has `Decision N — ...` blocks with `Why · Alternatives considered · Failure modes the rule prevents · Trade-off` — the pattern your TRD change should follow.
+3. **Look at the [OPS lessons learned](../ops/MIGRATION-NOTES.md#migration-completed--lessons-learned-2026-05-08)** — the antipatterns caught during OPS apply to TRD too (the React-to-Vue rewrite is its own concern, but the architectural patterns are framework-agnostic).
+
+OPS migrated **6 capabilities** with **249 tests** and **64 % LOC reduction**
+versus the legacy. The playbook is what made that possible. Apply it.
+
+### TRD-specific consideration: React → Vue rewrite
+
+TRD's legacy stack (React 18 + Radix UI + React Hook Form) is a stricter
+rewrite than OPS (which migrated Vue 2/3 JS → Vue 3 TS). Some patterns from
+the playbook need explicit React-to-Vue translation:
+
+- **Radix UI → reka-ui (shadcn-vue)** — the primitive families overlap (Dialog, Sheet, Popover, Select). `core-modals` already maps Radix patterns to reka-ui in the template.
+- **React Hook Form → vee-validate + zod** — the `core-forms` capability contracts the canonical Vue shape; the legacy form schemas need a one-time translation.
+- **React Query → @tanstack/vue-query** — the API is near-identical (`useQuery`, `useMutation`, `useQueryClient`); shape stays the same.
+- **TanStack Table (React) → useTable / vue-query** — `core-data-tables` covers the patterns; legacy `@tanstack/react-table` consumers translate to either flavour.
+
+These are **mechanical translations**, not architectural decisions. The
+playbook's architectural patterns (Type-A unification, Módulo B shape,
+read-only-first policy) apply unchanged.
+
+| Quick analogue map (when starting an `add-trd-<x>`) | Look at OPS change |
+|---|---|
+| Master + detail of a domain entity (RFQs, Liquidity Providers, etc.) | `add-ops-clients` (Type-A master + Type-B detail) |
+| Multi-step creation wizard | `add-ops-account-instructions` (3-step wizard + draft persistence) |
+| Modal-only feature on top of an existing page | `add-ops-statements` (modal + 5 QoL refinements) |
+| Heavy module with 3+ sub-views (Type-A with tabs) | `add-ops-psp` (Módulo B shape + open-set catalog) |
+| Heavy 2-tab dashboard (read-only first) | `add-ops-financial-dashboard` |
+| Real-time / streaming surface (RFQ inbound feed) | `core-websocket-client` capability + the patterns from OPS where applicable |
+
+---
+
 ## 1. Stack & configuration
 
 **Runtime / build**
