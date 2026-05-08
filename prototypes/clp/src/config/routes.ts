@@ -15,10 +15,7 @@ export const ROUTE_PATHS = {
   INBOX: '/inbox',
   ALERTAS: '/alertas',
   REPORTES: '/reportes',
-  // Domain modules (template examples).
-  MODULO_A: '/modulo-a',
-  MODULO_B: '/modulo-b',
-  MODULO_C: '/modulo-c',
+  // Domain modules land here as their migrations are scoped.
   NOT_FOUND: '/:pathMatch(.*)*',
 } as const;
 
@@ -28,9 +25,6 @@ export const ROUTE_NAMES = {
   INBOX: 'inbox',
   ALERTAS: 'alertas',
   REPORTES: 'reportes',
-  MODULO_A: 'modulo-a',
-  MODULO_B: 'modulo-b',
-  MODULO_C: 'modulo-c',
   NOT_FOUND: 'not-found',
 } as const;
 

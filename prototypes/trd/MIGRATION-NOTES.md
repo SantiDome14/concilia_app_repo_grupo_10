@@ -26,6 +26,12 @@ Before writing the proposal for any `add-trd-*` or `migrate-trd-*` change:
 OPS migrated **6 capabilities** with **249 tests** and **64 % LOC reduction**
 versus the legacy. The playbook is what made that possible. Apply it.
 
+> **Pre-migration cleanup (already applied):** the TRD prototype has
+> already been cleaned up per Pattern 12 — the template-only example
+> modules (`Módulo A/B/C`) and the component playground are removed.
+> The sidebar `blocks` array starts empty; populate it as each
+> `add-trd-<module>` change adds its sidebar entry.
+
 ### TRD-specific consideration: React → Vue rewrite
 
 TRD's legacy stack (React 18 + Radix UI + React Hook Form) is a stricter

@@ -63,40 +63,11 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/Reportes.vue'),
     meta: { requiresAuth: true, layout: 'shell', breadcrumb: 'Reportes' },
   },
-  // ─── Domain modules (template examples) ────────────────────────────
-  {
-    path: ROUTE_PATHS.MODULO_A,
-    name: ROUTE_NAMES.MODULO_A,
-    component: () => import('@/pages/ModuloA.vue'),
-    meta: {
-      requiresAuth: true,
-      layout: 'shell',
-      breadcrumb: 'Módulo A',
-      block: 'Bloque 1',
-    },
-  },
-  {
-    path: ROUTE_PATHS.MODULO_B,
-    name: ROUTE_NAMES.MODULO_B,
-    component: () => import('@/pages/ModuloB.vue'),
-    meta: {
-      requiresAuth: true,
-      layout: 'shell',
-      breadcrumb: 'Módulo B',
-      block: 'Bloque 2',
-    },
-  },
-  {
-    path: ROUTE_PATHS.MODULO_C,
-    name: ROUTE_NAMES.MODULO_C,
-    component: () => import('@/pages/ModuloC.vue'),
-    meta: {
-      requiresAuth: true,
-      layout: 'shell',
-      breadcrumb: 'Módulo C',
-      block: 'Bloque 2',
-    },
-  },
+  // NOTE: Template-only example modules (Módulo A/B/C) are NOT registered
+  // in derived apps — they live in _core-template only as reference for
+  // AI agents and developers. See _core-template/MIGRATION-PLAYBOOK.md
+  // "App derivation cleanup". Domain modules for this app land here as
+  // their migrations are scoped.
   {
     path: ROUTE_PATHS.NOT_FOUND,
     name: ROUTE_NAMES.NOT_FOUND,

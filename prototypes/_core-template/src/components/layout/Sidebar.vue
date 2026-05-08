@@ -163,7 +163,7 @@ function handleHelp(): void {
   <nav
     :class="
       cn(
-        'fixed left-0 top-0 bottom-0 z-50 flex min-h-screen flex-col gap-0.5 border-r border-b-1 bg-surf px-2.5 py-4 transition-[width] duration-200',
+        'fixed left-0 top-0 bottom-0 z-[600] flex min-h-screen flex-col gap-0.5 border-r border-b-1 bg-surf px-2.5 py-4 transition-[width] duration-200',
         collapsed ? 'w-[60px]' : 'w-[200px]',
       )
     "
@@ -173,7 +173,7 @@ function handleHelp(): void {
       type="button"
       :class="
         cn(
-          'absolute -right-2.5 top-[18px] z-[51] flex h-5 w-5 items-center justify-center rounded-full border border-b-3 bg-card-2 text-t-3 transition-colors hover:border-b-3 hover:bg-card hover:text-t-1',
+          'absolute -right-2.5 top-[18px] z-[601] flex h-5 w-5 items-center justify-center rounded-full border border-b-3 bg-card-2 text-t-3 transition-colors hover:border-b-3 hover:bg-card hover:text-t-1',
         )
       "
       aria-label="Toggle sidebar"

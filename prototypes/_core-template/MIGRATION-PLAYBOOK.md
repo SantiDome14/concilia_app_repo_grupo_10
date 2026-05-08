@@ -257,7 +257,89 @@ function pick(id) { emit('update:account-id', id); }
 
 **Example of hand-rolled override:** `ops-account-instructions::CreateAccountInstructionModal.vue` uses `useWizard`-style step gating but hand-rolls the footer + persistence (per Decision 3 of `add-ops-account-instructions`). The deviation is documented; the Wizard primitive is reused for everything else.
 
-### Pattern 12 — Modal width override is justified, not casual
+### Pattern 12 — App derivation cleanup (template-only modules stay in `_core-template`)
+
+**The smell:** apps derived from `_core-template` (LEX, OPS, TRD, CLP, future apps) ship the template's example modules (`Módulo A`, `Módulo B`, `Módulo C`) and the component playground (`/playground/forms`, `/playground/charts`, `/playground/layout`) in their sidebar — confusing operators with surfaces that are not part of the app.
+
+**The rule:** template-only example surfaces live **only in `_core-template`**. When a derived app re-syncs with the template (overlay strategy) it MUST clean them up:
+
+- Delete `src/pages/ModuloA.vue`, `ModuloB.vue`, `ModuloC.vue`.
+- Delete the entire `src/pages/playground/` directory.
+- Remove the `MODULO_A/B/C` and `PLAYGROUND_*` entries from `src/config/routes.ts` (`ROUTE_PATHS` + `ROUTE_NAMES`).
+- Remove the route definitions for those paths from `src/router/routes.ts`.
+- Empty the domain `blocks: NavBlock[]` array in `src/components/layout/Sidebar.vue` (or populate it only with the app's domain modules) and remove the `devBlocks` constant + its template loop.
+- Remove the `MODULO_A_MANIFEST` import + `registry.register(MODULO_A_MANIFEST_KEY, MODULO_A_MANIFEST)` line from `src/plugins/manifests.ts`. Keep the manifest file `src/manifests/framework.template.modulo_a.actions.ts` only if a test fixture references it (currently `validateManifest.spec.ts`); otherwise delete it too.
+
+What stays in every derived app:
+
+- The four cross-cutting standard modules (`Dashboard`, `Inbox`, `Alertas`, `Reportes`) per `core-modulo-genericos`. Their data is mocked until the app's domain takes over the surfaces.
+- The empty domain `blocks: NavBlock[] = []` array — populated as each migration scopes a new `<app>-<module>` capability and adds its sidebar entry.
+
+**Concrete OPS state after cleanup (reference for LEX/TRD/CLP):**
+
+```ts
+// Sidebar.vue
+const blocks: NavBlock[] = [
+  {
+    label: 'Operaciones',
+    items: [
+      { to: ROUTE_PATHS.CLIENTS, name: ROUTE_NAMES.CLIENTS, label: 'Clientes', icon: Users },
+      { to: ROUTE_PATHS.PSP, name: ROUTE_NAMES.PSP, label: 'PSP', icon: Banknote },
+      { to: ROUTE_PATHS.FINANCIAL_DASHBOARD, name: ROUTE_NAMES.FINANCIAL_DASHBOARD, label: 'Financial Dashboard', icon: LineChart },
+    ],
+  },
+  {
+    label: 'Configuración',
+    items: [
+      { to: ROUTE_PATHS.INSTRUCTIONS, name: ROUTE_NAMES.INSTRUCTIONS, label: 'Instrucciones', icon: ClipboardList },
+    ],
+  },
+];
+// devBlocks removed; the template loop iterates `blocks` only.
+```
+
+**Failure modes the rule prevents:**
+
+- Operator clicks `Módulo A` in their PSP app and sees a placeholder page that has nothing to do with PSP.
+- Bundle size inflates with showcase pages (Charts playground alone is ~452 KB).
+- Re-sync from the template overwrites a clean app sidebar with the template's examples — the cleanup must run on every re-sync.
+
+### Pattern 13 — Sidebar must be ABOVE Dialog/Sheet overlays (z-index 600+)
+
+**The smell:** with a modal open, clicking a sidebar entry doesn't navigate — the modal closes (or the click is consumed by the overlay) but the user stays on the current page. Reported as "no puedo navegar".
+
+**The rule:** the Sidebar's `<nav>` element MUST stack ABOVE the Dialog/Sheet overlay so navigation stays accessible while a modal is open. The canonical z-index ladder:
+
+| Element | Class | Why |
+|---|---|---|
+| Topbar / Sidebar `<nav>` | `z-[600]` | Above modal overlay so navigation always wins |
+| Sidebar collapse toggle | `z-[601]` | Above the sidebar's own bg |
+| `<DialogContent>` / `<SheetContent>` | `z-[501]` | Above the overlay; below the sidebar |
+| `<DialogOverlay>` / `<SheetOverlay>` | `z-[500]` | Blocks the page body but NOT the sidebar |
+| Sidebar account menu (`<div>`) | `z-[200]` | Below modal — when a modal opens, the dropdown can't shadow it |
+
+**Why navigation must win:** the sidebar is the operator's escape mechanism. If a modal hangs open due to a backend issue or misclick, the operator MUST be able to navigate away without learning a hidden gesture. The trade-off — that clicking the sidebar with a modal open closes the modal AND navigates — is acceptable: the modal's parent component unmounts on route change, so the modal goes with it cleanly.
+
+**Implementation note:** the cleanup is a 2-line edit in `src/components/layout/Sidebar.vue`:
+
+```vue
+<!-- BEFORE: z-50 (BELOW modal overlay z-[500]) -->
+<nav class="fixed left-0 top-0 bottom-0 z-50 ...">
+  <button class="... z-[51] ..." aria-label="Toggle sidebar">
+
+<!-- AFTER: z-[600] / z-[601] (ABOVE modal overlay) -->
+<nav class="fixed left-0 top-0 bottom-0 z-[600] ...">
+  <button class="... z-[601] ..." aria-label="Toggle sidebar">
+```
+
+The dropdown account menu intentionally STAYS at `z-[200]` (below modals) — opening the account menu while a modal is open is an edge case where it's correct that the modal wins.
+
+**Failure modes the rule prevents:**
+
+- Operator can't navigate while a modal is open (reported real bug, OPS 2026-05-08).
+- Clicking the sidebar with a modal open feels random: sometimes the click closes the modal, sometimes nothing happens.
+
+### Pattern 14 — Modal width override is justified, not casual
 
 **Default:** `sm:max-w-lg` (~720 px) per `core-modals` for centred dialogs.
 
@@ -334,6 +416,10 @@ review surfaces one of these, send the change back.
 13. **❌ `package.json` resolution from worktree path** — when the bash shell `cwd` is the worktree path (`prototypes/.claude/worktrees/.../`), `npm` doesn't find `package.json`. **✅** Run `npm` from `prototypes/<app>/` explicitly with `cd` or `npm --prefix=...`.
 
 14. **❌ Pre-existing failing test ignored silently** — `validateManifest.spec.ts` failed since `01cd08c` (fin-old removed); easy to ignore as "not mine". **✅** Ignore is fine but flag it explicitly in commit message + as a follow-up (`chore: remove fin-old manifest acid-test` or similar).
+
+15. **❌ Sidebar z-index below modal overlay** — leaves the navigation behind the `<Dialog>`/`<Sheet>` overlay (z-[500]) so clicking sidebar entries while a modal is open does NOT navigate. Reported as a real bug by an operator running the OPS prototype 2026-05-08. **✅** Sidebar `<nav>` SHALL be `z-[600]`, toggle button `z-[601]` (Pattern 13).
+
+16. **❌ Derived app ships template-only example modules** — `Módulo A`, `Módulo B`, `Módulo C`, and the component playground (`/playground/forms`, `/playground/charts`, `/playground/layout`) appear in the sidebar of LEX/OPS/TRD/CLP. Operators see surfaces unrelated to their domain. **✅** Cleanup as part of the first migration of each derived app (Pattern 12).
 
 ---
 

@@ -30,6 +30,12 @@ Before writing the proposal for any `add-lex-*` or `migrate-lex-*` change:
 OPS migrated **6 capabilities** with **249 tests** and **64 % LOC reduction**
 versus the legacy. The playbook is what made that possible. Apply it.
 
+> **Pre-migration cleanup (already applied):** the LEX prototype has
+> already been cleaned up per Pattern 12 — the template-only example
+> modules (`Módulo A/B/C`) and the component playground are removed.
+> The sidebar `blocks` array starts empty; populate it as each
+> `add-lex-<module>` change adds its sidebar entry.
+
 | Quick analogue map (when starting an `add-lex-<x>`) | Look at OPS change |
 |---|---|
 | Master + detail of a domain entity (Clientes, Operaciones, etc.) | `add-ops-clients` (Type-A master + Type-B detail) |

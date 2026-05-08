@@ -15,20 +15,12 @@ export const ROUTE_PATHS = {
   INBOX: '/inbox',
   ALERTAS: '/alertas',
   REPORTES: '/reportes',
-  // Domain modules (template examples).
-  MODULO_A: '/modulo-a',
-  MODULO_B: '/modulo-b',
-  MODULO_C: '/modulo-c',
-  // OPS domain modules (per `ops-instructions` capability + future siblings).
+  // OPS domain modules (per `ops-*` capabilities).
   INSTRUCTIONS: '/instructions',
   CLIENTS: '/clients',
   CLIENT_DETAIL: '/clients/:id',
   PSP: '/psp',
   FINANCIAL_DASHBOARD: '/financial-dashboard',
-  // Component playground (dev mode only — gated in Sidebar by import.meta.env.DEV).
-  PLAYGROUND_FORMS: '/playground/forms',
-  PLAYGROUND_CHARTS: '/playground/charts',
-  PLAYGROUND_LAYOUT: '/playground/layout',
   NOT_FOUND: '/:pathMatch(.*)*',
 } as const;
 
@@ -38,17 +30,11 @@ export const ROUTE_NAMES = {
   INBOX: 'inbox',
   ALERTAS: 'alertas',
   REPORTES: 'reportes',
-  MODULO_A: 'modulo-a',
-  MODULO_B: 'modulo-b',
-  MODULO_C: 'modulo-c',
   INSTRUCTIONS: 'instructions',
   CLIENTS: 'clients',
   CLIENT_DETAIL: 'client-detail',
   PSP: 'psp',
   FINANCIAL_DASHBOARD: 'financial-dashboard',
-  PLAYGROUND_FORMS: 'playground-forms',
-  PLAYGROUND_CHARTS: 'playground-charts',
-  PLAYGROUND_LAYOUT: 'playground-layout',
   NOT_FOUND: 'not-found',
 } as const;
 

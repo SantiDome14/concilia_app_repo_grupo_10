@@ -541,6 +541,19 @@ they're now in the playbook's antipattern list:
 8. jsdom Teleport rendering issue in modal tests (caught in
    `MovementDetailsModal.spec.ts`; resolved with the inline-stub pattern
    documented in the playbook).
+9. **Sidebar z-index below modal overlay** (caught after operator
+   testing 2026-05-08): clicking a sidebar entry with a modal open
+   didn't navigate because the `<DialogOverlay>` (z-[500]) covered
+   the sidebar (z-50). Resolved by lifting the Sidebar to z-[600]
+   in all 4 prototypes + template (Pattern 13).
+10. **Derived apps shipping template-only example modules**
+    (caught after the same operator session): the OPS sidebar
+    showed `Módulo A`, `Módulo B`, `Módulo C`, and the component
+    playground — surfaces unrelated to OPS. Resolved by removing
+    the example modules from OPS, LEX, TRD, CLP and codifying the
+    rule as Pattern 12 ("App derivation cleanup"). The example
+    modules stay in `_core-template` only as reference for AI
+    agents and developers.
 
 ### Follow-ups nominated (NOT yet migrated)
 
