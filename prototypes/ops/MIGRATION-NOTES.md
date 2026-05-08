@@ -334,7 +334,7 @@ Sin scrollbar customization (a diferencia de LEX).
 
 ## Migration design decisions (overriding the legacy structure)
 
-### Decision PSP-1 — `ops-psp-home` + `ops-psp-accounts` adopt the Módulo B shape
+### Decision PSP-1 — `ops-psp-home` + `ops-psp-accounts` adopt the Módulo B shape (with Banco Sponsor as the agg dimension)
 
 **Decided:** 2026-05-08 (pre-shipping note).
 
@@ -344,19 +344,57 @@ two heaviest OPS pages remaining. When their migration changes (`add-ops-psp-hom
 of `_core-template/src/pages/ModuloB.vue` — a Type-A page with three internal
 sub-modules surfaced as tabs (NOT segmentation):
 
-- **Posición** — KPIs consolidados + filtros (sociedad/moneda) + tree expansible sociedad → cuenta con posición neta.
+- **Posición** — KPIs consolidados + filtros (**banco sponsor / moneda**) + tree expansible **banco sponsor → cuenta** con posición neta.
 - **Movimientos** — KPIs + ledger table paginado + filtros (search, tipo, origen, estado).
 - **Cuentas / Cola de Asignación** — depende del módulo: PSP-home muestra Cola de Asignación (warning banner + retiros pendientes); PSP-accounts muestra Cuentas (lista con SWIFT transactions).
 
-Header CTA principal queda visible siempre, anclado al título (en PSP-home será
-"Whitelistar cuenta" o "Reconciliación"; en PSP-accounts será "Importar SWIFT").
-The legacy Coinag balance reconciliation banner SHALL render above the tabs as
-a persistent alert from `core-error-handling`.
+#### Naming substitution vs. the template
 
-**Rationale.** The Módulo B paradigm is built specifically for treasury-style
-modules where one page has multiple cohesive sub-views over the same domain
-data. PSP fits perfectly: cuentas multi-currency, ledger de movements, cola
-de assignation/whitelisting — that's the canonical decomposition. Adopting the
+The template's Módulo B uses **Sociedad** as the top-level aggregation dimension
+(treasury intra-group). For OPS PSP the equivalent dimension is **Banco Sponsor**
+— the bank the company holds the operational account at. The vocabulary swap is:
+
+| Template (Módulo B) | OPS PSP                  |
+|---------------------|--------------------------|
+| Sociedad            | Banco Sponsor            |
+| Moneda              | Moneda (sin cambio)      |
+| Cuenta              | Cuenta (sin cambio)      |
+| Posición por sociedad | Posición por banco sponsor |
+
+#### Banco Sponsor catalog (current + roadmap)
+
+OPS is currently integrated with **only one** banco sponsor:
+
+- **Coinag** (active) — `operations_provider_name = 'COINAG'` on `account_instructions`. Whitelisting flow (already shipped in `ops-clients`) uses `GET /coinag/account/:cvu` to validate against this provider.
+
+Roadmap (NOT integrated yet — drives the spec to keep the catalog open-set):
+
+- **BIND** (planned).
+- **Banco de Comercio** (planned).
+
+Implication for the PSP migration spec: the `Banco Sponsor` filter MUST NOT
+hardcode `'COINAG'` as the only option. The catalog SHOULD source from a
+backend endpoint (or a typed enum that callers can extend), so adding BIND or
+Banco de Comercio later is a config change, not a code change in every page.
+The `account_instruction.operations_provider_name` field on each row is the
+canonical link between an account and its banco sponsor.
+
+#### Header CTA + reconciliation banner
+
+Header CTA principal queda visible siempre, anclado al título (en PSP-home será
+"Habilitar cuenta" o "Reconciliación"; en PSP-accounts será "Importar SWIFT").
+The legacy Coinag balance reconciliation banner SHALL render above the tabs as
+a persistent alert from `core-error-handling`. Once BIND and Banco de Comercio
+land, the reconciliation banner becomes per-banco-sponsor (an array of alerts,
+not a single one), so the spec MUST contract a stackable alert area, not a
+single-alert slot.
+
+#### Rationale
+
+The Módulo B paradigm is built specifically for treasury-style modules where
+one page has multiple cohesive sub-views over the same domain data. PSP fits
+perfectly: cuentas multi-currency-multi-banco, ledger de movements, cola de
+assignation/whitelisting — that's the canonical decomposition. Adopting the
 shape now (rather than reinventing per page) keeps PSP-home and PSP-accounts
 visually + behaviourally consistent with each other and with the future
 `ops-financial-dashboard` (which is Activity + Quotes — a sibling Type-A with
@@ -364,7 +402,8 @@ its own tab decomposition).
 
 **Out of scope for this note:** the exact Requirement set lands when the
 `add-ops-psp-*` changes are written. This note captures the architectural
-constraint so the design phase doesn't drift into a different shape.
+constraint so the design phase doesn't drift into a different shape and so
+the Banco Sponsor abstraction is open-set from day one.
 
 ### Decision OPS-CLIENTS-1 — Type-A master + Type-B detail (NOT Módulo B)
 
