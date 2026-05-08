@@ -80,6 +80,19 @@ const currencyId = ref<string>(typeof route.query.currency_id === 'string' ? rou
 const page = ref<number>(Number(route.query.page) || 1);
 const pageSize = ref<number>(initialPageSize);
 
+// reka-ui forbids `<SelectItem value="">` — using one throws in setup and
+// (fatally) breaks the unmount cycle when the operator navigates away,
+// leaving a zombie DOM tree (reported real bug, OPS 2026-05-08). Use a
+// sentinel for "All" and translate to/from the empty-string filter
+// storage via this v-model bridge.
+const ALL = '__all__';
+const currencyIdModel = computed<string>({
+  get: () => currencyId.value || ALL,
+  set: (v) => {
+    currencyId.value = v === ALL ? '' : v;
+  },
+});
+
 // ─── Currencies catalog (mocked for now; real: GET /currencies) ──────
 const currencies = ref<{ value: string; label: string }[]>([
   { value: 'ARS', label: 'ARS · Pesos argentinos' },
@@ -299,12 +312,12 @@ function onUpdated(): void {
         class="w-64"
         aria-label="Filtrar por nombre"
       />
-      <Select v-model="currencyId">
+      <Select v-model="currencyIdModel">
         <SelectTrigger class="w-48" aria-label="Filtrar por moneda">
           <SelectValue placeholder="Todas las monedas" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Todas las monedas</SelectItem>
+          <SelectItem :value="ALL">Todas las monedas</SelectItem>
           <SelectItem v-for="c in currencies" :key="c.value" :value="c.value">
             {{ c.label }}
           </SelectItem>

@@ -511,6 +511,29 @@ review surfaces one of these, send the change back.
 
 18. **❌ PSP "Disponibilidad" simple cards-row instead of strict Módulo B shape** — initial `add-ops-psp` migration shipped a 3-column row of `<SponsorBalanceCard>` for the first tab. Operator surfaced that the canonical Módulo B has a much richer shape (KPI grid + filter row + tree expansible per sponsor → accounts). Corrected by `extend-ops-psp-posicion-shape`: tab renamed `Posición`, body adopts the strict Módulo B shape per `MIGRATION-NOTES.md` Decision PSP-1. **✅** When `MIGRATION-NOTES.md` declares "module X adopts the Módulo B shape", that means the **strict** Módulo B shape (KPI grid + filter row + tree). A simplified cards-row deviation is a spec violation, NOT a UX shortcut.
 
+19. **❌ `<SelectItem value="">` — "All / no filter" sentinel as the empty string** — reka-ui v2+ throws in setup with `A <SelectItem /> must have a value prop that is not an empty string`. The throw is silent in the dev console most of the time, but it FATALLY breaks the parent component's unmount cycle (`Cannot read properties of null (reading 'type')` in `unmountComponent`). When the operator navigates AWAY from the page, the broken unmount leaves a zombie DOM tree visible OVER the new route — looks indistinguishable from a "main pane stuck on previous module" bug, but the root cause is upstream. Reported as a real bug by an operator running OPS Instructions 2026-05-08. **✅** Use a sentinel string (`'__all__'` is the canon) for the "no filter" option AND a `computed<string>` v-model bridge that translates the sentinel back to `''` for the underlying filter ref:
+
+    ```ts
+    const ALL = '__all__';
+    const filterModel = computed<string>({
+      get: () => filterRef.value || ALL,
+      set: (v) => { filterRef.value = v === ALL ? '' : v; },
+    });
+    ```
+
+    ```vue
+    <Select v-model="filterModel">
+      <SelectContent>
+        <SelectItem :value="ALL">Todos</SelectItem>
+        <SelectItem v-for="opt in options" :key="opt.value" :value="opt.value">
+          {{ opt.label }}
+        </SelectItem>
+      </SelectContent>
+    </Select>
+    ```
+
+    The pattern is already documented inline in `Reportes.vue`. Apply it to every `<Select>` whose underlying filter ref is allowed to be empty. (When the underlying ref is a closed enum without "all", the sentinel is unnecessary — every `SelectItem` has a non-empty `value`.) Cross-link: this is the *real* root cause of the navigation-persistence symptom that Pattern 16 also defends against.
+
 ---
 
 ## PR review checklist
