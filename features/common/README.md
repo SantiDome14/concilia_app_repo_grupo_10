@@ -1,6 +1,6 @@
 # COMMON — Features transversales
 
-> Última actualización: 2026-05-05
+> Última actualización: 2026-05-08
 > Estado: En definición progresiva
 
 ---
@@ -31,6 +31,7 @@ La regla operativa: si la capacidad se expone al usuario final en múltiples pro
 | Capacidad | Estado | Feature file | Productos afectados |
 |---|---|---|---|
 | Ventanas de Mantenimiento | Definida | `ventanas-de-mantenimiento.md` | TRD, OPS, LEX, CLP, FIN, COM |
+| Release Awareness | Definida | `release-awareness.md` | TRD, OPS, LEX, CLP, FIN |
 
 ---
 

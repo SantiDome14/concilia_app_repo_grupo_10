@@ -1,10 +1,10 @@
 ---
 name: Release Awareness — banner y modal de nuevas funcionalidades
 features: [TRD, OPS, LEX, CLP, FIN]
-status: En investigación
+status: Concluida
 owner: Santino Domeniconi
 created_at: 2026-05-05
-updated_at: 2026-05-05
+updated_at: 2026-05-08
 ---
 
 # Release Awareness — banner y modal de nuevas funcionalidades

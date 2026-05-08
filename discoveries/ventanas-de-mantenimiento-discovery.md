@@ -1,10 +1,10 @@
 ---
 name: Ventanas de Mantenimiento — Comunicacion proactiva al usuario
 features: [COMMON]
-status: En investigacion
+status: Concluida
 owner: Santino Domeniconi
 created_at: 2026-05-05
-updated_at: 2026-05-05
+updated_at: 2026-05-08
 enriched_at: 2026-05-05
 ---
 

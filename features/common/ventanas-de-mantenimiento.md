@@ -3,7 +3,7 @@ aplicacion: COMMON
 status: Definida
 owner: Santino Domeniconi
 created_at: 2026-05-05
-updated_at: 2026-05-05
+updated_at: 2026-05-08
 req: REQ-67
 discovery: ventanas-de-mantenimiento-discovery.md
 productos_afectados: [TRD, OPS, LEX, CLP, FIN, COM]
@@ -67,6 +67,16 @@ Un click expande el banner a su estado completo.
 - Notificaciones por email, push u otros canales externos
 - Segmentación de mensajes por rol de usuario
 - Portal de wording configurable sin deploy (v2)
+
+---
+
+## Criterios de aceptación
+
+- Cuando IT activa el banner amarillo para un componente específico, el banner aparece únicamente en la vista de ese componente con el copy del template por defecto, sin afectar ninguna otra vista del financial-core.
+- Cuando comienza la ventana de mantenimiento, el banner amarillo es reemplazado automáticamente por el banner rojo.
+- El banner rojo permanece visible hasta que IT lo levante — el usuario no puede cerrarlo.
+- Si dos componentes están en mantenimiento simultáneamente, cada vista afectada muestra su propio banner sin propagación cruzada entre vistas.
+- El naranja no se usa en ningún estado de este banner — está reservado para Release Awareness (REQ-66).
 
 ---
 
