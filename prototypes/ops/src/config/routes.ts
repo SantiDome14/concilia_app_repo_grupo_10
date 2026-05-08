@@ -24,6 +24,7 @@ export const ROUTE_PATHS = {
   CLIENTS: '/clients',
   CLIENT_DETAIL: '/clients/:id',
   PSP: '/psp',
+  FINANCIAL_DASHBOARD: '/financial-dashboard',
   // Component playground (dev mode only — gated in Sidebar by import.meta.env.DEV).
   PLAYGROUND_FORMS: '/playground/forms',
   PLAYGROUND_CHARTS: '/playground/charts',
@@ -44,6 +45,7 @@ export const ROUTE_NAMES = {
   CLIENTS: 'clients',
   CLIENT_DETAIL: 'client-detail',
   PSP: 'psp',
+  FINANCIAL_DASHBOARD: 'financial-dashboard',
   PLAYGROUND_FORMS: 'playground-forms',
   PLAYGROUND_CHARTS: 'playground-charts',
   PLAYGROUND_LAYOUT: 'playground-layout',

@@ -184,6 +184,28 @@ export const routes: RouteRecordRaw[] = [
       query: { ...to.query, tab: 'cuentas' },
     }),
   },
+  // ops-financial-dashboard: 2-tab dashboard (Activity + Quotes).
+  {
+    path: ROUTE_PATHS.FINANCIAL_DASHBOARD,
+    name: ROUTE_NAMES.FINANCIAL_DASHBOARD,
+    component: () => import('@/pages/FinancialDashboard.vue'),
+    meta: {
+      requiresAuth: true,
+      layout: 'shell',
+      breadcrumb: 'Financial Dashboard',
+      block: 'Operaciones',
+    },
+  },
+  // Legacy /dashboard absorbed per ops-financial-dashboard Requirement 2.
+  // (The bare `/` is OWNED by the generic Dashboard from core-modulo-genericos
+  //  per design.md Decision 3; this redirect intentionally does NOT touch `/`.)
+  {
+    path: '/dashboard',
+    redirect: (to) => ({
+      path: ROUTE_PATHS.FINANCIAL_DASHBOARD,
+      query: { ...to.query, tab: 'activity' },
+    }),
+  },
   // Legacy account-instruction wizard URL absorbed into the detail modal
   // per ops-account-instructions Requirement 1.
   {
