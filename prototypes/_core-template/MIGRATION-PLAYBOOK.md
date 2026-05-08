@@ -225,6 +225,27 @@ The `OPS_ADMIN` fallback (or `LEX_ADMIN` / `TRD_ADMIN` per app) makes the inline
 
 **Failure mode the rule prevents:** shipping a capability that's `disabled` for everyone because the canonical capability string isn't declared yet.
 
+**Dev fallback (no Auth0 tenant configured):** `useCapabilities` honours a wildcard capability `'*'` — any user holding `'*'` passes every gate. The dev-fallback seed in `src/plugins/auth0.ts` includes `'*'` so the operator sees every CTA without anyone having to remember to update the seed when a new fine-grained capability lands. In production, `'*'` is never granted — the IdP claim drives the user's capabilities.
+
+```ts
+// useCapabilities.ts
+const WILDCARD = '*';
+function can(capability: string): boolean {
+  if (store.capabilities.includes(WILDCARD)) return true;
+  return store.capabilities.includes(capability);
+}
+```
+
+```ts
+// plugins/auth0.ts (dev fallback)
+const DEV_FALLBACK_CAPABILITIES = [
+  '*', // dev-only wildcard — see useCapabilities
+  // ...legacy named roles kept for fixtures that inspect them
+];
+```
+
+**Failure mode the rule prevents:** the operator can't see a CTA that was just landed because the dev seed doesn't yet include the new fine-grained capability string (and `OPS_ADMIN` / `LEX_ADMIN` / etc. drift from the seed's `ADMIN_OPS` / `ADMIN_LEX`).
+
 ### Pattern 10 — Component emits, parent mutates (vue/no-mutating-props)
 
 **The smell:** child component mutates `props.formState.foo = bar` and the linter rejects with `vue/no-mutating-props`.

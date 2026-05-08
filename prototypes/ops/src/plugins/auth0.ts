@@ -18,10 +18,21 @@ import { useAuthStore } from '@/stores/auth';
 // composite-dialog flow are exercisable without a live Auth0 tenant.
 // ════════════════════════════════════════════════════════════════════
 
-/** Roles granted to the dev fallback user — covers every capability
- * gate declared by FIN's manifests (Movimientos, Cotizaciones,
- * Tesorería). When wiring real Auth0, the IdP claim drives this list. */
+/** Capabilities granted to the dev fallback user.
+ *
+ * The wildcard `'*'` makes every `can()` / `canAny()` / `canAll()` check
+ * return true (see `useCapabilities` for the convention). This keeps
+ * the dev fallback robust against capability-string drift: as new
+ * fine-grained gates land (e.g. `psp:create-movement`,
+ * `psp:create-account`), the operator continues to see every CTA
+ * without anyone having to remember to update this seed.
+ *
+ * The legacy named roles below are kept for tests / fixtures that
+ * inspect specific role membership; they are NOT required for the
+ * wildcard to grant access. When wiring real Auth0, the IdP claim
+ * drives the user's capabilities and `'*'` is never granted. */
 const DEV_FALLBACK_CAPABILITIES = [
+  '*', // dev-only wildcard — see useCapabilities
   'ADMIN',
   'ADMIN_FIN',
   'ADMIN_OPS',
