@@ -334,4 +334,41 @@ Sin scrollbar customization (a diferencia de LEX).
 
 ## Migration design decisions (overriding the legacy structure)
 
-_Pendiente — se completa durante la fase de OpenSpec design._
+### Decision PSP-1 — `ops-psp-home` + `ops-psp-accounts` adopt the Módulo B shape
+
+**Decided:** 2026-05-08 (pre-shipping note).
+
+The legacy `PSPHome.vue` (6,604 LOC) and `PSPAccounts.vue` (1,798 LOC) are the
+two heaviest OPS pages remaining. When their migration changes (`add-ops-psp-home`,
+`add-ops-psp-accounts`) are scoped, the canonical layout SHALL be the Type-A shape
+of `_core-template/src/pages/ModuloB.vue` — a Type-A page with three internal
+sub-modules surfaced as tabs (NOT segmentation):
+
+- **Posición** — KPIs consolidados + filtros (sociedad/moneda) + tree expansible sociedad → cuenta con posición neta.
+- **Movimientos** — KPIs + ledger table paginado + filtros (search, tipo, origen, estado).
+- **Cuentas / Cola de Asignación** — depende del módulo: PSP-home muestra Cola de Asignación (warning banner + retiros pendientes); PSP-accounts muestra Cuentas (lista con SWIFT transactions).
+
+Header CTA principal queda visible siempre, anclado al título (en PSP-home será
+"Whitelistar cuenta" o "Reconciliación"; en PSP-accounts será "Importar SWIFT").
+The legacy Coinag balance reconciliation banner SHALL render above the tabs as
+a persistent alert from `core-error-handling`.
+
+**Rationale.** The Módulo B paradigm is built specifically for treasury-style
+modules where one page has multiple cohesive sub-views over the same domain
+data. PSP fits perfectly: cuentas multi-currency, ledger de movements, cola
+de assignation/whitelisting — that's the canonical decomposition. Adopting the
+shape now (rather than reinventing per page) keeps PSP-home and PSP-accounts
+visually + behaviourally consistent with each other and with the future
+`ops-financial-dashboard` (which is Activity + Quotes — a sibling Type-A with
+its own tab decomposition).
+
+**Out of scope for this note:** the exact Requirement set lands when the
+`add-ops-psp-*` changes are written. This note captures the architectural
+constraint so the design phase doesn't drift into a different shape.
+
+### Decision OPS-CLIENTS-1 — Type-A master + Type-B detail (NOT Módulo B)
+
+The `ops-clients` capability does NOT use the Módulo B shape because the
+domain shape is master-list-then-individual-detail (a client at a time), not
+treasury-style consolidation across sociedades. See
+`changes/add-ops-clients/design.md` Decision 1 for the full rationale.

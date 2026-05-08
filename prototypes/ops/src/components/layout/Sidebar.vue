@@ -18,6 +18,7 @@ import {
   BarChart3,
   Columns,
   ClipboardList,
+  Users,
 } from 'lucide-vue-next';
 import { ROUTE_PATHS, ROUTE_NAMES } from '@/config/routes';
 import { useAuth } from '@/composables/useAuth';
@@ -70,6 +71,17 @@ const blocks: NavBlock[] = [
     items: [
       { to: ROUTE_PATHS.MODULO_B, name: ROUTE_NAMES.MODULO_B, label: 'Módulo B', icon: LayoutGrid },
       { to: ROUTE_PATHS.MODULO_C, name: ROUTE_NAMES.MODULO_C, label: 'Módulo C', icon: Database },
+    ],
+  },
+  {
+    label: 'Operaciones',
+    items: [
+      {
+        to: ROUTE_PATHS.CLIENTS,
+        name: ROUTE_NAMES.CLIENTS,
+        label: 'Clientes',
+        icon: Users,
+      },
     ],
   },
   {

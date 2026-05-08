@@ -129,6 +129,34 @@ export const routes: RouteRecordRaw[] = [
       query: { detail: String(to.params.id) },
     }),
   },
+  // ops-clients: master list + detail page.
+  {
+    path: ROUTE_PATHS.CLIENTS,
+    name: ROUTE_NAMES.CLIENTS,
+    component: () => import('@/pages/Clients.vue'),
+    meta: {
+      requiresAuth: true,
+      layout: 'shell',
+      breadcrumb: 'Clientes',
+      block: 'Operaciones',
+    },
+  },
+  {
+    path: ROUTE_PATHS.CLIENT_DETAIL,
+    name: ROUTE_NAMES.CLIENT_DETAIL,
+    component: () => import('@/pages/ClientDetail.vue'),
+    meta: {
+      requiresAuth: true,
+      layout: 'shell',
+      breadcrumb: 'Detalle del cliente',
+      block: 'Operaciones',
+    },
+  },
+  // Legacy /users path absorbed into /clients per ops-clients Requirement 11.
+  {
+    path: '/users',
+    redirect: (to) => ({ path: ROUTE_PATHS.CLIENTS, query: to.query }),
+  },
   // ─── Component playground (dev mode only — kept registered always
   //     so the route works even when Sidebar visibility is gated; the
   //     entry in the sidebar checks `import.meta.env.DEV`). ─────────
