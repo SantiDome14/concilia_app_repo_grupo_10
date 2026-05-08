@@ -157,6 +157,33 @@ export const routes: RouteRecordRaw[] = [
     path: '/users',
     redirect: (to) => ({ path: ROUTE_PATHS.CLIENTS, query: to.query }),
   },
+  // ops-psp: PSP module with 3 internal tabs (Disponibilidad / Movimientos / Cuentas).
+  {
+    path: ROUTE_PATHS.PSP,
+    name: ROUTE_NAMES.PSP,
+    component: () => import('@/pages/Psp.vue'),
+    meta: {
+      requiresAuth: true,
+      layout: 'shell',
+      breadcrumb: 'PSP',
+      block: 'Operaciones',
+    },
+  },
+  // Legacy PSP routes absorbed per ops-psp Requirement 2.
+  {
+    path: '/psp/home',
+    redirect: (to) => ({
+      path: ROUTE_PATHS.PSP,
+      query: { ...to.query, tab: 'movimientos' },
+    }),
+  },
+  {
+    path: '/psp/accounts',
+    redirect: (to) => ({
+      path: ROUTE_PATHS.PSP,
+      query: { ...to.query, tab: 'cuentas' },
+    }),
+  },
   // Legacy account-instruction wizard URL absorbed into the detail modal
   // per ops-account-instructions Requirement 1.
   {

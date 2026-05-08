@@ -129,5 +129,11 @@ export type ConfirmationLetterResponse =
  * `validateCvu` call; on `Confirmar` failure with `already_whitelisted`
  * or `exist_internal_route` the modal stays at `'review'` showing an
  * inline error.
+ *
+ * The optional `'pick-client'` step is mounted ONLY when the modal is
+ * opened without a `clientId` prop bound (used by `ops-psp`'s Habilitar
+ * cuenta CTA per `add-ops-psp` Decision 5). When a `clientId` is
+ * pre-bound (the canonical `ops-clients` flow) the `'pick-client'`
+ * step is skipped entirely.
  */
-export type WhitelistModalStep = 'input' | 'review';
+export type WhitelistModalStep = 'pick-client' | 'input' | 'review';

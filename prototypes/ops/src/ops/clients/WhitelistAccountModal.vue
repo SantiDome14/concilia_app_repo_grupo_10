@@ -23,11 +23,14 @@ import {
 } from '@/components/ui/select';
 import { ApiError } from '@/types/api';
 import {
+  listClients,
   validateCvu as validateCvuApi,
   whitelistAccount,
   type WhitelistResult,
 } from './api';
+import ClientFilters from './ClientFilters.vue';
 import type {
+  Client,
   ClientId,
   CurrencyEntry,
   ValidatedCvuAccount,
@@ -37,17 +40,37 @@ import type {
 // ════════════════════════════════════════════════════════════════════
 // WhitelistAccountModal — implements Requirement 8.
 //
-// One <Dialog> with an internal `step: 'input' | 'review'` state machine
-// per design.md Decision 3. The transition is `input → review` after a
-// successful validateCvu(); on `Confirmar` failure with the localised
-// error codes, the modal stays at `'review'` showing the inline message.
-// On success, the `vue-query` cache for `['clients', clientId]` is
-// invalidated so the new account renders in the accounts list.
+// One <Dialog> with an internal state machine. Two flow shapes:
+//
+//   - With clientId pre-bound (canonical ops-clients flow):
+//       'input' → 'review' → POST → success | inline error
+//
+//   - Without clientId pre-bound (ops-psp Habilitar cuenta flow per
+//     `add-ops-psp` Decision 5):
+//       'pick-client' → 'input' → 'review' → POST → success | inline error
+//
+// The transition out of `'pick-client'` is "operator picked a client
+// from the autocomplete"; the modal then advances to `'input'` and
+// the rest of the flow is identical.
 // ════════════════════════════════════════════════════════════════════
 
 const props = defineProps<{
-  clientId: ClientId;
+  /**
+   * Pre-bound client id. When `null`, the modal mounts with a
+   * `'pick-client'` step prefix (used by `ops-psp`).
+   */
+  clientId: ClientId | null;
   currencies: CurrencyEntry[];
+}>();
+
+const emit = defineEmits<{
+  /**
+   * Emitted after a successful whitelist. Consumers (e.g. `ops-psp`)
+   * use this to invalidate their own query caches in addition to the
+   * `['ops', 'clients', clientId]` invalidation the modal does
+   * internally. Component-API extension per `add-ops-psp` Decision 5.
+   */
+  created: [clientId: ClientId];
 }>();
 
 const open = defineModel<boolean>('open', { required: true });
@@ -63,10 +86,46 @@ const isValidating = ref(false);
 const isConfirming = ref(false);
 const inlineError = ref<string | null>(null);
 
+// ─── Client picker (only when clientId prop is null) ────────────────
+const pickedClient = ref<Client | null>(null);
+const clientSuggestions = ref<Client[]>([]);
+const isSearchingClients = ref(false);
+
+const effectiveClientId = computed<ClientId | null>(
+  () => props.clientId ?? pickedClient.value?.id ?? null,
+);
+
+async function runClientSearch(query: string): Promise<void> {
+  isSearchingClients.value = true;
+  try {
+    const params: Parameters<typeof listClients>[0] = { page: 1, pageSize: 50 };
+    if (query) params.name = query;
+    const res = await listClients(params);
+    clientSuggestions.value = res.clients;
+  } catch {
+    clientSuggestions.value = [];
+  } finally {
+    isSearchingClients.value = false;
+  }
+}
+
+function onClientPicked(client: Client): void {
+  pickedClient.value = client;
+  step.value = 'input';
+}
+
+function changeClient(): void {
+  pickedClient.value = null;
+  step.value = 'pick-client';
+}
+
 // ─── Reset on each open + default currency = ARS ────────────────────
 watch(open, (isOpen) => {
   if (!isOpen) return;
-  step.value = 'input';
+  // Step depends on whether a clientId is pre-bound.
+  step.value = props.clientId ? 'input' : 'pick-client';
+  pickedClient.value = null;
+  clientSuggestions.value = [];
   cvuInput.value = '';
   validated.value = null;
   isValidating.value = false;
@@ -100,11 +159,11 @@ function backToInput(): void {
 }
 
 async function onConfirm(): Promise<void> {
-  if (!canConfirm.value || !validated.value) return;
+  if (!canConfirm.value || !validated.value || !effectiveClientId.value) return;
   isConfirming.value = true;
   inlineError.value = null;
   try {
-    const result = await whitelistAccount(props.clientId, {
+    const result = await whitelistAccount(effectiveClientId.value, {
       name: validated.value.holder,
       tax_number: validated.value.cuit,
       account_number: validated.value.account,
@@ -119,7 +178,12 @@ async function onConfirm(): Promise<void> {
 function handleResult(result: WhitelistResult): void {
   if (result.status === 'ok') {
     toast.success('Cuenta habilitada correctamente');
-    void queryClient.invalidateQueries({ queryKey: ['ops', 'clients', props.clientId] });
+    if (effectiveClientId.value) {
+      void queryClient.invalidateQueries({
+        queryKey: ['ops', 'clients', effectiveClientId.value],
+      });
+      emit('created', effectiveClientId.value);
+    }
     open.value = false;
     return;
   }
@@ -163,8 +227,47 @@ function close(): void {
         </DialogDescription>
       </DialogHeader>
 
+      <!-- Step: pick-client (only when clientId prop is null) ──── -->
+      <div
+        v-if="step === 'pick-client'"
+        class="flex flex-col gap-3"
+        data-testid="whitelist-step-pick-client"
+      >
+        <Label>Cliente</Label>
+        <ClientFilters
+          mode="picker"
+          :model-value="''"
+          :suggestions="clientSuggestions"
+          :is-searching="isSearchingClients"
+          :has-active-filters="false"
+          placeholder="Buscar cliente por nombre o legajo…"
+          @search="runClientSearch"
+          @pick="onClientPicked"
+        />
+        <p class="text-xs text-t-4">
+          Una vez seleccionado el cliente, podrás validar el CVU/CBU para habilitarle una cuenta.
+        </p>
+      </div>
+
       <!-- Step: input ─────────────────────────────────────────────── -->
-      <div v-if="step === 'input'" class="flex flex-col gap-3" data-testid="whitelist-step-input">
+      <div v-else-if="step === 'input'" class="flex flex-col gap-3" data-testid="whitelist-step-input">
+        <!-- Pre-bound client chip when picker prefix was used -->
+        <div
+          v-if="!props.clientId && pickedClient"
+          class="flex items-center justify-between rounded-lg border border-b-1 bg-card-2 p-2.5"
+          data-testid="whitelist-client-chip"
+        >
+          <div class="text-xs">
+            <div class="text-t-4">Cliente</div>
+            <div class="text-t-1">
+              {{ pickedClient.name || 'Sin nombre' }}
+              <span v-if="pickedClient.tax_number" class="text-t-4">· {{ pickedClient.tax_number }}</span>
+            </div>
+          </div>
+          <Button variant="ghost" size="sm" data-testid="whitelist-change-client" @click="changeClient">
+            Cambiar
+          </Button>
+        </div>
         <div class="flex flex-col gap-1.5">
           <Label for="whitelist-cvu">CVU / CBU</Label>
           <Input
@@ -233,7 +336,10 @@ function close(): void {
       </div>
 
       <DialogFooter>
-        <template v-if="step === 'input'">
+        <template v-if="step === 'pick-client'">
+          <Button variant="ghost" @click="close">Cancelar</Button>
+        </template>
+        <template v-else-if="step === 'input'">
           <Button variant="ghost" :disabled="isValidating" @click="close">Cancelar</Button>
           <Button
             variant="primary"

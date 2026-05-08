@@ -23,6 +23,7 @@ export const ROUTE_PATHS = {
   INSTRUCTIONS: '/instructions',
   CLIENTS: '/clients',
   CLIENT_DETAIL: '/clients/:id',
+  PSP: '/psp',
   // Component playground (dev mode only — gated in Sidebar by import.meta.env.DEV).
   PLAYGROUND_FORMS: '/playground/forms',
   PLAYGROUND_CHARTS: '/playground/charts',
@@ -42,6 +43,7 @@ export const ROUTE_NAMES = {
   INSTRUCTIONS: 'instructions',
   CLIENTS: 'clients',
   CLIENT_DETAIL: 'client-detail',
+  PSP: 'psp',
   PLAYGROUND_FORMS: 'playground-forms',
   PLAYGROUND_CHARTS: 'playground-charts',
   PLAYGROUND_LAYOUT: 'playground-layout',

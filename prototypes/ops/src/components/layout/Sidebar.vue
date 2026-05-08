@@ -19,6 +19,7 @@ import {
   Columns,
   ClipboardList,
   Users,
+  Banknote,
 } from 'lucide-vue-next';
 import { ROUTE_PATHS, ROUTE_NAMES } from '@/config/routes';
 import { useAuth } from '@/composables/useAuth';
@@ -81,6 +82,12 @@ const blocks: NavBlock[] = [
         name: ROUTE_NAMES.CLIENTS,
         label: 'Clientes',
         icon: Users,
+      },
+      {
+        to: ROUTE_PATHS.PSP,
+        name: ROUTE_NAMES.PSP,
+        label: 'PSP',
+        icon: Banknote,
       },
     ],
   },
