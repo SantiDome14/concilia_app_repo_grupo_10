@@ -20,7 +20,9 @@
     "exactOptionalPropertyTypes": false,
 
     // ─── Module resolution ──────────────────────────────────────
-    "baseUrl": ".",
+    // `baseUrl` was removed (deprecated in TS 6, dropped in TS 7). Path
+    // mappings already use relative `./src/*` entries — TS 5+ resolves
+    // them relative to the tsconfig directory without needing baseUrl.
     "paths": {
       "@/*": ["./src/*"]
     },
