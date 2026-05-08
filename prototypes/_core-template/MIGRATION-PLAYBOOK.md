@@ -399,6 +399,48 @@ If 3+ of those answers say "split", split.
 
 **Example:** `ops-account-instructions` Decision 4 — `xl` width because the live letter preview is A4-aspect and needs ~400 px next to a 400 px input column.
 
+### Pattern 16 — Key the RouterView so route changes force a clean remount
+
+**The smell:** after navigating from `/foo` to `/bar`, the URL, sidebar highlight, and breadcrumb all update — but the main pane keeps rendering the previous module's content. Reported as "el main sigue mostrando X" or "no me cambia el contenido aunque la URL cambió".
+
+**Root cause:** Vue Router does not, by default, re-mount the routed component when transitioning between two routes that share the same outlet. If the outgoing component had any of the following, the side effects can leak past unmount and visually persist over the new route:
+
+- A teleported portal (`<Dialog>`, `<Sheet>`, `<Popover>`) whose parent gets unmounted "in the wrong order".
+- A pending async fetch whose `.then` mutates a ref after the component has technically unmounted.
+- A `watch` on `route.query` (or any reactive that survives the navigation) that runs once more on the way out and calls `router.replace`.
+- An HMR-stale instance from the dev server.
+
+**The rule:** the top-level `<RouterView>` in `App.vue` SHALL render its slot through a keyed `<component :is="Component" :key="..." />`. The key is `route.name` (NOT `route.fullPath`), so the component re-mounts when the route changes but NOT when only `route.query` changes (which is the canonical channel for filters / pagination / tabs).
+
+```vue
+<!-- App.vue -->
+<script setup>
+import { RouterView, useRoute } from 'vue-router';
+const route = useRoute();
+</script>
+
+<template>
+  <AppShell>
+    <RouterView v-slot="{ Component }">
+      <component :is="Component" :key="String(route.name ?? route.path)" />
+    </RouterView>
+  </AppShell>
+</template>
+```
+
+**Why `route.name` and not `route.fullPath`:**
+
+- `route.fullPath` includes the query string. Keying on it would force a full remount whenever a filter / pagination / tab query param changes — destroying local state and triggering re-fetches the page deliberately scoped to query changes.
+- `route.name` is stable per route record. It changes if and only if the matched route record changes (i.e. the user navigated to a different module). Exactly the trigger we want for the remount.
+
+**Failure modes the rule prevents:**
+
+- Module X stays rendered after navigating to module Y (reported real bug, OPS 2026-05-08).
+- HMR-stale routed components survive a hot reload and show outdated UI until a hard refresh.
+- A modal that was mid-close-animation when the user clicked the sidebar leaves its content teleported to the body of the next route.
+
+**Where this pattern lives:** `App.vue` of every prototype + `_core-template`. It is a single, top-level fix; pages don't need to know about it.
+
 ---
 
 ## Quality-of-life refinements canon
