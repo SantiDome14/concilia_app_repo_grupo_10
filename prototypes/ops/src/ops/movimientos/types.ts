@@ -1,22 +1,16 @@
 import type { SponsorCode } from '@/ops/psp/types';
 
 // ════════════════════════════════════════════════════════════════════
-// ops-financial-dashboard — domain types
+// ops-movimientos — domain types
 // ────────────────────────────────────────────────────────────────────
-// Implements `ops-financial-dashboard` capability. The `Movement` and
+// Implements `ops-movimientos` capability. The `Movement` and
 // `MovementDetails` types are intentionally permissive (any string +
 // metadata bag) so the shared MovementDetailsModal works against any
-// Movement-shaped record from any consumer (Activity tab here, future
-// `ops-psp` Movimientos row click).
+// Movement-shaped record from any consumer (the /movimientos page here,
+// future `ops-psp` Movimientos row click via cross-capability import).
 // ════════════════════════════════════════════════════════════════════
 
-/** Closed enum of dashboard tabs. */
-export type DashboardTab = 'activity' | 'quotes';
-
-/** Closed enum of Quotes sub-toggle views. */
-export type QuotesView = 'active' | 'historic';
-
-/** Movement row in the Activity ledger. */
+/** Movement row in the ledger. */
 export interface Movement {
   id: string;
   date: string; // ISO 8601 or backend display string
@@ -64,41 +58,3 @@ export interface MovementsListResponse {
 export type ReceiptResponse =
   | { success: true; url: string }
   | { success: false; error?: string };
-
-/** Quote row in the Quotes ledger. */
-export interface Quote {
-  id: string;
-  client_id: string;
-  client_name: string | null;
-  origin_currency: string;
-  destination_currency: string;
-  /** BUY / SELL. */
-  operation: string;
-  /** Term (e.g. T+0, T+1) — may be null on legacy data. */
-  term: string | null;
-  origin_amount: string;
-  destination_amount: string;
-  exchange_rate: string;
-  status: string;
-  /** ISO 8601 timestamp. */
-  created_at: string;
-}
-
-/** Listing query params for Quotes. */
-export interface QuotesListParams {
-  /** Empty string ↔ no filter; the API treats `''` as wildcard. */
-  client_id?: string;
-  operation?: string;
-  /** Currency-pair filter applied client-side OR forwarded as backend param. */
-  pair?: string;
-  /** Maps to the legacy `?status=ACCEPTED` for active view; absent for historic. */
-  status?: string;
-  page: number;
-  pageSize: number;
-}
-
-/** Listing envelope for Quotes. */
-export interface QuotesListResponse {
-  data: Quote[];
-  total: number;
-}

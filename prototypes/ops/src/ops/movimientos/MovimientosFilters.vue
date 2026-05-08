@@ -16,7 +16,7 @@ import { activeSponsors } from '@/ops/psp/sponsor-catalog';
 import type { SponsorCode } from '@/ops/psp/types';
 
 // ════════════════════════════════════════════════════════════════════
-// ActivityFilters — implements part of Requirement 3.
+// MovimientosFilters — implements part of Requirement 3.
 //
 // Reuses the sponsor cards visual pattern from `ops-psp` per Decision 5.
 // The cross-dashboard sponsor filter is per-dashboard (no shared state

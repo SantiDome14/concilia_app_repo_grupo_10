@@ -7,7 +7,7 @@ import { getSponsorLabel } from '@/ops/psp/sponsor-catalog';
 import type { Movement } from './types';
 
 // ════════════════════════════════════════════════════════════════════
-// ActivityTable — implements part of Requirement 3 + Requirement 4
+// MovimientosTable — implements part of Requirement 3 + Requirement 4
 // (row click opens MovementDetailsModal — parent listens to @row-click).
 // ════════════════════════════════════════════════════════════════════
 

@@ -14,7 +14,8 @@ import {
   ClipboardList,
   Users,
   Banknote,
-  LineChart,
+  ArrowLeftRight,
+  TrendingUp,
 } from 'lucide-vue-next';
 import { ROUTE_PATHS, ROUTE_NAMES } from '@/config/routes';
 import { useAuth } from '@/composables/useAuth';
@@ -66,16 +67,22 @@ const blocks: NavBlock[] = [
         icon: Users,
       },
       {
+        to: ROUTE_PATHS.MOVIMIENTOS,
+        name: ROUTE_NAMES.MOVIMIENTOS,
+        label: 'Movimientos',
+        icon: ArrowLeftRight,
+      },
+      {
+        to: ROUTE_PATHS.COTIZACIONES,
+        name: ROUTE_NAMES.COTIZACIONES,
+        label: 'Cotizaciones',
+        icon: TrendingUp,
+      },
+      {
         to: ROUTE_PATHS.PSP,
         name: ROUTE_NAMES.PSP,
         label: 'PSP',
         icon: Banknote,
-      },
-      {
-        to: ROUTE_PATHS.FINANCIAL_DASHBOARD,
-        name: ROUTE_NAMES.FINANCIAL_DASHBOARD,
-        label: 'Financial Dashboard',
-        icon: LineChart,
       },
     ],
   },

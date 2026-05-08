@@ -339,7 +339,30 @@ The dropdown account menu intentionally STAYS at `z-[200]` (below modals) — op
 - Operator can't navigate while a modal is open (reported real bug, OPS 2026-05-08).
 - Clicking the sidebar with a modal open feels random: sometimes the click closes the modal, sometimes nothing happens.
 
-### Pattern 14 — Modal width override is justified, not casual
+### Pattern 14 — Don't replicate legacy architectural errors
+
+**The smell:** the legacy concentrates two or more unrelated surfaces under one roof — a Dashboard that mixes Movements + Quotes, a Settings page that bundles unrelated configuration domains, a single route that hosts what should be three. The 1:1 migration carries the concentration forward.
+
+**The rule:** when scoping a migration change, name **what each surface is for** and **who its primary audience is**. If two surfaces would have different audiences / different update cadences / different navigation entry points from the operator's daily flow, they are **independent modules** — not tabs of one dashboard. Migrate them as separate top-level capabilities; redirect the legacy URL to the most-used of the new modules.
+
+**Diagnostic questions** to apply to any "Dashboard" or "Hub" page in the legacy:
+
+1. *Who looks at this?* If "Movements" is for ops generalists and "Quotes" is for the trading desk, that's two audiences.
+2. *How often does it change?* If "Movements" updates per-second-ish and "Quotes" updates per-minute, that's two cadences.
+3. *What's the natural URL?* If you'd give a teammate `/movimientos` to share an activity link rather than `/dashboard?tab=activity`, the natural URL is the per-module path.
+4. *Was the concentration a UX choice or a workaround?* If the legacy didn't have a sub-module-tabs primitive, the concentration was probably a workaround.
+
+If 3+ of those answers say "split", split.
+
+**Example:** OPS migration's `add-ops-financial-dashboard` initially ported the legacy's `FinancialDashboard.vue` 1:1 (Activity + Quotes tabs). An operator surfaced that the concentration was confusing. The follow-up `refactor-ops-dashboard-into-movimientos-cotizaciones` split it into `ops-movimientos` and `ops-cotizaciones` as two top-level modules. The legacy `/dashboard` URL redirects to `/movimientos` (most-used legacy entry).
+
+**Failure modes the rule prevents:**
+
+- Operator can't find Movements because they searched the sidebar for "Mov..." but the entry says "Financial Dashboard".
+- Bundle size: every visit to `/financial-dashboard` loads the Quotes table machinery even when the operator only ever looks at Activity.
+- Capability gating: `dashboard:read` was a coarse capability gating both surfaces; splitting allows the trading desk role to see Cotizaciones without also being granted access to Movimientos (and vice versa).
+
+### Pattern 15 — Modal width override is justified, not casual
 
 **Default:** `sm:max-w-lg` (~720 px) per `core-modals` for centred dialogs.
 
@@ -420,6 +443,10 @@ review surfaces one of these, send the change back.
 15. **❌ Sidebar z-index below modal overlay** — leaves the navigation behind the `<Dialog>`/`<Sheet>` overlay (z-[500]) so clicking sidebar entries while a modal is open does NOT navigate. Reported as a real bug by an operator running the OPS prototype 2026-05-08. **✅** Sidebar `<nav>` SHALL be `z-[600]`, toggle button `z-[601]` (Pattern 13).
 
 16. **❌ Derived app ships template-only example modules** — `Módulo A`, `Módulo B`, `Módulo C`, and the component playground (`/playground/forms`, `/playground/charts`, `/playground/layout`) appear in the sidebar of LEX/OPS/TRD/CLP. Operators see surfaces unrelated to their domain. **✅** Cleanup as part of the first migration of each derived app (Pattern 12).
+
+17. **❌ "Big-dashboard" pattern** — concentrate Movements + Quotes (or any 2+ unrelated surfaces) into a single Dashboard route because "the legacy did it that way". Reported by an operator after `add-ops-financial-dashboard` shipped 2026-05-08; corrected by `refactor-ops-dashboard-into-movimientos-cotizaciones`. **✅** When the legacy concentration was a workaround for a missing primitive (no sub-module-tabs at the time), the migration's job is to split — NOT to perpetuate the workaround. Apply the diagnostic questions from Pattern 14: who looks at this · update cadence · natural URL · UX choice or workaround.
+
+18. **❌ PSP "Disponibilidad" simple cards-row instead of strict Módulo B shape** — initial `add-ops-psp` migration shipped a 3-column row of `<SponsorBalanceCard>` for the first tab. Operator surfaced that the canonical Módulo B has a much richer shape (KPI grid + filter row + tree expansible per sponsor → accounts). Corrected by `extend-ops-psp-posicion-shape`: tab renamed `Posición`, body adopts the strict Módulo B shape per `MIGRATION-NOTES.md` Decision PSP-1. **✅** When `MIGRATION-NOTES.md` declares "module X adopts the Módulo B shape", that means the **strict** Módulo B shape (KPI grid + filter row + tree). A simplified cards-row deviation is a spec violation, NOT a UX shortcut.
 
 ---
 

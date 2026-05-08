@@ -154,27 +154,49 @@ export const routes: RouteRecordRaw[] = [
       query: { ...to.query, tab: 'cuentas' },
     }),
   },
-  // ops-financial-dashboard: 2-tab dashboard (Activity + Quotes).
+  // ops-movimientos: top-level page (split from former ops-financial-dashboard).
   {
-    path: ROUTE_PATHS.FINANCIAL_DASHBOARD,
-    name: ROUTE_NAMES.FINANCIAL_DASHBOARD,
-    component: () => import('@/pages/FinancialDashboard.vue'),
+    path: ROUTE_PATHS.MOVIMIENTOS,
+    name: ROUTE_NAMES.MOVIMIENTOS,
+    component: () => import('@/pages/Movimientos.vue'),
     meta: {
       requiresAuth: true,
       layout: 'shell',
-      breadcrumb: 'Financial Dashboard',
+      breadcrumb: 'Movimientos',
       block: 'Operaciones',
     },
   },
-  // Legacy /dashboard absorbed per ops-financial-dashboard Requirement 2.
-  // (The bare `/` is OWNED by the generic Dashboard from core-modulo-genericos
-  //  per design.md Decision 3; this redirect intentionally does NOT touch `/`.)
+  // ops-cotizaciones: top-level page (split from former ops-financial-dashboard).
+  {
+    path: ROUTE_PATHS.COTIZACIONES,
+    name: ROUTE_NAMES.COTIZACIONES,
+    component: () => import('@/pages/Cotizaciones.vue'),
+    meta: {
+      requiresAuth: true,
+      layout: 'shell',
+      breadcrumb: 'Cotizaciones',
+      block: 'Operaciones',
+    },
+  },
+  // Legacy /dashboard + /financial-dashboard redirect to the split surfaces
+  // per `refactor-ops-dashboard-into-movimientos-cotizaciones`. The bare `/`
+  // stays owned by the generic Dashboard from `core-modulo-genericos`.
   {
     path: '/dashboard',
-    redirect: (to) => ({
-      path: ROUTE_PATHS.FINANCIAL_DASHBOARD,
-      query: { ...to.query, tab: 'activity' },
-    }),
+    redirect: (to) => ({ path: ROUTE_PATHS.MOVIMIENTOS, query: to.query }),
+  },
+  {
+    path: '/financial-dashboard',
+    redirect: (to) => {
+      // Drop the obsolete `?tab=activity|quotes`; map quotes → /cotizaciones,
+      // anything else → /movimientos.
+      const tab = typeof to.query.tab === 'string' ? to.query.tab : '';
+      const next = { ...to.query };
+      delete next.tab;
+      return tab === 'quotes'
+        ? { path: ROUTE_PATHS.COTIZACIONES, query: next }
+        : { path: ROUTE_PATHS.MOVIMIENTOS, query: next };
+    },
   },
   // Legacy account-instruction wizard URL absorbed into the detail modal
   // per ops-account-instructions Requirement 1.

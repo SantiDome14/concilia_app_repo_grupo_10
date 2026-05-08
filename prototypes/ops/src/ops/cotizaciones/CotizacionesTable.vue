@@ -5,9 +5,9 @@ import EmptyState from '@/components/feedback/EmptyState.vue';
 import type { Quote } from './types';
 
 // ════════════════════════════════════════════════════════════════════
-// QuotesTable — implements Requirement 5 + Requirement 6.
+// CotizacionesTable — implements Requirement 5 + Requirement 6.
 // Read-only in v1 (cursor-default) — quote action modals are deferred
-// per `add-ops-financial-dashboard` proposal "Removed from scope".
+// per `add-ops-cotizaciones` proposal "Removed from scope".
 // Status badge surfaces a tooltip explaining the deferral (Decision 6d).
 // ════════════════════════════════════════════════════════════════════
 

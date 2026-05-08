@@ -13,7 +13,7 @@ import { cn } from '@/lib/cn';
 import type { QuotesView } from './types';
 
 // ════════════════════════════════════════════════════════════════════
-// QuotesFilters — implements part of Requirement 5 + Decision 4.
+// CotizacionesFilters — implements part of Requirement 5 + Decision 4.
 //
 // Sub-toggle Active / Historic + filter row (operation + pair). The
 // client filter is owned by the parent (the page imports

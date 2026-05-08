@@ -4,32 +4,28 @@ import type {
   MovementDetails,
   MovementsListParams,
   MovementsListResponse,
-  Quote,
-  QuotesListParams,
-  QuotesListResponse,
   ReceiptResponse,
 } from './types';
 
 // ════════════════════════════════════════════════════════════════════
-// ops-financial-dashboard — API layer
+// ops-movimientos — API layer
 // ────────────────────────────────────────────────────────────────────
-// Wraps the legacy /movements, /quotes, /quote/:id, /receipt/:id
-// endpoints behind the shared `apiClient`. Returns plain typed payloads;
+// Wraps the legacy /movements, /movements/:id, /receipt/:id endpoints
+// behind the shared `apiClient`. Returns plain typed payloads;
 // component-level error surfaces (Skeleton / EmptyState / retry banner /
-// toast) live in the components themselves per Requirement 9.
+// toast) live in the components themselves.
 //
-// Both list endpoints tolerate the legacy `{movements/quotes, total}`
-// envelope shape AND the newer `{data, total}` shape.
+// The list endpoint tolerates the legacy `{movements, total}` envelope
+// shape AND the newer `{data, total}` shape.
 // ════════════════════════════════════════════════════════════════════
 
 const ENDPOINTS = {
   movements: '/movements',
   movement: (id: string): string => `/movements/${id}`,
-  quotes: '/quotes',
   receipt: (id: string): string => `/receipt/${id}`,
 } as const;
 
-/** GET /movements with filters + pagination (Requirement 3). */
+/** GET /movements with filters + pagination. */
 export async function listMovements(
   params: MovementsListParams,
 ): Promise<MovementsListResponse> {
@@ -48,13 +44,13 @@ export async function listMovements(
   };
 }
 
-/** GET /movements/:id — hydrates the MovementDetailsModal (Requirement 4 + 6c deep-link). */
+/** GET /movements/:id — hydrates the MovementDetailsModal (deep-link + row click). */
 export async function getMovement(id: string): Promise<MovementDetails> {
   const response = await apiClient.get<RawMovement>(ENDPOINTS.movement(id));
   return normaliseMovementDetails(response.data);
 }
 
-/** GET /receipt/:id — discriminated success/failure shape (Requirement 4). */
+/** GET /receipt/:id — discriminated success/failure shape. */
 export async function getReceipt(id: string): Promise<ReceiptResponse> {
   try {
     const response = await apiClient.get<{ success?: boolean; url?: string; error?: string }>(
@@ -67,25 +63,6 @@ export async function getReceipt(id: string): Promise<ReceiptResponse> {
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'request_failed' };
   }
-}
-
-/** GET /quotes with filters + pagination (Requirement 5). */
-export async function listQuotes(
-  params: QuotesListParams,
-): Promise<QuotesListResponse> {
-  const response = await apiClient.get<{
-    data?: RawQuote[];
-    quotes?: RawQuote[];
-    total?: number;
-  }>(ENDPOINTS.quotes, { params });
-  const list =
-    (Array.isArray(response.data?.data) && response.data.data) ||
-    (Array.isArray(response.data?.quotes) && response.data.quotes) ||
-    [];
-  return {
-    data: list.map(normaliseQuote),
-    total: response.data?.total ?? list.length,
-  };
 }
 
 // ─── Internal normalisers ───────────────────────────────────────────
@@ -147,37 +124,5 @@ function normaliseMovementDetails(raw: RawMovement): MovementDetails {
     created_at: raw.created_at,
     updated_at: raw.updated_at,
     metadata: raw.metadata,
-  };
-}
-
-interface RawQuote {
-  id?: string;
-  client_id?: string;
-  client_name?: string | null;
-  origin_currency?: string;
-  destination_currency?: string;
-  operation?: string;
-  term?: string | null;
-  origin_amount?: string | number;
-  destination_amount?: string | number;
-  exchange_rate?: string | number;
-  status?: string;
-  created_at?: string;
-}
-
-function normaliseQuote(raw: RawQuote): Quote {
-  return {
-    id: String(raw.id ?? ''),
-    client_id: String(raw.client_id ?? ''),
-    client_name: raw.client_name ?? null,
-    origin_currency: String(raw.origin_currency ?? '').toUpperCase(),
-    destination_currency: String(raw.destination_currency ?? '').toUpperCase(),
-    operation: String(raw.operation ?? '').toUpperCase(),
-    term: raw.term ?? null,
-    origin_amount: String(raw.origin_amount ?? '0'),
-    destination_amount: String(raw.destination_amount ?? '0'),
-    exchange_rate: String(raw.exchange_rate ?? '0'),
-    status: String(raw.status ?? ''),
-    created_at: String(raw.created_at ?? ''),
   };
 }

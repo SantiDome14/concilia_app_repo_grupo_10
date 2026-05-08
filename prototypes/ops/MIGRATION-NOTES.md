@@ -479,7 +479,8 @@ The OPS migration validated 12 patterns now codified in
    account; NOT modal (too narrow), NOT sub-route (loses context).
 6. **Cross-capability composition** — `<WhitelistAccountModal>` from
    `ops-clients` reused by `ops-psp`; `<MovementDetailsModal>` from
-   `ops-financial-dashboard` will be reused by future PSP follow-up.
+   `ops-movimientos` (post-refactor canonical home) will be reused by
+   future PSP follow-up.
 7. **Discriminated result types** — `WhitelistResult`,
    `AccountInstructionResult`, `StatementResult`, `SaveResult`.
 8. **Pure helpers extracted** — `portal-status.ts`,
@@ -554,6 +555,30 @@ they're now in the playbook's antipattern list:
     rule as Pattern 12 ("App derivation cleanup"). The example
     modules stay in `_core-template` only as reference for AI
     agents and developers.
+11. **Big-dashboard pattern** (caught after the operator session
+    of 2026-05-08): the initial `add-ops-financial-dashboard`
+    migration ported the legacy's `FinancialDashboard.vue` 1:1,
+    concentrating Movements + Quotes under one `/financial-dashboard`
+    page because the legacy did. Operator surfaced that the
+    concentration was confusing (different audiences, different
+    cadences, different natural URLs). Corrected by
+    `refactor-ops-dashboard-into-movimientos-cotizaciones`:
+    `ops-financial-dashboard` removed entirely; `ops-movimientos`
+    + `ops-cotizaciones` shipped as two top-level capabilities.
+    The legacy `/dashboard` URL redirects to `/movimientos`.
+    Codified as Pattern 14 + antipattern #17 in
+    `MIGRATION-PLAYBOOK.md`.
+12. **PSP "Disponibilidad" simplified shape vs strict Módulo B**
+    (same operator session): the initial `add-ops-psp` migration
+    shipped Tab 1 as a row of 3 sponsor balance cards. Operator
+    pointed out that the canonical Módulo B shape has a KPI grid
+    + filter row + tree expansible per sponsor → accounts.
+    Corrected by `extend-ops-psp-posicion-shape`: tab renamed
+    `Posición`, body adopts the strict Módulo B shape (KPI grid
+    + filter row + sponsor → accounts tree expansible per
+    `_core-template/src/pages/ModuloB.vue`); Movimientos tab gets
+    a 4-card KPI grid above its existing sponsor cards. Codified
+    as antipattern #18 in `MIGRATION-PLAYBOOK.md`.
 
 ### Follow-ups nominated (NOT yet migrated)
 

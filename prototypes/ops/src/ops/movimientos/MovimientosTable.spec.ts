@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
-import ActivityTable from './ActivityTable.vue';
+import MovimientosTable from './MovimientosTable.vue';
 import type { Movement } from './types';
 
 function makeMovement(overrides: Partial<Movement> = {}): Movement {
@@ -20,16 +20,16 @@ function makeMovement(overrides: Partial<Movement> = {}): Movement {
   };
 }
 
-describe('ActivityTable', () => {
+describe('MovimientosTable', () => {
   it('renders skeleton rows while loading', () => {
-    const w = mount(ActivityTable, {
+    const w = mount(MovimientosTable, {
       props: { rows: [], isLoading: true, hasActiveFilters: false },
     });
     expect(w.findAll('tbody tr').length).toBe(5);
   });
 
   it('renders the canonical empty state when no filters', () => {
-    const w = mount(ActivityTable, {
+    const w = mount(MovimientosTable, {
       props: { rows: [], isLoading: false, hasActiveFilters: false },
     });
     expect(w.text()).toContain('Sin movimientos');
@@ -37,7 +37,7 @@ describe('ActivityTable', () => {
   });
 
   it('renders the filtered empty state with clear button', async () => {
-    const w = mount(ActivityTable, {
+    const w = mount(MovimientosTable, {
       props: { rows: [], isLoading: false, hasActiveFilters: true },
     });
     expect(w.text()).toContain('Sin resultados');
@@ -48,7 +48,7 @@ describe('ActivityTable', () => {
   });
 
   it('renders the canonical 9-column header set', () => {
-    const w = mount(ActivityTable, {
+    const w = mount(MovimientosTable, {
       props: { rows: [makeMovement()], isLoading: false, hasActiveFilters: false },
     });
     const headers = w.findAll('thead th').map((th) => th.text());
@@ -66,19 +66,19 @@ describe('ActivityTable', () => {
   });
 
   it('renders sponsor label via getSponsorLabel', () => {
-    const w = mount(ActivityTable, {
+    const w = mount(MovimientosTable, {
       props: { rows: [makeMovement()], isLoading: false, hasActiveFilters: false },
     });
     expect(w.text()).toContain('COINAG');
   });
 
   it('renders status badge with semantic variant', () => {
-    const wPending = mount(ActivityTable, {
+    const wPending = mount(MovimientosTable, {
       props: { rows: [makeMovement({ status: 'PENDING' })], isLoading: false, hasActiveFilters: false },
     });
     expect(wPending.html()).toContain('text-warning');
 
-    const wDanger = mount(ActivityTable, {
+    const wDanger = mount(MovimientosTable, {
       props: { rows: [makeMovement({ status: 'FAILED' })], isLoading: false, hasActiveFilters: false },
     });
     expect(wDanger.html()).toContain('text-danger');
@@ -86,7 +86,7 @@ describe('ActivityTable', () => {
 
   it('emits row-click with the movement when a row is clicked', async () => {
     const movement = makeMovement();
-    const w = mount(ActivityTable, {
+    const w = mount(MovimientosTable, {
       props: { rows: [movement], isLoading: false, hasActiveFilters: false },
     });
     await w.find(`[data-testid="movement-row-${movement.id}"]`).trigger('click');
@@ -95,7 +95,7 @@ describe('ActivityTable', () => {
   });
 
   it('renders em-dash for missing optional fields', () => {
-    const w = mount(ActivityTable, {
+    const w = mount(MovimientosTable, {
       props: {
         rows: [makeMovement({ origin: null, destination: null, client: null })],
         isLoading: false,
@@ -107,7 +107,7 @@ describe('ActivityTable', () => {
   });
 
   it('formats amount with thousand separators + 2 decimals', () => {
-    const w = mount(ActivityTable, {
+    const w = mount(MovimientosTable, {
       props: {
         rows: [makeMovement({ amount: '1234567.5' })],
         isLoading: false,

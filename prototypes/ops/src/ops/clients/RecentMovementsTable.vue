@@ -5,7 +5,7 @@ import type { ClientMovement } from './types';
 // RecentMovementsTable — implements Requirement 6 (recent movements
 // section composition) read-only per Decision 6: rows render with
 // `cursor-default` and no hover effect because the canonical movement
-// detail modal belongs to `ops-financial-dashboard` (not yet migrated).
+// detail modal belongs to `ops-movimientos` (not yet migrated).
 // When that capability lands, this component is extended to emit
 // `row-click` and the page wires the modal opening.
 // ════════════════════════════════════════════════════════════════════
