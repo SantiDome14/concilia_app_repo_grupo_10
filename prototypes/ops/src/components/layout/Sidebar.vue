@@ -17,6 +17,7 @@ import {
   FlaskConical,
   BarChart3,
   Columns,
+  ClipboardList,
 } from 'lucide-vue-next';
 import { ROUTE_PATHS, ROUTE_NAMES } from '@/config/routes';
 import { useAuth } from '@/composables/useAuth';
@@ -69,6 +70,17 @@ const blocks: NavBlock[] = [
     items: [
       { to: ROUTE_PATHS.MODULO_B, name: ROUTE_NAMES.MODULO_B, label: 'Módulo B', icon: LayoutGrid },
       { to: ROUTE_PATHS.MODULO_C, name: ROUTE_NAMES.MODULO_C, label: 'Módulo C', icon: Database },
+    ],
+  },
+  {
+    label: 'Configuración',
+    items: [
+      {
+        to: ROUTE_PATHS.INSTRUCTIONS,
+        name: ROUTE_NAMES.INSTRUCTIONS,
+        label: 'Instrucciones',
+        icon: ClipboardList,
+      },
     ],
   },
 ];

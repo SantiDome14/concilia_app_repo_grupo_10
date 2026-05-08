@@ -97,6 +97,38 @@ export const routes: RouteRecordRaw[] = [
       block: 'Bloque 2',
     },
   },
+  // ─── OPS domain modules ────────────────────────────────────────────
+  {
+    path: ROUTE_PATHS.INSTRUCTIONS,
+    name: ROUTE_NAMES.INSTRUCTIONS,
+    component: () => import('@/pages/Instructions.vue'),
+    meta: {
+      requiresAuth: true,
+      layout: 'shell',
+      breadcrumb: 'Instrucciones',
+      block: 'Configuración',
+    },
+  },
+  // Legacy URL absorbed into the new /instructions surface.
+  // Per ops-instructions Requirement 1.
+  {
+    path: '/settings/instructions',
+    redirect: ROUTE_PATHS.INSTRUCTIONS,
+  },
+  {
+    path: '/settings/instructions/:id',
+    redirect: (to) => ({
+      path: ROUTE_PATHS.INSTRUCTIONS,
+      query: { edit: String(to.params.id) },
+    }),
+  },
+  {
+    path: '/settings/instructions/:id/view',
+    redirect: (to) => ({
+      path: ROUTE_PATHS.INSTRUCTIONS,
+      query: { detail: String(to.params.id) },
+    }),
+  },
   // ─── Component playground (dev mode only — kept registered always
   //     so the route works even when Sidebar visibility is gated; the
   //     entry in the sidebar checks `import.meta.env.DEV`). ─────────

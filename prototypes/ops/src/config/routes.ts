@@ -19,6 +19,8 @@ export const ROUTE_PATHS = {
   MODULO_A: '/modulo-a',
   MODULO_B: '/modulo-b',
   MODULO_C: '/modulo-c',
+  // OPS domain modules (per `ops-instructions` capability + future siblings).
+  INSTRUCTIONS: '/instructions',
   // Component playground (dev mode only — gated in Sidebar by import.meta.env.DEV).
   PLAYGROUND_FORMS: '/playground/forms',
   PLAYGROUND_CHARTS: '/playground/charts',
@@ -35,6 +37,7 @@ export const ROUTE_NAMES = {
   MODULO_A: 'modulo-a',
   MODULO_B: 'modulo-b',
   MODULO_C: 'modulo-c',
+  INSTRUCTIONS: 'instructions',
   PLAYGROUND_FORMS: 'playground-forms',
   PLAYGROUND_CHARTS: 'playground-charts',
   PLAYGROUND_LAYOUT: 'playground-layout',
