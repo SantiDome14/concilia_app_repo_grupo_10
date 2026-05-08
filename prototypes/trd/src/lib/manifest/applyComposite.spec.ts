@@ -1,0 +1,194 @@
+import { describe, it, expect } from 'vitest';
+import { applyComposite } from './applyComposite';
+import { computeImputation } from './computeImputation';
+import type { ApplyDeps } from './applyTypes';
+import type { Action, AuditEntry, Manifest } from '@/types/manifest';
+
+function makeDeps(): {
+  deps: ApplyDeps;
+  audit: AuditEntry[];
+  warns: { ch: string; m: string }[];
+} {
+  const audit: AuditEntry[] = [];
+  const warns: { ch: string; m: string }[] = [];
+  const deps: ApplyDeps = {
+    auditAppend: (e) => audit.push(e),
+    toast: { success: () => {}, error: () => {} },
+    afterMutation: () => {},
+    recompute: (token) => (token === 'imputacion' ? computeImputation : undefined),
+    devWarn: (ch, m) => warns.push({ ch, m }),
+  };
+  return { deps, audit, warns };
+}
+
+const manifest: Manifest = {
+  app: 'demo',
+  module: 'test',
+  required_imputations: ['cliente_id', 'cuenta_id'],
+};
+
+describe('applyComposite', () => {
+  it('applies update_fields and set_fields of every enabled action in order', () => {
+    const a1: Action = {
+      id: 'a1',
+      dimension: 'imputacion',
+      label: 'A1',
+      on_confirm: { update_fields: ['cliente_id'] },
+    };
+    const a2: Action = {
+      id: 'a2',
+      dimension: 'imputacion',
+      label: 'A2',
+      on_confirm: { update_fields: ['cuenta_id'], set_fields: { 'aux.flag': true } },
+    };
+    const record: Record<string, unknown> = { id: 'R-1' };
+    const { deps } = makeDeps();
+    applyComposite(
+      {
+        manifestKey: 'demo.test',
+        manifest,
+        axisId: 'imputacion',
+        record,
+        enabledActions: [a1, a2],
+        formValues: { cliente_id: 'C-1', cuenta_id: 'CU-9' },
+        userId: 'U-1',
+      },
+      deps,
+    );
+    expect(record.cliente_id).toBe('C-1');
+    expect(record.cuenta_id).toBe('CU-9');
+    expect((record.aux as Record<string, unknown>).flag).toBe(true);
+  });
+
+  it('runs ONE recompute even when multiple actions declare it', () => {
+    const a1: Action = {
+      id: 'a1',
+      dimension: 'imputacion',
+      label: 'A1',
+      on_confirm: { update_fields: ['cliente_id'], recompute: ['imputacion'] },
+    };
+    const a2: Action = {
+      id: 'a2',
+      dimension: 'imputacion',
+      label: 'A2',
+      on_confirm: { update_fields: ['cuenta_id'], recompute: ['imputacion'] },
+    };
+    const a3: Action = {
+      id: 'a3',
+      dimension: 'imputacion',
+      label: 'A3',
+      on_confirm: { recompute: ['imputacion'] },
+    };
+    const record: Record<string, unknown> = { id: 'R-1' };
+    const captured = { count: 0 };
+    const deps: ApplyDeps = {
+      auditAppend: () => {},
+      toast: { success: () => {}, error: () => {} },
+      afterMutation: () => {},
+      recompute: (token) =>
+        token === 'imputacion'
+          ? (rec, m) => {
+              captured.count += 1;
+              return computeImputation(rec, m);
+            }
+          : undefined,
+      devWarn: () => {},
+    };
+    applyComposite(
+      {
+        manifestKey: 'demo.test',
+        manifest,
+        axisId: 'imputacion',
+        record,
+        enabledActions: [a1, a2, a3],
+        formValues: { cliente_id: 'C-1', cuenta_id: 'CU-1' },
+        userId: 'U-1',
+      },
+      deps,
+    );
+    expect(captured.count).toBe(1);
+    expect(record._imputacion_state).toBe('imputado');
+  });
+
+  it('emits ONE audit entry with kind:"composite" and child_action_ids[]', () => {
+    const a1: Action = {
+      id: 'a1',
+      dimension: 'imputacion',
+      label: 'A1',
+      on_confirm: { update_fields: ['cliente_id'] },
+    };
+    const a2: Action = {
+      id: 'a2',
+      dimension: 'imputacion',
+      label: 'A2',
+      on_confirm: { update_fields: ['cuenta_id'] },
+    };
+    const a3: Action = {
+      id: 'a3',
+      dimension: 'imputacion',
+      label: 'A3',
+      on_confirm: { set_fields: { 'aux.flag': true } },
+    };
+    const audit: AuditEntry[] = [];
+    const deps: ApplyDeps = {
+      auditAppend: (e) => audit.push(e),
+      toast: { success: () => {}, error: () => {} },
+      afterMutation: () => {},
+      recompute: () => undefined,
+      devWarn: () => {},
+    };
+    const record: Record<string, unknown> = { id: 'R-9' };
+    applyComposite(
+      {
+        manifestKey: 'demo.test',
+        manifest,
+        axisId: 'imputacion',
+        record,
+        enabledActions: [a1, a2, a3],
+        formValues: { cliente_id: 'C-1', cuenta_id: 'CU-1' },
+        userId: 'U-1',
+      },
+      deps,
+    );
+    expect(audit).toHaveLength(1);
+    expect(audit[0]).toMatchObject({
+      kind: 'composite',
+      action_id: 'composite:imputacion',
+      record_id: 'R-9',
+      axis_id: 'imputacion',
+      child_action_ids: ['a1', 'a2', 'a3'],
+    });
+  });
+
+  it('warns on unknown recompute token', () => {
+    const a1: Action = {
+      id: 'a1',
+      dimension: 'imputacion',
+      label: 'A1',
+      on_confirm: { recompute: ['totalmente_inventado'] },
+    };
+    const warns: { ch: string; m: string }[] = [];
+    const deps: ApplyDeps = {
+      auditAppend: () => {},
+      toast: { success: () => {}, error: () => {} },
+      afterMutation: () => {},
+      recompute: () => undefined,
+      devWarn: (ch, m) => warns.push({ ch, m }),
+    };
+    applyComposite(
+      {
+        manifestKey: 'demo.test',
+        manifest,
+        axisId: 'imputacion',
+        record: { id: 'R-1' },
+        enabledActions: [a1],
+        formValues: {},
+        userId: 'U-1',
+      },
+      deps,
+    );
+    expect(warns).toEqual([
+      { ch: 'MANIFEST', m: 'unknown recompute token: totalmente_inventado' },
+    ]);
+  });
+});

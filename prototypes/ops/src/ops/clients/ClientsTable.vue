@@ -1,0 +1,114 @@
+<script setup lang="ts">
+import { Check, X } from 'lucide-vue-next';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import Skeleton from '@/components/feedback/Skeleton.vue';
+import EmptyState from '@/components/feedback/EmptyState.vue';
+import { derivePortalStatus } from './portal-status';
+import type { Client } from './types';
+
+// ════════════════════════════════════════════════════════════════════
+// ClientsTable — implements Requirements 2 (canonical column set,
+// row click → detail page) and 10 (loading / empty / error surfaces).
+// The page owns the data fetch + filter state and passes the rows here.
+// The table emits `row-click` for clicks anywhere on a row.
+// ════════════════════════════════════════════════════════════════════
+
+const props = defineProps<{
+  rows: Client[];
+  isLoading: boolean;
+  /** True when at least one filter is active — drives the EmptyState copy. */
+  hasActiveFilters: boolean;
+}>();
+
+const emit = defineEmits<{
+  'row-click': [client: Client];
+  'clear-filters': [];
+}>();
+
+function onRowClick(client: Client): void {
+  emit('row-click', client);
+}
+</script>
+
+<template>
+  <div class="rounded-lg border border-b-2 bg-card">
+    <table class="w-full table-auto text-sm">
+      <thead class="border-b border-b-2 text-[10px] font-bold uppercase tracking-wider text-t-4">
+        <tr>
+          <th class="px-4 py-3 text-left">CUIT/CUIL</th>
+          <th class="px-4 py-3 text-left">Nombre</th>
+          <th class="px-4 py-3 text-left">Email</th>
+          <th class="px-4 py-3 text-left">Activo</th>
+          <th class="px-4 py-3 text-left">Estado Portal</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Loading -->
+        <template v-if="props.isLoading">
+          <tr v-for="i in 5" :key="`skeleton-${i}`">
+            <td class="px-4 py-3"><Skeleton class="h-4 w-32" /></td>
+            <td class="px-4 py-3"><Skeleton class="h-4 w-40" /></td>
+            <td class="px-4 py-3"><Skeleton class="h-4 w-48" /></td>
+            <td class="px-4 py-3"><Skeleton class="h-4 w-6" /></td>
+            <td class="px-4 py-3"><Skeleton class="h-4 w-28" /></td>
+          </tr>
+        </template>
+
+        <!-- Empty -->
+        <tr v-else-if="props.rows.length === 0">
+          <td :colspan="5" class="px-4 py-8">
+            <EmptyState
+              v-if="!props.hasActiveFilters"
+              title="No hay clientes"
+              description="No se encontraron clientes para mostrar"
+            />
+            <EmptyState
+              v-else
+              title="Sin resultados para los filtros aplicados"
+              description="Probá ajustar los filtros o limpialos para ver todos los clientes."
+            />
+            <div v-if="props.hasActiveFilters" class="mt-3 flex justify-center">
+              <Button variant="ghost" @click="emit('clear-filters')">
+                Limpiar filtros
+              </Button>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Rows -->
+        <tr
+          v-for="row in props.rows"
+          v-else
+          :key="row.id"
+          class="cursor-pointer border-t border-b-1 transition-colors hover:bg-card-2"
+          :data-testid="`client-row-${row.id}`"
+          @click="onRowClick(row)"
+        >
+          <td class="px-4 py-3 font-mono text-t-2">{{ row.tax_number || '—' }}</td>
+          <td class="px-4 py-3 text-t-1">{{ row.name || '—' }}</td>
+          <td class="max-w-md truncate px-4 py-3 text-t-3" :title="row.email ?? ''">
+            {{ row.email || '—' }}
+          </td>
+          <td class="px-4 py-3">
+            <Check
+              v-if="row.is_active"
+              class="h-4 w-4 text-success"
+              :aria-label="'Activo'"
+            />
+            <X
+              v-else
+              class="h-4 w-4 text-danger"
+              :aria-label="'Inactivo'"
+            />
+          </td>
+          <td class="px-4 py-3">
+            <Badge :variant="derivePortalStatus(row).tone">
+              {{ derivePortalStatus(row).label }}
+            </Badge>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</template>

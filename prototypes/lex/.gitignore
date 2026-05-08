@@ -1,0 +1,33 @@
+# ─── Node / build ────────────────────────────────────────────
+node_modules
+dist
+dist-ssr
+*.local
+coverage
+.nyc_output
+
+# ─── Environment ────────────────────────────────────────────
+# NOTE: .env.qa and .env.production are committed intentionally.
+# Only .env.local (never committed) holds secrets per developer.
+.env
+.env.local
+.env.*.local
+
+# ─── Editor / OS ─────────────────────────────────────────────
+.DS_Store
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.tsbuildinfo
+
+# ─── Logs ───────────────────────────────────────────────────
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*

@@ -14,6 +14,9 @@ import {
   Settings,
   HelpCircle,
   LogOut,
+  FlaskConical,
+  BarChart3,
+  Columns,
 } from 'lucide-vue-next';
 import { ROUTE_PATHS, ROUTE_NAMES } from '@/config/routes';
 import { useAuth } from '@/composables/useAuth';
@@ -69,6 +72,39 @@ const blocks: NavBlock[] = [
     ],
   },
 ];
+
+// Dev-only block: component playground. Gated by import.meta.env.DEV
+// so production builds (and apps cloned from this template) do NOT
+// inflate their sidebar nor their bundle with showcase pages.
+// The routes are always registered (they're code-split anyway), but
+// the entries are only rendered in dev.
+const devBlocks: NavBlock[] = import.meta.env.DEV
+  ? [
+      {
+        label: 'Componentes (dev)',
+        items: [
+          {
+            to: ROUTE_PATHS.PLAYGROUND_FORMS,
+            name: ROUTE_NAMES.PLAYGROUND_FORMS,
+            label: 'Forms',
+            icon: FlaskConical,
+          },
+          {
+            to: ROUTE_PATHS.PLAYGROUND_CHARTS,
+            name: ROUTE_NAMES.PLAYGROUND_CHARTS,
+            label: 'Charts',
+            icon: BarChart3,
+          },
+          {
+            to: ROUTE_PATHS.PLAYGROUND_LAYOUT,
+            name: ROUTE_NAMES.PLAYGROUND_LAYOUT,
+            label: 'Layout',
+            icon: Columns,
+          },
+        ],
+      },
+    ]
+  : [];
 
 const collapsed = ref(false);
 const accountOpen = ref(false);
@@ -127,7 +163,7 @@ function handleHelp(): void {
   <nav
     :class="
       cn(
-        'fixed left-0 top-0 bottom-0 z-50 flex min-h-screen flex-col gap-0.5 border-r border-b-1 bg-surf px-2.5 py-4 transition-[width] duration-200',
+        'fixed left-0 top-0 bottom-0 z-[600] flex min-h-screen flex-col gap-0.5 border-r border-b-1 bg-surf px-2.5 py-4 transition-[width] duration-200',
         collapsed ? 'w-[60px]' : 'w-[200px]',
       )
     "
@@ -137,7 +173,7 @@ function handleHelp(): void {
       type="button"
       :class="
         cn(
-          'absolute -right-2.5 top-[18px] z-[51] flex h-5 w-5 items-center justify-center rounded-full border border-b-3 bg-card-2 text-t-3 transition-colors hover:border-b-3 hover:bg-card hover:text-t-1',
+          'absolute -right-2.5 top-[18px] z-[601] flex h-5 w-5 items-center justify-center rounded-full border border-b-3 bg-card-2 text-t-3 transition-colors hover:border-b-3 hover:bg-card hover:text-t-1',
         )
       "
       aria-label="Toggle sidebar"
@@ -188,7 +224,7 @@ function handleHelp(): void {
     </RouterLink>
 
     <!-- Blocks -->
-    <template v-for="block in blocks" :key="block.label">
+    <template v-for="block in [...blocks, ...devBlocks]" :key="block.label">
       <div
         v-if="!collapsed"
         class="px-2.5 pb-[5px] pt-3 text-[9px] font-extrabold uppercase tracking-wider text-t-4"

@@ -97,6 +97,42 @@ export const routes: RouteRecordRaw[] = [
       block: 'Bloque 2',
     },
   },
+  // ─── Component playground (dev mode only — kept registered always
+  //     so the route works even when Sidebar visibility is gated; the
+  //     entry in the sidebar checks `import.meta.env.DEV`). ─────────
+  {
+    path: ROUTE_PATHS.PLAYGROUND_FORMS,
+    name: ROUTE_NAMES.PLAYGROUND_FORMS,
+    component: () => import('@/pages/playground/PlaygroundForms.vue'),
+    meta: {
+      requiresAuth: true,
+      layout: 'shell',
+      breadcrumb: 'Forms',
+      block: 'Componentes',
+    },
+  },
+  {
+    path: ROUTE_PATHS.PLAYGROUND_CHARTS,
+    name: ROUTE_NAMES.PLAYGROUND_CHARTS,
+    component: () => import('@/pages/playground/PlaygroundCharts.vue'),
+    meta: {
+      requiresAuth: true,
+      layout: 'shell',
+      breadcrumb: 'Charts',
+      block: 'Componentes',
+    },
+  },
+  {
+    path: ROUTE_PATHS.PLAYGROUND_LAYOUT,
+    name: ROUTE_NAMES.PLAYGROUND_LAYOUT,
+    component: () => import('@/pages/playground/PlaygroundLayoutDemos.vue'),
+    meta: {
+      requiresAuth: true,
+      layout: 'shell',
+      breadcrumb: 'Layout',
+      block: 'Componentes',
+    },
+  },
   {
     path: ROUTE_PATHS.NOT_FOUND,
     name: ROUTE_NAMES.NOT_FOUND,
