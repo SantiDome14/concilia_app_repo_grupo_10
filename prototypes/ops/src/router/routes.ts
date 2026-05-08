@@ -157,6 +157,15 @@ export const routes: RouteRecordRaw[] = [
     path: '/users',
     redirect: (to) => ({ path: ROUTE_PATHS.CLIENTS, query: to.query }),
   },
+  // Legacy account-instruction wizard URL absorbed into the detail modal
+  // per ops-account-instructions Requirement 1.
+  {
+    path: '/clients/:id/instructions/create',
+    redirect: (to) => ({
+      path: `/clients/${String(to.params.id)}`,
+      query: { ...to.query, createInstruction: '1' },
+    }),
+  },
   // ─── Component playground (dev mode only — kept registered always
   //     so the route works even when Sidebar visibility is gated; the
   //     entry in the sidebar checks `import.meta.env.DEV`). ─────────
