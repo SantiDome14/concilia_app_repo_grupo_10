@@ -10,8 +10,10 @@ import {
 } from '@/components/ui/select';
 import EmptyState from '@/components/feedback/EmptyState.vue';
 import { cn } from '@/lib/cn';
+import CoinagHealthIndicator from './CoinagHealthIndicator.vue';
 import { activeSponsors, getSponsorByCode } from './sponsor-catalog';
 import type {
+  CoinagHealth,
   PspAccount,
   PspMovement,
   SponsorBalance,
@@ -23,6 +25,18 @@ const props = defineProps<{
   accounts: PspAccount[];
   /** Used to compute DR / CR cumulatives per account. */
   movements: PspMovement[];
+  /**
+   * Coinag health snapshot. Per
+   * `refine-ops-psp-tab-aware-header-and-multi-sponsor` the health
+   * chip lives inside the COINAG sponsor row's collapsible header
+   * (NOT in the page header — that slot is reserved for ViewToggle
+   * + main CTA per active tab). For sponsors without a health
+   * endpoint (BIND / Banco de Comercio in v1), the slot renders a
+   * neutral `Sin integración` placeholder.
+   */
+  health?: CoinagHealth | null;
+  /** True when the Coinag health query is in error state. */
+  isHealthStale?: boolean;
 }>();
 
 // ════════════════════════════════════════════════════════════════════
@@ -259,6 +273,23 @@ const sponsorOptions = computed(() => {
             <div class="text-[11px] text-t-4">{{ formatCheckedAt(row.checkedAt) }}</div>
           </div>
           <div class="flex flex-wrap items-center gap-3.5">
+            <!-- Per-sponsor status chip (relocated from the page header
+                 per `refine-ops-psp-tab-aware-header-and-multi-sponsor`). -->
+            <CoinagHealthIndicator
+              v-if="row.code === 'COINAG'"
+              :health="props.health ?? null"
+              :is-stale="props.isHealthStale"
+              @click.stop
+            />
+            <span
+              v-else
+              class="inline-flex items-center gap-1.5 rounded-full border border-b-1 bg-card px-2.5 py-1 text-[11px] font-medium text-t-4"
+              :data-testid="`sponsor-status-${row.code}`"
+              @click.stop
+            >
+              <span class="h-1.5 w-1.5 rounded-full bg-t-4" aria-hidden="true" />
+              <span>Sin integración</span>
+            </span>
             <div class="flex flex-col items-end gap-0.5">
               <span
                 class="text-[9px] font-extrabold uppercase tracking-wider text-t-4"

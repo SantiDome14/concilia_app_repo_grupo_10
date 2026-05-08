@@ -8,22 +8,22 @@ import {
 } from './sponsor-catalog';
 
 describe('SPONSOR_CATALOG — open-set abstraction', () => {
-  it('exposes Coinag as active and BIND + Banco de Comercio as roadmap', () => {
+  it('lists COINAG, BIND, and BANCO_DE_COMERCIO as active per refine-ops-psp-tab-aware-header-and-multi-sponsor', () => {
     const codes = SPONSOR_CATALOG.map((s) => s.code);
     expect(codes).toContain('COINAG');
     expect(codes).toContain('BIND');
     expect(codes).toContain('BANCO_DE_COMERCIO');
 
     expect(SPONSOR_CATALOG.find((s) => s.code === 'COINAG')?.active).toBe(true);
-    expect(SPONSOR_CATALOG.find((s) => s.code === 'BIND')?.active).toBe(false);
-    expect(SPONSOR_CATALOG.find((s) => s.code === 'BANCO_DE_COMERCIO')?.active).toBe(false);
+    expect(SPONSOR_CATALOG.find((s) => s.code === 'BIND')?.active).toBe(true);
+    expect(SPONSOR_CATALOG.find((s) => s.code === 'BANCO_DE_COMERCIO')?.active).toBe(true);
   });
 });
 
 describe('activeSponsors', () => {
-  it('returns only active entries', () => {
+  it('returns every catalog entry in display order', () => {
     const codes = activeSponsors().map((s) => s.code);
-    expect(codes).toEqual(['COINAG']);
+    expect(codes).toEqual(['COINAG', 'BIND', 'BANCO_DE_COMERCIO']);
   });
 });
 
@@ -55,10 +55,10 @@ describe('getSponsorLabel', () => {
 });
 
 describe('isActiveSponsor', () => {
-  it('returns true only for active sponsors', () => {
+  it('returns true for every active sponsor in the catalog', () => {
     expect(isActiveSponsor('COINAG')).toBe(true);
-    expect(isActiveSponsor('BIND')).toBe(false);
-    expect(isActiveSponsor('BANCO_DE_COMERCIO')).toBe(false);
+    expect(isActiveSponsor('BIND')).toBe(true);
+    expect(isActiveSponsor('BANCO_DE_COMERCIO')).toBe(true);
   });
 
   it('returns false for unknown / null inputs', () => {

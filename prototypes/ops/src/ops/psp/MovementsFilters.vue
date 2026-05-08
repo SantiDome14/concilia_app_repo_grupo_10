@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/cn';
 import { activeSponsors } from './sponsor-catalog';
 import type { SponsorCode } from './types';
+import type { CatalogOption } from '@/ops/movimientos/catalog';
 
 // ════════════════════════════════════════════════════════════════════
 // MovementsFilters — implements part of Requirement 5.
@@ -22,6 +23,12 @@ import type { SponsorCode } from './types';
 // sponsor in the current view) ABOVE the filter row, and the filter
 // row itself (search + 3 selects). Fully presentational; the parent
 // owns the state via v-model + emits.
+//
+// Type / status / origin options come from a closed catalog (per
+// `refine-ops-psp-tab-aware-header-and-multi-sponsor`); each option
+// is `{ value, label }` so the dropdown can render a human-readable
+// label (e.g. `COLLECTOR IN`) while the on-the-wire value remains
+// snake_case (e.g. `COLLECTOR_IN`).
 // ════════════════════════════════════════════════════════════════════
 
 const props = defineProps<{
@@ -35,10 +42,10 @@ const props = defineProps<{
   /** Counts of movements per sponsor in the CURRENT view (after filters). */
   countsBySponsor: Record<SponsorCode, number>;
   hasActiveFilters: boolean;
-  /** Type / origin / status options come from the backend; the parent passes a closed set. */
-  typeOptions: string[];
-  statusOptions: string[];
-  originOptions: string[];
+  /** Type / origin / status options come from the closed catalog. */
+  typeOptions: ReadonlyArray<CatalogOption>;
+  statusOptions: ReadonlyArray<CatalogOption>;
+  originOptions: ReadonlyArray<CatalogOption>;
 }>();
 
 const emit = defineEmits<{
@@ -140,7 +147,9 @@ const originModel = computed<string>({
         </SelectTrigger>
         <SelectContent>
           <SelectItem :value="ALL">Todos los tipos</SelectItem>
-          <SelectItem v-for="opt in props.typeOptions" :key="opt" :value="opt">{{ opt }}</SelectItem>
+          <SelectItem v-for="opt in props.typeOptions" :key="opt.value" :value="opt.value">
+            {{ opt.label }}
+          </SelectItem>
         </SelectContent>
       </Select>
 
@@ -150,7 +159,9 @@ const originModel = computed<string>({
         </SelectTrigger>
         <SelectContent>
           <SelectItem :value="ALL">Todos los estados</SelectItem>
-          <SelectItem v-for="opt in props.statusOptions" :key="opt" :value="opt">{{ opt }}</SelectItem>
+          <SelectItem v-for="opt in props.statusOptions" :key="opt.value" :value="opt.value">
+            {{ opt.label }}
+          </SelectItem>
         </SelectContent>
       </Select>
 
@@ -160,7 +171,9 @@ const originModel = computed<string>({
         </SelectTrigger>
         <SelectContent>
           <SelectItem :value="ALL">Todos los orígenes</SelectItem>
-          <SelectItem v-for="opt in props.originOptions" :key="opt" :value="opt">{{ opt }}</SelectItem>
+          <SelectItem v-for="opt in props.originOptions" :key="opt.value" :value="opt.value">
+            {{ opt.label }}
+          </SelectItem>
         </SelectContent>
       </Select>
 

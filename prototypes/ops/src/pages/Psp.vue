@@ -2,8 +2,10 @@
 import { computed, ref, watch } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import { useRoute, useRouter } from 'vue-router';
-import { ShieldCheck } from 'lucide-vue-next';
+import { Plus } from 'lucide-vue-next';
+import { toast } from 'vue-sonner';
 import { Button } from '@/components/ui/button';
+import { ViewToggle, type ViewMode } from '@/components/views';
 import { cn } from '@/lib/cn';
 import { useCapabilities } from '@/composables/useCapabilities';
 import {
@@ -14,7 +16,6 @@ import {
   listSponsorBalances,
 } from '@/ops/psp/api';
 import ReconciliationBanner from '@/ops/psp/ReconciliationBanner.vue';
-import CoinagHealthIndicator from '@/ops/psp/CoinagHealthIndicator.vue';
 import PosicionKpis from '@/ops/psp/PosicionKpis.vue';
 import PosicionTree from '@/ops/psp/PosicionTree.vue';
 import MovimientosKpis from '@/ops/psp/MovimientosKpis.vue';
@@ -24,6 +25,11 @@ import AccountsTable from '@/ops/psp/AccountsTable.vue';
 import SwiftTransactionsDrawer from '@/ops/psp/SwiftTransactionsDrawer.vue';
 import WhitelistAccountModal from '@/ops/clients/WhitelistAccountModal.vue';
 import { listCurrencies } from '@/ops/clients/api';
+import {
+  MOVEMENT_TYPE_OPTIONS,
+  MOVEMENT_STATUS_OPTIONS,
+  MOVEMENT_ORIGIN_OPTIONS,
+} from '@/ops/movimientos/catalog';
 import type { PspAccount, PspTab, SponsorCode } from '@/ops/psp/types';
 
 // ════════════════════════════════════════════════════════════════════
@@ -40,7 +46,16 @@ const queryClient = useQueryClient();
 const { can } = useCapabilities();
 
 const canRead = computed(() => can('psp:read') || can('OPS_ADMIN'));
-const canWhitelist = computed(() => can('psp:whitelist') || can('OPS_ADMIN'));
+// Per `refine-ops-psp-tab-aware-header-and-multi-sponsor` the page-level
+// `Habilitar cuenta` CTA is retired. The capability `psp:whitelist` is
+// preserved on the modal call-site (drawer-context invocation, when
+// re-cabled by `extend-ops-psp-whitelist-from-drawer`).
+const canCreateMovement = computed(
+  () => can('psp:create-movement') || can('OPS_ADMIN'),
+);
+const canCreateAccount = computed(
+  () => can('psp:create-account') || can('OPS_ADMIN'),
+);
 
 // ─── Tab state with URL + localStorage persistence (Requirement 1) ──
 const VALID_TABS: PspTab[] = ['posicion', 'movimientos', 'cuentas'];
@@ -80,6 +95,13 @@ const initialTab: PspTab =
   'posicion';
 
 const activeTab = ref<PspTab>(initialTab);
+
+// Per-page ViewToggle state. Per
+// `refine-ops-psp-tab-aware-header-and-multi-sponsor` the toggle is
+// rendered structurally on Movimientos and Cuentas tabs; v1 falls
+// through to the `list` render for `cards` and `kanban` modes (the
+// alt-view bodies are owned by `extend-ops-psp-alternative-views`).
+const viewMode = ref<ViewMode>('list');
 
 // ─── Cross-tab sponsor filter + per-tab query state ─────────────────
 const sponsorFilter = ref<SponsorCode | null>(
@@ -279,11 +301,24 @@ watch(
   { immediate: true },
 );
 
-// ─── Whitelist modal (Requirement 7 — REUSE from ops-clients) ───────
-const whitelistOpen = ref(false);
-function openWhitelist(): void {
-  whitelistOpen.value = true;
+// ─── Page-level main CTAs (tab-aware per `refine-ops-psp-tab-aware-header-and-multi-sponsor`) ───
+function onCrearMovimiento(): void {
+  toast.info('Crear movimiento', {
+    description: 'Pendiente de wireado al backend (extend-ops-psp-create-movement)',
+  });
 }
+
+function onCrearCuenta(): void {
+  toast.info('Crear cuenta', {
+    description: 'Pendiente de wireado al backend (extend-ops-psp-create-account)',
+  });
+}
+
+// ─── Whitelist modal — preserved as a drawer-context surface ────────
+// Per the same change, the page-header `Habilitar cuenta` CTA is
+// retired; the modal stays mounted for re-cabling from the SWIFT
+// transactions drawer (extend-ops-psp-whitelist-from-drawer).
+const whitelistOpen = ref(false);
 
 function onWhitelistCreated(): void {
   void queryClient.invalidateQueries({ queryKey: ['ops', 'psp', 'accounts'] });
@@ -298,14 +333,11 @@ const currenciesQuery = useQuery({
 });
 const currencies = computed(() => currenciesQuery.data.value ?? []);
 
-// Filter option lists for Movimientos (sourced from the current view).
-const typeOptions = computed(() =>
-  Array.from(new Set(movements.value.map((m) => m.type).filter(Boolean))).sort(),
-);
-const statusOptions = computed(() =>
-  Array.from(new Set(movements.value.map((m) => m.status).filter(Boolean))).sort(),
-);
-const originOptions = computed(() => ['MANUAL', 'SWIFT', 'AUTO']); // placeholder while the backend confirms
+// Filter option lists for Movimientos sourced from the closed catalog
+// (per `refine-ops-psp-tab-aware-header-and-multi-sponsor`).
+const typeOptions = MOVEMENT_TYPE_OPTIONS;
+const statusOptions = MOVEMENT_STATUS_OPTIONS;
+const originOptions = MOVEMENT_ORIGIN_OPTIONS;
 
 function clearMovementsFilters(): void {
   sponsorFilter.value = null;
@@ -331,7 +363,11 @@ const TAB_LABELS: Record<PspTab, string> = {
 
 <template>
   <div class="flex flex-col gap-5 p-6">
-    <!-- L1 page header -->
+    <!-- L1 page header — right-actions slot is tab-aware per
+         `refine-ops-psp-tab-aware-header-and-multi-sponsor`:
+         · Posición   → empty (informational drilldown)
+         · Movimientos → ViewToggle + Crear Movimiento
+         · Cuentas     → ViewToggle + Crear Cuenta -->
     <div class="flex items-center justify-between gap-4">
       <div>
         <h1 class="text-xl font-bold text-t-1">PSP</h1>
@@ -339,10 +375,31 @@ const TAB_LABELS: Record<PspTab, string> = {
           Posición, movimientos y cuentas operativas por banco sponsor.
         </p>
       </div>
-      <CoinagHealthIndicator
-        :health="healthQuery.data.value ?? null"
-        :is-stale="isHealthStale"
-      />
+      <div
+        v-if="activeTab !== 'posicion'"
+        class="flex items-center gap-3"
+        data-testid="psp-header-actions"
+      >
+        <ViewToggle v-model="viewMode" :views="['list', 'cards', 'kanban']" />
+        <Button
+          v-if="activeTab === 'movimientos' && canCreateMovement"
+          variant="primary"
+          data-testid="psp-create-movement-cta"
+          @click="onCrearMovimiento"
+        >
+          <Plus class="h-3.5 w-3.5" />
+          Crear Movimiento
+        </Button>
+        <Button
+          v-if="activeTab === 'cuentas' && canCreateAccount"
+          variant="primary"
+          data-testid="psp-create-account-cta"
+          @click="onCrearCuenta"
+        >
+          <Plus class="h-3.5 w-3.5" />
+          Crear Cuenta
+        </Button>
+      </div>
     </div>
 
     <!-- Reconciliation banner area -->
@@ -392,6 +449,8 @@ const TAB_LABELS: Record<PspTab, string> = {
         :balances="balances"
         :accounts="accounts"
         :movements="posicionMovements"
+        :health="healthQuery.data.value ?? null"
+        :is-health-stale="isHealthStale"
       />
     </section>
 
@@ -461,16 +520,9 @@ const TAB_LABELS: Record<PspTab, string> = {
       data-testid="psp-tab-body-cuentas"
     >
       <div class="flex items-center justify-between">
-        <p class="text-sm text-t-3">{{ accounts.length }} cuenta{{ accounts.length === 1 ? '' : 's' }}</p>
-        <Button
-          v-if="canWhitelist"
-          variant="primary"
-          data-testid="psp-whitelist-cta"
-          @click="openWhitelist"
-        >
-          <ShieldCheck class="h-3.5 w-3.5" />
-          Habilitar cuenta
-        </Button>
+        <p class="text-sm text-t-3">
+          {{ accounts.length }} cuenta{{ accounts.length === 1 ? '' : 's' }}
+        </p>
       </div>
       <AccountsTable
         :rows="accounts"

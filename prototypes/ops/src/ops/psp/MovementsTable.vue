@@ -4,6 +4,10 @@ import { Button } from '@/components/ui/button';
 import Skeleton from '@/components/feedback/Skeleton.vue';
 import EmptyState from '@/components/feedback/EmptyState.vue';
 import { getSponsorLabel } from './sponsor-catalog';
+import {
+  getMovementStatusLabel,
+  getMovementTypeLabel,
+} from '@/ops/movimientos/catalog';
 import type { PspMovement } from './types';
 
 // ════════════════════════════════════════════════════════════════════
@@ -94,9 +98,9 @@ function statusVariant(status: string): 'success' | 'warning' | 'danger' | 'neut
           :data-testid="`movement-row-${row.id}`"
         >
           <td class="px-4 py-3 font-mono text-xs text-t-3">{{ row.date }}</td>
-          <td class="px-4 py-3 text-t-2">{{ row.type || '—' }}</td>
+          <td class="px-4 py-3 text-t-2">{{ getMovementTypeLabel(row.type) }}</td>
           <td class="px-4 py-3">
-            <Badge :variant="statusVariant(row.status)">{{ row.status || '—' }}</Badge>
+            <Badge :variant="statusVariant(row.status)">{{ getMovementStatusLabel(row.status) }}</Badge>
           </td>
           <td class="px-4 py-3 text-right font-mono text-t-1">${{ formatAmount(row.amount) }}</td>
           <td class="px-4 py-3 text-t-3">{{ row.partner || '—' }}</td>

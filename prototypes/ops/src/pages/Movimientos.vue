@@ -11,6 +11,11 @@ import {
 import MovimientosFilters from '@/ops/movimientos/MovimientosFilters.vue';
 import MovimientosTable from '@/ops/movimientos/MovimientosTable.vue';
 import MovementDetailsModal from '@/ops/movimientos/MovementDetailsModal.vue';
+import {
+  MOVEMENT_TYPE_OPTIONS,
+  MOVEMENT_STATUS_OPTIONS,
+  MOVEMENT_ORIGIN_OPTIONS,
+} from '@/ops/movimientos/catalog';
 import type { Movement, MovementDetails } from '@/ops/movimientos/types';
 import type { SponsorCode } from '@/ops/psp/types';
 
@@ -93,13 +98,10 @@ const movementsCountsBySponsor = computed<Record<SponsorCode, number>>(() => {
   return counts;
 });
 
-const typeOptions = computed(() =>
-  Array.from(new Set(movements.value.map((m) => m.type).filter(Boolean))).sort(),
-);
-const statusOptions = computed(() =>
-  Array.from(new Set(movements.value.map((m) => m.status).filter(Boolean))).sort(),
-);
-const originOptions = computed(() => ['MANUAL', 'SWIFT', 'AUTO']);
+// Closed catalog per `refine-ops-psp-tab-aware-header-and-multi-sponsor`.
+const typeOptions = MOVEMENT_TYPE_OPTIONS;
+const statusOptions = MOVEMENT_STATUS_OPTIONS;
+const originOptions = MOVEMENT_ORIGIN_OPTIONS;
 
 function clearFilters(): void {
   sponsorFilter.value = null;

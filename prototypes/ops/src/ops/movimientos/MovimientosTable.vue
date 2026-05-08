@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import Skeleton from '@/components/feedback/Skeleton.vue';
 import EmptyState from '@/components/feedback/EmptyState.vue';
 import { getSponsorLabel } from '@/ops/psp/sponsor-catalog';
+import { getMovementTypeLabel, getMovementStatusLabel } from './catalog';
 import type { Movement } from './types';
 
 // ════════════════════════════════════════════════════════════════════
@@ -98,7 +99,7 @@ function formatAmount(value: string): string {
           @click="emit('row-click', row)"
         >
           <td class="whitespace-nowrap px-4 py-3 font-mono text-xs text-t-3">{{ row.date }}</td>
-          <td class="px-4 py-3 text-t-2">{{ row.type || '—' }}</td>
+          <td class="px-4 py-3 text-t-2">{{ getMovementTypeLabel(row.type) }}</td>
           <td class="max-w-[180px] truncate px-4 py-3 text-t-3" :title="row.origin ?? ''">
             {{ row.origin || '—' }}
           </td>
@@ -110,7 +111,7 @@ function formatAmount(value: string): string {
             ${{ formatAmount(row.amount) }}
           </td>
           <td class="px-4 py-3">
-            <Badge :variant="statusVariant(row.status)">{{ row.status || '—' }}</Badge>
+            <Badge :variant="statusVariant(row.status)">{{ getMovementStatusLabel(row.status) }}</Badge>
           </td>
           <td class="px-4 py-3 text-t-2">{{ getSponsorLabel(row.sponsor) }}</td>
           <td class="max-w-[180px] truncate px-4 py-3 text-t-2" :title="row.client ?? ''">

@@ -3,9 +3,14 @@ import type { BancoSponsor, SponsorCode } from './types';
 // ════════════════════════════════════════════════════════════════════
 // sponsor-catalog — open-set Banco Sponsor catalog per Decision 2.
 //
-// Today: Coinag active. Roadmap: BIND + Banco de Comercio. Adding a
-// new sponsor = one entry here; no other code changes (the rest of
-// the codebase loops over `activeSponsors()`).
+// All three banco sponsors are now `active` per
+// `refine-ops-psp-tab-aware-header-and-multi-sponsor`. COINAG has a
+// real backend integration (balances + health); BIND and
+// Banco de Comercio render structurally in the Posición tree and the
+// Movimientos sponsor cards even before their integration ships. The
+// UI degrades gracefully for sponsors without backend data (saldo
+// `$0.00`, cuentas `0`, neutral `Sin integración` chip in the
+// per-sponsor status slot).
 //
 // When the catalog graduates to a backend-driven `GET /sponsors`
 // endpoint (see design.md Open question 1), this file becomes a
@@ -14,8 +19,8 @@ import type { BancoSponsor, SponsorCode } from './types';
 // ════════════════════════════════════════════════════════════════════
 
 /**
- * Canonical catalog. Order is the display order in the
- * Disponibilidad tab cards row and in the Movimientos sponsor cards.
+ * Canonical catalog. Order is the display order in the Posición tab
+ * tree and in the Movimientos sponsor cards.
  */
 export const SPONSOR_CATALOG: ReadonlyArray<BancoSponsor> = [
   {
@@ -28,13 +33,13 @@ export const SPONSOR_CATALOG: ReadonlyArray<BancoSponsor> = [
   {
     code: 'BIND',
     label: 'BIND',
-    active: false, // roadmap
+    active: true, // structurally listed; backend integration pending
     tone: 'info',
   },
   {
     code: 'BANCO_DE_COMERCIO',
     label: 'Banco de Comercio',
-    active: false, // roadmap
+    active: true, // structurally listed; backend integration pending
     tone: 'brand',
   },
 ];
