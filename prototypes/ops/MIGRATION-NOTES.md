@@ -334,19 +334,27 @@ Sin scrollbar customization (a diferencia de LEX).
 
 ## Migration design decisions (overriding the legacy structure)
 
-### Decision PSP-1 — `ops-psp-home` + `ops-psp-accounts` adopt the Módulo B shape (with Banco Sponsor as the agg dimension)
+### Decision PSP-1 — `ops-psp` is ONE capability with the Módulo B shape (3 tabs: Disponibilidad / Movimientos / Cuentas)
 
-**Decided:** 2026-05-08 (pre-shipping note).
+**Decided:** 2026-05-08 (pre-shipping note). **Refined:** 2026-05-08 (after
+reviewing the legacy two-route split in detail).
 
-The legacy `PSPHome.vue` (6,604 LOC) and `PSPAccounts.vue` (1,798 LOC) are the
-two heaviest OPS pages remaining. When their migration changes (`add-ops-psp-home`,
-`add-ops-psp-accounts`) are scoped, the canonical layout SHALL be the Type-A shape
-of `_core-template/src/pages/ModuloB.vue` — a Type-A page with three internal
-sub-modules surfaced as tabs (NOT segmentation):
+The legacy ships PSP across **two separate routes**:
 
-- **Posición** — KPIs consolidados + filtros (**banco sponsor / moneda**) + tree expansible **banco sponsor → cuenta** con posición neta.
-- **Movimientos** — KPIs + ledger table paginado + filtros (search, tipo, origen, estado).
-- **Cuentas / Cola de Asignación** — depende del módulo: PSP-home muestra Cola de Asignación (warning banner + retiros pendientes); PSP-accounts muestra Cuentas (lista con SWIFT transactions).
+- `PSPHome.vue` (6,604 LOC) — internally has its own Movements/Accounts tabs + a balance reconciliation banner.
+- `PSPAccounts.vue` (1,798 LOC) — selector + SWIFT transactions table (what would be a drill-down inside the new Cuentas tab).
+
+In the new template paradigm both routes collapse into **one capability
+`ops-psp`** registered at `/psp`, with three tabs (NOT segmentation — these are
+sub-modules within PSP), per the Módulo B shape:
+
+- **Disponibilidad** — saldos disponibles agrupados por banco sponsor (consolidated balances per integration partner: Coinag today; BIND + Banco de Comercio in the roadmap). Includes the legacy reconciliation banner stacked above the section when at least one sponsor reports a mismatch.
+- **Movimientos** — ledger paginado con filtros (search + tipo + origen + estado) + cards/contadores por sponsor que actúan también como filtro de un solo click ("ver solo movimientos de Coinag").
+- **Cuentas** — lista de cuentas operativas; click en una cuenta abre un drill-down (drawer o sub-vista) con sus SWIFT transactions (lo que hoy es el legacy `PSPAccounts.vue`). Whitelist account modal sigue accesible desde aquí.
+
+This is the same unification principle used by `ops-instructions` (3 legacy
+routes → 1 page). The legacy two-route split was not a UX choice — it was a
+side-effect of the legacy not having a sub-module-tabs primitive.
 
 #### Naming substitution vs. the template
 
@@ -381,8 +389,13 @@ canonical link between an account and its banco sponsor.
 
 #### Header CTA + reconciliation banner
 
-Header CTA principal queda visible siempre, anclado al título (en PSP-home será
-"Habilitar cuenta" o "Reconciliación"; en PSP-accounts será "Importar SWIFT").
+Header CTA principal queda visible siempre, anclado al título. CTAs candidatos
+(a confirmar en el design del change): `Habilitar cuenta` (cuando la tab activa
+es Cuentas), `Importar SWIFT` (cuando la tab activa es Cuentas o Movimientos),
+`Reconciliación` (siempre — ejecuta el chequeo manual). El primer CTA del
+header debe ser el principal del módulo (no per-tab); CTAs específicos de cada
+tab pueden vivir en el header de la sección, no en el L1.
+
 The legacy Coinag balance reconciliation banner SHALL render above the tabs as
 a persistent alert from `core-error-handling`. Once BIND and Banco de Comercio
 land, the reconciliation banner becomes per-banco-sponsor (an array of alerts,
@@ -393,17 +406,18 @@ single-alert slot.
 
 The Módulo B paradigm is built specifically for treasury-style modules where
 one page has multiple cohesive sub-views over the same domain data. PSP fits
-perfectly: cuentas multi-currency-multi-banco, ledger de movements, cola de
-assignation/whitelisting — that's the canonical decomposition. Adopting the
-shape now (rather than reinventing per page) keeps PSP-home and PSP-accounts
-visually + behaviourally consistent with each other and with the future
+perfectly: disponibilidad multi-banco, ledger de movements multi-sponsor,
+cuentas con drill-down de SWIFT — that's the canonical decomposition.
+Adopting the shape now (rather than reinventing the legacy two-route split)
+keeps PSP visually + behaviourally consistent with the future
 `ops-financial-dashboard` (which is Activity + Quotes — a sibling Type-A with
 its own tab decomposition).
 
 **Out of scope for this note:** the exact Requirement set lands when the
-`add-ops-psp-*` changes are written. This note captures the architectural
-constraint so the design phase doesn't drift into a different shape and so
-the Banco Sponsor abstraction is open-set from day one.
+`add-ops-psp` change is written (single capability, not split). This note
+captures the architectural constraint so the design phase doesn't drift into
+a different shape and so the Banco Sponsor abstraction is open-set from day
+one.
 
 ### Decision OPS-CLIENTS-1 — Type-A master + Type-B detail (NOT Módulo B)
 
