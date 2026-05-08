@@ -150,7 +150,7 @@ The page SHALL render: a `Skeleton` placeholder for each tab's body while the ta
 
 ### Requirement: The PSP module CTA + tab access MUST be gated by capability
 
-The sidebar entry `PSP` SHALL be visible only to users with `psp:read` capability or `OPS_ADMIN`. The page itself respects the same gate — direct navigation to `/psp` for users without the capability shows the canonical 403 surface. CTAs WITHIN the page have their own gates: the page-header main CTAs are tab-aware per the `tab-aware right-actions` requirement — `Crear Movimiento` requires `psp:create-movement || OPS_ADMIN`, `Crear Cuenta` requires `psp:create-account || OPS_ADMIN`. Future CTAs (Edit Label, SWIFT Import) will declare their own capability strings when those follow-ups land. The `psp:whitelist` capability is no longer used by a page-header CTA (the `Habilitar cuenta` page-level CTA is retired per the REMOVED requirement); when the whitelist surface is re-cabled (e.g. from the SWIFT transactions drawer), the trigger SHALL re-introduce a `psp:whitelist || OPS_ADMIN` gate at that drawer-context call site. For v1 inline gating uses `OPS_ADMIN` as fallback for every capability check until `ops-roles` consolidates.
+The sidebar entry `PSP` SHALL be visible only to users with `psp:read` capability or `OPS_ADMIN`. The page itself respects the same gate — direct navigation to `/psp` for users without the capability shows the canonical 403 surface. CTAs WITHIN the page have their own gates: the page-header main CTAs are tab-aware per the `tab-aware right-actions` requirement — `Crear Movimiento` requires `psp:create-movement || OPS_ADMIN`, `Crear Cuenta` requires `psp:whitelist || OPS_ADMIN` (in the PSP domain, "crear cuenta" IS the whitelist flow — the CTA is the page-header relocation of the previous body-level `Habilitar cuenta`, same surface, same gate). Future CTAs (Edit Label, SWIFT Import) will declare their own capability strings when those follow-ups land. For v1 inline gating uses `OPS_ADMIN` as fallback for every capability check until `ops-roles` consolidates.
 
 #### Scenario: ADMIN role sees the sidebar entry and the page
 
@@ -162,7 +162,7 @@ The sidebar entry `PSP` SHALL be visible only to users with `psp:read` capabilit
 
 - **GIVEN** an authenticated user whose roles include `psp:read` only
 - **WHEN** the sidebar renders
-- **THEN** the `PSP` entry is visible (read capability suffices for the entry); navigating to `/psp` renders all 3 tabs in read-only mode; the `Crear Movimiento` and `Crear Cuenta` CTAs are hidden in their respective tabs (gated by `psp:create-movement` / `psp:create-account`); the `<ViewToggle>` remains visible in Movimientos and Cuentas
+- **THEN** the `PSP` entry is visible (read capability suffices for the entry); navigating to `/psp` renders all 3 tabs in read-only mode; the `Crear Movimiento` and `Crear Cuenta` CTAs are hidden in their respective tabs (gated by `psp:create-movement` / `psp:whitelist`); the `<ViewToggle>` remains visible in Movimientos and Cuentas
 
 #### Scenario: User with no PSP capability is redirected to 403
 
@@ -288,7 +288,7 @@ The `/psp` page header right-actions area SHALL be tab-aware. The slot is reserv
 
 - **Posición** — empty (no `<ViewToggle>`, no main CTA). The Posición tab is an informational drilldown; mutations are out of scope for this view.
 - **Movimientos** — `<ViewToggle :views="['list','cards','kanban']">` + main CTA `Crear Movimiento` (variant `primary`). The CTA is gated by capability `psp:create-movement || OPS_ADMIN`. In v1 the handler shows a toast (`Crear movimiento — pendiente de wireado al backend`); the real mutation surface is owned by the follow-up `extend-ops-psp-create-movement` change.
-- **Cuentas** — `<ViewToggle :views="['list','cards','kanban']">` + main CTA `Crear Cuenta` (variant `primary`). The CTA is gated by capability `psp:create-account || OPS_ADMIN`. In v1 the handler shows a toast (`Crear cuenta — pendiente de wireado al backend`); the real mutation surface is owned by the follow-up `extend-ops-psp-create-account` change.
+- **Cuentas** — `<ViewToggle :views="['list','cards','kanban']">` + main CTA `Crear Cuenta` (variant `primary`). The CTA is gated by capability `psp:whitelist || OPS_ADMIN` and opens `<WhitelistAccountModal>` (reused from `ops-clients` per the cross-capability composition contract). In the PSP domain, "crear cuenta" IS the whitelist flow: the operator selects a client and enables a Coinag CVU/CBU as an outbound destination. The CTA is the page-header rename and relocation of the previous body-level `Habilitar cuenta` CTA — same modal surface, same gate, same `created` event invalidating `['ops', 'psp', 'accounts', ...]`.
 
 The `<ViewToggle>` mounts in v1 but the `cards` and `kanban` view modes fall through to the `list` render (the alt-view bodies are owned by the `extend-ops-psp-alternative-views` follow-up). The toggle is structurally present so the operator sees the canonical layout; switching modes does not break the page.
 
@@ -304,11 +304,11 @@ The `<ViewToggle>` mounts in v1 but the `cards` and `kanban` view modes fall thr
 - **WHEN** the page renders
 - **THEN** the page header right-actions slot shows the `<ViewToggle>` (3 icons: list / cards / kanban) followed by a primary button `Crear Movimiento`; clicking the button surfaces a toast `Crear movimiento — pendiente de wireado al backend`
 
-#### Scenario: Cuentas tab shows ViewToggle + Crear Cuenta
+#### Scenario: Cuentas tab shows ViewToggle + Crear Cuenta wired to the whitelist modal
 
 - **GIVEN** an authenticated `OPS_ADMIN` user navigates to `/psp?tab=cuentas`
 - **WHEN** the page renders
-- **THEN** the page header right-actions slot shows the `<ViewToggle>` followed by a primary button `Crear Cuenta`; clicking the button surfaces a toast `Crear cuenta — pendiente de wireado al backend`; the legacy `Habilitar cuenta` CTA is NOT rendered (the whitelist surface is preserved as a component for drawer-context invocation per the REMOVED requirement above)
+- **THEN** the page header right-actions slot shows the `<ViewToggle>` followed by a primary button `Crear Cuenta`; clicking the button opens `<WhitelistAccountModal>` (the same modal that was previously triggered by the body-level `Habilitar cuenta` CTA — same picker-prefixed flow, same gate `psp:whitelist || OPS_ADMIN`, same invalidation on `created`); the legacy body-level `Habilitar cuenta` CTA is NOT rendered (it has been replaced by this page-header relocation)
 
 #### Scenario: Switching tabs swaps the right-actions content live
 

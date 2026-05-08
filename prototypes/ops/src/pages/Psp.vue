@@ -46,15 +46,17 @@ const queryClient = useQueryClient();
 const { can } = useCapabilities();
 
 const canRead = computed(() => can('psp:read') || can('OPS_ADMIN'));
-// Per `refine-ops-psp-tab-aware-header-and-multi-sponsor` the page-level
-// `Habilitar cuenta` CTA is retired. The capability `psp:whitelist` is
-// preserved on the modal call-site (drawer-context invocation, when
-// re-cabled by `extend-ops-psp-whitelist-from-drawer`).
+// `Crear Cuenta` is the page-header rename of the previous body-level
+// `Habilitar cuenta` CTA — same surface (`<WhitelistAccountModal>`,
+// reused from `ops-clients`), same capability gate. In PSP, the
+// canonical way to "crear cuenta" IS to whitelist a Coinag account.
+const canCreateAccount = computed(
+  () => can('psp:whitelist') || can('OPS_ADMIN'),
+);
+// `Crear Movimiento` ships as a placeholder until
+// `extend-ops-psp-create-movement` lands a real mutation surface.
 const canCreateMovement = computed(
   () => can('psp:create-movement') || can('OPS_ADMIN'),
-);
-const canCreateAccount = computed(
-  () => can('psp:create-account') || can('OPS_ADMIN'),
 );
 
 // ─── Tab state with URL + localStorage persistence (Requirement 1) ──
@@ -302,22 +304,23 @@ watch(
 );
 
 // ─── Page-level main CTAs (tab-aware per `refine-ops-psp-tab-aware-header-and-multi-sponsor`) ───
+//
+// `Crear Movimiento` ships as a placeholder until
+// `extend-ops-psp-create-movement` lands a real mutation surface.
 function onCrearMovimiento(): void {
   toast.info('Crear movimiento', {
     description: 'Pendiente de wireado al backend (extend-ops-psp-create-movement)',
   });
 }
 
+// `Crear Cuenta` opens `<WhitelistAccountModal>` — the same modal that
+// was previously triggered by the body-level `Habilitar cuenta` CTA.
+// In the PSP domain, "crear cuenta" IS the whitelist flow.
 function onCrearCuenta(): void {
-  toast.info('Crear cuenta', {
-    description: 'Pendiente de wireado al backend (extend-ops-psp-create-account)',
-  });
+  whitelistOpen.value = true;
 }
 
-// ─── Whitelist modal — preserved as a drawer-context surface ────────
-// Per the same change, the page-header `Habilitar cuenta` CTA is
-// retired; the modal stays mounted for re-cabling from the SWIFT
-// transactions drawer (extend-ops-psp-whitelist-from-drawer).
+// ─── Whitelist modal (Requirement: PSP module CTA + tab access) ────
 const whitelistOpen = ref(false);
 
 function onWhitelistCreated(): void {
