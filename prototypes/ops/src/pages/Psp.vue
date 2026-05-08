@@ -13,10 +13,11 @@ import {
   listMovements,
   listSponsorBalances,
 } from '@/ops/psp/api';
-import { activeSponsors } from '@/ops/psp/sponsor-catalog';
-import SponsorBalanceCard from '@/ops/psp/SponsorBalanceCard.vue';
 import ReconciliationBanner from '@/ops/psp/ReconciliationBanner.vue';
 import CoinagHealthIndicator from '@/ops/psp/CoinagHealthIndicator.vue';
+import PosicionKpis from '@/ops/psp/PosicionKpis.vue';
+import PosicionTree from '@/ops/psp/PosicionTree.vue';
+import MovimientosKpis from '@/ops/psp/MovimientosKpis.vue';
 import MovementsFilters from '@/ops/psp/MovementsFilters.vue';
 import MovementsTable from '@/ops/psp/MovementsTable.vue';
 import AccountsTable from '@/ops/psp/AccountsTable.vue';
@@ -42,13 +43,24 @@ const canRead = computed(() => can('psp:read') || can('OPS_ADMIN'));
 const canWhitelist = computed(() => can('psp:whitelist') || can('OPS_ADMIN'));
 
 // ─── Tab state with URL + localStorage persistence (Requirement 1) ──
-const VALID_TABS: PspTab[] = ['disponibilidad', 'movimientos', 'cuentas'];
+const VALID_TABS: PspTab[] = ['posicion', 'movimientos', 'cuentas'];
+const LEGACY_TAB_ALIASES: Record<string, PspTab> = {
+  // Per `extend-ops-psp-posicion-shape` — the legacy ?tab=disponibilidad
+  // bookmark normalises to ?tab=posicion on first visit.
+  disponibilidad: 'posicion',
+};
 const LAST_TAB_KEY = 'ops:psp:lastTab';
+
+function normaliseTab(value: string | undefined): PspTab | null {
+  if (!value) return null;
+  if (VALID_TABS.includes(value as PspTab)) return value as PspTab;
+  if (LEGACY_TAB_ALIASES[value]) return LEGACY_TAB_ALIASES[value]!;
+  return null;
+}
 
 function readSavedTab(): PspTab | null {
   try {
-    const v = window.localStorage.getItem(LAST_TAB_KEY);
-    return VALID_TABS.includes(v as PspTab) ? (v as PspTab) : null;
+    return normaliseTab(window.localStorage.getItem(LAST_TAB_KEY) ?? undefined);
   } catch {
     return null;
   }
@@ -62,13 +74,10 @@ function writeSavedTab(tab: PspTab): void {
   }
 }
 
-const initialTab: PspTab = (() => {
-  const fromQuery = route.query.tab;
-  if (typeof fromQuery === 'string' && VALID_TABS.includes(fromQuery as PspTab)) {
-    return fromQuery as PspTab;
-  }
-  return readSavedTab() ?? 'disponibilidad';
-})();
+const initialTab: PspTab =
+  normaliseTab(typeof route.query.tab === 'string' ? route.query.tab : undefined) ??
+  readSavedTab() ??
+  'posicion';
 
 const activeTab = ref<PspTab>(initialTab);
 
@@ -154,10 +163,9 @@ const balancesQuery = useQuery({
 });
 
 const balances = computed(() => balancesQuery.data.value ?? []);
-
-function balanceForSponsor(code: SponsorCode) {
-  return balances.value.find((b) => b.sponsor === code) ?? null;
-}
+// `balanceForSponsor` was used by the deprecated `<SponsorBalanceCard>`
+// row-of-cards shape; replaced by `<PosicionTree>` which loops over
+// `activeSponsors()` and reads `balances` directly.
 
 // ─── Movements query (Requirement 5) ────────────────────────────────
 const movQueryParams = computed(() => ({
@@ -209,10 +217,28 @@ const accQueryParams = computed(() => ({
 const accountsQuery = useQuery({
   queryKey: computed(() => ['ops', 'psp', 'accounts', accQueryParams.value] as const),
   queryFn: () => listAccounts(accQueryParams.value),
-  enabled: computed(() => canRead.value && activeTab.value === 'cuentas'),
+  // Posición tab needs the accounts list for the tree drill-down too.
+  enabled: computed(
+    () =>
+      canRead.value &&
+      (activeTab.value === 'cuentas' || activeTab.value === 'posicion'),
+  ),
 });
 
 const accounts = computed(() => accountsQuery.data.value?.data ?? []);
+
+// Posición also needs a recent movements snapshot to compute DR/CR cumulatives.
+// We fetch a wide page (no filters) when the tab is active.
+const posicionMovementsQuery = useQuery({
+  queryKey: ['ops', 'psp', 'movements', 'posicion-snapshot'],
+  queryFn: () => listMovements({ page: 1, pageSize: 200 }),
+  refetchInterval: 60_000,
+  enabled: computed(() => canRead.value && activeTab.value === 'posicion'),
+});
+
+const posicionMovements = computed(
+  () => posicionMovementsQuery.data.value?.data ?? [],
+);
 
 const hasActiveAccountsFilters = computed(
   () => Boolean(sponsorFilter.value) || Boolean(accSearch.value),
@@ -297,7 +323,7 @@ function clearAccountsFilters(): void {
 }
 
 const TAB_LABELS: Record<PspTab, string> = {
-  disponibilidad: 'Disponibilidad',
+  posicion: 'Posición',
   movimientos: 'Movimientos',
   cuentas: 'Cuentas',
 };
@@ -310,7 +336,7 @@ const TAB_LABELS: Record<PspTab, string> = {
       <div>
         <h1 class="text-xl font-bold text-t-1">PSP</h1>
         <p class="text-xs text-t-4">
-          Disponibilidad, movimientos y cuentas operativas por banco sponsor.
+          Posición, movimientos y cuentas operativas por banco sponsor.
         </p>
       </div>
       <CoinagHealthIndicator
@@ -329,7 +355,7 @@ const TAB_LABELS: Record<PspTab, string> = {
       data-testid="psp-tabs"
     >
       <button
-        v-for="tab in (['disponibilidad', 'movimientos', 'cuentas'] as PspTab[])"
+        v-for="tab in (['posicion', 'movimientos', 'cuentas'] as PspTab[])"
         :key="tab"
         type="button"
         role="tab"
@@ -351,23 +377,22 @@ const TAB_LABELS: Record<PspTab, string> = {
 
     <!-- Tab body -->
 
-    <!-- ─── Disponibilidad ────────────────────────────────────────── -->
+    <!-- ─── Posición (strict Módulo B shape) ──────────────────────── -->
     <section
-      v-if="activeTab === 'disponibilidad'"
-      class="flex flex-col gap-4"
-      data-testid="psp-tab-body-disponibilidad"
+      v-if="activeTab === 'posicion'"
+      class="flex flex-col gap-5"
+      data-testid="psp-tab-body-posicion"
     >
-      <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <SponsorBalanceCard
-          v-for="sponsor in activeSponsors()"
-          :key="sponsor.code"
-          :sponsor="sponsor"
-          :balance="balanceForSponsor(sponsor.code)"
-          :is-active-filter="sponsorFilter === sponsor.code"
-          :is-clickable="true"
-          @select="(code: string) => (sponsorFilter = sponsorFilter === code ? null : code)"
-        />
-      </div>
+      <PosicionKpis
+        :balances="balances"
+        :movements="posicionMovements"
+        :accounts="accounts"
+      />
+      <PosicionTree
+        :balances="balances"
+        :accounts="accounts"
+        :movements="posicionMovements"
+      />
     </section>
 
     <!-- ─── Movimientos ──────────────────────────────────────────── -->
@@ -376,6 +401,7 @@ const TAB_LABELS: Record<PspTab, string> = {
       class="flex flex-col gap-4"
       data-testid="psp-tab-body-movimientos"
     >
+      <MovimientosKpis :movements="movements" />
       <MovementsFilters
         :search="movSearch"
         :sponsor="sponsorFilter"

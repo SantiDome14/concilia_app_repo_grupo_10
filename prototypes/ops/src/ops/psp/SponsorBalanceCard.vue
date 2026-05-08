@@ -5,9 +5,17 @@ import type { BancoSponsor, SponsorBalance } from './types';
 import { getSponsorByCode } from './sponsor-catalog';
 
 // ════════════════════════════════════════════════════════════════════
-// SponsorBalanceCard — implements Requirement 4. One card per active
-// banco sponsor showing balance + last-checked + click-to-filter
-// semantics (the parent listens to @select and toggles the filter).
+// SponsorBalanceCard — DEPRECATED (since `extend-ops-psp-posicion-shape`).
+//
+// The Posición tab now uses `<PosicionTree>` (sponsor → accounts tree
+// expansible per the strict Módulo B shape). This row-of-cards primitive
+// is no longer mounted by `Psp.vue`. Kept in the codebase for one
+// release cycle so any cross-capability consumer (none today) gets
+// notice; deletion is tracked as the follow-up
+// `chore-ops-psp-remove-deprecated-sponsor-balance-card`.
+//
+// Original purpose (pre-extension): one card per active banco sponsor
+// showing balance + last-checked + click-to-filter semantics.
 // ════════════════════════════════════════════════════════════════════
 
 const props = defineProps<{

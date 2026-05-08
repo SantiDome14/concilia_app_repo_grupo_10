@@ -7,7 +7,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 /** Closed enum of tab ids. URL `?tab=` query param uses these. */
-export type PspTab = 'disponibilidad' | 'movimientos' | 'cuentas';
+export type PspTab = 'posicion' | 'movimientos' | 'cuentas';
 
 /** Open-set sponsor codes. Catalog lives in `sponsor-catalog.ts`. */
 export type SponsorCode = string;

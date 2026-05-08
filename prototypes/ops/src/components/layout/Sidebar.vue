@@ -190,11 +190,11 @@ function handleHelp(): void {
       <div
         class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-brand text-xs font-extrabold text-white"
       >
-        A
+        O
       </div>
       <div v-if="!collapsed" class="flex flex-col gap-px">
-        <span class="text-[13px] font-bold tracking-tight text-t-1">APP · Ardua</span>
-        <span class="text-[10px] font-medium text-t-4">Tagline</span>
+        <span class="text-[13px] font-bold tracking-tight text-t-1">OPS</span>
+        <span class="text-[10px] font-medium text-t-4">Ardua Financial Core</span>
       </div>
     </div>
 
