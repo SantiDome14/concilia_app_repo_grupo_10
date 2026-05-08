@@ -12,33 +12,52 @@ import Skeleton from '@/components/feedback/Skeleton.vue';
 import type { Client } from './types';
 
 // ════════════════════════════════════════════════════════════════════
-// ClientFilters — implements Requirement 3.
+// ClientFilters — implements ops-clients Requirement 3.
 //
 // Single autocomplete combobox over `name | docket`. Typing debounces
 // the lookup (300 ms); selecting a result applies the filter. The
 // dropdown reuses the page-side fetch (passed via props) so this
 // component stays presentational — the page owns the network.
 //
-// `Limpiar filtros` ghost button appears whenever a filter is active.
+// Two modes:
+//   - `'filter'` (default) — emits `update:modelValue` with a string
+//     so the page can set `?name=` in the URL. Used by `<Clients>`.
+//   - `'picker'` — emits `pick` with the full `Client` object. Used by
+//     `<GenerateStatementModal>` (per `ops-statements` Decision 4 —
+//     reuse instead of rolling a new picker).
+//
+// `Limpiar filtros` ghost button appears in `'filter'` mode whenever a
+// filter is active; suppressed in `'picker'` mode (the modal owns its
+// own clear affordance via the selected-client chip's Cambiar link).
 // ════════════════════════════════════════════════════════════════════
 
-const props = defineProps<{
-  /** Currently applied search term (kept in sync with the URL by the page). */
-  modelValue: string;
-  /** Lookup results to render in the dropdown. */
-  suggestions: Client[];
-  /** Whether the lookup is in flight. */
-  isSearching: boolean;
-  /** Toggles the Limpiar button. */
-  hasActiveFilters: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    /** Currently applied search term (kept in sync with the URL by the page in 'filter' mode). */
+    modelValue: string;
+    /** Lookup results to render in the dropdown. */
+    suggestions: Client[];
+    /** Whether the lookup is in flight. */
+    isSearching: boolean;
+    /** Toggles the Limpiar button (filter mode only). */
+    hasActiveFilters: boolean;
+    /** Mode. Defaults to 'filter' — the legacy semantic. */
+    mode?: 'filter' | 'picker';
+    /** Custom placeholder; defaults to "Buscar por nombre o legajo…". */
+    placeholder?: string;
+  }>(),
+  { mode: 'filter', placeholder: 'Buscar por nombre o legajo…' },
+);
 
 const emit = defineEmits<{
   /** Fires after the 300 ms debounce — triggers the lookup. */
   search: [query: string];
-  /** Final filter applied — page sets `?name=` and reloads. */
+  /** Final filter applied — page sets `?name=` and reloads. (filter mode) */
   'update:modelValue': [value: string];
+  /** Cleared in filter mode. */
   'clear-filters': [];
+  /** Fires when the user picks a suggestion. (picker mode) */
+  pick: [client: Client];
 }>();
 
 // ─── Local input state (debounced into `search`) ────────────────────
@@ -66,11 +85,17 @@ function pickSuggestion(client: Client): void {
   const label = client.name || client.tax_number || '';
   inputValue.value = label;
   dropdownOpen.value = false;
-  emit('update:modelValue', label);
+  if (props.mode === 'picker') {
+    emit('pick', client);
+  } else {
+    emit('update:modelValue', label);
+  }
 }
 
 function applyCurrent(): void {
-  // User pressed Enter without picking — apply the typed string as the filter.
+  // Picker mode: Enter without picking is a no-op (the modal needs a real Client).
+  if (props.mode === 'picker') return;
+  // Filter mode: apply the typed string as the filter.
   dropdownOpen.value = false;
   emit('update:modelValue', inputValue.value.trim());
 }
@@ -92,7 +117,7 @@ function clear(): void {
           />
           <Input
             v-model="inputValue"
-            placeholder="Buscar por nombre o legajo…"
+            :placeholder="props.placeholder"
             class="pl-8"
             data-testid="clients-filter-input"
             @input="onInput"
@@ -136,7 +161,7 @@ function clear(): void {
     </Popover>
 
     <Button
-      v-if="props.hasActiveFilters"
+      v-if="props.mode === 'filter' && props.hasActiveFilters"
       variant="ghost"
       size="sm"
       data-testid="clients-clear-filters"

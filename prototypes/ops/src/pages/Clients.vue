@@ -2,13 +2,14 @@
 import { computed, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { useRoute, useRouter } from 'vue-router';
-import { UserPlus } from 'lucide-vue-next';
+import { UserPlus, FileText } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/composables/useCapabilities';
 import { listClients } from '@/ops/clients/api';
 import ClientsTable from '@/ops/clients/ClientsTable.vue';
 import ClientFilters from '@/ops/clients/ClientFilters.vue';
 import SignUpUserModal from '@/ops/clients/SignUpUserModal.vue';
+import GenerateStatementModal from '@/ops/statements/GenerateStatementModal.vue';
 import type { Client } from '@/ops/clients/types';
 
 // ════════════════════════════════════════════════════════════════════
@@ -18,6 +19,8 @@ import type { Client } from '@/ops/clients/types';
 //
 // Capabilities (declared inline per design.md cross-capability table):
 //   - clients:invite     → Alta CTA (or fallback to OPS_ADMIN role)
+//   - clients:statement  → Generar Statement CTA (per ops-statements
+//                          Requirement 6)
 //
 // `useCapabilities()` gracefully degrades to false when no roles are
 // configured (template's first-run mode).
@@ -28,6 +31,7 @@ const router = useRouter();
 const { can } = useCapabilities();
 
 const canInvite = computed(() => can('clients:invite') || can('OPS_ADMIN'));
+const canGenerateStatement = computed(() => can('clients:statement') || can('OPS_ADMIN'));
 
 // ─── Filters (URL-reflected, debounced for text per Requirement 3) ───
 const PAGE_SIZE_KEY = 'ops:clients:pageSize';
@@ -117,6 +121,12 @@ const signUpOpen = ref(false);
 function openSignUp(): void {
   signUpOpen.value = true;
 }
+
+// ─── Generate Statement modal (no client pre-populated from master) ─
+const statementOpen = ref(false);
+function openStatement(): void {
+  statementOpen.value = true;
+}
 </script>
 
 <template>
@@ -129,15 +139,26 @@ function openSignUp(): void {
           Listado de clientes operativos del sistema.
         </p>
       </div>
-      <Button
-        v-if="canInvite"
-        variant="primary"
-        data-testid="clients-invite-cta"
-        @click="openSignUp"
-      >
-        <UserPlus class="h-4 w-4" />
-        Alta de Cliente en APP
-      </Button>
+      <div class="flex items-center gap-2">
+        <Button
+          v-if="canGenerateStatement"
+          variant="secondary"
+          data-testid="clients-statement-cta"
+          @click="openStatement"
+        >
+          <FileText class="h-4 w-4" />
+          Generar Statement
+        </Button>
+        <Button
+          v-if="canInvite"
+          variant="primary"
+          data-testid="clients-invite-cta"
+          @click="openSignUp"
+        >
+          <UserPlus class="h-4 w-4" />
+          Alta de Cliente en APP
+        </Button>
+      </div>
     </div>
 
     <!-- Filters row -->
@@ -192,5 +213,8 @@ function openSignUp(): void {
 
     <!-- SignUp modal -->
     <SignUpUserModal v-model:open="signUpOpen" />
+
+    <!-- Generate Statement modal (no client pre-populated from master entry) -->
+    <GenerateStatementModal v-model:open="statementOpen" />
   </div>
 </template>

@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { useRoute, useRouter } from 'vue-router';
-import { ArrowLeft, ShieldCheck } from 'lucide-vue-next';
+import { ArrowLeft, ShieldCheck, FileText } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Skeleton from '@/components/feedback/Skeleton.vue';
@@ -12,8 +12,9 @@ import { getClient, listCurrencies } from '@/ops/clients/api';
 import AccountCard from '@/ops/clients/AccountCard.vue';
 import RecentMovementsTable from '@/ops/clients/RecentMovementsTable.vue';
 import WhitelistAccountModal from '@/ops/clients/WhitelistAccountModal.vue';
+import GenerateStatementModal from '@/ops/statements/GenerateStatementModal.vue';
 import { derivePortalStatus } from '@/ops/clients/portal-status';
-import type { ClientWithAccounts } from '@/ops/clients/types';
+import type { Client, ClientWithAccounts } from '@/ops/clients/types';
 
 // ════════════════════════════════════════════════════════════════════
 // ClientDetail page — implements ops-clients Requirements 6, 7, 8, 9,
@@ -28,6 +29,7 @@ const router = useRouter();
 const { can } = useCapabilities();
 
 const canWhitelistByRole = computed(() => can('clients:whitelist') || can('OPS_ADMIN'));
+const canGenerateStatement = computed(() => can('clients:statement') || can('OPS_ADMIN'));
 
 const clientId = computed(() => String(route.params.id));
 
@@ -71,6 +73,13 @@ const canShowWhitelistCta = computed(
 
 const whitelistOpen = ref(false);
 
+// ─── Generate Statement (pre-populates the current client) ──────────
+const statementOpen = ref(false);
+const preselectedClient = computed<Client | null>(() => client.value);
+function openStatement(): void {
+  statementOpen.value = true;
+}
+
 function goBack(): void {
   void router.push('/clients');
 }
@@ -90,6 +99,19 @@ const portalInfo = computed(() => (client.value ? derivePortalStatus(client.valu
       <ArrowLeft class="h-3.5 w-3.5" />
       Volver a Clientes
     </button>
+
+    <!-- L1 header CTA row (anchored to the back-link area, before the main sections) -->
+    <div v-if="!isPending && !isError && client" class="-mt-2 flex justify-end">
+      <Button
+        v-if="canGenerateStatement"
+        variant="secondary"
+        data-testid="client-detail-statement-cta"
+        @click="openStatement"
+      >
+        <FileText class="h-3.5 w-3.5" />
+        Generar Statement
+      </Button>
+    </div>
 
     <!-- Loading -->
     <template v-if="isPending">
@@ -197,6 +219,12 @@ const portalInfo = computed(() => (client.value ? derivePortalStatus(client.valu
         v-model:open="whitelistOpen"
         :client-id="client.id"
         :currencies="currencies"
+      />
+
+      <!-- Generate Statement modal (pre-populates the current client) -->
+      <GenerateStatementModal
+        v-model:open="statementOpen"
+        :preselected-client="preselectedClient"
       />
     </template>
   </div>
