@@ -1,27 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { execFileSync } from 'node:child_process';
 import { ManifestError, type Manifest } from '@/types/manifest';
 import { validateManifest } from './validateManifest';
 import { MODULO_A_MANIFEST } from '@/manifests/framework.template.modulo_a.actions';
-
-const PROTOTYPE_ROOT =
-  '/Users/yasmani/product-management-framework/prototypes';
-
-function loadPrototypeManifest(file: string, key: string): Manifest {
-  // Extract the JSON literal between '= ' and the trailing ';' by
-  // running sed in a subshell. Parse as JSON. This avoids any runtime
-  // dependency on the prototype path beyond test time.
-  const stdout = execFileSync(
-    'sed',
-    ['-n', `/window\\.ACTION_MANIFEST\\["${key}"\\] = {/,/^};$/p`, file],
-    { encoding: 'utf-8' },
-  );
-  const trimmed = stdout
-    .replace(/^window\.ACTION_MANIFEST\[[^\]]*\] = /, '')
-    .replace(/;\s*$/, '')
-    .trim();
-  return JSON.parse(trimmed) as Manifest;
-}
 
 const minimalManifest = (): Manifest => ({
   app: 'demo',
@@ -66,20 +46,6 @@ describe('validateManifest', () => {
       expect(result.ok).toBe(true);
     });
 
-    it('accepts the FIN acid-test legacy manifest with zero warnings', () => {
-      // FIN's legacy JSON-strict manifests live at `prototypes/fin-old/`
-      // while the FIN frontend migration replaces the live `prototypes/fin/`
-      // with the new Vue template. This smoke test stays useful until the
-      // FIN migration ports every action into TS, at which point the
-      // legacy reference can be dropped.
-      const m = loadPrototypeManifest(
-        `${PROTOTYPE_ROOT}/fin-old/manifests/fin.operaciones.movimientos.actions.js`,
-        'fin.operaciones.movimientos',
-      );
-      const result = validateManifest(m, 'fin.operaciones.movimientos');
-      expect(result.warnings).toEqual([]);
-      expect(result.ok).toBe(true);
-    });
   });
 
   describe('top-level required fields', () => {

@@ -22,6 +22,7 @@ export const ROUTE_PATHS = {
   PSP: '/psp',
   MOVIMIENTOS: '/movimientos',
   COTIZACIONES: '/cotizaciones',
+  BANKS_ACCOUNTS: '/banks-accounts',
   NOT_FOUND: '/:pathMatch(.*)*',
 } as const;
 
@@ -37,6 +38,7 @@ export const ROUTE_NAMES = {
   PSP: 'psp',
   MOVIMIENTOS: 'movimientos',
   COTIZACIONES: 'cotizaciones',
+  BANKS_ACCOUNTS: 'banks-accounts',
   NOT_FOUND: 'not-found',
 } as const;
 

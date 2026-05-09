@@ -76,7 +76,7 @@ export const routes: RouteRecordRaw[] = [
       requiresAuth: true,
       layout: 'shell',
       breadcrumb: 'Instrucciones',
-      block: 'Configuración',
+      block: 'Catálogos',
     },
   },
   // Legacy URL absorbed into the new /instructions surface.
@@ -108,7 +108,7 @@ export const routes: RouteRecordRaw[] = [
       requiresAuth: true,
       layout: 'shell',
       breadcrumb: 'Clientes',
-      block: 'Operaciones',
+      block: 'Catálogos',
     },
   },
   {
@@ -119,7 +119,7 @@ export const routes: RouteRecordRaw[] = [
       requiresAuth: true,
       layout: 'shell',
       breadcrumb: 'Detalle del cliente',
-      block: 'Operaciones',
+      block: 'Catálogos',
     },
   },
   // Legacy /users path absorbed into /clients per ops-clients Requirement 11.
@@ -136,7 +136,7 @@ export const routes: RouteRecordRaw[] = [
       requiresAuth: true,
       layout: 'shell',
       breadcrumb: 'PSP',
-      block: 'Operaciones',
+      block: 'Custodia',
     },
   },
   // Legacy PSP routes absorbed per ops-psp Requirement 2.
@@ -176,6 +176,18 @@ export const routes: RouteRecordRaw[] = [
       layout: 'shell',
       breadcrumb: 'Cotizaciones',
       block: 'Operaciones',
+    },
+  },
+  // ops-banks-accounts: master catalog of Sociedad → Estructura → Cuenta.
+  {
+    path: ROUTE_PATHS.BANKS_ACCOUNTS,
+    name: ROUTE_NAMES.BANKS_ACCOUNTS,
+    component: () => import('@/pages/BanksAccounts.vue'),
+    meta: {
+      requiresAuth: true,
+      layout: 'shell',
+      breadcrumb: 'Bancos / Cuentas',
+      block: 'Catálogos',
     },
   },
   // Legacy /dashboard + /financial-dashboard redirect to the split surfaces
