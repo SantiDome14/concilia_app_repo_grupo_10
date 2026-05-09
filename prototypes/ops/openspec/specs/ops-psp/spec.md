@@ -156,13 +156,13 @@ The sidebar entry `PSP` SHALL be visible only to users with `psp:read` capabilit
 
 - **GIVEN** an authenticated user whose roles include `OPS_ADMIN`
 - **WHEN** the sidebar renders and the user navigates to `/psp`
-- **THEN** the `PSP` entry is visible under the `Operaciones` block; the page renders fully
+- **THEN** the `PSP` entry is visible under the `Custodia` block; the page renders fully
 
 #### Scenario: VIEWER role does NOT see the sidebar entry but can still deep-link with read capability
 
 - **GIVEN** an authenticated user whose roles include `psp:read` only
 - **WHEN** the sidebar renders
-- **THEN** the `PSP` entry is visible (read capability suffices for the entry); navigating to `/psp` renders all 3 tabs in read-only mode; the `Crear Movimiento` and `Crear Cuenta` CTAs are hidden in their respective tabs (gated by `psp:create-movement` / `psp:whitelist`); the `<ViewToggle>` remains visible in Movimientos and Cuentas
+- **THEN** the `PSP` entry is visible under the `Custodia` block (read capability suffices for the entry); navigating to `/psp` renders all 3 tabs in read-only mode; the `Crear Movimiento` and `Crear Cuenta` CTAs are hidden in their respective tabs (gated by `psp:create-movement` / `psp:whitelist`); the `<ViewToggle>` remains visible in Movimientos and Cuentas
 
 #### Scenario: User with no PSP capability is redirected to 403
 
@@ -172,7 +172,7 @@ The sidebar entry `PSP` SHALL be visible only to users with `psp:read` capabilit
 
 ### Requirement: The /psp page MUST be a Type-A page with 3 internal tabs (Posición / Movimientos / Cuentas) and URL-reflected active tab
 
-The page SHALL be implemented at `src/pages/Psp.vue` and registered at `/psp` with `meta.requiresAuth = true`, `meta.layout = 'shell'`, `meta.breadcrumb = 'PSP'`, and `meta.block = 'Operaciones'`. The composition SHALL follow the Type-A pattern from `core-module-types` with sub-module tabs (Módulo B shape per `MIGRATION-NOTES.md` Decision PSP-1): page header (title + tab-aware right-actions per the `tab-aware right-actions` Requirement), reconciliation banner area, tab indicator, active tab body. The active tab SHALL be reflected in the URL via `?tab=posicion|movimientos|cuentas` so back-navigation restores the tab. **The initial tab MUST default to `posicion` whenever no `?tab=` query parameter is set, regardless of any persisted state.** The page MAY still write `localStorage:ops:psp:lastTab` on tab switches for analytics or future re-introduction of saved state, but SHALL NOT read it as a default-tab source on mount.
+The page SHALL be implemented at `src/pages/Psp.vue` and registered at `/psp` with `meta.requiresAuth = true`, `meta.layout = 'shell'`, `meta.breadcrumb = 'PSP'`, and `meta.block = 'Custodia'`. The composition SHALL follow the Type-A pattern from `core-module-types` with sub-module tabs (Módulo B shape per `MIGRATION-NOTES.md` Decision PSP-1): page header (title + tab-aware right-actions per the `tab-aware right-actions` Requirement), reconciliation banner area, tab indicator, active tab body. The active tab SHALL be reflected in the URL via `?tab=posicion|movimientos|cuentas` so back-navigation restores the tab. **The initial tab MUST default to `posicion` whenever no `?tab=` query parameter is set, regardless of any persisted state.** The page MAY still write `localStorage:ops:psp:lastTab` on tab switches for analytics or future re-introduction of saved state, but SHALL NOT read it as a default-tab source on mount.
 
 #### Scenario: Authenticated navigation to /psp opens the Posición tab
 

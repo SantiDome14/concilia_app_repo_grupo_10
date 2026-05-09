@@ -5,7 +5,7 @@ TBD - created by archiving change add-ops-clients. Update Purpose after archive.
 ## Requirements
 ### Requirement: The Clients page MUST be a Type-A master list registered at `/clients`
 
-The page SHALL be implemented at `src/pages/Clients.vue` and registered in `src/router/routes.ts` with `meta.requiresAuth = true`, `meta.layout = 'shell'`, `meta.breadcrumb = 'Clientes'`, and `meta.block = 'Operaciones'`. The composition SHALL follow the Type-A pattern from `core-module-types`: page header (title + primary CTA `Alta de Cliente en APP`), filter row, paginated table, footer with pagination ellipsis. The legacy path `/users` SHALL redirect to `/clients`. The detail surface for an individual client SHALL NOT be a modal; per `core-module-types`, dense detail surfaces (info card + accounts + movements) belong on a Type-B page (see Requirement 6).
+The page SHALL be implemented at `src/pages/Clients.vue` and registered in `src/router/routes.ts` with `meta.requiresAuth = true`, `meta.layout = 'shell'`, `meta.breadcrumb = 'Clientes'`, and `meta.block = 'Catálogos'`. The composition SHALL follow the Type-A pattern from `core-module-types`: page header (title + primary CTA `Alta de Cliente en APP`), filter row, paginated table, footer with pagination ellipsis. The legacy path `/users` SHALL redirect to `/clients`. The detail surface for an individual client SHALL NOT be a modal; per `core-module-types`, dense detail surfaces (info card + accounts + movements) belong on a Type-B page (see Requirement 6).
 
 #### Scenario: Authenticated navigation to `/clients` renders the Type-A page shell
 
@@ -19,11 +19,11 @@ The page SHALL be implemented at `src/pages/Clients.vue` and registered in `src/
 - **WHEN** the router processes the redirect
 - **THEN** the user lands on `/clients?name=acme&page=2` with the master list rendered and filters applied; no intermediate redirect screen is shown
 
-#### Scenario: Sidebar surfaces the page under the `Operaciones` block
+#### Scenario: Sidebar surfaces the page under the `Catálogos` block
 
 - **GIVEN** the OPS sidebar is rendered
 - **WHEN** the user inspects the navigation
-- **THEN** there is an `Operaciones` block whose first entry is `Clientes` linking to `/clients`; the entry receives the active style when the route matches `/clients` or `/clients/:id`
+- **THEN** there is a `Catálogos` block whose first entry is `Clientes` linking to `/clients`; the entry receives the active style when the route matches `/clients` or `/clients/:id`
 
 ### Requirement: The list MUST expose `CUIT/CUIL`, `Nombre`, `Email`, `Activo` and `Estado Portal` columns and surface row click as detail navigation
 

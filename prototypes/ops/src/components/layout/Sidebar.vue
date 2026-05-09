@@ -16,6 +16,7 @@ import {
   Banknote,
   ArrowLeftRight,
   TrendingUp,
+  Landmark,
 } from 'lucide-vue-next';
 import { ROUTE_PATHS, ROUTE_NAMES } from '@/config/routes';
 import { useAuth } from '@/composables/useAuth';
@@ -61,12 +62,6 @@ const blocks: NavBlock[] = [
     label: 'Operaciones',
     items: [
       {
-        to: ROUTE_PATHS.CLIENTS,
-        name: ROUTE_NAMES.CLIENTS,
-        label: 'Clientes',
-        icon: Users,
-      },
-      {
         to: ROUTE_PATHS.MOVIMIENTOS,
         name: ROUTE_NAMES.MOVIMIENTOS,
         label: 'Movimientos',
@@ -78,6 +73,11 @@ const blocks: NavBlock[] = [
         label: 'Cotizaciones',
         icon: TrendingUp,
       },
+    ],
+  },
+  {
+    label: 'Custodia',
+    items: [
       {
         to: ROUTE_PATHS.PSP,
         name: ROUTE_NAMES.PSP,
@@ -87,13 +87,25 @@ const blocks: NavBlock[] = [
     ],
   },
   {
-    label: 'Configuración',
+    label: 'Catálogos',
     items: [
+      {
+        to: ROUTE_PATHS.CLIENTS,
+        name: ROUTE_NAMES.CLIENTS,
+        label: 'Clientes',
+        icon: Users,
+      },
       {
         to: ROUTE_PATHS.INSTRUCTIONS,
         name: ROUTE_NAMES.INSTRUCTIONS,
         label: 'Instrucciones',
         icon: ClipboardList,
+      },
+      {
+        to: ROUTE_PATHS.BANKS_ACCOUNTS,
+        name: ROUTE_NAMES.BANKS_ACCOUNTS,
+        label: 'Bancos / Cuentas',
+        icon: Landmark,
       },
     ],
   },
