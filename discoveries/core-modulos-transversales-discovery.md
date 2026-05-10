@@ -4,7 +4,7 @@ features: []
 status: En investigación
 owner: Yasmani Rodriguez
 created_at: 2026-05-06
-updated_at: 2026-05-06
+updated_at: 2026-05-10
 ---
 
 # Modulos transversales del financial-core — Adopcion por app
@@ -220,7 +220,234 @@ Una matriz cross-app tiende a verse mejor en una database de Notion que en una t
 
 ---
 
+## Enriquecimiento de REQs transversales — Sesion 2026-05-10
+
+Sesion de enriquecimiento sobre los REQs transversales que ya estaban en SENT TO DEV, agregando capas arquitectonicas sustantivas que no estaban en el cleanup original (2026-05-06). El estado SENT TO DEV no cambio — solo se actualizo el contenido de las descriptions.
+
+### Iniciativa contenedora
+
+Durante esta sesion se trabajo bajo la iniciativa [REQ-81 — Ardua Financial Core: Infraestructura Transversal del Core](https://arduasolutions.atlassian.net/browse/REQ-81), que agrupa los 6 REQs transversales en 2 capas: habilitante (REQ-68 Acciones, REQ-69 Vistas) + 4 modulos genericos (REQ-71 Inbox, REQ-73 Alertas, REQ-59 Reportes, REQ-74 Dashboard). Esto convive con [REQ-3 — Ardua Fintech: Financial Core as a Service](https://arduasolutions.atlassian.net/browse/REQ-3) como iniciativa estrategica de nivel superior.
+
+### REQs enriquecidos en esta sesion
+
+| REQ | Capa arquitectonica agregada |
+|---|---|
+| **REQ-73 ALERTAS** | Refactor `profile A/B/C/D` → `category triage/workflow/metric/cross_app_panel`. Slack como capacidad opcional V1 declarable por ALERT_TYPE (no commitment). Naturaleza del servicio: backend transversal + UI por app. Flujo de alta de ALERT_TYPEs (V1 formato estandar; V2 IA Playground evaluable). Reportes analiticos sobre alertas (funciones de generacion en REQ-59). REQ-52 y REQ-33 reformulados como pedidos pendientes desbloqueados por REQ-73 (vinculados via `is caused by`), ya no construcciones paralelas. |
+| **REQ-71 INBOX** | Renombrado conceptual como **Centro de Solicitudes**. Triggers automaticos al crear (`triggers_on_create`) + CTAs en el Drawer (`available_actions`). Naturaleza dual: una Solicitud no es registro pasivo, es espacio de trabajo que puede triggerear acciones del manifest del modulo destino. Notificaciones in-app primarias (badge sidebar + Web Notifications API) + Slack/email opcional declarable por tipo. Ejemplos del patron completo con 6 tipos ilustrativos. Aclaracion explicita: hoy ningun tipo esta definido — las areas los daran de alta progresivamente. |
+| **REQ-68 ACCIONES** | (1) Distincion `action_type: record_mutation` vs `function_invocation` como discriminador clave. (2) Modelo de Capabilities + Grupos + Panel admin como entregable de este REQ. (3) Audit trail + Stream de eventos mandatorio V1. (4) `activity_template` declarable por accion. (5) **Universalidad del menu** `⋯` en lista/card/Kanban. (6) **Agrupacion visual del menu en 2 niveles** (`ASIGNACION / IMPUTACION` vs `CONTEXTUALES`) con sub-grupos del nivel 2 solo en el primer bloque. (7) Iconografia (`✓` mutacion, `↗` invocacion). |
+| **REQ-59 REPORTES** | `ReportPermissions` con 4 niveles independientes (`view`/`execute`/`edit`/`delete`). Default seguro (sin declaracion explicita = solo creador + ADMIN_GROUP). V2 (IA Playground + Builder visual + Marketplace) reformulado como **exploracion sujeta a viabilidad** (no commitment). Las capabilities referenciadas son las mismas del capability provider de REQ-68 — misma fuente de verdad. |
+
+Estado final de los 4 REQs: SENT TO DEV (sin cambio de estado, solo enrichment del contenido).
+
+### Decisiones arquitectonicas transversales
+
+Decisiones tomadas en esta sesion que cruzan varios REQs y forman parte del paradigma del core post-enrichment:
+
+#### Distincion `record_mutation` vs `function_invocation`
+
+Discriminador critico introducido en REQ-68 que separa dos mecanicas:
+
+| Tipo | Que hace | Ejemplos |
+|---|---|---|
+| `record_mutation` | Completa campos / cambia estado del registro fuente | Asignar Banco y Cuenta, Asignar Cliente, Marcar Conciliado, Marcar como Intercompany, Marcar como No facturable |
+| `function_invocation` | Toma el registro fuente como contexto e invoca otra cosa (crear registro en otro modulo, disparar job, navegar, llamar endpoint) | Generar Factura, Crear Nota de Credito/Debito, Generar cotizacion desde cliente, Ver movimientos de cliente, Validar whitelist, Generar reporte sobre registro |
+
+`function_invocation` declara `invokes` con `invocation_mode: 'modal_wizard' | 'navigate' | 'background_job' | 'sync_call'` + `parameter_mapping` (mismo mecanismo que `payload_mapping` de triggers de REQ-71).
+
+Campos hibridos: `then_invoke` (mutar y despues invocar) y `on_success` (efecto en el registro fuente al retornar ok).
+
+Esta distincion surgio en discusion en el medio del enrichment de REQ-68 — no estaba en el plan original. Yasmani la introdujo al notar que el modelo inicial solo cubria mutaciones con `dialog`+`on_confirm` y dejaba afuera el caso de "crear nota de credito desde un registro" o "generar cotizacion tomando este cliente como contexto".
+
+#### Capabilities + Grupos + Panel admin
+
+Modelo de governance de dos niveles introducido en REQ-68 como entregable parte del scope:
+
+```
+Capabilities atomicas → Grupos → Usuarios (via memberships)
+```
+
+Un usuario puede pertenecer a multiples grupos; sus capabilities efectivas son la **union** de capabilities de todos sus grupos. Capability provider backend resuelve `user_id → capabilities[]` via la cadena Usuario → Grupos → Capabilities.
+
+Panel admin (CRUD Capabilities + Grupos + Memberships) restringido a capability `manage_capabilities`. Vistas: Capabilities, Grupos, Usuario.
+
+Consumido por: REQ-68 (motor de acciones), REQ-59 (`ReportPermissions`), REQ-71 (Inbox `target_role`), REQ-73 (Alertas `target_role`), guards de ruta, APIs server-side. Misma fuente de verdad en frontend y backend.
+
+#### Universalidad del menu `⋯`
+
+A partir de REQ-68, todo registro de la plataforma en cualquier formato (lista, card, Kanban) tiene el menu `⋯` montado. Sin acciones habilitadas → `⋯` aparece deshabilitado con tooltip "Sin acciones disponibles en el estado actual", nunca desaparece. La presencia del `⋯` es invariante; lo que varia es que acciones aparecen habilitadas.
+
+#### Agrupacion visual del menu en 2 niveles
+
+`<ManifestActionsMenu>` renderiza las acciones agrupadas:
+
+**Nivel 1 — bloques por `action_type`:**
+
+| Bloque | Contiene | Sub-grupos |
+|---|---|---|
+| `ASIGNACION / IMPUTACION` | Acciones `record_mutation` (mutan el registro fuente) | Si admite sub-grupos del nivel 2 |
+| `CONTEXTUALES` | Acciones `function_invocation` (toman el registro como contexto e invocan otra cosa) | No admite sub-grupos — siempre flat |
+
+**Nivel 2 — sub-grupos funcionales del dominio**, solo dentro de `ASIGNACION / IMPUTACION`, declarables por manifest via `ActionConfig.group?: string`. Sub-grupos observados como referencia (no canonicos cross-modulos):
+
+| Sub-grupo | Naturaleza | Ejemplos |
+|---|---|---|
+| `IMPUTACION` | Asignacion de referencias del registro a entidades del dominio | Asignar Banco y Cuenta, Asignar Cliente, Asignar Cuenta de Origen |
+| `CONCILIACION` | Conciliacion contra fuentes externas | Marcar Conciliado, Marcar con Diferencias |
+| `GOVERNANCE` | Atributos de governance interna | Marcar como Intercompany, Cerrar periodo contable |
+| `DOCUMENTACION` | Estado documental del registro | Marcar como No facturable |
+| `CIERRE` | Cierre del registro (terminales) | Marcar resuelta, Descartar (destructiva, label en rojo) |
+
+**Iconografia:** `✓` (check) para `record_mutation` ("completar/marcar"); `↗` (flecha externa) para `function_invocation` ("salir del registro a invocar algo"). Override declarable via `ActionConfig.icon`. Acciones destructivas: label en rojo, manteniendo el icono del bloque.
+
+**Header del menu:** `ACCIONES DEL REGISTRO` cuando se abre sobre un registro fuente (row action); `ACCIONES` cuando se abre desde header de pagina (`module_cta`, sin registro fuente).
+
+La agrupacion visual surgio del analisis de capturas de UI que Yasmani aporto: el patron actual ya separa con sub-grupos (`IMPUTACION`, `CONCILIACION`, etc.) pero no diferencia visualmente entre mutaciones e invocaciones. La diferenciacion en 2 niveles formaliza esa distincion conceptual.
+
+#### Audit trail + Stream de eventos
+
+REQ-68 entrega doble exposicion del audit trail sobre la misma fuente:
+
+- **Log persistente consultable** filtrable por `record_id`, `user_id`, `action_id`, `manifest_key`, `invocation_source`, rango de fechas. Para queries historicas (auditorias, compliance, reportes regulatorios).
+- **Stream de eventos en tiempo real** con shape canonico (`ActionLogEntry`) consumible por sinks. Para reaccionar al instante a lo que pasa.
+
+Consumidores del stream:
+
+- **Internos:** REQ-74 (Dashboard) — seccion Activity feed con templates declarados por accion. Sistema de notificaciones de gobierno (V2).
+- **Externos:** Mixpanel, Amplitude, PostHog, Hubspot, o cualquier servicio compatible con webhooks o pub/sub. Sumar un destino nuevo no requiere instrumentar nada en las apps.
+
+El `activity_template` declarable por accion (`{user_name} genero un deposito para {record.cliente_nombre}`) se resuelve al ejecutar y persiste en `activity_text` del audit log. Consumido por el activity feed de REQ-74 y por reportes regulatorios.
+
+#### `invocation_source` — categorias de invocacion
+
+El motor de REQ-68 acepta 7 categorias de invocacion como metadata del audit trail:
+
+| Fuente | Consumidor |
+|---|---|
+| `menu` | Menu `⋯` (row action) en todos los modulos |
+| `cta` | CTA del header (module CTA) en todos los modulos |
+| `kanban_drag` | Transicion drag-drop (REQ-69) |
+| `inbox_drawer_cta` | CTA dentro del Drawer de Solicitud (REQ-71 §3.2) |
+| `inbox_trigger` | Trigger automatico al crear Solicitud (REQ-71 §3.1) |
+| `batch` | Operacion masiva |
+| `api` | Invocacion server-side directa (REQ-59 scheduler, integraciones) |
+
+El motor no distingue por fuente — ejecuta la misma logica. La fuente es solo metadata para audit + analiticas (patron "que % de cada accion se invoca por menu vs trigger automatico vs batch").
+
+#### Refactor de Alertas: `profile` → `category`
+
+En REQ-73 se renombraron los 4 perfiles A/B/C/D a 4 categorias con semantica explicita:
+
+| Anterior | Nuevo | Naturaleza | UI canonica |
+|---|---|---|---|
+| Profile A | `triage` | Active triage list — resolver = un click | Lista tipo Inbox |
+| Profile B | `workflow` | Master-detail con Drawer + Timeline + Comments | Tablero Kanban + ClosureModal con justificacion ≥10 chars |
+| Profile C | `metric` | Time-series con threshold (auto-resolucion) | Chart-first, metrica con thresholds overlaid |
+| Profile D | `cross_app_panel` | Cross-app KPI dashboard (read-only) | KPI cards por app de origen |
+
+Las 4 son fijas — no se inventan nuevas. Tipo `AlertProfile` → `AlertCategory`; campo `Alerta.profile` → `Alerta.category`. Yasmani prefirio "categoria" sobre "perfil" porque suena mas natural.
+
+#### Notificaciones in-app como foco; canales externos como opcionales
+
+Tanto Alertas (REQ-73) como Inbox (REQ-71) consagran el mismo principio: el **Centro de Solicitudes / Centro de Alertas es el destino primario obligatorio**. Sobre eso, capacidades opcionales declarables por tipo:
+
+- **Badge en sidebar** (mandatorio, real-time)
+- **Web Notifications API** (opt-in del usuario)
+- **Email** (capacidad opcional V1)
+- **Slack** (capacidad opcional V1, complementario)
+- **Otros canales** (Teams, SMS, WhatsApp, push nativo) → V2
+
+Slack quedo como capacidad opcional V1 declarable por tipo despues de aclaracion de Yasmani: el foco es in-app, Slack es recomendacion para tipos donde el usuario suele estar en el canal, no es mandatorio. La gestion siempre ocurre en el Centro; el mensaje en Slack es solo aviso.
+
+#### `ReportPermissions` con 4 niveles independientes
+
+REQ-59 introduce `permissions: ReportPermissions` mandatorio en cada `Report`:
+
+```typescript
+interface ReportPermissions {
+  view: string[];      // capability IDs que pueden ver el reporte en el catalogo
+  execute: string[];   // capability IDs que pueden ejecutar manualmente o programar
+  edit: string[];      // capability IDs que pueden modificar la definicion
+  delete: string[];    // capability IDs que pueden archivar/eliminar el reporte
+}
+```
+
+Niveles independientes — un usuario puede tener `view` sin `execute` (read-only), o `edit` sin `delete`. Permite separacion de responsabilidades realista (analista: view+execute; manager: +edit; admin: +delete).
+
+**Default seguro:** si `permissions` no se declara explicitamente, solo creador del REQ + `ADMIN_GROUP` tienen las 4 capacidades. Reporte invisible para el resto. Fuerza declaracion explicita para reportes accesibles a roles amplios — previene exposicion accidental de reportes sensibles (P&L, exposicion agregada cross-entidad).
+
+**`consumer_apps[]` vs `permissions` son ortogonales:** `consumer_apps` define donde aparece el reporte (que apps lo listan); `permissions` define que usuarios dentro de esas apps pueden ver/ejecutar/editar/eliminar.
+
+#### V2 de Reportes como exploracion no-commitment
+
+REQ-59 reformulo V2 (IA Playground + Builder visual + Marketplace) como **exploracion sujeta a viabilidad tecnica y de governance**, no commitment. V1 (flujo formal de alta por REQ + PR) es la via principal y suficiente. Si V2 no resulta viable, V1 cubre todas las necesidades del catalogo.
+
+Razon del refactor: aclaracion de Yasmani — "los reportes autogestionados/creados es una recomendacion, es decir, si es posible hacerlo perfecto, caso contrario vamos por el camino del REQ".
+
+### Modelo conceptual unificado
+
+Una observacion sintetica que surgio durante la sesion:
+
+> Una accion del manifest = unidad atomica de mutacion/invocacion del sistema. Trigger automatico de Inbox, CTA del Drawer, transicion Kanban, batch op, integracion externa: **todos pasan por el motor de REQ-68**. El `parameter_mapping` de las acciones es el mismo mecanismo que el `payload_mapping` de los triggers automaticos de REQ-71. Esto unifica conceptualmente la conexion entre modulos del core.
+
+Una implicancia: un trigger de Inbox (REQ-71 §3.1) no es mas que **una accion de tipo `function_invocation` + `invocation_mode: 'background_job'` invocada por el sistema con `invocation_source: 'inbox_trigger'`**. Lo mismo para los CTAs del Drawer (REQ-71 §3.2): son acciones del manifest del modulo destino, invocadas desde el contexto de la Solicitud, con `invocation_source: 'inbox_drawer_cta'`.
+
+### Pendientes
+
+| REQ | Estado | Notas |
+|---|---|---|
+| **REQ-69 VISTAS** | Pendiente enrichment | Capa habilitante. Provee `<ClosureModal>` shared y mecanica drag-drop. Consume REQ-68 para evaluacion de transiciones. Necesita coordinar con REQ-71 (transiciones del Inbox) y REQ-73 categoria `workflow` (transiciones de Alertas). |
+| **REQ-74 DASHBOARD** | Pendiente enrichment | Al final del orden de rollout. Consume los 3 list-shaped (Inbox, Alertas, Reportes) como counters + stream de eventos del audit trail de REQ-68 para activity feed con `activity_template` declarado por cada accion. |
+
+Tambien pendientes (heredados de la sesion anterior, ya documentados en §"Decisiones pendientes" mas arriba):
+
+- Migracion REQ-52 (LEX Alertas) y REQ-33 (TRD Alertas) para que solo declaren la configuracion del dominio consumiendo REQ-73.
+- Matriz canonica de capabilities — set inicial se acuerda al arranque de implementacion; cierre pendiente Producto + Tecnologia.
+- `target_role` conventions cross-app — junta una vez que cada app cierre sus REQs por area.
+- Relevamiento real del estado de adopcion por app (matriz §"Matriz de adopcion" tiene estimaciones, faltan datos verificados del repo de cada app).
+
+### Convenciones y aprendizajes adicionales de la sesion
+
+**Limites de Jira en escritura de descriptions:**
+
+- `editJiraIssue` con descriptions largas choca con `CONTENT_LIMIT_EXCEEDED` cuando el contenido supera cierto threshold. Estrategia: compactacion preventiva con tablas densas, eliminacion de redundancias entre Alcance y Criterios, parrafos cortos.
+- Paso con REQ-73 (la primera version no entro, hubo que compactar) y con REQ-59 (mismo problema). REQ-68 y REQ-71 entraron en primera pasada.
+- `editJiraIssue` con `contentFormat: 'markdown'` funciona bien para escritura y debugging — devuelve la version final en markdown legible y consistente.
+
+**Convencion de Yasmani al enriquecer un REQ:**
+
+- Plan + bloques nuevos + cuestiones a validar antes de escribir, no escribir directo.
+- Iteraciones de drafts validados via tabla de cambios resumida.
+- Yasmani aprueba los puntos uno a uno; el sistema integra todo + escribe en una sola pasada.
+- Si Yasmani aporta una distincion conceptual nueva en el medio del enrichment (ej: `record_mutation` vs `function_invocation` no estaba en el plan original — surgio en discusion durante REQ-68), el sistema la integra al modelo y reescribe el plan ajustado.
+
+**Patron de analisis de capturas de UI:**
+
+- Cuando Yasmani aporta capturas del producto actual, el sistema las analiza para identificar el patron visual existente (header, sub-grupos en mayusculas, items con check, tags al final) y propone la pieza nueva que falta encajando con el patron actual — no inventando un patron paralelo.
+- Sub-grupos identificados a partir de las imagenes de esta sesion: `IMPUTACION`, `CONCILIACION`, `GOVERNANCE`, `DOCUMENTACION`, `CIERRE`. Tipicos pero no canonicos cross-modulos.
+
+### Como retomar en otra sesion
+
+1. **Leer este discovery** (es el punto de entrada actualizado al 2026-05-10). Especialmente §"Decisiones arquitectonicas transversales" y §"Modelo conceptual unificado".
+2. **Leer la seccion §"Trazabilidad — REQs y AM stories"** mas arriba para los links a Jira.
+3. **Estado actual a tener en cuenta antes de retomar:**
+    - REQ-59, REQ-68, REQ-71, REQ-73 estan **enriquecidos** (no son los REQs limpios post-cleanup; tienen toda la capa arquitectonica de esta sesion).
+    - REQ-69 y REQ-74 estan **pendientes de enrichment**.
+4. **Convenciones del modelo nuevo para tener presentes:**
+    - `record_mutation` vs `function_invocation` es el discriminador clave de toda accion del manifest.
+    - Capabilities + Grupos + Panel admin viven en REQ-68; los demas REQs consumen.
+    - Sub-grupos del nivel 2 (IMPUTACION, CONCILIACION, GOVERNANCE, DOCUMENTACION, CIERRE) son declarables solo en `record_mutation`. `function_invocation` siempre va flat en CONTEXTUALES.
+    - Permissions de Reportes (REQ-59) referencian las mismas capabilities del capability provider de REQ-68 — misma fuente de verdad.
+    - Stream de eventos del audit trail (REQ-68) es la base del activity feed de REQ-74 y de integraciones analiticas externas.
+    - Universalidad del `⋯`: todo registro en lista/card/Kanban tiene menu de acciones; nunca desaparece.
+    - Slack en Alertas/Inbox es capacidad opcional declarable por tipo, no mandatorio. Foco in-app.
+    - V2 de REQ-59 es exploracion no-commitment; V1 (REQ + PR) es la via principal y suficiente.
+5. **Si la nueva sesion arranca con REQ-69 (VISTAS):** consume motor de Acciones (REQ-68) para evaluar transiciones drag-drop como acciones del manifest (`invocation_source: 'kanban_drag'`). Necesita coordinar con REQ-71 (transiciones del Inbox) y REQ-73 categoria `workflow` (transiciones de Alertas con Drawer + ClosureModal con justificacion ≥10 chars).
+6. **Si la nueva sesion arranca con REQ-74 (DASHBOARD):** consume los 3 list-shaped (Inbox, Alertas, Reportes) como counters + stream de eventos del audit trail de REQ-68 para activity feed con `activity_template` declarado por cada accion ("Yasmani genero un deposito para el Cliente Acme").
+
+---
+
 ## Referencias
 
 - `core-template-frontend-discovery.md` — paradigma del template del cual derivan los 6 transversales.
-- Iniciativa Jira: [REQ-3 — Ardua Fintech: Financial Core as a Service](https://arduasolutions.atlassian.net/browse/REQ-3).
+- Iniciativa Jira: [REQ-3 — Ardua Fintech: Financial Core as a Service](https://arduasolutions.atlassian.net/browse/REQ-3) (estrategica).
+- Iniciativa Jira: [REQ-81 — Ardua Financial Core: Infraestructura Transversal del Core](https://arduasolutions.atlassian.net/browse/REQ-81) (contenedora de los 6 REQs transversales).
