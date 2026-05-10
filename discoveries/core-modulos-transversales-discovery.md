@@ -236,6 +236,7 @@ Durante esta sesion se trabajo bajo la iniciativa [REQ-81 — Ardua Financial Co
 | **REQ-71 INBOX** | Renombrado conceptual como **Centro de Solicitudes**. Triggers automaticos al crear (`triggers_on_create`) + CTAs en el Drawer (`available_actions`). Naturaleza dual: una Solicitud no es registro pasivo, es espacio de trabajo que puede triggerear acciones del manifest del modulo destino. Notificaciones in-app primarias (badge sidebar + Web Notifications API) + Slack/email opcional declarable por tipo. Ejemplos del patron completo con 6 tipos ilustrativos. Aclaracion explicita: hoy ningun tipo esta definido — las areas los daran de alta progresivamente. |
 | **REQ-68 ACCIONES** | (1) Distincion `action_type: record_mutation` vs `function_invocation` como discriminador clave. (2) Modelo de Capabilities + Grupos + Panel admin como entregable de este REQ. (3) Audit trail + Stream de eventos mandatorio V1. (4) `activity_template` declarable por accion. (5) **Universalidad del menu** `⋯` en lista/card/Kanban. (6) **Agrupacion visual del menu en 2 niveles** (`ASIGNACION / IMPUTACION` vs `CONTEXTUALES`) con sub-grupos del nivel 2 solo en el primer bloque. (7) Iconografia (`✓` mutacion, `↗` invocacion). |
 | **REQ-59 REPORTES** | `ReportPermissions` con 4 niveles independientes (`view`/`execute`/`edit`/`delete`). Default seguro (sin declaracion explicita = solo creador + ADMIN_GROUP). V2 (IA Playground + Builder visual + Marketplace) reformulado como **exploracion sujeta a viabilidad** (no commitment). Las capabilities referenciadas son las mismas del capability provider de REQ-68 — misma fuente de verdad. |
+| **REQ-69 VISTAS** | Modelo conceptual unificado: una transicion drag-drop del Kanban **es literalmente una accion `record_mutation` del manifest** (REQ-68) invocada con `invocation_source: 'kanban_drag'`. Refactor de `KanbanTransition` para colapsar duplicacion con REQ-68: el eje declara `{from, to, action_id}` referenciando una accion del manifest; el `mode` se deriva (con `dialog` → modal abre `<ClosureModal>`; sin `dialog` → mutacion directa, util para cambios simples de campo booleano o enum). `<ClosureModal>` re-conceptualizado como wrapper tematico del `<ManifestDialog>` (REQ-68), no componente paralelo. Universalidad del menu `⋯` consagrada tambien en cards del Kanban — drag-drop y menu son rutas equivalentes que difieren solo en `invocation_source`. Cards no draggables por 2 razones articuladas: (a) estado en `terminal_values[]`, (b) ninguna transicion habilitada por el motor. Cap blando de 200 cards/columna en V1; virtualizacion completa V2. Empty state por columna con copy `Sin registros en este estado` (columna no se colapsa). |
 
 Estado final de los 4 REQs: SENT TO DEV (sin cambio de estado, solo enrichment del contenido).
 
@@ -391,12 +392,13 @@ Una observacion sintetica que surgio durante la sesion:
 
 Una implicancia: un trigger de Inbox (REQ-71 §3.1) no es mas que **una accion de tipo `function_invocation` + `invocation_mode: 'background_job'` invocada por el sistema con `invocation_source: 'inbox_trigger'`**. Lo mismo para los CTAs del Drawer (REQ-71 §3.2): son acciones del manifest del modulo destino, invocadas desde el contexto de la Solicitud, con `invocation_source: 'inbox_drawer_cta'`.
 
+Y una segunda implicancia con el enrichment de REQ-69: una transicion drag-drop del Tablero **es una accion `record_mutation` del manifest del modulo** invocada con `invocation_source: 'kanban_drag'`. El eje del Kanban declara `KanbanTransition[]` con `{from, to, action_id}` referenciando acciones del manifest — no duplica `mode`, `closeAction`, capabilities ni `on_confirm`. Esos viven en la accion del manifest, unica fuente de verdad. El `mode` se deriva del manifest: si la accion declara `dialog` → modal (abre `<ClosureModal>`, que es el `<ManifestDialog>` de REQ-68 con header/copy especificos para cierre); si no declara `dialog` → mutacion directa (ideal para cambios simples de campo booleano o enum sin campos que recoger). Drag-drop y menu `⋯` son dos rutas equivalentes de la misma accion.
+
 ### Pendientes
 
 | REQ | Estado | Notas |
 |---|---|---|
-| **REQ-69 VISTAS** | Pendiente enrichment | Capa habilitante. Provee `<ClosureModal>` shared y mecanica drag-drop. Consume REQ-68 para evaluacion de transiciones. Necesita coordinar con REQ-71 (transiciones del Inbox) y REQ-73 categoria `workflow` (transiciones de Alertas). |
-| **REQ-74 DASHBOARD** | Pendiente enrichment | Al final del orden de rollout. Consume los 3 list-shaped (Inbox, Alertas, Reportes) como counters + stream de eventos del audit trail de REQ-68 para activity feed con `activity_template` declarado por cada accion. |
+| **REQ-74 DASHBOARD** | Pendiente enrichment | Ultimo transversal pendiente. Al final del orden de rollout. Consume los 3 list-shaped (Inbox, Alertas, Reportes) como counters + stream de eventos del audit trail de REQ-68 para activity feed con `activity_template` declarado por cada accion. |
 
 Tambien pendientes (heredados de la sesion anterior, ya documentados en §"Decisiones pendientes" mas arriba):
 
@@ -430,8 +432,8 @@ Tambien pendientes (heredados de la sesion anterior, ya documentados en §"Decis
 1. **Leer este discovery** (es el punto de entrada actualizado al 2026-05-10). Especialmente §"Decisiones arquitectonicas transversales" y §"Modelo conceptual unificado".
 2. **Leer la seccion §"Trazabilidad — REQs y AM stories"** mas arriba para los links a Jira.
 3. **Estado actual a tener en cuenta antes de retomar:**
-    - REQ-59, REQ-68, REQ-71, REQ-73 estan **enriquecidos** (no son los REQs limpios post-cleanup; tienen toda la capa arquitectonica de esta sesion).
-    - REQ-69 y REQ-74 estan **pendientes de enrichment**.
+    - REQ-59, REQ-68, REQ-69, REQ-71, REQ-73 estan **enriquecidos** (no son los REQs limpios post-cleanup; tienen toda la capa arquitectonica de esta sesion).
+    - Solo REQ-74 (DASHBOARD) esta **pendiente de enrichment**.
 4. **Convenciones del modelo nuevo para tener presentes:**
     - `record_mutation` vs `function_invocation` es el discriminador clave de toda accion del manifest.
     - Capabilities + Grupos + Panel admin viven en REQ-68; los demas REQs consumen.
@@ -441,8 +443,8 @@ Tambien pendientes (heredados de la sesion anterior, ya documentados en §"Decis
     - Universalidad del `⋯`: todo registro en lista/card/Kanban tiene menu de acciones; nunca desaparece.
     - Slack en Alertas/Inbox es capacidad opcional declarable por tipo, no mandatorio. Foco in-app.
     - V2 de REQ-59 es exploracion no-commitment; V1 (REQ + PR) es la via principal y suficiente.
-5. **Si la nueva sesion arranca con REQ-69 (VISTAS):** consume motor de Acciones (REQ-68) para evaluar transiciones drag-drop como acciones del manifest (`invocation_source: 'kanban_drag'`). Necesita coordinar con REQ-71 (transiciones del Inbox) y REQ-73 categoria `workflow` (transiciones de Alertas con Drawer + ClosureModal con justificacion ≥10 chars).
-6. **Si la nueva sesion arranca con REQ-74 (DASHBOARD):** consume los 3 list-shaped (Inbox, Alertas, Reportes) como counters + stream de eventos del audit trail de REQ-68 para activity feed con `activity_template` declarado por cada accion ("Yasmani genero un deposito para el Cliente Acme").
+    - Transiciones del Kanban (REQ-69) son acciones `record_mutation` del manifest referenciadas por `action_id` desde el eje; `<ClosureModal>` es el `<ManifestDialog>` con header/copy de cierre.
+5. **Si la nueva sesion arranca con REQ-74 (DASHBOARD):** consume los 3 list-shaped (Inbox, Alertas, Reportes) como counters + stream de eventos del audit trail de REQ-68 para activity feed con `activity_template` declarado por cada accion ("Yasmani genero un deposito para el Cliente Acme").
 
 ---
 
