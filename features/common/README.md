@@ -1,6 +1,6 @@
 # COMMON — Features transversales
 
-> Última actualización: 2026-05-08
+> Última actualización: 2026-05-11
 > Estado: En definición progresiva
 
 ---
@@ -32,6 +32,8 @@ La regla operativa: si la capacidad se expone al usuario final en múltiples pro
 |---|---|---|---|
 | Ventanas de Mantenimiento | Definida | `ventanas-de-mantenimiento.md` | TRD, OPS, LEX, CLP, FIN, COM |
 | Release Awareness | Definida | `release-awareness.md` | TRD, OPS, LEX, CLP, FIN |
+| Centro de Alertas | Definida | `centro-de-alertas.md` | TRD, OPS, LEX, CLP, FIN |
+| Centro de Reportería | Definida | `centro-de-reporteria.md` | TRD, OPS, LEX, CLP, FIN |
 
 ---
 
