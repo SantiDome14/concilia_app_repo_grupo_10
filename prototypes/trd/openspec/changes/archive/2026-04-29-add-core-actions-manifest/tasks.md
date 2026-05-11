@@ -90,7 +90,7 @@ This change creates the `core-actions-manifest` capability — the declarative a
 
 ### 5.2 Integration
 
-- [ ] `tests/integration/manifest-prototype-parity.spec.ts` — load the canonical example manifest (`prototypes/_core-template/manifests/ejemplo.modulo-a.actions.js`) and the FIN acid-test (`prototypes/fin/manifests/fin.operaciones.movimientos.actions.js`); register them in the new Pinia store; for a sample record set, verify `resolveActions()` produces the same enable/visible/reason/tag tuple as the prototype HTML engine. This test guards parity during migration.
+- [ ] `tests/integration/manifest-prototype-parity.spec.ts` — load the canonical example manifest (`prototypes/_core-template-frontend/manifests/ejemplo.modulo-a.actions.js`) and the FIN acid-test (`prototypes/fin/manifests/fin.operaciones.movimientos.actions.js`); register them in the new Pinia store; for a sample record set, verify `resolveActions()` produces the same enable/visible/reason/tag tuple as the prototype HTML engine. This test guards parity during migration.
 - [ ] `tests/integration/manifest-dialog.spec.ts` — mount `<ManifestDialog>`, drive each mode through open → fill → confirm; assert audit log entries, formValues writes, recompute outcomes.
 
 ## 6. Documentation

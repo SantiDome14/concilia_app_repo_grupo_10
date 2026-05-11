@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { MoreVertical, Check } from 'lucide-vue-next';
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from '@/components/ui/popover';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { useManifestModule } from '@/composables/useManifestModule';
 import type { Dimension, ResolvedAction } from '@/types/manifest';
 import { cn } from '@/lib/cn';
@@ -14,7 +10,7 @@ import { cn } from '@/lib/cn';
 // ManifestActionsMenu — per-row 3-dot menu wired to the manifest engine
 // ────────────────────────────────────────────────────────────────────
 // Mirrors the prototype's `MFmenu(...)` portal popover (lines 3095-3155
-// of `_core-template.html`):
+// of `_core-template-frontend.html`):
 //   - tiny header "ACCIONES DEL REGISTRO"
 //   - sections grouped by `action.dimension` (canonical order)
 //   - items with check-icon + label
@@ -62,9 +58,7 @@ interface Group {
 }
 
 const grouped = computed<Group[]>(() => {
-  const items = mod
-    .resolveActionsFor(props.record)
-    .filter((it) => it.visible);
+  const items = mod.resolveActionsFor(props.record).filter((it) => it.visible);
   return DIM_ORDER.map((dim) => ({
     dim,
     label: MF_DIM_HEADERS[dim],
@@ -99,11 +93,7 @@ const triggerClass = computed(() =>
         data-testid="manifest-actions-trigger"
         @click.stop
       >
-        <MoreVertical
-          :class="
-            props.variant === 'table' ? 'h-3.5 w-3.5' : 'h-3 w-3'
-          "
-        />
+        <MoreVertical :class="props.variant === 'table' ? 'h-3.5 w-3.5' : 'h-3 w-3'" />
       </button>
     </PopoverTrigger>
     <PopoverContent align="end" :side-offset="4" class="w-[260px] p-1.5">
@@ -112,64 +102,57 @@ const triggerClass = computed(() =>
            auto-inherited (Vue warns), so we ground them on a real DOM
            node here. -->
       <div data-testid="manifest-actions-menu" @click.stop>
-      <div
-        class="px-3 pb-1 pt-1.5 text-[9px] font-bold uppercase tracking-[0.06em] text-t-4"
-      >
-        Acciones del registro
-      </div>
-      <div
-        v-if="!hasItems"
-        class="px-3 py-2 text-sm text-t-3"
-        data-testid="manifest-actions-empty"
-      >
-        Sin acciones disponibles
-      </div>
-      <template v-for="g in grouped" :key="g.dim">
-        <div
-          class="px-3 pb-1 pt-1.5 text-[9px] font-bold uppercase tracking-[0.06em] text-t-4"
-          :data-testid="`manifest-actions-section-${g.dim}`"
-        >
-          {{ g.label }}
+        <div class="text-t-4 px-3 pt-1.5 pb-1 text-[9px] font-bold tracking-[0.06em] uppercase">
+          Acciones del registro
         </div>
-        <button
-          v-for="it in g.items"
-          :key="it.action.id"
-          type="button"
-          :title="it.reason ?? undefined"
-          :disabled="!it.enabled"
-          :data-testid="`manifest-actions-item-${it.action.id}`"
-          :class="
-            cn(
-              'flex w-full items-center gap-2 rounded-sm px-3 py-1.5 text-left text-[13px] transition-colors',
-              it.enabled
-                ? it.action.danger
-                  ? 'text-danger hover:bg-card'
-                  : 'text-t-2 hover:bg-card hover:text-t-1'
-                : 'cursor-not-allowed text-t-4',
-            )
-          "
-          @click="onItemClick(it)"
+        <div
+          v-if="!hasItems"
+          class="text-t-3 px-3 py-2 text-sm"
+          data-testid="manifest-actions-empty"
         >
-          <Check
-            class="h-3 w-3 shrink-0"
-            :class="it.enabled ? '' : 'opacity-50'"
-          />
-          <span class="flex-1 truncate">{{ it.action.label }}</span>
-          <span
-            v-if="!it.enabled && it.tag"
+          Sin acciones disponibles
+        </div>
+        <template v-for="g in grouped" :key="g.dim">
+          <div
+            class="text-t-4 px-3 pt-1.5 pb-1 text-[9px] font-bold tracking-[0.06em] uppercase"
+            :data-testid="`manifest-actions-section-${g.dim}`"
+          >
+            {{ g.label }}
+          </div>
+          <button
+            v-for="it in g.items"
+            :key="it.action.id"
+            type="button"
+            :title="it.reason ?? undefined"
+            :disabled="!it.enabled"
+            :data-testid="`manifest-actions-item-${it.action.id}`"
             :class="
               cn(
-                'shrink-0 rounded px-1.5 py-px text-[9px] font-bold uppercase tracking-wider',
-                it.tag === 'V2'
-                  ? 'bg-danger/10 text-danger'
-                  : 'bg-white/[0.05] text-t-4',
+                'flex w-full items-center gap-2 rounded-sm px-3 py-1.5 text-left text-[13px] transition-colors',
+                it.enabled
+                  ? it.action.danger
+                    ? 'text-danger hover:bg-card'
+                    : 'text-t-2 hover:bg-card hover:text-t-1'
+                  : 'text-t-4 cursor-not-allowed',
               )
             "
+            @click="onItemClick(it)"
           >
-            {{ it.tag }}
-          </span>
-        </button>
-      </template>
+            <Check class="h-3 w-3 shrink-0" :class="it.enabled ? '' : 'opacity-50'" />
+            <span class="flex-1 truncate">{{ it.action.label }}</span>
+            <span
+              v-if="!it.enabled && it.tag"
+              :class="
+                cn(
+                  'shrink-0 rounded px-1.5 py-px text-[9px] font-bold tracking-wider uppercase',
+                  it.tag === 'V2' ? 'bg-danger/10 text-danger' : 'text-t-4 bg-white/[0.05]',
+                )
+              "
+            >
+              {{ it.tag }}
+            </span>
+          </button>
+        </template>
       </div>
     </PopoverContent>
   </Popover>

@@ -14,7 +14,7 @@ import { cn } from '@/lib/cn';
 // ManifestActionsMenu — per-row 3-dot menu wired to the manifest engine
 // ────────────────────────────────────────────────────────────────────
 // Mirrors the prototype's `MFmenu(...)` portal popover (lines 3095-3155
-// of `_core-template.html`):
+// of `_core-template-frontend.html`):
 //   - tiny header "ACCIONES DEL REGISTRO"
 //   - sections grouped by `action.dimension` (canonical order)
 //   - items with check-icon + label

@@ -35,17 +35,13 @@ describe('validateManifest', () => {
 
     it('accepts the canonical Módulo A manifest with zero warnings', () => {
       // The canonical example used to live as a JSON-strict literal at
-      // `prototypes/_core-template/manifests/ejemplo.modulo-a.actions.js`.
+      // `prototypes/_core-template-frontend/manifests/ejemplo.modulo-a.actions.js`.
       // After the template was promoted into this folder, the canonical
       // example is the TS manifest that the engine actually loads at boot.
-      const result = validateManifest(
-        MODULO_A_MANIFEST,
-        'framework.template.modulo_a',
-      );
+      const result = validateManifest(MODULO_A_MANIFEST, 'framework.template.modulo_a');
       expect(result.warnings).toEqual([]);
       expect(result.ok).toBe(true);
     });
-
   });
 
   describe('top-level required fields', () => {
@@ -74,15 +70,11 @@ describe('validateManifest', () => {
       const m = {
         app: 'demo',
         module: 'test',
-        actions: [
-          { id: 'a', label: 'A', dimension: 'fiscalizacion' as never },
-        ],
+        actions: [{ id: 'a', label: 'A', dimension: 'fiscalizacion' as never }],
       };
       const result = validateManifest(m, 'k');
       expect(result.ok).toBe(false);
-      expect(result.warnings.some((w) => w.includes('canonical six'))).toBe(
-        true,
-      );
+      expect(result.warnings.some((w) => w.includes('canonical six'))).toBe(true);
     });
 
     it('rejects missing required action fields', () => {
@@ -131,9 +123,7 @@ describe('validateManifest', () => {
             dimension: 'imputacion',
             dialog: {
               title: 'T',
-              fields: [
-                { id: 'x', label: 'X', type: 'select', options: [] } as never,
-              ],
+              fields: [{ id: 'x', label: 'X', type: 'select', options: [] } as never],
             },
           },
         ],
@@ -154,9 +144,7 @@ describe('validateManifest', () => {
             dimension: 'imputacion',
             dialog: {
               title: 'T',
-              fields: [
-                { id: 'x', label: 'X', type: 'invented' as never },
-              ],
+              fields: [{ id: 'x', label: 'X', type: 'invented' as never }],
             },
           },
         ],
@@ -182,11 +170,7 @@ describe('validateManifest', () => {
       };
       const result = validateManifest(m, 'k');
       expect(result.ok).toBe(false);
-      expect(
-        result.warnings.some((w) =>
-          w.includes('required_role_all_of is REMOVED'),
-        ),
-      ).toBe(true);
+      expect(result.warnings.some((w) => w.includes('required_role_all_of is REMOVED'))).toBe(true);
     });
   });
 
@@ -206,11 +190,7 @@ describe('validateManifest', () => {
       };
       const result = validateManifest(m, 'k');
       expect(result.ok).toBe(false);
-      expect(
-        result.warnings.some((w) =>
-          w.includes('not JSON-strict serializable'),
-        ),
-      ).toBe(true);
+      expect(result.warnings.some((w) => w.includes('not JSON-strict serializable'))).toBe(true);
     });
 
     it('rejects Date instances', () => {
@@ -228,9 +208,7 @@ describe('validateManifest', () => {
       };
       const result = validateManifest(m, 'k');
       expect(result.ok).toBe(false);
-      expect(
-        result.warnings.some((w) => w.includes('Date instance')),
-      ).toBe(true);
+      expect(result.warnings.some((w) => w.includes('Date instance'))).toBe(true);
     });
 
     it('rejects undefined values', () => {
@@ -242,9 +220,7 @@ describe('validateManifest', () => {
       };
       const result = validateManifest(m, 'k');
       expect(result.ok).toBe(false);
-      expect(
-        result.warnings.some((w) => w.includes('undefined value')),
-      ).toBe(true);
+      expect(result.warnings.some((w) => w.includes('undefined value'))).toBe(true);
     });
   });
 
@@ -264,9 +240,7 @@ describe('validateManifest', () => {
       };
       const result = validateManifest(m, 'k');
       expect(result.ok).toBe(false);
-      expect(
-        result.warnings.some((w) => w.includes('unknown token "invented"')),
-      ).toBe(true);
+      expect(result.warnings.some((w) => w.includes('unknown token "invented"'))).toBe(true);
     });
 
     it('respects knownRecomputeTokens override', () => {
@@ -336,9 +310,7 @@ describe('validateManifest', () => {
     });
 
     it('does not throw for valid manifests', () => {
-      expect(() =>
-        validateManifest(minimalManifest(), 'k', 'strict'),
-      ).not.toThrow();
+      expect(() => validateManifest(minimalManifest(), 'k', 'strict')).not.toThrow();
     });
   });
 

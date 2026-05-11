@@ -65,8 +65,8 @@ export const routes: RouteRecordRaw[] = [
   },
   // NOTE: Template-only example modules (Módulo A/B/C) and the component
   // playground are NOT registered in derived apps — they live in
-  // _core-template only as reference for AI agents and developers. See
-  // _core-template/MIGRATION-PLAYBOOK.md "App derivation cleanup".
+  // _core-template-frontend only as reference for AI agents and developers. See
+  // _core-template-frontend/MIGRATION-PLAYBOOK.md "App derivation cleanup".
   // Domain modules for this app land here as their migrations are scoped.
   {
     path: ROUTE_PATHS.NOT_FOUND,

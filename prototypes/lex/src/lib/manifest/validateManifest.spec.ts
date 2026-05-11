@@ -55,7 +55,7 @@ describe('validateManifest', () => {
 
     it('accepts the canonical Módulo A manifest with zero warnings', () => {
       // The canonical example used to live as a JSON-strict literal at
-      // `prototypes/_core-template/manifests/ejemplo.modulo-a.actions.js`.
+      // `prototypes/_core-template-frontend/manifests/ejemplo.modulo-a.actions.js`.
       // After the template was promoted into this folder, the canonical
       // example is the TS manifest that the engine actually loads at boot.
       const result = validateManifest(

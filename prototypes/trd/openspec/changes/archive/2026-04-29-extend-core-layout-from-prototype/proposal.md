@@ -1,11 +1,11 @@
 # Extend core-layout with the prototype's three-level control framework
 
-> Jira REQ: — (no ticket; template-level additive migration from `prototypes/_core-template/` v1.15)
+> Jira REQ: — (no ticket; template-level additive migration from `prototypes/_core-template-frontend/` v1.15)
 > Module: core-template (foundation)
 
 ## Why
 
-The current `core-layout` baseline contracts the L1 / L2 / L3 page composition, the shell render order, the Sidebar collapse, and the cap of three primary CTAs in the header. What it does NOT yet contract is the conceptual model that the vanilla HTML/JS prototype (`prototypes/_core-template/`, v1.15, dated 2026-04-28) accumulated over fifteen revisions: a three-level *control* framework — **Segmentación / Vista / Filtros** — that defines where each kind of control lives and what each one is allowed to do. The prototype also locks down two structural rules that the current Vue spec leaves implicit (body-fixed scroll inside the Main container) and one alternative page-layout pattern that does not fit the L1/L2/L3 mold (Master-Detail). Without these added contracts, two implementers reading the existing baseline can produce two different-looking modules that each technically pass `core-layout` but disagree on where filters live, where the segmentador goes, what scrolls, and how Master-Detail pages are structured. This change ports those four contracts into the Vue 3 + TypeScript template additively — nothing is removed, four requirements are added on top of the existing six.
+The current `core-layout` baseline contracts the L1 / L2 / L3 page composition, the shell render order, the Sidebar collapse, and the cap of three primary CTAs in the header. What it does NOT yet contract is the conceptual model that the vanilla HTML/JS prototype (`prototypes/_core-template-frontend/`, v1.15, dated 2026-04-28) accumulated over fifteen revisions: a three-level *control* framework — **Segmentación / Vista / Filtros** — that defines where each kind of control lives and what each one is allowed to do. The prototype also locks down two structural rules that the current Vue spec leaves implicit (body-fixed scroll inside the Main container) and one alternative page-layout pattern that does not fit the L1/L2/L3 mold (Master-Detail). Without these added contracts, two implementers reading the existing baseline can produce two different-looking modules that each technically pass `core-layout` but disagree on where filters live, where the segmentador goes, what scrolls, and how Master-Detail pages are structured. This change ports those four contracts into the Vue 3 + TypeScript template additively — nothing is removed, four requirements are added on top of the existing six.
 
 ## What Changes
 

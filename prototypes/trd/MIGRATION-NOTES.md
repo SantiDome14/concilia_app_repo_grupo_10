@@ -19,7 +19,7 @@ source_stack: React + TypeScript (target stack: Vue 3 + TypeScript)
 
 Before writing the proposal for any `add-trd-*` or `migrate-trd-*` change:
 
-1. **Read the [Migration Playbook](../_core-template/MIGRATION-PLAYBOOK.md)** — the cross-prototype patterns (Type-A unification, Módulo B shape, read-only-first policy, open-set abstractions, drawer vs modal vs page, cross-capability composition, discriminated result types, pure helpers, capability gating, modal width override) validated end-to-end by the OPS migration.
+1. **Read the [Migration Playbook](../_core-template-frontend/MIGRATION-PLAYBOOK.md)** — the cross-prototype patterns (Type-A unification, Módulo B shape, read-only-first policy, open-set abstractions, drawer vs modal vs page, cross-capability composition, discriminated result types, pure helpers, capability gating, modal width override) validated end-to-end by the OPS migration.
 2. **Reference the closest [archived OPS change](../ops/openspec/changes/archive/)** as the worked example. Each `design.md` has `Decision N — ...` blocks with `Why · Alternatives considered · Failure modes the rule prevents · Trade-off` — the pattern your TRD change should follow.
 3. **Look at the [OPS lessons learned](../ops/MIGRATION-NOTES.md#migration-completed--lessons-learned-2026-05-08)** — the antipatterns caught during OPS apply to TRD too (the React-to-Vue rewrite is its own concern, but the architectural patterns are framework-agnostic).
 
@@ -47,31 +47,34 @@ These are **mechanical translations**, not architectural decisions. The
 playbook's architectural patterns (Type-A unification, Módulo B shape,
 read-only-first policy) apply unchanged.
 
-| Quick analogue map (when starting an `add-trd-<x>`) | Look at OPS change |
-|---|---|
-| Master + detail of a domain entity (RFQs, Liquidity Providers, etc.) | `add-ops-clients` (Type-A master + Type-B detail) |
-| Multi-step creation wizard | `add-ops-account-instructions` (3-step wizard + draft persistence) |
-| Modal-only feature on top of an existing page | `add-ops-statements` (modal + 5 QoL refinements) |
-| Heavy module with 3+ sub-views (Type-A with tabs) | `add-ops-psp` (Módulo B shape + open-set catalog) |
-| Heavy 2-tab dashboard (read-only first) | `add-ops-financial-dashboard` |
-| Real-time / streaming surface (RFQ inbound feed) | `core-websocket-client` capability + the patterns from OPS where applicable |
+| Quick analogue map (when starting an `add-trd-<x>`)                  | Look at OPS change                                                          |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Master + detail of a domain entity (RFQs, Liquidity Providers, etc.) | `add-ops-clients` (Type-A master + Type-B detail)                           |
+| Multi-step creation wizard                                           | `add-ops-account-instructions` (3-step wizard + draft persistence)          |
+| Modal-only feature on top of an existing page                        | `add-ops-statements` (modal + 5 QoL refinements)                            |
+| Heavy module with 3+ sub-views (Type-A with tabs)                    | `add-ops-psp` (Módulo B shape + open-set catalog)                           |
+| Heavy 2-tab dashboard (read-only first)                              | `add-ops-financial-dashboard`                                               |
+| Real-time / streaming surface (RFQ inbound feed)                     | `core-websocket-client` capability + the patterns from OPS where applicable |
 
 ---
 
 ## 1. Stack & configuration
 
 **Runtime / build**
+
 - React 18.3.1 — functional components, hooks
 - TypeScript 5.5.3 (strict)
 - Vite 7.2.7 + `@vitejs/plugin-react-swc`
 - Dev server: `localhost:5173`
 
 **Scripts (`package.json`)**
+
 - `npm run dev` / `build` / `build:qa` / `build:prod` / `preview`
 - `npm run lint` (ESLint 9.9.0 + react-hooks + react-refresh)
 - **Sin test runner configurado** (cero Vitest/Jest/RTL)
 
 **Environment variables**
+
 - `VITE_API_BASE_URL` — backend principal (quotes, clients, limits, balances, attachments)
 - `VITE_TRADING_API_BASE_URL` — backend separado para alerts y bots (Lambda/AWS)
 - `VITE_AUTH0_DOMAIN`, `VITE_AUTH0_CLIENT_ID`, `VITE_AUTH0_AUDIENCE`
@@ -79,12 +82,14 @@ read-only-first policy) apply unchanged.
 - `.env.example`, `.env.qa`, `.env.production`
 
 **Auth**
+
 - `@auth0/auth0-react` 2.4.0 + Auth0Provider; `cacheLocation: 'localstorage'`
 - Token strategy: `getAccessTokenSilently()` con headers manuales por call; cache adicional en `js-cookie`
 - Roles (Auth0 scopes / metadata): `ADMIN_TRD`, `VIEWER_TRD`, `OPS_TRD`, `QUOTE_CREATOR_TRD`
 - Custom `AuthContext.tsx` envolviendo Auth0 expone `getAccessToken()`, `logout()`, `isAuthenticated`, `user`
 
 **Styling / UI**
+
 - TailwindCSS 3.4.11 (HSL tokens en CSS vars)
 - Montserrat (Google Fonts)
 - `lucide-react` 0.462.0
@@ -93,18 +98,21 @@ read-only-first policy) apply unchanged.
 - 51 shadcn-ui wrapper components en `src/components/ui/`
 
 **Forms / data**
+
 - `react-hook-form` 7.53.0 + `@hookform/resolvers` 3.9.0
 - `zod` 3.23.8
 - `date-fns` 3.6.0
 - `recharts` 2.12.7 (charting)
 
 **HTTP**
+
 - `fetch` API directa (no axios)
 - Headers manuales por call: `Authorization: Bearer ${token}`
 - Sin global interceptor
 - **Dos backends** distintos (`VITE_API_BASE_URL` vs `VITE_TRADING_API_BASE_URL`)
 
 **UI interactions**
+
 - `sonner` 1.5.0 (toast)
 - `vaul` 0.9.3 (drawer)
 - `input-otp` 1.2.4
@@ -206,17 +214,17 @@ State: React Query (server state) + React Context (client state). Sin Redux/Zust
 
 ## 3. Routes
 
-| Path | Component | requiresAuth | Notes |
-|---|---|---|---|
-| `/callback` | Callback.tsx | false | Auth0 callback handler |
-| `/` | MainLayout (outlet) | true | Wrapper con sidebar |
-| `` (index) | Quotes.tsx | true | Default → HistoryQuotes |
-| `/dashboard` | Dashboard.tsx | true | KPIs (mock data) |
-| `/clients` | Clients.tsx | true | |
-| `/alerts` | Alerts.tsx | true | |
-| `/bots` | Bots.tsx | true | |
-| `/providers` | Providers.tsx | true | placeholder |
-| `*` | NotFound.tsx | false | 404 |
+| Path         | Component           | requiresAuth | Notes                   |
+| ------------ | ------------------- | ------------ | ----------------------- |
+| `/callback`  | Callback.tsx        | false        | Auth0 callback handler  |
+| `/`          | MainLayout (outlet) | true         | Wrapper con sidebar     |
+| `` (index)   | Quotes.tsx          | true         | Default → HistoryQuotes |
+| `/dashboard` | Dashboard.tsx       | true         | KPIs (mock data)        |
+| `/clients`   | Clients.tsx         | true         |                         |
+| `/alerts`    | Alerts.tsx          | true         |                         |
+| `/bots`      | Bots.tsx            | true         |                         |
+| `/providers` | Providers.tsx       | true         | placeholder             |
+| `*`          | NotFound.tsx        | false        | 404                     |
 
 Guard: `ProtectedRoute` envuelve rutas dentro de MainLayout; chequea `isAuthenticated`. **No tiene `router.setAuth0()`** (ventaja sobre LEX/OPS).
 
@@ -235,11 +243,13 @@ Default route. Wrapper que carga clients vía ClientsContext y renderiza History
 **HistoryRow (355 LOC):** client name, dockets, amounts (origin/dest), currency, exchange rate, term, status, actions (view details, cancel, edit notes).
 
 **Endpoints:**
+
 - `GET /quotes` (filtered)
 - `GET /quote/{id}`, `/quote/{id}/activities`, `/quote/{id}/attachments`
 - `PATCH /quote/{id}` (notes, liquidate_date, status)
 
 **Features especiales:**
+
 - **FX rate lookup:** `GET /fx-rate?pair_id=...` → MarketPricesResponse (per-provider bid/ask + errors)
 - **CCC (Crypto-to-Crypto-to-Crypto):** CCCDialog (416 LOC) crea quote 3-leg con middle currency
 - **Duplicate detection:** quotesApi tira `DUPLICATE_ERROR` en 409
@@ -276,11 +286,13 @@ BotsTable, StrategiesTable, BotDialog, useBots hook. Stub.
 **Layout:** MainLayout (sidebar + outlet); sidebar.tsx (761 LOC, complex collapsible nav).
 
 **Forms (decomposed):**
+
 - QuoteForm (3,048 LOC ⚠️) — quote creation con dynamic FX, CCC, BUY/SELL, T0-T2 terms, deduct limits flag
 - LiquidityForm (482 LOC) — create/edit liquidity ops
 - NewAlertDialog (304 LOC) — alert con FieldConfig dynamic generation
 
 **Modals:**
+
 - QuoteDetailsDialog (368 LOC) — tabs Details/Activity/Attachments
 - CCCQuoteDetailsDialog (571 LOC)
 - CCCDialog (416 LOC) — 3-leg crypto
@@ -298,6 +310,7 @@ BotsTable, StrategiesTable, BotDialog, useBots hook. Stub.
 ## 6. State management
 
 **React Context:**
+
 - `AuthContext` — isAuthenticated, user, getAccessToken(), logout()
 - `ClientsContext` — clients[] + isLoadingClients
 - `CurrenciesContext` — currency info, pairs
@@ -314,37 +327,37 @@ Sin Redux / Zustand / Pinia analog.
 
 ### `quotesApi.ts` (~555 LOC)
 
-| Función | Endpoint |
-|---|---|
-| `createQuote(data, token)` | `POST /quote` (409 → throw `DUPLICATE_ERROR`) |
-| `createCCCQuote(data, token)` | `POST /create-ccc` |
-| `cancelQuote(id, token)` | `PATCH /quote/{id}` `{ status: 'CANCELLED' }` |
-| `getQuotes(token, filters?)` | `GET /quotes?...` |
-| `getCCCQuotes(quoteId, token, cccGroupId?)` | `GET /quotes?ccc=...` |
-| `updateQuote(id, data, token)` | `PATCH /quote/{id}` |
-| `getClients(token, filters?)` | `GET /clients?...` |
-| `getClientLimits(clientId, token)` | `GET /client/{id}/limits` |
-| `getClientBalances(clientId, token)` | `GET /client/{id}/balances` |
-| `uploadAttachment(quoteId, data, token)` | `POST /quote/{id}/attachment` (presigned URLs) |
-| `getAttachments(quoteId, token)` | `GET /quote/{id}/attachments` |
-| `editAttachment(...)` | `PATCH /quote/{id}/attachment/{attachmentId}` |
-| `deleteAttachment(...)` | `DELETE /quote/{id}/attachment/{attachmentId}` |
-| `getQuoteActivities(quoteId, token)` | `GET /quote/{id}/activities` |
-| `getFXRate(pairId, token)` | `GET /fx-rate?pair_id=...` |
-| `getOperationFlows(token)` | `GET /operation-flows` |
+| Función                                     | Endpoint                                       |
+| ------------------------------------------- | ---------------------------------------------- |
+| `createQuote(data, token)`                  | `POST /quote` (409 → throw `DUPLICATE_ERROR`)  |
+| `createCCCQuote(data, token)`               | `POST /create-ccc`                             |
+| `cancelQuote(id, token)`                    | `PATCH /quote/{id}` `{ status: 'CANCELLED' }`  |
+| `getQuotes(token, filters?)`                | `GET /quotes?...`                              |
+| `getCCCQuotes(quoteId, token, cccGroupId?)` | `GET /quotes?ccc=...`                          |
+| `updateQuote(id, data, token)`              | `PATCH /quote/{id}`                            |
+| `getClients(token, filters?)`               | `GET /clients?...`                             |
+| `getClientLimits(clientId, token)`          | `GET /client/{id}/limits`                      |
+| `getClientBalances(clientId, token)`        | `GET /client/{id}/balances`                    |
+| `uploadAttachment(quoteId, data, token)`    | `POST /quote/{id}/attachment` (presigned URLs) |
+| `getAttachments(quoteId, token)`            | `GET /quote/{id}/attachments`                  |
+| `editAttachment(...)`                       | `PATCH /quote/{id}/attachment/{attachmentId}`  |
+| `deleteAttachment(...)`                     | `DELETE /quote/{id}/attachment/{attachmentId}` |
+| `getQuoteActivities(quoteId, token)`        | `GET /quote/{id}/activities`                   |
+| `getFXRate(pairId, token)`                  | `GET /fx-rate?pair_id=...`                     |
+| `getOperationFlows(token)`                  | `GET /operation-flows`                         |
 
 ### `liquidityApi.ts` (~183 LOC)
 
-| Función | Endpoint |
-|---|---|
-| `getOperations(token, filters)` | `GET /liquidity-operations?...` |
-| `createOperation(token, payload)` | `POST /liquidity-operations` (409 → DUPLICATE_ERROR) |
-| `confirmOperation(token, id)` | `PATCH /liquidity-operations/{id}/status` `{ status: 'RECEIVED' }` |
-| `cancelOperation(token, id)` | `PATCH .../status` `{ status: 'CANCELLED' }` |
-| `changeStatus(token, id, status)` | `PATCH .../status` |
-| `updateOperation(token, id, payload)` | `PATCH /liquidity-operations/{id}` |
-| `getActivities(token, id)` | `GET /liquidity-operations/{id}/activities` |
-| `getProviders(token)` | `GET /providers` |
+| Función                               | Endpoint                                                           |
+| ------------------------------------- | ------------------------------------------------------------------ |
+| `getOperations(token, filters)`       | `GET /liquidity-operations?...`                                    |
+| `createOperation(token, payload)`     | `POST /liquidity-operations` (409 → DUPLICATE_ERROR)               |
+| `confirmOperation(token, id)`         | `PATCH /liquidity-operations/{id}/status` `{ status: 'RECEIVED' }` |
+| `cancelOperation(token, id)`          | `PATCH .../status` `{ status: 'CANCELLED' }`                       |
+| `changeStatus(token, id, status)`     | `PATCH .../status`                                                 |
+| `updateOperation(token, id, payload)` | `PATCH /liquidity-operations/{id}`                                 |
+| `getActivities(token, id)`            | `GET /liquidity-operations/{id}/activities`                        |
+| `getProviders(token)`                 | `GET /providers`                                                   |
 
 **Quirk:** algunas responses vienen wrapped `{ body: JSON.stringify(...) }` — código parsea `json.body`.
 
@@ -370,6 +383,7 @@ TRD = Trading Desk (RFQ / Liquidity / Automated Trading).
 - **Bot:** automated trading strategy (estructura desconocida).
 
 **Workflows:**
+
 - Quote: PENDING → ACCEPTED → COMPLETED · CANCELLED
 - LiquidityOp: PENDING → RECEIVED · CANCELLED
 
@@ -382,12 +396,14 @@ TRD = Trading Desk (RFQ / Liquidity / Automated Trading).
 ## 9. Styles & assets
 
 **`src/index.css`**
+
 - `@import "tailwindcss"`
 - CSS vars HSL: `--primary`, `--background`, `--foreground`, `--destructive`, `--muted`, `--accent`, `--card`, `--sidebar-*`, `--status-*`, `--trading-*`
 - Keyframes: accordion-down/up, pulse-overdue
 - Montserrat (Google Fonts)
 
 **Tailwind config (`tailwind.config.ts`)**
+
 - Dark mode class-based
 - Tokens: trading-buy / trading-sell / trading-neutral · status-pending/ready/completed/overdue
 - Border radius lg/md/sm, container padding, screen sizes
@@ -429,31 +445,32 @@ TRD = Trading Desk (RFQ / Liquidity / Automated Trading).
 
 ## 11. React → Vue translation table
 
-| React (legacy) | Vue 3 (target) | Notas |
-|---|---|---|
-| `react-hook-form` | `vee-validate` 4 + `zod` 3 | QuoteForm es el gran refactor |
-| `@radix-ui/*` (51 wrappers) | `reka-ui` (shadcn-vue) | No 1:1; auditar primitivos |
-| `react-router-dom` | `vue-router` 4 | `createAuthGuard(auth0)`, dynamic imports |
-| `@tanstack/react-query` | `@tanstack/vue-query` 5 | Patrón similar, API distinta |
-| `useAuth0()` | `Auth0Provider` + `createAuthGuard(auth0)` | NO custom `router.setAuth0()` |
-| `useContext(AuthContext)` | Pinia `useAuthStore()` | Migrar 3 contexts → 3 stores |
-| `useState()` | `ref()` / `reactive()` | |
-| Custom hooks | Composables | Mismo patrón function-based |
-| `fetch` + manual headers | `axios` + `setAccessTokenGetter()` interceptor | Todo via `src/lib/api/` |
-| `next-themes` | Template theme provider | Verificar en CLAUDE.md |
-| `sonner` | `vue-sonner` | API parecida |
-| `lucide-react` | `lucide-vue-next` | Mismos íconos, import distinto |
-| `date-fns` | `date-fns` | sin cambios |
-| `recharts` | `recharts` (Vue) o swap a `chart.js`/`plotly.js` | Verificar Vue support |
-| `zod` | `zod` 3 | sin cambios |
-| `clsx`+`tailwind-merge` | mismo + `cn()` | Portable as-is |
-| `js-cookie` | mismo o `pinia-plugin-persistedstate` | Mejor Pinia persistence para auth |
-| JSX nested | `<template>` + `<script setup>` | SFCs `.vue` |
-| Props + callbacks | Props + emits | |
-| `QueryClientProvider` | Vue Query provider del template | |
-| `BrowserRouter` + `Routes` | `createRouter()` | |
+| React (legacy)              | Vue 3 (target)                                   | Notas                                     |
+| --------------------------- | ------------------------------------------------ | ----------------------------------------- |
+| `react-hook-form`           | `vee-validate` 4 + `zod` 3                       | QuoteForm es el gran refactor             |
+| `@radix-ui/*` (51 wrappers) | `reka-ui` (shadcn-vue)                           | No 1:1; auditar primitivos                |
+| `react-router-dom`          | `vue-router` 4                                   | `createAuthGuard(auth0)`, dynamic imports |
+| `@tanstack/react-query`     | `@tanstack/vue-query` 5                          | Patrón similar, API distinta              |
+| `useAuth0()`                | `Auth0Provider` + `createAuthGuard(auth0)`       | NO custom `router.setAuth0()`             |
+| `useContext(AuthContext)`   | Pinia `useAuthStore()`                           | Migrar 3 contexts → 3 stores              |
+| `useState()`                | `ref()` / `reactive()`                           |                                           |
+| Custom hooks                | Composables                                      | Mismo patrón function-based               |
+| `fetch` + manual headers    | `axios` + `setAccessTokenGetter()` interceptor   | Todo via `src/lib/api/`                   |
+| `next-themes`               | Template theme provider                          | Verificar en CLAUDE.md                    |
+| `sonner`                    | `vue-sonner`                                     | API parecida                              |
+| `lucide-react`              | `lucide-vue-next`                                | Mismos íconos, import distinto            |
+| `date-fns`                  | `date-fns`                                       | sin cambios                               |
+| `recharts`                  | `recharts` (Vue) o swap a `chart.js`/`plotly.js` | Verificar Vue support                     |
+| `zod`                       | `zod` 3                                          | sin cambios                               |
+| `clsx`+`tailwind-merge`     | mismo + `cn()`                                   | Portable as-is                            |
+| `js-cookie`                 | mismo o `pinia-plugin-persistedstate`            | Mejor Pinia persistence para auth         |
+| JSX nested                  | `<template>` + `<script setup>`                  | SFCs `.vue`                               |
+| Props + callbacks           | Props + emits                                    |                                           |
+| `QueryClientProvider`       | Vue Query provider del template                  |                                           |
+| `BrowserRouter` + `Routes`  | `createRouter()`                                 |                                           |
 
 **Checklist de migración:**
+
 - [ ] Replace react-hook-form forms con vee-validate + Zod
 - [ ] Auditar 51 shadcn-ui components → reka-ui equivalents
 - [ ] Migrar routing (router instance, auth guard, dynamic imports, catch-all)

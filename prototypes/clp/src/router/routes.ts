@@ -64,8 +64,8 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, layout: 'shell', breadcrumb: 'Reportes' },
   },
   // NOTE: Template-only example modules (Módulo A/B/C) are NOT registered
-  // in derived apps — they live in _core-template only as reference for
-  // AI agents and developers. See _core-template/MIGRATION-PLAYBOOK.md
+  // in derived apps — they live in _core-template-frontend only as reference for
+  // AI agents and developers. See _core-template-frontend/MIGRATION-PLAYBOOK.md
   // "App derivation cleanup". Domain modules for this app land here as
   // their migrations are scoped.
   {

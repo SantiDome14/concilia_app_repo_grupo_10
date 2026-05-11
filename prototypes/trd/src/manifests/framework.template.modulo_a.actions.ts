@@ -3,7 +3,7 @@
 // ────────────────────────────────────────────────────────────────────
 // Demonstrative manifest for the canonical Type-A reference page
 // (`src/pages/ModuloA.vue`). Mirrors the legacy prototype's
-// `prototypes/_core-template/manifests/ejemplo.modulo-a.actions.js`
+// `prototypes/_core-template-frontend/manifests/ejemplo.modulo-a.actions.js`
 // with the five actions a registro_demo can carry, expressed in the
 // Vue 3 + TS strict shape the engine uses today.
 //

@@ -1,11 +1,11 @@
-> Jira REQ: — (template-level gap closure derived from the `_core-template` v1.15 prototype survey)
+> Jira REQ: — (template-level gap closure derived from the `_core-template-frontend` v1.15 prototype survey)
 > Module: core-template (foundation)
 
 # Extend core-forms with custom Select, dependent fields, dynamic options, and dialog field types
 
 ## Why
 
-The current `core-forms` capability seeds the validation engine (`vee-validate` + `zod`), the label token, the required-field marker, the submit-disabled rule, and the field-error placement. That baseline is necessary but not sufficient for the patterns documented in `prototypes/_core-template/README.md` v1.15 and exercised by the manifest engine, Inbox, Alertas, Reportes, and the example Módulo A. Five concrete gaps remain that, if left uncontracted, will be re-implemented divergently by every Ardua app:
+The current `core-forms` capability seeds the validation engine (`vee-validate` + `zod`), the label token, the required-field marker, the submit-disabled rule, and the field-error placement. That baseline is necessary but not sufficient for the patterns documented in `prototypes/_core-template-frontend/README.md` v1.15 and exercised by the manifest engine, Inbox, Alertas, Reportes, and the example Módulo A. Five concrete gaps remain that, if left uncontracted, will be re-implemented divergently by every Ardua app:
 
 1. **Native `<select>` is still implicitly allowed** because the spec says nothing about Select rendering. The prototype is unambiguous: forms and modals NEVER use native `<select>` (line 339 of the catalog: *"Los formularios y modales nunca usan `<select>` nativo."*) because native selects ignore design tokens (dark mode, fonts, paddings, hover states) and break visual consistency. Without a contract, agents will reach for `<select>` "because it's simpler" and the visual baseline will rot.
 2. **Dependent dropdowns are not specified.** The canonical example (`Cuenta` depends on `Sociedad` in FIN — `cm-soc → cm-cuenta`) needs a deterministic reset-and-repopulate pattern. Without a contract, every module will re-invent the parent-watcher and the reset semantics differently.

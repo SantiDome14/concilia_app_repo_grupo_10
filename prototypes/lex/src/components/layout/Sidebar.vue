@@ -52,9 +52,9 @@ const generics: NavItem[] = [
 ];
 
 // Domain modules for this app land here as their migrations are scoped.
-// See `_core-template/MIGRATION-PLAYBOOK.md` "App derivation cleanup" —
+// See `_core-template-frontend/MIGRATION-PLAYBOOK.md` "App derivation cleanup" —
 // derived apps do NOT carry the template's Módulo A/B/C examples nor the
-// component playground; those live only in `_core-template`.
+// component playground; those live only in `_core-template-frontend`.
 const blocks: NavBlock[] = [];
 
 const collapsed = ref(false);

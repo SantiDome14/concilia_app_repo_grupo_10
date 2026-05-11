@@ -17,16 +17,19 @@ source_repo: /Users/yasmani/projects/core-ops-frontend
 ## 1. Stack & configuration
 
 **Runtime / build**
+
 - Vue 3.5.17 — Options API (pages) + Composition API (composables) — mixed
 - JavaScript (90%) + TypeScript (10%, en `enums/` y `lib/utils.ts`)
 - Vite 7.0.0
 - Dev server: `localhost:5173`
 
 **Scripts (`package.json`)**
+
 - `npm run dev` / `build` / `build:prod` / `build:qa` / `preview`
 - No lint script, no test script
 
 **Environment variables**
+
 - `VITE_API_URL` — backend OPS
 - `VITE_PSP_API_URL` — backend PSP (Payment Service Provider, separado)
 - `VITE_LEX_URL` — referencia cross-app a Lex (declarada, no usada)
@@ -36,6 +39,7 @@ source_repo: /Users/yasmani/projects/core-ops-frontend
 - Re-exportadas vía `config.js`: `API_URL`, `PSP_API_URL`, `LEX_URL`
 
 **Auth**
+
 - `@auth0/auth0-vue` 2.4.0 (sin refresh-token flow)
 - `cacheLocation: 'localstorage'`
 - Roles en `idTokenClaims.USER_ROLES[]`: `admin-ops`, `viewer-ops`, `admin-psp`, `viewer-psp`
@@ -43,6 +47,7 @@ source_repo: /Users/yasmani/projects/core-ops-frontend
 - **Anti-pattern:** `router.setAuth0()` custom method (forbidden by template)
 
 **Styling / UI**
+
 - TailwindCSS 4.1.11
 - Geist (sans) + Geist Mono (Google Fonts)
 - `lucide-vue-next` + `oh-vue-icons` (Bootstrap Icons legacy)
@@ -51,12 +56,14 @@ source_repo: /Users/yasmani/projects/core-ops-frontend
 - `clsx` + `tailwind-merge` para className utils
 
 **Forms / data**
+
 - `vee-validate` 4.15.1 (uso básico)
 - `zod` declarado, uso mínimo
 - `MoneyInput.vue` (custom numeric input)
 - `CurrencyCombobox.vue`, `SearchableSelect.vue` (custom dropdowns reemplazando native `<select>`)
 
 **HTTP**
+
 - **`fetch` API** envuelta en `useApi()` composable (NO axios)
 - Headers manuales por call: `Authorization: Bearer ${token}`
 - Sin interceptor central
@@ -64,6 +71,7 @@ source_repo: /Users/yasmani/projects/core-ops-frontend
 - Sin `ApiError` tipada
 
 **Files / export**
+
 - No xlsx ni jszip declarados
 - `Toast.vue` custom (no `vue-sonner`)
 
@@ -140,21 +148,21 @@ No Pinia / Vuex. State component-local + 4 composables.
 
 ## 3. Routes
 
-| Path | Name | Component | requiresAuth | Roles |
-|---|---|---|---|---|
-| `/login` | Login | Login.vue | false | — |
-| `/` | Dashboard | FinancialDashboard.vue | true | ADMIN_OPS, VIEWER |
-| `/dashboard` | DashboardAlias | FinancialDashboard.vue | true | ADMIN_OPS, VIEWER |
-| `/users` | usersDashboardAlias | UserDashboard.vue | true | ADMIN_OPS |
-| `/psp` | — | PSP.vue (layout) | true | ADMIN_OPS |
-| `/psp/home` | PSPHome | PSPHome.vue | true | — |
-| `/psp/accounts` | PSPAccounts | PSPAccounts.vue | true | — |
-| `/unauthorized` | Unauthorized | Unauthorized.vue | true | — |
-| `/settings/instructions` | Instructions | InstructionsList.vue | true | ADMIN_OPS |
-| `/settings/instructions/:id` | InstructionEditor | InstructionForm.vue | true | ADMIN_OPS |
-| `/settings/instructions/:id/view` | InstructionDetail | InstructionDetail.vue | true | ADMIN_OPS |
-| `/clients/:id` | ClientDetail | ClientDetail.vue | true | ADMIN_OPS, VIEWER |
-| `/clients/:id/instructions/create` | CreateInstruction | CreateInstruction.vue | true | ADMIN_OPS |
+| Path                               | Name                | Component              | requiresAuth | Roles             |
+| ---------------------------------- | ------------------- | ---------------------- | ------------ | ----------------- |
+| `/login`                           | Login               | Login.vue              | false        | —                 |
+| `/`                                | Dashboard           | FinancialDashboard.vue | true         | ADMIN_OPS, VIEWER |
+| `/dashboard`                       | DashboardAlias      | FinancialDashboard.vue | true         | ADMIN_OPS, VIEWER |
+| `/users`                           | usersDashboardAlias | UserDashboard.vue      | true         | ADMIN_OPS         |
+| `/psp`                             | —                   | PSP.vue (layout)       | true         | ADMIN_OPS         |
+| `/psp/home`                        | PSPHome             | PSPHome.vue            | true         | —                 |
+| `/psp/accounts`                    | PSPAccounts         | PSPAccounts.vue        | true         | —                 |
+| `/unauthorized`                    | Unauthorized        | Unauthorized.vue       | true         | —                 |
+| `/settings/instructions`           | Instructions        | InstructionsList.vue   | true         | ADMIN_OPS         |
+| `/settings/instructions/:id`       | InstructionEditor   | InstructionForm.vue    | true         | ADMIN_OPS         |
+| `/settings/instructions/:id/view`  | InstructionDetail   | InstructionDetail.vue  | true         | ADMIN_OPS         |
+| `/clients/:id`                     | ClientDetail        | ClientDetail.vue       | true         | ADMIN_OPS, VIEWER |
+| `/clients/:id/instructions/create` | CreateInstruction   | CreateInstruction.vue  | true         | ADMIN_OPS         |
 
 Guard: `beforeEach` espera Auth0 vía watch sobre `auth0Instance.isLoading`; chequea `ROUTE_PERMISSIONS`; redirige unauth → `/login`.
 
@@ -241,6 +249,7 @@ No Pinia / Vuex. State local + 4 composables:
 Métodos del wrapper: `get`, `post`, `put`, `patch`, `del` (cada uno con flag `isPsp` para enrutar a PSP backend).
 
 **Endpoints inventariados (via composables/pages):**
+
 - `GET /instruction?name=&currency_name=`
 - `GET /instruction/:id` · `POST /instruction` · `PUT /instruction/:id` · `DELETE /instruction/:id`
 - `GET /instruction-attribute/instruction/:id` · `POST /instruction-attribute/save-all`
@@ -258,6 +267,7 @@ Métodos del wrapper: `get`, `post`, `put`, `patch`, `del` (cada uno con flag `i
 ## 8. OPS domain logic (technical view)
 
 **Movement types** (`enums/movement.ts`, 23 tipos)
+
 - Core: `DEPOSIT`, `WITHDRAWAL`, `FEE`, `REBATE`, `TRANSFER`, `SWAP`
 - Sub: `TRANSFER_IN/OUT`, `SWAP_IN/OUT`, `INT_DEPOSIT/WITHDRAWAL`, `FX_DEPOSIT/WITHDRAWAL`
 - Collector: `COLLECTOR_IN`, `COLLECTOR_OUT`
@@ -283,11 +293,13 @@ Métodos del wrapper: `get`, `post`, `put`, `patch`, `del` (cada uno con flag `i
 ## 9. Styles & assets
 
 **`src/style.css`**
+
 - `@import 'tailwindcss';`
 - `@theme { --font-sans: "Geist"; --font-mono: "Geist Mono"; }`
 - `html, body { background-color: #0A0A0A; }`
 
 **Color scheme (dark)**
+
 - bg `#0A0A0A` · fg `#FFFFFF`
 - muted: `#D9D9D9`, `#999999`, `#666666`, `#595959`
 - borders: `#3a3a3a`, `#292929`, `#2a2a2a`
@@ -295,6 +307,7 @@ Métodos del wrapper: `get`, `post`, `put`, `patch`, `del` (cada uno con flag `i
 - accents: red-500, blue-600, green-500, purple-500
 
 **Logos / assets**
+
 - `/logo.png` (referenciado, no presente en repo)
 - `/icons/coinag-logo.png`
 - `eur_round.png`, `usa_round.png`, `usd-coin-usdc-logo.svg`, `swap.png`
@@ -362,11 +375,11 @@ The template's Módulo B uses **Sociedad** as the top-level aggregation dimensio
 (treasury intra-group). For OPS PSP the equivalent dimension is **Banco Sponsor**
 — the bank the company holds the operational account at. The vocabulary swap is:
 
-| Template (Módulo B) | OPS PSP                  |
-|---------------------|--------------------------|
-| Sociedad            | Banco Sponsor            |
-| Moneda              | Moneda (sin cambio)      |
-| Cuenta              | Cuenta (sin cambio)      |
+| Template (Módulo B)   | OPS PSP                    |
+| --------------------- | -------------------------- |
+| Sociedad              | Banco Sponsor              |
+| Moneda                | Moneda (sin cambio)        |
+| Cuenta                | Cuenta (sin cambio)        |
 | Posición por sociedad | Posición por banco sponsor |
 
 #### Banco Sponsor catalog (current + roadmap)
@@ -438,7 +451,7 @@ modal in heavy modules to focused follow-up changes per the
 playbook).
 
 The patterns captured here are the input that produced the canonical
-**`prototypes/_core-template/MIGRATION-PLAYBOOK.md`** — the reference for
+**`prototypes/_core-template-frontend/MIGRATION-PLAYBOOK.md`** — the reference for
 LEX, TRD, CLP, and future migrations. **Read the playbook before starting
 any new prototype migration.**
 
@@ -446,14 +459,14 @@ any new prototype migration.**
 
 Located at `openspec/changes/archive/`:
 
-| # | Change | Capability | Tests | Net LOC |
-|---|---|---|---|---|
-| 1 | `2026-05-08-add-ops-instructions` | `ops-instructions` | 22 | -806 + 600 |
-| 2 | `2026-05-08-add-ops-clients` | `ops-clients` | 31 | -2 086 + 1 500 |
-| 3 | `2026-05-08-add-ops-statements` | `ops-statements` | 39 | -940 + 700 |
-| 4 | `2026-05-08-add-ops-account-instructions` | `ops-account-instructions` | 67 | -794 + 1 200 |
-| 5 | `2026-05-08-add-ops-psp` | `ops-psp` | 53 | -9 019 + 1 400 |
-| 6 | `2026-05-08-add-ops-financial-dashboard` | `ops-financial-dashboard` | 37 | -6 592 + 1 400 |
+| #   | Change                                    | Capability                 | Tests | Net LOC        |
+| --- | ----------------------------------------- | -------------------------- | ----- | -------------- |
+| 1   | `2026-05-08-add-ops-instructions`         | `ops-instructions`         | 22    | -806 + 600     |
+| 2   | `2026-05-08-add-ops-clients`              | `ops-clients`              | 31    | -2 086 + 1 500 |
+| 3   | `2026-05-08-add-ops-statements`           | `ops-statements`           | 39    | -940 + 700     |
+| 4   | `2026-05-08-add-ops-account-instructions` | `ops-account-instructions` | 67    | -794 + 1 200   |
+| 5   | `2026-05-08-add-ops-psp`                  | `ops-psp`                  | 53    | -9 019 + 1 400 |
+| 6   | `2026-05-08-add-ops-financial-dashboard`  | `ops-financial-dashboard`  | 37    | -6 592 + 1 400 |
 
 Each archive folder contains `proposal.md`, `design.md`, `tasks.md`, and
 the frozen `specs/<capability>/spec.md`. **When migrating LEX or TRD and
@@ -553,7 +566,7 @@ they're now in the playbook's antipattern list:
     playground — surfaces unrelated to OPS. Resolved by removing
     the example modules from OPS, LEX, TRD, CLP and codifying the
     rule as Pattern 12 ("App derivation cleanup"). The example
-    modules stay in `_core-template` only as reference for AI
+    modules stay in `_core-template-frontend` only as reference for AI
     agents and developers.
 11. **Big-dashboard pattern** (caught after the operator session
     of 2026-05-08): the initial `add-ops-financial-dashboard`
@@ -564,21 +577,21 @@ they're now in the playbook's antipattern list:
     cadences, different natural URLs). Corrected by
     `refactor-ops-dashboard-into-movimientos-cotizaciones`:
     `ops-financial-dashboard` removed entirely; `ops-movimientos`
-    + `ops-cotizaciones` shipped as two top-level capabilities.
-    The legacy `/dashboard` URL redirects to `/movimientos`.
-    Codified as Pattern 14 + antipattern #17 in
-    `MIGRATION-PLAYBOOK.md`.
+    - `ops-cotizaciones` shipped as two top-level capabilities.
+      The legacy `/dashboard` URL redirects to `/movimientos`.
+      Codified as Pattern 14 + antipattern #17 in
+      `MIGRATION-PLAYBOOK.md`.
 12. **PSP "Disponibilidad" simplified shape vs strict Módulo B**
     (same operator session): the initial `add-ops-psp` migration
     shipped Tab 1 as a row of 3 sponsor balance cards. Operator
     pointed out that the canonical Módulo B shape has a KPI grid
-    + filter row + tree expansible per sponsor → accounts.
-    Corrected by `extend-ops-psp-posicion-shape`: tab renamed
-    `Posición`, body adopts the strict Módulo B shape (KPI grid
-    + filter row + sponsor → accounts tree expansible per
-    `_core-template/src/pages/ModuloB.vue`); Movimientos tab gets
-    a 4-card KPI grid above its existing sponsor cards. Codified
-    as antipattern #18 in `MIGRATION-PLAYBOOK.md`.
+    - filter row + tree expansible per sponsor → accounts.
+      Corrected by `extend-ops-psp-posicion-shape`: tab renamed
+      `Posición`, body adopts the strict Módulo B shape (KPI grid
+    - filter row + sponsor → accounts tree expansible per
+      `_core-template-frontend/src/pages/ModuloB.vue`); Movimientos tab gets
+      a 4-card KPI grid above its existing sponsor cards. Codified
+      as antipattern #18 in `MIGRATION-PLAYBOOK.md`.
 
 ### Follow-ups nominated (NOT yet migrated)
 

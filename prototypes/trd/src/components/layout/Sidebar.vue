@@ -45,16 +45,21 @@ interface NavBlock {
 // MUST live at the top of the sidebar, NOT inside a <SidebarBlock>,
 // in this exact order: Dashboard → Inbox → Alertas → Reportes.
 const generics: NavItem[] = [
-  { to: ROUTE_PATHS.DASHBOARD, name: ROUTE_NAMES.DASHBOARD, label: 'Dashboard', icon: LayoutDashboard },
+  {
+    to: ROUTE_PATHS.DASHBOARD,
+    name: ROUTE_NAMES.DASHBOARD,
+    label: 'Dashboard',
+    icon: LayoutDashboard,
+  },
   { to: ROUTE_PATHS.INBOX, name: ROUTE_NAMES.INBOX, label: 'Inbox', icon: InboxIcon },
   { to: ROUTE_PATHS.ALERTAS, name: ROUTE_NAMES.ALERTAS, label: 'Alertas', icon: BellRing },
   { to: ROUTE_PATHS.REPORTES, name: ROUTE_NAMES.REPORTES, label: 'Reportes', icon: FileText },
 ];
 
 // Domain modules for this app land here as their migrations are scoped.
-// See `_core-template/MIGRATION-PLAYBOOK.md` "App derivation cleanup" —
+// See `_core-template-frontend/MIGRATION-PLAYBOOK.md` "App derivation cleanup" —
 // derived apps do NOT carry the template's Módulo A/B/C examples nor the
-// component playground; those live only in `_core-template`.
+// component playground; those live only in `_core-template-frontend`.
 const blocks: NavBlock[] = [];
 
 const collapsed = ref(false);
@@ -114,7 +119,7 @@ function handleHelp(): void {
   <nav
     :class="
       cn(
-        'fixed left-0 top-0 bottom-0 z-[600] flex min-h-screen flex-col gap-0.5 border-r border-b-1 bg-surf px-2.5 py-4 transition-[width] duration-200',
+        'bg-surf fixed top-0 bottom-0 left-0 z-[600] flex min-h-screen flex-col gap-0.5 border-r border-b-1 px-2.5 py-4 transition-[width] duration-200',
         collapsed ? 'w-[60px]' : 'w-[200px]',
       )
     "
@@ -124,34 +129,32 @@ function handleHelp(): void {
       type="button"
       :class="
         cn(
-          'absolute -right-2.5 top-[18px] z-[601] flex h-5 w-5 items-center justify-center rounded-full border border-b-3 bg-card-2 text-t-3 transition-colors hover:border-b-3 hover:bg-card hover:text-t-1',
+          'bg-card-2 text-t-3 hover:bg-card hover:text-t-1 absolute top-[18px] -right-2.5 z-[601] flex h-5 w-5 items-center justify-center rounded-full border border-b-3 transition-colors hover:border-b-3',
         )
       "
       aria-label="Toggle sidebar"
       @click="toggleCollapsed"
     >
-      <ChevronLeft
-        :class="cn('h-2.5 w-2.5 transition-transform', collapsed && 'rotate-180')"
-      />
+      <ChevronLeft :class="cn('h-2.5 w-2.5 transition-transform', collapsed && 'rotate-180')" />
     </button>
 
     <!-- Brand -->
     <div
       :class="
         cn(
-          'mb-1.5 flex items-center gap-2.5 border-b border-b-1 px-2.5 pb-[18px] pt-1.5',
+          'mb-1.5 flex items-center gap-2.5 border-b border-b-1 px-2.5 pt-1.5 pb-[18px]',
           collapsed && 'justify-center gap-0 px-0',
         )
       "
     >
       <div
-        class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-brand text-xs font-extrabold text-white"
+        class="bg-brand flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md text-xs font-extrabold text-white"
       >
         A
       </div>
       <div v-if="!collapsed" class="flex flex-col gap-px">
-        <span class="text-[13px] font-bold tracking-tight text-t-1">APP · Ardua</span>
-        <span class="text-[10px] font-medium text-t-4">Tagline</span>
+        <span class="text-t-1 text-[13px] font-bold tracking-tight">APP · Ardua</span>
+        <span class="text-t-4 text-[10px] font-medium">Tagline</span>
       </div>
     </div>
 
@@ -164,8 +167,8 @@ function handleHelp(): void {
       :data-testid="`sidebar-generic-${item.name}`"
       :class="
         cn(
-          'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium text-t-3 transition-colors hover:bg-card hover:text-t-2',
-          route.name === item.name && 'bg-brand-bg font-semibold text-brand',
+          'text-t-3 hover:bg-card hover:text-t-2 flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors',
+          route.name === item.name && 'bg-brand-bg text-brand font-semibold',
           collapsed && 'justify-center gap-0 px-0 py-2.5',
         )
       "
@@ -178,7 +181,7 @@ function handleHelp(): void {
     <template v-for="block in blocks" :key="block.label">
       <div
         v-if="!collapsed"
-        class="px-2.5 pb-[5px] pt-3 text-[9px] font-extrabold uppercase tracking-wider text-t-4"
+        class="text-t-4 px-2.5 pt-3 pb-[5px] text-[9px] font-extrabold tracking-wider uppercase"
       >
         {{ block.label }}
       </div>
@@ -189,8 +192,8 @@ function handleHelp(): void {
         :title="item.label"
         :class="
           cn(
-            'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium text-t-3 transition-colors hover:bg-card hover:text-t-2',
-            route.name === item.name && 'bg-brand-bg font-semibold text-brand',
+            'text-t-3 hover:bg-card hover:text-t-2 flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors',
+            route.name === item.name && 'bg-brand-bg text-brand font-semibold',
             collapsed && 'justify-center gap-0 px-0 py-2.5',
           )
         "
@@ -209,28 +212,25 @@ function handleHelp(): void {
         type="button"
         :class="
           cn(
-            'flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 transition-colors hover:bg-card',
+            'hover:bg-card flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 transition-colors',
             collapsed && 'justify-center gap-0 px-0',
           )
         "
         @click="toggleAccount"
       >
         <div
-          class="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-info to-[#A78BFA] text-[10px] font-bold text-white"
+          class="from-info flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br to-[#A78BFA] text-[10px] font-bold text-white"
         >
           {{ initials }}
         </div>
         <div v-if="!collapsed" class="min-w-0 flex-1 overflow-hidden text-left">
-          <div class="truncate text-xs font-semibold text-t-2">{{ displayName }}</div>
-          <div class="truncate text-[10px] text-t-4">{{ displayEmail }}</div>
+          <div class="text-t-2 truncate text-xs font-semibold">{{ displayName }}</div>
+          <div class="text-t-4 truncate text-[10px]">{{ displayEmail }}</div>
         </div>
         <ChevronDown
           v-if="!collapsed"
           :class="
-            cn(
-              'h-3 w-3 flex-shrink-0 text-t-4 transition-transform',
-              accountOpen && 'rotate-180',
-            )
+            cn('text-t-4 h-3 w-3 flex-shrink-0 transition-transform', accountOpen && 'rotate-180')
           "
         />
       </button>
@@ -238,11 +238,11 @@ function handleHelp(): void {
       <!-- Account menu -->
       <div
         v-if="accountOpen"
-        class="absolute bottom-[66px] left-2.5 z-[200] w-[180px] rounded-lg border border-b-3 bg-card-2 p-1.5 shadow-[0_-4px_24px_rgba(0,0,0,0.6)]"
+        class="bg-card-2 absolute bottom-[66px] left-2.5 z-[200] w-[180px] rounded-lg border border-b-3 p-1.5 shadow-[0_-4px_24px_rgba(0,0,0,0.6)]"
       >
         <button
           type="button"
-          class="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[13px] font-medium text-t-2 transition-colors hover:bg-white/[0.06] hover:text-t-1"
+          class="text-t-2 hover:text-t-1 flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[13px] font-medium transition-colors hover:bg-white/[0.06]"
           @click="handleSettings"
         >
           <Settings class="h-3.5 w-3.5 flex-shrink-0" />
@@ -250,16 +250,16 @@ function handleHelp(): void {
         </button>
         <button
           type="button"
-          class="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[13px] font-medium text-t-2 transition-colors hover:bg-white/[0.06] hover:text-t-1"
+          class="text-t-2 hover:text-t-1 flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[13px] font-medium transition-colors hover:bg-white/[0.06]"
           @click="handleHelp"
         >
           <HelpCircle class="h-3.5 w-3.5 flex-shrink-0" />
           Get Help
         </button>
-        <div class="my-1 h-px bg-b-1" />
+        <div class="bg-b-1 my-1 h-px" />
         <button
           type="button"
-          class="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[13px] font-medium text-danger transition-colors hover:bg-danger-bg"
+          class="text-danger hover:bg-danger-bg flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[13px] font-medium transition-colors"
           @click="handleLogout"
         >
           <LogOut class="h-3.5 w-3.5 flex-shrink-0" />

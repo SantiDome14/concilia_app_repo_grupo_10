@@ -4,9 +4,9 @@
 
 This design document captures the rationale behind the three new requirements proposed for `core-navigation`: the generics block ordering, the breadcrumb sub-tab segment, and the placeholder page contract.
 
-Each of the three answers a specific question that the survey of `prototypes/_core-template/` v1.15 against the current `core-navigation` baseline left open. The design here explains **why the answer is what it is**, what alternatives we considered, and what tradeoffs we accepted.
+Each of the three answers a specific question that the survey of `prototypes/_core-template-frontend/` v1.15 against the current `core-navigation` baseline left open. The design here explains **why the answer is what it is**, what alternatives we considered, and what tradeoffs we accepted.
 
-The reference for every decision is the prototype README at `prototypes/_core-template/README.md` and the existing baseline at `openspec/specs/core-navigation/spec.md`.
+The reference for every decision is the prototype README at `prototypes/_core-template-frontend/README.md` and the existing baseline at `openspec/specs/core-navigation/spec.md`.
 
 ---
 

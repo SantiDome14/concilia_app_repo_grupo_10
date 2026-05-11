@@ -1,6 +1,6 @@
 # core-forms Specification — Delta
 
-This delta extends the `core-forms` baseline with five new requirements derived from the `_core-template` v1.15 prototype survey. None of the existing five baseline requirements are modified or removed.
+This delta extends the `core-forms` baseline with five new requirements derived from the `_core-template-frontend` v1.15 prototype survey. None of the existing five baseline requirements are modified or removed.
 
 ## ADDED Requirements
 

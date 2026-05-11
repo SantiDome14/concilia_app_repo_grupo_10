@@ -1,4 +1,4 @@
-> Jira REQ: — (pending; template-level capability extension driven by `_core-template` v1.15 prototype survey)
+> Jira REQ: — (pending; template-level capability extension driven by `_core-template-frontend` v1.15 prototype survey)
 > Module: core-template (foundation)
 
 # Extend core-data-tables with views, kanban, multi-axis state machines, severity, and ID column
@@ -7,7 +7,7 @@
 
 The current `core-data-tables` capability defines an excellent baseline for the **single-view list** use case: a bordered surface, uppercase headers, row-click detail, search + filter triggers, ellipsis pagination, an empty state, and the `useTable` / `vue-query` composable split. Eight requirements, every one of them load-bearing.
 
-What it does NOT yet contractualize — and what `prototypes/_core-template/` v1.15 has been operating with for over a year of internal use — is everything that turns that list into a **module surface that adapts to the data**:
+What it does NOT yet contractualize — and what `prototypes/_core-template-frontend/` v1.15 has been operating with for over a year of internal use — is everything that turns that list into a **module surface that adapts to the data**:
 
 1. The fact that a table is one of three coordinated **views** of the same dataset (`Lista` / `Tarjetas` / `Tablero`), declared per module, with a shared pagination footprint.
 2. The fact that `Tablero` is **state-driven**: the kanban does not invent columns; it renders one column per state declared in the module's state machine, with declarative transitions and side effects.

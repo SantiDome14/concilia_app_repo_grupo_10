@@ -1,11 +1,11 @@
-> Jira REQ: — (no Jira ticket; template-level capability extension derived from `prototypes/_core-template/` v1.15)
+> Jira REQ: — (no Jira ticket; template-level capability extension derived from `prototypes/_core-template-frontend/` v1.15)
 > Module: core-template (foundation)
 
 # Extend core-modals with closure modal, drawer, info bar, axis dialog, and global portal aggregator
 
 ## Why
 
-The current `core-modals` baseline contractualizes the four canonical modal flows that every Ardua core app needs from day one — Create, Detail, Edit, and Confirmation. That coverage is correct as a starting point, but it leaves five modal-surface patterns that the v1.15 reference prototype (`prototypes/_core-template/`) treats as first-class and that every Ardua core module will need the moment it starts wiring real lifecycle, multi-axis kanban, or persistent-message overlays:
+The current `core-modals` baseline contractualizes the four canonical modal flows that every Ardua core app needs from day one — Create, Detail, Edit, and Confirmation. That coverage is correct as a starting point, but it leaves five modal-surface patterns that the v1.15 reference prototype (`prototypes/_core-template-frontend/`) treats as first-class and that every Ardua core module will need the moment it starts wiring real lifecycle, multi-axis kanban, or persistent-message overlays:
 
 1. **Closure / justification modal for state-machine transitions.** When a kanban transition is declared `mode: 'modal'` (the canonical case for Inbox `*→completed` and for Alertas terminals `resolved` and `dismissed`), the drag SHALL NOT mutate state directly. It SHALL open a closure modal that captures a structured justification comment plus any structured fields the transition declares, and the state change SHALL only commit on confirm. Without this contract, agents will either skip justification (an audit gap) or invent ad-hoc per-module dialogs (visual drift).
 2. **Drawer with timeline as the canonical detail surface for record types whose detail is a workflow.** Solicitudes (Inbox) and Alertas have detail views that are not static read-only displays — they are timelines with comments and pending actions. The Detail modal pattern from the baseline does not fit. The prototype solves this with a slide-in side panel (`<Drawer>`). Without this contract, agents will overload the Detail modal with timeline content (bad fit) or invent a per-module drawer (drift).

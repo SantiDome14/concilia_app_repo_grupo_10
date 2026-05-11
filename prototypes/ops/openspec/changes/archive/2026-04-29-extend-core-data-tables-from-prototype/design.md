@@ -4,7 +4,7 @@
 
 This is the largest capability extension in the v1.15 prototype migration. The current `core-data-tables` baseline establishes the **single-view list** as the canonical surface: bordered, paginated, searchable, filterable, with a row-click detail and an empty state. Eight requirements, every one of them load-bearing.
 
-What the baseline leaves out — and what `prototypes/_core-template/` v1.15 has been operating with for over a year of internal use — is the **adaptive layer** that turns that list into a module surface that responds to data shape: alternative views (`Tarjetas`, `Tablero`), state-driven kanban, multi-axis state machines, severity rendering, ID-as-first-column, period-as-privileged-filter, and pagination that is owned at the module level rather than at the view level.
+What the baseline leaves out — and what `prototypes/_core-template-frontend/` v1.15 has been operating with for over a year of internal use — is the **adaptive layer** that turns that list into a module surface that responds to data shape: alternative views (`Tarjetas`, `Tablero`), state-driven kanban, multi-axis state machines, severity rendering, ID-as-first-column, period-as-privileged-filter, and pagination that is owned at the module level rather than at the view level.
 
 This document captures the conceptual model behind the ten new requirements, the alternatives we considered, and the tradeoffs we accepted. It is intentionally substantial because the kanban / multi-axis layer is the most complex pattern in the template and the part most likely to be reinvented incorrectly by an unguided agent.
 

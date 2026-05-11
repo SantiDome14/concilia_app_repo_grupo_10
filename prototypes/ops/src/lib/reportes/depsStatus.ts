@@ -2,7 +2,7 @@
 // depsStatus — pure helper for the Reportes Catálogo dependency block
 // ────────────────────────────────────────────────────────────────────
 // Mirrors the prototype's `depsStatus(r)` (lines 5318-5330 of
-// `_core-template.html`):
+// `_core-template-frontend.html`):
 //   - returns `null` when the report has no `dependencies` entries
 //   - `total` / `done` count the array
 //   - `ready === (done === total)`
@@ -29,9 +29,11 @@ function daysUntil(iso: string, now: number): number {
   const m = parts[1] ?? 1;
   const d = parts[2] ?? 1;
   const target = new Date(y, m - 1, d).getTime();
-  const today = new Date(new Date(now).getFullYear(),
+  const today = new Date(
+    new Date(now).getFullYear(),
     new Date(now).getMonth(),
-    new Date(now).getDate()).getTime();
+    new Date(now).getDate(),
+  ).getTime();
   return Math.round((target - today) / MS_PER_DAY);
 }
 
@@ -49,9 +51,7 @@ export function depsStatus(r: Report, now: number = Date.now()): DepsStatus | nu
   let blocked = false;
   if (!ready && r.next) {
     const dRem = daysUntil(r.next, now);
-    blocked = deps.some(
-      (d) => !d.completed && dRem !== null && dRem <= d.sla_days_before,
-    );
+    blocked = deps.some((d) => !d.completed && dRem !== null && dRem <= d.sla_days_before);
   }
   return { total, done, ready, blocked };
 }

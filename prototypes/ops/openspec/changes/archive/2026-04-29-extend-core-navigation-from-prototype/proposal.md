@@ -1,11 +1,11 @@
 # Extend core-navigation with generics block, sub-tab breadcrumb, and placeholder pages
 
-> Jira REQ: — (no Jira ticket; this is a template-level gap closure driven by the survey of `prototypes/_core-template/` v1.15 against the current `core-navigation` baseline)
+> Jira REQ: — (no Jira ticket; this is a template-level gap closure driven by the survey of `prototypes/_core-template-frontend/` v1.15 against the current `core-navigation` baseline)
 > Module: core-template (foundation)
 
 ## Why
 
-The vanilla HTML/JS prototype at `prototypes/_core-template/` (v1.15, dated 2026-04-28) is the reference for every Ardua core app today. Its README is explicit and prescriptive about three navigation patterns that the current `core-navigation` baseline in this template either under-specifies or omits entirely. Migrating apps to this Vue+TS template before contractualizing those patterns would force every migration to invent its own shape — defeating the consistency goal that motivated the template in the first place.
+The vanilla HTML/JS prototype at `prototypes/_core-template-frontend/` (v1.15, dated 2026-04-28) is the reference for every Ardua core app today. Its README is explicit and prescriptive about three navigation patterns that the current `core-navigation` baseline in this template either under-specifies or omits entirely. Migrating apps to this Vue+TS template before contractualizing those patterns would force every migration to invent its own shape — defeating the consistency goal that motivated the template in the first place.
 
 The three gaps that surfaced during the survey:
 

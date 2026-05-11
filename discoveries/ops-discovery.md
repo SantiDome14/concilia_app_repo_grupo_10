@@ -86,6 +86,7 @@ La naturaleza de la cuenta en la plataforma externa determina el costo operativo
 - **Dónde predomina:** la mayoría del esquema no-ARS (Binance, Bitso, Bridge, Convera en ciertos flujos).
 
 Cuando llega un movimiento a una cuenta Pool, el sistema sabe:
+
 - ✅ Cuánto llegó
 - ✅ Cuándo llegó
 - ✅ A qué cuenta Pool de Ardua llegó
@@ -104,6 +105,7 @@ Esta es la forma concreta en que se materializa el problema del Excel ("La Diari
 ### 3.3 Decisión operativa — Pool o Subcuentas
 
 Aunque una plataforma ofrezca Subcuentas, **Ardua puede decidir no habilitarlas** por razones:
+
 - **Operativas:** gestión de muchas subcuentas complejiza la conciliación global en la plataforma.
 - **Fiscales/legales:** mantener un esquema Pool puede ser preferible para ciertos tratamientos.
 
@@ -113,20 +115,20 @@ Los criterios de esta decisión **no están documentados formalmente** y deberí
 
 ## 4. Vocabulario del Dominio
 
-| Término | Definición |
-|---|---|
-| **Banco** | Cualquier institución que habilita cuentas — no solo bancos tradicionales (incluye Binance, Bitso, Coinag, Bridge, Convera, etc.) |
-| **Estructura** | Sinónimo de "Banco" en el módulo Bancos/Cuentas |
-| **Cuenta Pool** | Cuenta de Ardua en una plataforma donde llegan fondos de múltiples clientes mezclados |
-| **Subcuenta** | Cuenta específica de un cliente dentro de una plataforma de Ardua |
-| **Bandeja** | Cola de trabajo para gestionar la *asignación de fondos* — dinero que ya existe en el sistema y necesita ser ubicado correctamente. Foco: asignación |
-| **Comanda** | Cola de trabajo para gestionar *solicitudes que requieren aprobación* — alguien pidió algo y Ops decide qué hacer. Foco: aprobación |
-| **Vostro** | Movimiento entre un cliente y Ardua (depósito, withdrawal, etc.) |
-| **Nostro** | Movimiento entre cuentas propias de Ardua, incluso entre distintas plataformas |
-| **La Diaria** | Plantilla Excel donde Ops registra manualmente todos los movimientos no-ARS antes de cargarlos en el módulo |
-| **Pendiente de asignación** | Movimiento llegado a una cuenta Pool sin cliente identificado — requiere asignación manual por Ops |
-| **Whitelist** | Lista de cuentas de destino habilitadas para un cliente — prerequisito para ejecutar un withdrawal |
-| **Ledger interno** | Registro propio de Ardua de todos los movimientos — fuente de conciliación contra plataformas externas |
+| Término                     | Definición                                                                                                                                           |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Banco**                   | Cualquier institución que habilita cuentas — no solo bancos tradicionales (incluye Binance, Bitso, Coinag, Bridge, Convera, etc.)                    |
+| **Estructura**              | Sinónimo de "Banco" en el módulo Bancos/Cuentas                                                                                                      |
+| **Cuenta Pool**             | Cuenta de Ardua en una plataforma donde llegan fondos de múltiples clientes mezclados                                                                |
+| **Subcuenta**               | Cuenta específica de un cliente dentro de una plataforma de Ardua                                                                                    |
+| **Bandeja**                 | Cola de trabajo para gestionar la _asignación de fondos_ — dinero que ya existe en el sistema y necesita ser ubicado correctamente. Foco: asignación |
+| **Comanda**                 | Cola de trabajo para gestionar _solicitudes que requieren aprobación_ — alguien pidió algo y Ops decide qué hacer. Foco: aprobación                  |
+| **Vostro**                  | Movimiento entre un cliente y Ardua (depósito, withdrawal, etc.)                                                                                     |
+| **Nostro**                  | Movimiento entre cuentas propias de Ardua, incluso entre distintas plataformas                                                                       |
+| **La Diaria**               | Plantilla Excel donde Ops registra manualmente todos los movimientos no-ARS antes de cargarlos en el módulo                                          |
+| **Pendiente de asignación** | Movimiento llegado a una cuenta Pool sin cliente identificado — requiere asignación manual por Ops                                                   |
+| **Whitelist**               | Lista de cuentas de destino habilitadas para un cliente — prerequisito para ejecutar un withdrawal                                                   |
+| **Ledger interno**          | Registro propio de Ardua de todos los movimientos — fuente de conciliación contra plataformas externas                                               |
 
 ---
 
@@ -142,22 +144,22 @@ Todo movimiento en Ops cae en una de tres macro-categorías:
 
 ### 5.2 Tipos específicos — Esquema Ops (no-ARS)
 
-| Tipo | Macro | Sale del ecosistema | Descripción | Nomenclatura externa típica |
-|---|---|---|---|---|
-| **Depósito** | Entrada | No | De afuera hacia Ardua | Deposit |
-| **Withdrawal** | Salida | Sí | De Ardua hacia afuera | Withdrawal |
-| **Transferencia** | Interno | No | Cliente A → Cliente B, misma moneda | Transfer In / Transfer Out |
-| **SWAP** | Interno | No | Mismo cliente, moneda X → moneda Y | Swap In / Swap Out (par) |
-| **Fee** | Interno | No | Cliente → Bolsa Ardua. Recargo aplicado. Tratamiento contable pendiente | Fee / ND (Nota de Débito) |
-| **Rebate** | Interno | No | Bolsa Ardua → Cliente. Crédito al cliente | Rebate / NC (Nota de Crédito) |
-| **Nostro** | Interno | Depende | Entre cuentas propias de Ardua (entre plataformas o intercompany) | Transfer/Withdrawal en origen + Deposit en destino. ⚠️ Hoy no se registran como Nostro unificado |
+| Tipo              | Macro   | Sale del ecosistema | Descripción                                                             | Nomenclatura externa típica                                                                      |
+| ----------------- | ------- | ------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| **Depósito**      | Entrada | No                  | De afuera hacia Ardua                                                   | Deposit                                                                                          |
+| **Withdrawal**    | Salida  | Sí                  | De Ardua hacia afuera                                                   | Withdrawal                                                                                       |
+| **Transferencia** | Interno | No                  | Cliente A → Cliente B, misma moneda                                     | Transfer In / Transfer Out                                                                       |
+| **SWAP**          | Interno | No                  | Mismo cliente, moneda X → moneda Y                                      | Swap In / Swap Out (par)                                                                         |
+| **Fee**           | Interno | No                  | Cliente → Bolsa Ardua. Recargo aplicado. Tratamiento contable pendiente | Fee / ND (Nota de Débito)                                                                        |
+| **Rebate**        | Interno | No                  | Bolsa Ardua → Cliente. Crédito al cliente                               | Rebate / NC (Nota de Crédito)                                                                    |
+| **Nostro**        | Interno | Depende             | Entre cuentas propias de Ardua (entre plataformas o intercompany)       | Transfer/Withdrawal en origen + Deposit en destino. ⚠️ Hoy no se registran como Nostro unificado |
 
 ### 5.3 Tipos específicos — Esquema PSP (ARS)
 
-| Tipo interno | Nomenclatura Coinag | Descripción |
-|---|---|---|
-| **Interno** | Addition / Deduction | Entre CVUs dentro del ecosistema Coinag |
-| **Transferencia** | Collector Out | De un CVU hacia afuera del ecosistema |
+| Tipo interno      | Nomenclatura Coinag  | Descripción                             |
+| ----------------- | -------------------- | --------------------------------------- |
+| **Interno**       | Addition / Deduction | Entre CVUs dentro del ecosistema Coinag |
+| **Transferencia** | Collector Out        | De un CVU hacia afuera del ecosistema   |
 
 ### 5.4 Nota sobre la heterogeneidad de nomenclaturas
 
@@ -173,26 +175,26 @@ El mapeo completo por plataforma es un entregable pendiente (gap Media, §13).
 
 **Bandejas** y **Comandas** son los dos patrones operativos que estructuran el trabajo de Ops. Son distintos en naturaleza y propósito:
 
-| | Comanda | Bandeja |
-|---|---|---|
-| **¿Qué llega?** | Una solicitud de acción | Un movimiento de fondos |
-| **¿Quién lo origina?** | Un actor que pide algo | Un evento financiero que ocurrió |
-| **¿Qué hace Ops?** | Evalúa, aprueba o rechaza | Identifica, asigna, concilia |
+|                          | Comanda                      | Bandeja                                |
+| ------------------------ | ---------------------------- | -------------------------------------- |
+| **¿Qué llega?**          | Una solicitud de acción      | Un movimiento de fondos                |
+| **¿Quién lo origina?**   | Un actor que pide algo       | Un evento financiero que ocurrió       |
+| **¿Qué hace Ops?**       | Evalúa, aprueba o rechaza    | Identifica, asigna, concilia           |
 | **¿El dinero ya movió?** | No — pendiente de aprobación | Sí — ya llegó, falta saber de quién es |
-| **Foco** | Aprobación | Asignación |
+| **Foco**                 | Aprobación                   | Asignación                             |
 
 ### 6.2 Bandejas — gestión de fondos en tránsito
 
-| Bandeja | Estado de entrada | Acción de Ops | Estado de salida |
-|---|---|---|---|
-| **Bandeja de Depósitos** | Fondos llegaron a pool, sin procesar | Verificar y encolar | Pendiente de asignación |
-| **Bandeja de Pendientes** | Verificado, sin cliente asignado | Identificar y asignar cliente | → Bandeja de Clientes |
-| **Bandeja de Clientes** | Conciliado y asignado al cliente | Ninguna — solo visibilidad | Estado final / reflejo en CLP |
+| Bandeja                   | Estado de entrada                    | Acción de Ops                 | Estado de salida              |
+| ------------------------- | ------------------------------------ | ----------------------------- | ----------------------------- |
+| **Bandeja de Depósitos**  | Fondos llegaron a pool, sin procesar | Verificar y encolar           | Pendiente de asignación       |
+| **Bandeja de Pendientes** | Verificado, sin cliente asignado     | Identificar y asignar cliente | → Bandeja de Clientes         |
+| **Bandeja de Clientes**   | Conciliado y asignado al cliente     | Ninguna — solo visibilidad    | Estado final / reflejo en CLP |
 
 ### 6.3 Comandas — gestión de solicitudes pendientes de decisión
 
-| Comanda | Estado de entrada | Acción de Ops | Estado de salida |
-|---|---|---|---|
+| Comanda                | Estado de entrada                | Acción de Ops                                   | Estado de salida      |
+| ---------------------- | -------------------------------- | ----------------------------------------------- | --------------------- |
 | **Comanda de Retiros** | Solicitud recibida, sin ejecutar | Validar whitelist → aprobar/rechazar → ejecutar | → Bandeja de Clientes |
 
 ---
@@ -232,7 +234,7 @@ Reflejo en CLP
 
 Todas las aplicaciones del core (OPS, TRD, FIN, CLP, COM, LEX) siguen una arquitectura base común. La definición detallada de este estándar es **transversal** y candidata a formalizarse en `framework/` como un documento de design system (pendiente — ver §13).
 
-**Template base del core:** `../prototypes/_core-template/` — punto de partida para todos los prototipos del core.
+**Template base del core:** `../prototypes/_core-template-frontend/` — punto de partida para todos los prototipos del core.
 
 ### 8.1 Layout base
 
@@ -242,10 +244,10 @@ Todas las aplicaciones del core (OPS, TRD, FIN, CLP, COM, LEX) siguen una arquit
 
 ### 8.2 Estructura del Main en módulos con listado
 
-| Línea | Contenido |
-|---|---|
-| **L1** | Nombre del módulo + descripción + CTAs principales (máx. 3) |
-| **L2** | Cards contadoras/totalizadoras (KPIs) |
+| Línea  | Contenido                                                                                      |
+| ------ | ---------------------------------------------------------------------------------------------- |
+| **L1** | Nombre del módulo + descripción + CTAs principales (máx. 3)                                    |
+| **L2** | Cards contadoras/totalizadoras (KPIs)                                                          |
 | **L3** | Tabla con (a) encabezado: buscador + filtros, (b) campos + columna de Acciones, (c) paginación |
 
 Las **Acciones** sobre cada registro pueden trackearse como comportamientos de usuario y habilitar capabilities específicas (ej. en Movimientos: Asignar Banco y Cuenta, Crear Nota de Débito, Crear Nota de Crédito). En algunos casos el registro se freezea y solo permite acciones definidas.
@@ -263,25 +265,25 @@ Toda aplicación del core tiene un módulo Home destinado al Dashboard — cards
 Repositorio: `/Users/yasmani/Projects/devs/core-ops-frontend`
 Stack: Vue 3 + Vite + Auth0 + Tailwind
 
-| Funcionalidad | Estado |
-|---|---|
+| Funcionalidad                                | Estado                                                  |
+| -------------------------------------------- | ------------------------------------------------------- |
 | Dashboard / Actividad (tabla de movimientos) | ⚠️ Existe — ingesta manual, sin conciliación automática |
-| Importar SWIFT | ⚠️ Existe — proceso manual, frágil |
-| Crear movimiento manual | ⚠️ Existe — sin auditoría |
-| Clientes (listado) | ⚠️ Existe — parcial |
-| Alta de clientes en app | ⚠️ Existe — sin integración KYC |
-| Detalle de cliente + cuentas | ⚠️ Existe — parcial |
-| Rutas de depósito (Routes) | ⚠️ Existe — flujo de aprobación presente |
-| Route Templates | ✅ Existe — CRUD completo |
-| PSP / Coinag — conciliación automática | ✅ El más maduro del módulo |
-| Whitelist de cuentas | ⚠️ Existe — solo para admins |
-| Bandejas (Depósitos / Pendientes / Clientes) | ❌ No existen como tal |
-| Comanda de Retiros | ❌ No existe formalmente |
-| Nostro | ❌ No se registra en absoluto |
-| Bolsa de fees (estructura contable) | ❌ No existe |
-| Auditoría de acciones | ❌ No existe |
-| Cierre diario / snapshot de posición | ❌ No existe |
-| Catálogo maestro de Bancos/Cuentas | ❌ Hoy hardcodeado — diseñado en prototipo |
+| Importar SWIFT                               | ⚠️ Existe — proceso manual, frágil                      |
+| Crear movimiento manual                      | ⚠️ Existe — sin auditoría                               |
+| Clientes (listado)                           | ⚠️ Existe — parcial                                     |
+| Alta de clientes en app                      | ⚠️ Existe — sin integración KYC                         |
+| Detalle de cliente + cuentas                 | ⚠️ Existe — parcial                                     |
+| Rutas de depósito (Routes)                   | ⚠️ Existe — flujo de aprobación presente                |
+| Route Templates                              | ✅ Existe — CRUD completo                               |
+| PSP / Coinag — conciliación automática       | ✅ El más maduro del módulo                             |
+| Whitelist de cuentas                         | ⚠️ Existe — solo para admins                            |
+| Bandejas (Depósitos / Pendientes / Clientes) | ❌ No existen como tal                                  |
+| Comanda de Retiros                           | ❌ No existe formalmente                                |
+| Nostro                                       | ❌ No se registra en absoluto                           |
+| Bolsa de fees (estructura contable)          | ❌ No existe                                            |
+| Auditoría de acciones                        | ❌ No existe                                            |
+| Cierre diario / snapshot de posición         | ❌ No existe                                            |
+| Catálogo maestro de Bancos/Cuentas           | ❌ Hoy hardcodeado — diseñado en prototipo              |
 
 ### 9.2 Prototipo vigente
 
@@ -289,17 +291,18 @@ Stack: Vue 3 + Vite + Auth0 + Tailwind
 Sirve como fuente de verdad visual/funcional para las iteraciones pendientes del frontend.
 
 **Sidebar:**
+
 - Home (placeholder)
 - **Bloque Operaciones:** Movimientos, Quotes
 - **Bloque Gestión:** Clientes (placeholder), Bancos/Cuentas, PSP (placeholder)
 
 **Módulos funcionales en el prototipo:**
 
-| Módulo | KPIs | Filtros | Paginación |
-|---|---|---|---|
-| Movimientos | Total / Entradas / Salidas / Internos / Sin asignar | Período, Tipo, Rail, Partner, Estructura/Cuenta | ✅ |
-| Quotes | Total / Activos / Pending / Accepted / Completed (clickeables) | Período, Estado (multi), Operación, Plazo | ✅ |
-| Bancos/Cuentas | Estructuras / Cuentas totales / Config. contable / Sin configurar | Sociedad, Tipo, Tipo de cuenta, Moneda, Config. contable | ✅ |
+| Módulo         | KPIs                                                              | Filtros                                                  | Paginación |
+| -------------- | ----------------------------------------------------------------- | -------------------------------------------------------- | ---------- |
+| Movimientos    | Total / Entradas / Salidas / Internos / Sin asignar               | Período, Tipo, Rail, Partner, Estructura/Cuenta          | ✅         |
+| Quotes         | Total / Activos / Pending / Accepted / Completed (clickeables)    | Período, Estado (multi), Operación, Plazo                | ✅         |
+| Bancos/Cuentas | Estructuras / Cuentas totales / Config. contable / Sin configurar | Sociedad, Tipo, Tipo de cuenta, Moneda, Config. contable | ✅         |
 
 ---
 
@@ -328,43 +331,43 @@ El **catálogo completo de tipos de cuenta** está pendiente de validación con 
 
 ## 11. Roles del Sistema
 
-| Rol | Acceso |
-|---|---|
-| `admin-ops` | Acceso total — incluyendo whitelist |
-| `viewer-ops` | Solo lectura |
-| `admin-psp` | Gestión PSP |
-| `viewer-psp` | Solo lectura PSP |
+| Rol          | Acceso                              |
+| ------------ | ----------------------------------- |
+| `admin-ops`  | Acceso total — incluyendo whitelist |
+| `viewer-ops` | Solo lectura                        |
+| `admin-psp`  | Gestión PSP                         |
+| `viewer-psp` | Solo lectura PSP                    |
 
 ---
 
 ## 12. Relación con otros módulos del core
 
-| Módulo | Relación |
-|---|---|
-| **CLP (Client Portal)** | OPS es backstage; CLP es frontstage. Los movimientos Vostro asignados a un cliente se reflejan en su vista CLP |
-| **FIN (Finanzas)** | FIN recibe los movimientos que OPS no puede asignar a cliente (Nostro financiero no operativo). Motor Contable de FIN consume mapeos de Bancos/Cuentas de OPS para generar asientos. Ver `fin-session-context.md` |
-| **TRD (Mesa de Trading)** | TRD origina quotes (instrucciones de swap/cambio); OPS ejecuta el movimiento de fondos resultante. TRD no mueve fondos directamente |
-| **CLP Earn / FCI** | Cualquier movimiento originado por suscripción a FCI aterriza en OPS |
-| **COM (Comercial)** | Sin vínculo operativo directo con OPS (V1) |
+| Módulo                    | Relación                                                                                                                                                                                                          |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **CLP (Client Portal)**   | OPS es backstage; CLP es frontstage. Los movimientos Vostro asignados a un cliente se reflejan en su vista CLP                                                                                                    |
+| **FIN (Finanzas)**        | FIN recibe los movimientos que OPS no puede asignar a cliente (Nostro financiero no operativo). Motor Contable de FIN consume mapeos de Bancos/Cuentas de OPS para generar asientos. Ver `fin-session-context.md` |
+| **TRD (Mesa de Trading)** | TRD origina quotes (instrucciones de swap/cambio); OPS ejecuta el movimiento de fondos resultante. TRD no mueve fondos directamente                                                                               |
+| **CLP Earn / FCI**        | Cualquier movimiento originado por suscripción a FCI aterriza en OPS                                                                                                                                              |
+| **COM (Comercial)**       | Sin vínculo operativo directo con OPS (V1)                                                                                                                                                                        |
 
 ---
 
 ## 13. Gaps Abiertos — Pendientes de Investigación
 
-| Gap | Por qué importa | Prioridad | Estado |
-|---|---|---|---|
-| Entidad legal del esquema Ops no-ARS | Define regulación y contabilidad por movimiento | Alta | Abierto — también flaggeado en REQ-42 |
-| Estructura real de La Diaria (Excel) | Define los campos reales que necesita el módulo | Alta | Abierto |
-| Tipos y frecuencia de movimientos Nostro | Define urgencia de resolver ese gap | Alta | Abierto |
-| Tratamiento contable del SWAP (spread FX) | ¿Va a la bolsa de fees o tiene cuenta propia? | Alta | Abierto |
-| Tratamiento contable de la bolsa de fees | Deuda contable activa — Ardua no sabe cuánto ganó en fees | Alta | Abierto |
-| Catálogo completo de tipos de cuenta | Necesario para cerrar el modelo de datos de Bancos/Cuentas | Alta | Abierto — a validar con Ops + FIN |
-| Mapeo completo de nomenclaturas externas por plataforma | Base para la capa de integración | Media | Abierto |
-| Criterios de decisión Pool vs Subcuentas | Hoy es informal; conviene documentar las razones | Media | Abierto |
-| Proceso completo de whitelist | Define el flujo completo de la Comanda de Retiros | Media | Abierto |
-| ¿Existen Comandas para otros tipos además de retiros? | Define si el patrón se extiende a otros flujos | Media | Abierto |
-| APIs disponibles en Bridge y Convera | Define si la ingesta puede automatizarse o sigue siendo manual | Media | Abierto |
-| Formalización del estándar de UI del core en `framework/` | Hoy el estándar vive implícito en prototipos; conviene un doc de design system | Media | Abierto |
+| Gap                                                       | Por qué importa                                                                | Prioridad | Estado                                |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------ | --------- | ------------------------------------- |
+| Entidad legal del esquema Ops no-ARS                      | Define regulación y contabilidad por movimiento                                | Alta      | Abierto — también flaggeado en REQ-42 |
+| Estructura real de La Diaria (Excel)                      | Define los campos reales que necesita el módulo                                | Alta      | Abierto                               |
+| Tipos y frecuencia de movimientos Nostro                  | Define urgencia de resolver ese gap                                            | Alta      | Abierto                               |
+| Tratamiento contable del SWAP (spread FX)                 | ¿Va a la bolsa de fees o tiene cuenta propia?                                  | Alta      | Abierto                               |
+| Tratamiento contable de la bolsa de fees                  | Deuda contable activa — Ardua no sabe cuánto ganó en fees                      | Alta      | Abierto                               |
+| Catálogo completo de tipos de cuenta                      | Necesario para cerrar el modelo de datos de Bancos/Cuentas                     | Alta      | Abierto — a validar con Ops + FIN     |
+| Mapeo completo de nomenclaturas externas por plataforma   | Base para la capa de integración                                               | Media     | Abierto                               |
+| Criterios de decisión Pool vs Subcuentas                  | Hoy es informal; conviene documentar las razones                               | Media     | Abierto                               |
+| Proceso completo de whitelist                             | Define el flujo completo de la Comanda de Retiros                              | Media     | Abierto                               |
+| ¿Existen Comandas para otros tipos además de retiros?     | Define si el patrón se extiende a otros flujos                                 | Media     | Abierto                               |
+| APIs disponibles en Bridge y Convera                      | Define si la ingesta puede automatizarse o sigue siendo manual                 | Media     | Abierto                               |
+| Formalización del estándar de UI del core en `framework/` | Hoy el estándar vive implícito en prototipos; conviene un doc de design system | Media     | Abierto                               |
 
 ---
 
@@ -387,10 +390,10 @@ El **catálogo completo de tipos de cuenta** está pendiente de validación con 
 
 ## 15. Changelog
 
-| Fecha | Cambio |
-|---|---|
-| 2026-03-16 | Versión inicial — modelo conceptual completo, dos esquemas, Bandejas/Comandas, taxonomía base |
-| 2026-04-21 | Integración del documento de Drive "Discovery del Módulo de Operaciones": premisa fundacional formalizada, sección Cuentas Pool vs Subcuentas, taxonomía ampliada con nomenclaturas externas (Coinag / exchanges), estándar de UI del core, módulo Bancos/Cuentas documentado (creado en abril), relación con otros módulos, gaps actualizados. Archivo duplicado `OPS_Session_Context.md` eliminado en la misma fecha |
+| Fecha          | Cambio                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-03-16     | Versión inicial — modelo conceptual completo, dos esquemas, Bandejas/Comandas, taxonomía base                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 2026-04-21     | Integración del documento de Drive "Discovery del Módulo de Operaciones": premisa fundacional formalizada, sección Cuentas Pool vs Subcuentas, taxonomía ampliada con nomenclaturas externas (Coinag / exchanges), estándar de UI del core, módulo Bancos/Cuentas documentado (creado en abril), relación con otros módulos, gaps actualizados. Archivo duplicado `OPS_Session_Context.md` eliminado en la misma fecha                                                                                                                                                                                                                                                                                                                        |
 | **2026-04-27** | **Nueva §16 OPS-Inbox como primer canónico de Inbox del financial-core. Prompt completo en disco (`prototypes/ops/ops-inbox-PROMPT.md` v1) con vista Kanban + Lista, drag & drop híbrido, drawer + timeline, modal de cierre con radio buttons por tipo, dataset de 13 Solicitudes en 8 tipos cubriendo el dominio OPS — especialmente solicitudes desde CLP (withdrawals, swaps, RFQs) ante la próxima habilitación del flujo en el Client Portal. Pendiente ejecutar el prompt y validar con OPS officers; cuando esté maduro, se promueve a canónico oficial. Próximos pasos actualizados (§14) con: ejecución del prompt, sesión de elicitación, generación de `ops-inbox-discovery.md`, tramitación del REQ Inbox transversal en Jira.** |
 
 ---
@@ -405,10 +408,10 @@ Cuando OPS-Inbox se ejecute, valide y se considere maduro, **se promueve a canó
 
 ### 16.2 Artefacto en disco
 
-| Artefacto | Path | Estado |
-|---|---|---|
-| Prompt del prototipo | `../prototypes/ops/ops-inbox-PROMPT.md` | v1 · 27/04/2026 · listo para ejecutar |
-| Prototipo HTML | `../prototypes/ops/ops-inbox-prototype.html` | Pendiente — se genera al ejecutar el prompt |
+| Artefacto            | Path                                         | Estado                                      |
+| -------------------- | -------------------------------------------- | ------------------------------------------- |
+| Prompt del prototipo | `../prototypes/ops/ops-inbox-PROMPT.md`      | v1 · 27/04/2026 · listo para ejecutar       |
+| Prototipo HTML       | `../prototypes/ops/ops-inbox-prototype.html` | Pendiente — se genera al ejecutar el prompt |
 
 ### 16.3 Decisiones cerradas en el prompt v1
 
@@ -426,16 +429,16 @@ Cuando OPS-Inbox se ejecute, valide y se considere maduro, **se promueve a canó
 
 Distribución: 5 `pending` + 5 `in_progress` + 3 `completed` = 13 Solicitudes total.
 
-| Código | Label | Color badge | Origen típico |
-|---|---|---|---|
-| `WITHDRAWAL_REQUEST` | Solicitud de withdrawal | rojo (`pbr`) | CLP |
-| `SWAP_REQUEST` | Solicitud de swap | azul (`pa`) | CLP |
-| `RFQ_REQUEST` | Solicitud de cotización (RFQ) | púrpura (`pa`) | CLP |
-| `DEPOSIT_MATCHING` | Depósito a identificar | verde (`pbi`) | SYSTEM (webhook Coinag) |
-| `IMPUTATION_REQUEST` | Pedido de imputación retroactiva | ámbar (`pc`) | FIN |
-| `KYC_HOLD` | Cuenta retenida por KYC | rojo (`pbr`) | LEX |
-| `REPORT_DEPENDENCY` | Dependencia de reporte centralizado | gris (`pbg`) | SYSTEM (auto, desde FIN.Reportes) |
-| `MANUAL_TASK` | Tarea manual ad-hoc | gris (`pbg`) | Variable |
+| Código               | Label                               | Color badge    | Origen típico                     |
+| -------------------- | ----------------------------------- | -------------- | --------------------------------- |
+| `WITHDRAWAL_REQUEST` | Solicitud de withdrawal             | rojo (`pbr`)   | CLP                               |
+| `SWAP_REQUEST`       | Solicitud de swap                   | azul (`pa`)    | CLP                               |
+| `RFQ_REQUEST`        | Solicitud de cotización (RFQ)       | púrpura (`pa`) | CLP                               |
+| `DEPOSIT_MATCHING`   | Depósito a identificar              | verde (`pbi`)  | SYSTEM (webhook Coinag)           |
+| `IMPUTATION_REQUEST` | Pedido de imputación retroactiva    | ámbar (`pc`)   | FIN                               |
+| `KYC_HOLD`           | Cuenta retenida por KYC             | rojo (`pbr`)   | LEX                               |
+| `REPORT_DEPENDENCY`  | Dependencia de reporte centralizado | gris (`pbg`)   | SYSTEM (auto, desde FIN.Reportes) |
+| `MANUAL_TASK`        | Tarea manual ad-hoc                 | gris (`pbg`)   | Variable                          |
 
 La cobertura del dataset incluye 3 tipos de origen distintos (otra app del core, otra app del mismo OPS, sistema), Solicitudes con acción inline y otras que requieren saltar a otro módulo, y un caso del loop completo Reportes→Alertas→Inbox (`REPORT_DEPENDENCY`).
 
@@ -458,4 +461,4 @@ El prototipo OPS-Inbox materializa este flujo end-to-end como herramienta de eli
 3. **Sesión de elicitación con OPS officers** — herramienta de validación del modelo conceptual antes de tramitar REQ formal.
 4. **Generar `ops-inbox-discovery.md`** con el feedback recolectado (modelo de datos refinado, tipos de Solicitudes ajustados, capacidades a activar/desactivar).
 5. **Tramitar REQ Inbox transversal en Jira** (ver framework §13). OPS-Inbox queda como caso de implementación base de la infra transversal.
-6. **Promover OPS-Inbox a canónico oficial** del financial-core: actualizar el placeholder del template clonable (`prototypes/_core-template/_core-template.html`) reemplazándolo por un skeleton funcional derivado de OPS-Inbox, replicar capacidades en los demás prototipos de apps.
+6. **Promover OPS-Inbox a canónico oficial** del financial-core: actualizar el placeholder del template clonable (`prototypes/_core-template-frontend/_core-template-frontend.html`) reemplazándolo por un skeleton funcional derivado de OPS-Inbox, replicar capacidades en los demás prototipos de apps.

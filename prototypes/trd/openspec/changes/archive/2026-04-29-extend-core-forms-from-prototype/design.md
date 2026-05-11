@@ -2,7 +2,7 @@
 
 ## Context
 
-This design captures the rationale behind the five new requirements added to `core-forms`. Each requirement closes a concrete gap surfaced by the `_core-template` v1.15 prototype survey (`/tmp/survey-readme-catalog.md` § `core-forms`) against the current `core-forms` baseline (`openspec/specs/core-forms/spec.md`). The design here explains **why each Vue/TS rule is what it is**, what alternatives we considered, and what tradeoffs we accepted.
+This design captures the rationale behind the five new requirements added to `core-forms`. Each requirement closes a concrete gap surfaced by the `_core-template-frontend` v1.15 prototype survey (`/tmp/survey-readme-catalog.md` § `core-forms`) against the current `core-forms` baseline (`openspec/specs/core-forms/spec.md`). The design here explains **why each Vue/TS rule is what it is**, what alternatives we considered, and what tradeoffs we accepted.
 
 The prototype expresses these patterns with imperative DOM helpers (`FORM_DD`, `FORM_DD_OPTS`, `openFormDD`, `closeFormDD`, `selectFormDD`, `updateFormDDLabel`). The Vue/TS template is declarative, reactive, and built on shadcn-vue + vee-validate + zod. The translation is not 1-to-1; it's a contract restatement in the new stack's idioms.
 

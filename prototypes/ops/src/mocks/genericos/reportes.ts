@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════════════════════════
 // Mock Reports + ReportRuns — seed data for the Reportes module
 // ────────────────────────────────────────────────────────────────────
-// CATALOG mirrors the prototype (`prototypes/_core-template.html`,
+// CATALOG mirrors the prototype (`prototypes/_core-template-frontend.html`,
 // lines 5149-5185) — five reports including a CRON Mensual, a CRON
 // Semanal, an On-demand, one with two dependencies (one completed),
 // and one locked. HISTORY runs span success/error and manual/cron.
@@ -25,8 +25,9 @@ export const REPORT_CATEGORIES: ReportCategoryDef[] = [
   { key: 'OPERATIVO', label: 'Operativos', badgeClass: 'border-info/30 text-info' },
 ];
 
-export const REPORT_CATEGORY_BY_KEY: Record<string, ReportCategoryDef> =
-  Object.fromEntries(REPORT_CATEGORIES.map((c) => [c.key, c]));
+export const REPORT_CATEGORY_BY_KEY: Record<string, ReportCategoryDef> = Object.fromEntries(
+  REPORT_CATEGORIES.map((c) => [c.key, c]),
+);
 
 export const REPORTS_CATALOG: Report[] = [
   {
@@ -105,8 +106,7 @@ export const REPORTS_CATALOG: Report[] = [
   {
     id: 'rpt_005',
     name: 'Análisis Especializado (Bloqueado)',
-    description:
-      'Ejemplo de reporte futuro · visible en el catálogo pero no generable aún.',
+    description: 'Ejemplo de reporte futuro · visible en el catálogo pero no generable aún.',
     category: 'OPERATIVO',
     periodicity: 'Mensual',
     next: null,

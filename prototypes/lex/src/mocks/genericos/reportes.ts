@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════════════════════════
 // Mock Reports + ReportRuns — seed data for the Reportes module
 // ────────────────────────────────────────────────────────────────────
-// CATALOG mirrors the prototype (`prototypes/_core-template.html`,
+// CATALOG mirrors the prototype (`prototypes/_core-template-frontend.html`,
 // lines 5149-5185) — five reports including a CRON Mensual, a CRON
 // Semanal, an On-demand, one with two dependencies (one completed),
 // and one locked. HISTORY runs span success/error and manual/cron.

@@ -7,7 +7,7 @@
 
 When an operator ran the `/psp` page after the `add-ops-psp` migration
 landed, they reported that the first tab (`Disponibilidad`) was visually
-inconsistent with the canonical Módulo B shape from `_core-template/src/
+inconsistent with the canonical Módulo B shape from `_core-template-frontend/src/
 pages/ModuloB.vue`. The Disponibilidad tab shipped a simple 3-column row
 of `<SponsorBalanceCard>` instances; the canonical Módulo B treasury
 shape is significantly richer:

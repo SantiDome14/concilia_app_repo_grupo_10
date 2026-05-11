@@ -6,7 +6,7 @@ This design document captures the rationale behind the three new requirements pr
 
 Each requirement answers a specific question that the current `core-error-handling` baseline leaves open. The design here explains **why the answer is what it is**, what alternatives we considered, and what tradeoffs we accepted.
 
-The reference prototype at `/Users/yasmani/product-management-framework/prototypes/_core-template/` v1.15 is the source of truth for the patterns being contracted. Each decision below cites the prototype line range that the contract codifies.
+The reference prototype at `/Users/yasmani/product-management-framework/prototypes/_core-template-frontend/` v1.15 is the source of truth for the patterns being contracted. Each decision below cites the prototype line range that the contract codifies.
 
 ---
 

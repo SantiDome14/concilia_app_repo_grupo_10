@@ -1,11 +1,11 @@
 # Extend core-theming with subtle scrollbars, skeleton variants, branding placement, and badge palette
 
-> Jira REQ: — (no ticket; template-level additive migration from `prototypes/_core-template/` v1.15)
+> Jira REQ: — (no ticket; template-level additive migration from `prototypes/_core-template-frontend/` v1.15)
 > Module: core-template (foundation)
 
 ## Why
 
-The current `core-theming` baseline contracts the token-driven approach: CSS custom properties in `:root`, the single `--brand` swap, the four-step surface / border / text ramps, the semantic status palette, dark mode default, and DM Sans typography. What it does NOT yet contract is four small but high-leverage rules that the vanilla HTML/JS prototype (`prototypes/_core-template/`, v1.15, dated 2026-04-28) accumulated over fifteen revisions and that every one of the six modules built on top of the prototype now relies on:
+The current `core-theming` baseline contracts the token-driven approach: CSS custom properties in `:root`, the single `--brand` swap, the four-step surface / border / text ramps, the semantic status palette, dark mode default, and DM Sans typography. What it does NOT yet contract is four small but high-leverage rules that the vanilla HTML/JS prototype (`prototypes/_core-template-frontend/`, v1.15, dated 2026-04-28) accumulated over fifteen revisions and that every one of the six modules built on top of the prototype now relies on:
 
 1. **Subtle scrollbars are global, not per-component.** The prototype declares `::-webkit-scrollbar` once at the root and every scroll container (Main, table wrappers, Drawers, modal bodies, Sidebar) inherits the same canonical 8px-wide thumb tied to the `--b3` border token. Without contractualizing this, two implementers will produce two visually different scrollbars (browser default in some places, custom in others), and a third will redefine the scrollbar locally in a single component breaking the visual rhythm.
 2. **`<Skeleton>` variants are a closed set, not a free-form shape.** The prototype exposes `.sk-card`, `.sk-btn`, `.sk-chart`, `.sk-circle`, `.sk-row` as the five canonical loading shapes — every loading state in every module reuses one of those five. Without contractualizing the variant set, agents will invent ad-hoc skeleton shapes per page, the shimmer animation will fork into multiple keyframes, and the loading-state grammar will diverge across modules.

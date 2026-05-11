@@ -2,7 +2,7 @@
 
 ## Context
 
-This design captures the rationale behind the five new requirements added to `core-modals` in this change. Each requirement closes a gap that became visible when comparing the v1.15 reference prototype (`prototypes/_core-template/`) against the current `core-modals` baseline. The baseline contracts the four canonical modal flows (Create, Detail, Edit, Confirmation); the prototype additionally relies on five surfaces that this change contractualizes:
+This design captures the rationale behind the five new requirements added to `core-modals` in this change. Each requirement closes a gap that became visible when comparing the v1.15 reference prototype (`prototypes/_core-template-frontend/`) against the current `core-modals` baseline. The baseline contracts the four canonical modal flows (Create, Detail, Edit, Confirmation); the prototype additionally relies on five surfaces that this change contractualizes:
 
 1. Closure / justification modal (state-machine `mode: 'modal'`).
 2. Drawer side panel as the canonical detail surface for workflow-typed records.

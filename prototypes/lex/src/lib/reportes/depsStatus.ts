@@ -2,7 +2,7 @@
 // depsStatus — pure helper for the Reportes Catálogo dependency block
 // ────────────────────────────────────────────────────────────────────
 // Mirrors the prototype's `depsStatus(r)` (lines 5318-5330 of
-// `_core-template.html`):
+// `_core-template-frontend.html`):
 //   - returns `null` when the report has no `dependencies` entries
 //   - `total` / `done` count the array
 //   - `ready === (done === total)`

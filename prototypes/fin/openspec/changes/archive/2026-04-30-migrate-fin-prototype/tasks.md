@@ -98,7 +98,7 @@
 - [x] FIN catalogs plugin (`src/plugins/catalogs.ts`) — register `framework.sociedades`, `ops.catalogo_cuentas` (with sociedad / moneda / compound estructura filters), `clp.clientes`, `fin.proveedores`, `fin.partners`, `framework.bancos_exchanges`, `fin.estructuras`
 - [x] `Asignar Banco y Cuenta` action restructured to a single 3-field cascade (Sociedad → Estructura → Cuenta); legacy `Asignar Estructura` removed; `Marcar con Diferencias` action added; conciliacion axis transitions widened
 - [x] FIN Dashboard rewrite — port the legacy 4-KPI + Posición por sociedad + Alertas activas + Próximos vencimientos + Actividad reciente layout
-- [x] Port every framework-level change above to `_core-template/` (29 files) so derived apps inherit on clone
+- [x] Port every framework-level change above to `_core-template-frontend/` (29 files) so derived apps inherit on clone
 - [x] Smoke tests — `AppearanceToggle.spec.ts`, `preferences.spec.ts`, `RecordDetailModal.spec.ts`
 - [x] Spec deltas — `core-theming` (light mode + primitive token discipline), `core-modulo-genericos` (SettingsDialog), `core-actions-manifest` (UNFILTERED sentinel + eager labels), `core-data-tables` (column-change=field-update + axis tabs)
 

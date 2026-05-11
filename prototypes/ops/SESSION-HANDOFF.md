@@ -14,17 +14,17 @@
 
 ## What landed in this session (10 commits, in chronological order)
 
-| Commit | Subject |
-|---|---|
-| `0e85004` | sidebar z-index + template-only modules cleanup (z-[600] over Dialog/Sheet overlays + remove ModuloA/B/C + Playground from derived apps) |
-| `bcbd3d3` | OPS migration learnings → cross-prototype playbook |
-| `80a32e8` | PSP adopts strict Módulo B shape; OPS sidebar brand → "OPS / Ardua Financial Core / O" |
-| `5ae90ec` | split `ops-financial-dashboard` into `ops-movimientos` + `ops-cotizaciones` (top-level modules, not Dashboard tabs) |
-| `918d266` | PSP tab-aware header + multi-sponsor Posición + closed Movimientos catalog (BIND + Banco de Comercio activated) |
-| `6d0c806` | `Crear Cuenta` wires the whitelist modal (rename of legacy `Habilitar cuenta`, not a placeholder toast) |
-| `818a1b5` | PSP partner rename + Posición default + partner filter as Select (`Sponsor` → `Partner` in user-facing labels; pill cards → Select; health chip drops `Coinag` prefix; localStorage no longer overrides default tab) |
-| `1193327` | dev-fallback wildcard `*` capability so test users see every CTA (`useCapabilities.can()` honours `'*'`; seed includes it across 5 prototypes + template) |
-| `27761ca` | key the `RouterView` so route changes force a clean remount (defensive — `:key="route.name"` in `App.vue` across all 5 prototypes) |
+| Commit    | Subject                                                                                                                                                                                                                                    |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `0e85004` | sidebar z-index + template-only modules cleanup (z-[600] over Dialog/Sheet overlays + remove ModuloA/B/C + Playground from derived apps)                                                                                                   |
+| `bcbd3d3` | OPS migration learnings → cross-prototype playbook                                                                                                                                                                                         |
+| `80a32e8` | PSP adopts strict Módulo B shape; OPS sidebar brand → "OPS / Ardua Financial Core / O"                                                                                                                                                     |
+| `5ae90ec` | split `ops-financial-dashboard` into `ops-movimientos` + `ops-cotizaciones` (top-level modules, not Dashboard tabs)                                                                                                                        |
+| `918d266` | PSP tab-aware header + multi-sponsor Posición + closed Movimientos catalog (BIND + Banco de Comercio activated)                                                                                                                            |
+| `6d0c806` | `Crear Cuenta` wires the whitelist modal (rename of legacy `Habilitar cuenta`, not a placeholder toast)                                                                                                                                    |
+| `818a1b5` | PSP partner rename + Posición default + partner filter as Select (`Sponsor` → `Partner` in user-facing labels; pill cards → Select; health chip drops `Coinag` prefix; localStorage no longer overrides default tab)                       |
+| `1193327` | dev-fallback wildcard `*` capability so test users see every CTA (`useCapabilities.can()` honours `'*'`; seed includes it across 5 prototypes + template)                                                                                  |
+| `27761ca` | key the `RouterView` so route changes force a clean remount (defensive — `:key="route.name"` in `App.vue` across all 5 prototypes)                                                                                                         |
 | `a34a1b7` | **Real root cause** of the "main pane stuck" bug: `<SelectItem value="">` in `Instructions.vue` was throwing in setup and breaking the parent's unmount cycle, leaving zombie DOM. Sentinel pattern (`__all__` + computed bridge) applied. |
 
 ## Known follow-ups (nominated in archived specs)
@@ -41,9 +41,9 @@ These are intentionally NOT shipped here; each is a separate change when product
 
 ## Patterns + antipatterns codified this session
 
-In `prototypes/_core-template/MIGRATION-PLAYBOOK.md`:
+In `prototypes/_core-template-frontend/MIGRATION-PLAYBOOK.md`:
 
-- **Pattern 12** — App derivation cleanup (template-only modules stay in `_core-template`).
+- **Pattern 12** — App derivation cleanup (template-only modules stay in `_core-template-frontend`).
 - **Pattern 13** — Sidebar must be ABOVE Dialog/Sheet overlays (z-index 600+).
 - **Pattern 14** — Don't replicate legacy architectural errors (4 diagnostic questions for "Dashboard" / "Hub" pages).
 - **Pattern 16** — Key the RouterView so route changes force a clean remount (`:key="route.name"`).
@@ -58,7 +58,7 @@ In `prototypes/_core-template/MIGRATION-PLAYBOOK.md`:
 
 1. **Read this file first.**
 2. Skim the commit list above (`git log --oneline -10` from the OPS prototype).
-3. For deep context on architectural decisions, read `prototypes/_core-template/MIGRATION-PLAYBOOK.md` (Patterns 1–16, antipatterns 1–19).
+3. For deep context on architectural decisions, read `prototypes/_core-template-frontend/MIGRATION-PLAYBOOK.md` (Patterns 1–16, antipatterns 1–19).
 4. For OPS-specific decision history, read `prototypes/ops/MIGRATION-NOTES.md`.
 5. Run validation gates from `prototypes/ops/`:
    ```bash

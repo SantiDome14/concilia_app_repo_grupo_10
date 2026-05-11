@@ -1,4 +1,4 @@
-- Jira REQ: — (no ticket; template-level structural correction discovered while comparing Inbox/Alertas drawers against the legacy `prototypes/_core-template/_core-template.html`)
+- Jira REQ: — (no ticket; template-level structural correction discovered while comparing Inbox/Alertas drawers against the legacy `prototypes/_core-template-frontend/_core-template-frontend.html`)
 - Module: core-template (foundation)
 
 # Reorganize the Drawer body so primary actions live inline at the top, not in the footer

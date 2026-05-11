@@ -2,7 +2,7 @@
 
 ## Context
 
-This design captures the rationale behind porting four contracts from `prototypes/_core-template/` (vanilla HTML/JS, v1.15, dated 2026-04-28) into the Vue 3 + TypeScript template's `core-layout` capability. The prototype accumulated these rules over fifteen revisions while six modules were built on top of it; each rule resolves a real disagreement that surfaced during that period. Bringing them into the OpenSpec contract before any Ardua core app starts implementing features on the Vue template is the cheapest way to guarantee the same disagreements do not re-surface in a different language.
+This design captures the rationale behind porting four contracts from `prototypes/_core-template-frontend/` (vanilla HTML/JS, v1.15, dated 2026-04-28) into the Vue 3 + TypeScript template's `core-layout` capability. The prototype accumulated these rules over fifteen revisions while six modules were built on top of it; each rule resolves a real disagreement that surfaced during that period. Bringing them into the OpenSpec contract before any Ardua core app starts implementing features on the Vue template is the cheapest way to guarantee the same disagreements do not re-surface in a different language.
 
 Each decision below answers a specific question that the current `core-layout` baseline leaves open. The design explains **why the answer is what it is**, what alternatives we considered, and what tradeoffs we accepted. The Vue artifact names introduced here (`<Segmenter>`, `<ViewToggle>`, `<MasterDetailLayout>`, `meta.layout`, `Main` container) are the binding tokens — the prototype's CSS class names (`.qtabs`, `.ph-actions`, `.main`) are inputs to this design, not outputs.
 
