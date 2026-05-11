@@ -36,7 +36,8 @@ El alta de un nuevo reporte no es operación de runtime — es flujo de requerim
 | Scheduler de generaciones automáticas | CRON consulta catálogo, dispara generaciones según `next_emission_date`, emite eventos a Alertas |
 | Persistencia de ejecuciones | `ReportRun` inmutables con metadata completa, archivos re-descargables hasta vencimiento de retención |
 | Política de retención por reporte | Categorías: `regulatorio` / `contable` / `operativo` / `interno`; `legal_basis` mandatorio para regulatorios y contables |
-| Mecanismo `REPORT_DEPENDENCY` | Coordinación con Alertas cuando un reporte tiene dependencias bloqueantes en otra app — cierre manual en v1 |
+| Mecanismo `REPORT_DEPENDENCY` | Coordinación con Inbox cuando un reporte tiene dependencias bloqueantes en otra app — modelado como **Tarea al Inbox del `blocking_app` con `auto_archive`** (no como alerta) |
+| Bifurcación por `allows_auto_generation` | Reporte próximo a emitir con `true` → Alerta; con `false` → Tarea al Inbox. Generación automática con dependencias incompletas → `dependencies_unmet[]` + Alerta `reporte_dependencias_incompletas` al consumidor |
 | Reportes cross-app | Múltiples `consumer_apps[]` por reporte; ejecuciones únicas compartidas |
 | Reportes headless | `consumer_apps[]` vacío — generados pero no expuestos en UI |
 | Flujo formal V1 de alta | Solicitud estructurada → REQ hijo → función de generación → registry |
@@ -47,7 +48,6 @@ El alta de un nuevo reporte no es operación de runtime — es flujo de requerim
 - **Builder visual estilo n8n** — nodos (Fuente, Filtro, Constraint, Transformación, Formato, Condición) generando la misma salida
 - **Marketplace de Reportes** — publicación directa para reportes internos/operativos sin pasar por Tecnología (regulatorios y contables siguen ruta formal)
 - **Matriz de aprobaciones por categoría × sensibilidad** — declarable por tipo de reporte
-- **Auto-cierre algorítmico del mecanismo `REPORT_DEPENDENCY`** — alineado con Centro de Alertas v1 (que difiere auto-cierre a v2). En v1, el cierre de las alertas de dependencia es manual
 - **Job de borrado físico de outputs vencidos** — V1 marca `retention_expired: true`; el borrado físico es REQ futuro
 - **Workflow de aprobación para generación** — V1 no contempla aprobaciones previas a generar
 - **Dashboards interactivos / BI** — otra discusión, no es Reportería
@@ -100,6 +100,26 @@ interface RetentionPolicy {
   legal_basis?: string;              // mandatorio para regulatorio/contable
 }
 
+interface ReportDependency {
+  blocking_app: string;
+  blocking_module: string;
+  blocking_type: string;             // tipo de instancia bloqueante (ej: 'daily_reconciliation')
+  recurring_definition_id?: string;  // cuando es instancia específica de una serie recurrente del Inbox (REQ-71)
+  description: string;
+  completed?: boolean;               // marcado por el motor cuando la dependencia se libera
+  completed_at?: number;
+  completed_ref?: string;            // referencia a la Solicitud/Tarea que cerró
+}
+
+interface ReportDependencySnapshot {
+  blocking_app: string;
+  blocking_module: string;
+  blocking_type: string;
+  recurring_definition_id?: string;
+  description: string;
+  state_at_run: 'pending' | 'completed';
+}
+
 interface ReportRun {
   id: string;
   report_id: string;
@@ -111,6 +131,7 @@ interface ReportRun {
   output_url?: string;
   error_message?: string;
   retention_expired?: boolean;
+  dependencies_unmet?: ReportDependencySnapshot[];  // poblado cuando se generó con dependencias no completadas
 }
 ```
 
@@ -153,11 +174,19 @@ El capability provider de REQ-68 resuelve `user_id → capabilities[]` vía la c
 
 ## Comportamiento
 
-**Generación manual.** Click en "Generar" → endpoint valida `permissions.execute`, valida parámetros, verifica `dependencies[]`, invoca `generator_ref`, persiste `ReportRun`, retorna referencia descargable. Si hay dependencias pendientes, no genera: emite `REPORT_DEPENDENCY` y devuelve `dependencies_pending`.
+**Generación manual.** Click en "Generar" → endpoint valida `permissions.execute`, valida parámetros, verifica `dependencies[]`. Si todas están `completed: true`, invoca `generator_ref`, persiste `ReportRun`, retorna referencia descargable. Si alguna no está completada: **no genera**, emite Tarea `report_dependency_block` al Inbox del `blocking_app` (ver § REPORT_DEPENDENCY) y devuelve `dependencies_pending`.
 
-**Generación automática (CRON).** Scheduler periódico consulta el catálogo, identifica reportes con `allows_auto_generation: true` y `cron_active: true` cuya fecha venció o está dentro del umbral; verifica dependencias; invoca el endpoint con parámetros default e identidad de sistema; persiste `ReportRun` con `trigger: { type: 'cron' }`; actualiza `next_emission_date`. No aplica check de `permissions.execute` (identidad de sistema).
+**Generación automática (CRON) — bifurcación por `allows_auto_generation`.** Scheduler periódico consulta el catálogo, identifica reportes con `cron_active: true` cuya fecha venció o está dentro del umbral; verifica dependencias y bifurca:
 
-**Persistencia y retención.** Cada `ReportRun` queda inmutable con metadata completa. Archivos re-descargables hasta vencimiento de `retention_policy.duration`, sujeto a `permissions.view`. Al vencer: `retention_expired: true`, `output_url` deja de servir (404), deja de aparecer en Ejecución; metadata preservada indefinidamente.
+| Estado de dependencias | `allows_auto_generation` | Comportamiento |
+|---|---|---|
+| Todas `completed: true` | cualquiera | Invoca `generator_ref` con identidad de sistema, persiste `ReportRun` con `trigger: { type: 'cron' }`, actualiza `next_emission_date` |
+| Alguna `completed: false` | `true` | **Genera de todos modos** con los datos disponibles, persiste `ReportRun` con `dependencies_unmet[]` poblado (snapshot de las pendientes al momento del run), emite Alerta `reporte_dependencias_incompletas` al consumidor + Tarea `report_dependency_block` al `blocking_app` |
+| Alguna `completed: false` | `false` | **No genera.** Emite Tarea `report_dependency_block` al Inbox del `blocking_app` para que se libere la dependencia. La próxima corrida del scheduler re-evaluará |
+
+No aplica check de `permissions.execute` en generación CRON (identidad de sistema).
+
+**Persistencia y retención.** Cada `ReportRun` queda inmutable con metadata completa, incluyendo `dependencies_unmet[]` cuando aplique. Archivos re-descargables hasta vencimiento de `retention_policy.duration`, sujeto a `permissions.view`. Al vencer: `retention_expired: true`, `output_url` deja de servir (404), deja de aparecer en Ejecución; metadata preservada indefinidamente.
 
 **Retenciones típicas de referencia:**
 
@@ -167,6 +196,43 @@ El capability provider de REQ-68 resuelve `user_id → capabilities[]` vía la c
 | `contable` | 10 años (asientos, balances, P&L) |
 | `operativo` | 1–6 meses |
 | `interno` | 1–3 meses |
+
+---
+
+## Mecanismo `REPORT_DEPENDENCY` y eventos a Alertas
+
+### Dependencias bloqueantes → Tarea al Inbox del `blocking_app`
+
+Cuando se detecta una dependencia no completada (ya sea en generación manual o automática), el motor emite una **Tarea** del tipo `report_dependency_block` al Centro de Solicitudes del `blocking_app`, **no una Alerta**.
+
+La Tarea:
+
+- `kind: 'tarea'`, `source_app: 'reportes'`, `target_app: blocking_app`, `target_role` declarado por la dependencia.
+- Payload: `{ report_id, report_name, report_run_id?, blocking_module, blocking_type, recurring_definition_id?, description, due_at }`.
+- `auto_archive`: configurado con `condition_ref` que evalúa `dependencies[].completed: true` para esta dependencia. Cuando la dependencia se libera (porque alguna instancia bloqueante de la serie o tipo se cerró con éxito), el motor del Inbox evalúa la condición y auto-cierra la Tarea con `closed_by: 'system'` + `closure_action: 'dependency_resolved'`.
+- Si la dependencia es una instancia específica de una **serie recurrente** del Inbox (REQ-71), `recurring_definition_id` apunta a la `RecurringInboxItemDefinition`; el motor matchea contra la próxima instancia completada de esa serie.
+
+Esto reemplaza el diseño previo "`REPORT_DEPENDENCY` como Alerta con cierre manual". El nuevo diseño:
+
+1. **Convive con la semántica del Inbox** — una dependencia bloqueante es una Tarea que alguien (humano o serie recurrente) tiene que destrabar.
+2. **Permite auto-archive declarativo** sin depender del auto-cierre algorítmico general de Alertas (que sigue diferido a v2).
+3. **Asigna routing** vía `target_role` y opcionalmente `default_assignee` cuando se crea por serie recurrente.
+
+### Eventos del scheduler a Alertas
+
+El scheduler y el motor de generación emiten `ALERT_TYPE`s al Centro de Alertas. Los eventos bifurcan por `allows_auto_generation` cuando aplica:
+
+| Evento | `ALERT_TYPE` o Tarea | Destino | Disparador |
+|---|---|---|---|
+| Próximo a emitir, `allows_auto_generation: true` | Alerta `reporte_proximo_emision_auto` | `consumer_apps[]` | `next_emission_date - alert_anticipation_days` |
+| Próximo a emitir, `allows_auto_generation: false` | **Tarea** `reporte_proximo_emision_manual` al Inbox | `consumer_apps[]` (o el responsable de ejecutar) | `next_emission_date - alert_anticipation_days` |
+| Vencido (`next_emission_date` pasó sin generación exitosa) | Alerta `reporte_vencido` | `consumer_apps[]` | Detección periódica del scheduler |
+| Error en generación | Alerta `reporte_error_generacion` | `consumer_apps[]` | `ReportRun.status: 'error'` |
+| Emitido automáticamente | Alerta `reporte_emitido_automaticamente` | `consumer_apps[]` | `ReportRun` con `trigger: { type: 'cron' }` y `status: 'ok'` |
+| Generado con dependencias incompletas | Alerta `reporte_dependencias_incompletas` | `consumer_apps[]` | `ReportRun.dependencies_unmet[]` poblado |
+| Dependencia bloqueante detectada | **Tarea** `report_dependency_block` con `auto_archive` | Inbox del `blocking_app` | Generación (manual o auto) con dependencia `completed: false` |
+
+La lista no es exhaustiva. Cualquier evento sistémico relevante del dominio Reportes puede modelarse como nuevo `ALERT_TYPE` o tipo de Tarea siguiendo el flujo formal (REQ-73 §11 o REQ-71 §13).
 
 ---
 
@@ -187,7 +253,8 @@ El capability provider de REQ-68 resuelve `user_id → capabilities[]` vía la c
 | Con | Cómo |
 |---|---|
 | **Acciones / Manifest Engine** (REQ-68) | (a) Las acciones del Catálogo son del manifest; (b) el capability provider resuelve `user → capabilities`; (c) el catálogo canónico de capabilities vive ahí y este servicio las referencia por ID |
-| **Centro de Alertas** (`centro-de-alertas.md`, REQ-73) | Consumidor del repositorio para reportería analítica; receptor de eventos del scheduler (próximo a emitir, vencido, error en generación, `REPORT_DEPENDENCY`) |
+| **Centro de Alertas** (`centro-de-alertas.md`, REQ-73) | Receptor de eventos del scheduler y del motor de generación: `reporte_proximo_emision_auto`, `reporte_vencido`, `reporte_error_generacion`, `reporte_emitido_automaticamente`, `reporte_dependencias_incompletas` |
+| **Centro de Solicitudes** (`centro-de-solicitudes.md`, REQ-71) | Receptor de Tareas: `report_dependency_block` (con `auto_archive` declarativo) y `reporte_proximo_emision_manual` (cuando `allows_auto_generation: false`). Consumidor de `recurring_definition_id` para vincular dependencias con instancias de series recurrentes |
 | **Vistas** (REQ-69) | Contrato de tabs alternables (Catálogo / Ejecución) + mecánica de tabla y filtros |
 | **Auth0** | Identidad del invocador; los claims alimentan al capability provider de REQ-68 |
 
@@ -244,8 +311,11 @@ Vinculante. Solicitudes incompletas se rechazan.
 | 5 | Pre-2026-05 | `ReportRun` **inmutables** con metadata preservada indefinidamente; archivos sujetos a `retention_policy.duration` |
 | 6 | Pre-2026-05 | **Categorías de retención** estandarizadas (`regulatorio` / `contable` / `operativo` / `interno`) con `legal_basis` mandatorio para las dos primeras |
 | 7 | Pre-2026-05 | V2 (IA Playground + builder visual + Marketplace) marcada explícitamente como **sujeta a viabilidad, no commitment**. V1 debe ser autosuficiente |
-| 8 | 2026-05-11 | **Alineación con Centro de Alertas v1.** Se difiere a v2 el auto-cierre algorítmico del mecanismo `REPORT_DEPENDENCY` (consistente con REQ-73 v1, que difiere auto-cierre y `auto_resolved`). En v1, el cierre de las alertas de dependencia es manual; la marca `dependencies[].completed: true` en Reportes es independiente del cierre de la alerta |
-| 9 | 2026-05-11 | **Principio elevado:** la gestión y ejecución de reportes son fuente de alertas hacia el Centro de Alertas. Los eventos típicos enumerados en §9 de REQ-59 (próximo a emitir, vencido, error, dependencia) no son exhaustivos — cualquier evento relevante del dominio Reportes puede modelarse como un nuevo `ALERT_TYPE` siguiendo el flujo formal de REQ-73 §11 |
+| 8 | 2026-05-11 | **`REPORT_DEPENDENCY` se modela como Tarea al Centro de Solicitudes** del `blocking_app` con `auto_archive` declarativo, no como Alerta. La condición de auto-archive evalúa `dependencies[].completed: true` para la dependencia específica. Cuando aplica a instancias recurrentes del Inbox (REQ-71), se referencia vía `recurring_definition_id` |
+| 9 | 2026-05-11 | **Principio elevado:** la gestión y ejecución de reportes son fuente de alertas hacia el Centro de Alertas. Los eventos típicos enumerados en § "Mecanismo `REPORT_DEPENDENCY`" no son exhaustivos — cualquier evento relevante del dominio Reportes puede modelarse como un nuevo `ALERT_TYPE` o tipo de Tarea siguiendo el flujo formal (REQ-73 §11 / REQ-71 §13) |
+| 10 | 2026-05-11 | **Bifurcación por `allows_auto_generation` para "reporte próximo a emitir":** `true` → Alerta `reporte_proximo_emision_auto`; `false` → Tarea `reporte_proximo_emision_manual` al Inbox. Razonamiento: un reporte manual próximo a emitir requiere acción humana específica (la propia generación), no es solo una condición a anunciar |
+| 11 | 2026-05-11 | **`ReportRun.dependencies_unmet[]`** — cuando un reporte con `allows_auto_generation: true` se genera con dependencias no completadas, persiste snapshot de las dependencias pendientes al momento del run. Emite Alerta `reporte_dependencias_incompletas` al consumidor + Tarea `report_dependency_block` al `blocking_app` |
+| 12 | 2026-05-11 | **`ReportDependency.recurring_definition_id?`** — cuando la dependencia es una instancia específica de una serie recurrente del Inbox (REQ-71), se referencia por el ID de la definición. Permite vincular reportería regulatoria con tareas operativas recurrentes (ej: reporte UIF depende de `daily_reconciliation` del día previo) |
 
 ---
 
@@ -262,5 +332,7 @@ Vinculante. Solicitudes incompletas se rechazan.
 
 - REQ entregable: REQ-59 · espejo en AM-1004
 - Discovery relacionado: `discoveries/core-modulos-transversales-discovery.md`
-- Feature relacionada: Centro de Alertas (`centro-de-alertas.md`) — receptor de los `ALERT_TYPE`s que emite este servicio (`report_dependency`, próximo a emitir, vencido, errores)
+- Features relacionadas:
+  - Centro de Alertas (`centro-de-alertas.md`) — receptor de los `ALERT_TYPE`s que emite este servicio (próximo-emisión-auto, vencido, error-generación, emitido-automáticamente, dependencias-incompletas)
+  - Centro de Solicitudes (`centro-de-solicitudes.md`) — receptor de Tareas con `auto_archive` (`report_dependency_block`) y Tareas manuales (`reporte_proximo_emision_manual`). Vincula dependencias contra series recurrentes vía `recurring_definition_id`
 - REQ consumidor: REQ-54 (LEX — Centro de Reportería Regulatoria y Operativa)

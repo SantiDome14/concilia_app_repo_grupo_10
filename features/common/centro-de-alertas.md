@@ -13,11 +13,25 @@ productos_afectados: [TRD, OPS, LEX, CLP, FIN]
 
 ## Propósito
 
-Sistema formal de gestión de alertas del backoffice de Ardua. Las alertas se generan automáticamente desde código que detecta condiciones del dominio (en cualquier app del core o sistema externo), llegan al Centro de la app responsable, y un humano del backoffice las tramita con audit trail: comentar, marcar como resuelta, descartar.
+Sistema formal de gestión de alertas del backoffice de Ardua. Las alertas se generan **exclusivamente desde código** que detecta condiciones sistémicas del dominio (en cualquier app del core o sistema externo), llegan al Centro de la app responsable, y un humano del backoffice las tramita con audit trail: comentar, marcar como resuelta, descartar.
 
 Cubre el gap entre **Slack** (canal de mensajería sin trazabilidad estructurada) y **Grafana** (observabilidad técnica para developers). Ninguno de los dos sirve para gestión formal del backoffice ni acredita governance regulatoria — el Centro asume ese rol.
 
 **Capacidad nueva del v1:** Ardua tiene un repositorio interno auditable de alertas y comentarios en su propia base de datos, consultable vía API. Es el primer registro estructurado del grupo sobre estos eventos.
+
+### Origen exclusivamente sistémico
+
+La diferencia operativa con el **Centro de Solicitudes** (`centro-de-solicitudes.md`) es taxativa:
+
+| Eje | Alertas | Inbox |
+|---|---|---|
+| **Origen** | Sistémico (código que detecta una condición) | Humano o sistémico |
+| **Disparador** | Una condición evaluada en runtime se cumple | Alguien (persona o sistema) pide algo |
+| **Creación manual desde UI** | **No existe** en v1 | Existe (CTA "Crear Solicitud/Tarea" en tipos con `creable_manualmente: true`) |
+| **Asignación** | Routing por `target_role` en v1; `assignee` se difiere a v2 | `assignee` editable en v1 |
+| **Pregunta canónica** | "¿Qué condición sistémica se cumplió?" | "¿Qué tarea hay que hacer?" |
+
+Una observación humana que requiere ser registrada y trabajada es una Solicitud/Tarea, no una Alerta. Si en el futuro aparece un caso legítimo de "alerta creada por humano", se evaluará en V2 y se justificará por qué no calza como Solicitud.
 
 ---
 
@@ -45,10 +59,12 @@ Cubre el gap entre **Slack** (canal de mensajería sin trazabilidad estructurada
 - Asignación formal a usuario o área (`assignee`)
 - Estado intermedio `in_review`
 - Auto-cierre algorítmico
-- Mecanismo `REPORT_DEPENDENCY` con auto-cierre (coordinación inter-app con Reportes)
 - Chart-first surface con thresholds overlaid (para alertas time-series)
 - Bulk operations, re-apertura, canales push adicionales (email, Teams, SMS, WhatsApp)
 - Asistente IA para definir nuevos `ALERT_TYPE`s
+- **Creación manual de alertas desde la UI** — todas las alertas son sistémicas en v1
+
+> **Nota sobre `REPORT_DEPENDENCY`:** No se modela como alerta. Las dependencias bloqueantes de reportes se modelan como **Tarea al Centro de Solicitudes** del `blocking_app` con `auto_archive` (ver `centro-de-solicitudes.md` y `centro-de-reporteria.md`). El auto-cierre algorítmico de alertas sigue diferido a v2 por separado, pero no condiciona el mecanismo de dependencias de Reportes.
 
 ---
 
@@ -80,6 +96,20 @@ interface Alerta<TPayload = unknown> {
 ```
 
 Cada app declara sus `ALERT_TYPE`s en un registry (`AlertTypeConfig`) con: payload del dominio, severidades válidas, `closeActions[]`, política de push a Slack. Mezclar `closeActions` con `terminal_state` inconsistentes es contract violation validable al boot.
+
+### `ALERT_TYPE`s emitidos por otros servicios del core
+
+Servicios transversales del core emiten `ALERT_TYPE`s que cada `target_app` consumidora debe declarar en su registry. Ejemplos:
+
+| ALERT_TYPE | Emisor | Disparador | Severidad típica |
+|---|---|---|---|
+| `reporte_proximo_emision_auto` | Centro de Reportería (REQ-59) | Reporte con `allows_auto_generation: true` próximo a emitirse según `alert_anticipation_days` | `medium` / `high` |
+| `reporte_vencido` | Centro de Reportería (REQ-59) | `next_emission_date` pasada sin generación exitosa | `high` / `critical` |
+| `reporte_error_generacion` | Centro de Reportería (REQ-59) | `ReportRun` con `status: 'error'` | `high` |
+| `reporte_emitido_automaticamente` | Centro de Reportería (REQ-59) | `ReportRun` con `trigger: { type: 'cron' }` y `status: 'ok'`, según política del reporte | `low` / `medium` |
+| `reporte_dependencias_incompletas` | Centro de Reportería (REQ-59) | `ReportRun` ejecutado con `dependencies_unmet[]` poblado (auto-gen procedió pese a dependencias `completed: false`) | `high` |
+
+La lista no es exhaustiva — cualquier evento sistémico relevante del dominio Reportes (u otro servicio) puede convertirse en `ALERT_TYPE` siguiendo el flujo formal de §11.
 
 ---
 
@@ -137,9 +167,11 @@ Ambos REQs configuradores (REQ-52 y REQ-33) están desbloqueados al 100% por v1 
 |---|---|---|
 | 1 | 2026-05-11 | Recorte a v1: se descartan las 4 categorías originales (`triage` / `workflow` / `metric` / `cross_app_panel`). Modelo plano con severidad como única dimensión de clasificación |
 | 2 | 2026-05-11 | Dashboard cross-app no es categoría del modelo — se construye sobre la API de consulta |
-| 3 | 2026-05-11 | `REPORT_DEPENDENCY` con auto-cierre se difiere a v2 (depende de auto-cierre, que no entra en v1) |
-| 4 | 2026-05-11 | Vistas v1 = Lista + Cards + Kanban. Kanban habilita Ejes (REQ-69) para reagrupar por dimensión del dominio (ej: severidad) |
-| 5 | 2026-05-11 | Persistencia interna explícita como objetivo y capacidad nueva — diferenciación frente a Slack (efímero) y Grafana (técnico) |
+| 3 | 2026-05-11 | Vistas v1 = Lista + Cards + Kanban. Kanban habilita Ejes (REQ-69) para reagrupar por dimensión del dominio (ej: severidad) |
+| 4 | 2026-05-11 | Persistencia interna explícita como objetivo y capacidad nueva — diferenciación frente a Slack (efímero) y Grafana (técnico) |
+| 5 | 2026-05-11 | **Origen exclusivamente sistémico** en v1. Las alertas no se crean manualmente desde la UI. Una observación humana que requiere registrarse y trabajarse va al Centro de Solicitudes (`centro-de-solicitudes.md`), no a Alertas |
+| 6 | 2026-05-11 | **`REPORT_DEPENDENCY` se modela como Tarea al Inbox del `blocking_app` con `auto_archive`** (no como alerta). Resuelve el coupling Reportes ↔ Inbox sin pasar por Alertas. El auto-cierre algorítmico de alertas sigue diferido a v2, pero por razones independientes |
+| 7 | 2026-05-11 | **Nueva `ALERT_TYPE` emitida por Reportería**: `reporte_dependencias_incompletas` — se dispara cuando un `ReportRun` se ejecuta con `dependencies_unmet[]` poblado (caso `allows_auto_generation: true` que procede a generar pese a dependencias no completadas) |
 
 ---
 
@@ -156,4 +188,6 @@ Ambos REQs configuradores (REQ-52 y REQ-33) están desbloqueados al 100% por v1 
 
 - REQ entregable: REQ-73 · espejo en AM-1020
 - Discovery relacionado: `discoveries/core-modulos-transversales-discovery.md`
-- Feature relacionada: Centro de Reportería (`centro-de-reporteria.md`) — consume el repositorio de alertas para reportería analítica
+- Features relacionadas:
+  - Centro de Solicitudes (`centro-de-solicitudes.md`) — comparte `<Drawer>`, `TimelineEvent`, `Comment`, motor de routing por `target_role`. Eje funcional distinto: Centro de Solicitudes para Solicitudes/Tareas (humano o sistémico), Alertas para condiciones sistémicas detectadas en código
+  - Centro de Reportería (`centro-de-reporteria.md`) — emite `ALERT_TYPE`s al Centro (`reporte_proximo_emision_auto`, `reporte_vencido`, `reporte_error_generacion`, `reporte_emitido_automaticamente`, `reporte_dependencias_incompletas`) y consume el repositorio para reportería analítica

@@ -34,6 +34,7 @@ La regla operativa: si la capacidad se expone al usuario final en múltiples pro
 | Release Awareness | Definida | `release-awareness.md` | TRD, OPS, LEX, CLP, FIN |
 | Centro de Alertas | Definida | `centro-de-alertas.md` | TRD, OPS, LEX, CLP, FIN |
 | Centro de Reportería | Definida | `centro-de-reporteria.md` | TRD, OPS, LEX, CLP, FIN |
+| Centro de Solicitudes | Definida | `centro-de-solicitudes.md` | TRD, OPS, LEX, CLP, FIN |
 
 ---
 
@@ -54,7 +55,7 @@ Reglas:
 ```
 features/common/notificaciones.md         ← sistema unificado de notificaciones
 features/common/alertas.md                ← motor de alertas con perfiles A/B/C/D
-features/common/inbox.md                  ← inbox transversal (canónico OPS-Inbox como base)
+features/common/centro-de-solicitudes.md   ← centro transversal de Solicitudes/Tareas (Inbox)
 features/common/acciones.md               ← mecanismo Acción · Registro · Capability
 ```
 
