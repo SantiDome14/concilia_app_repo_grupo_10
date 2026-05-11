@@ -4,7 +4,7 @@ features: []
 status: En investigación
 owner: Yasmani Rodriguez
 created_at: 2026-04-30
-updated_at: 2026-04-22
+updated_at: 2026-05-11
 ---
 
 # Jira Automations — Session Context
@@ -87,6 +87,38 @@ Para validar la regla end-to-end después de cambios en cualquier extremo del ha
 4. Esperar hasta 5 minutos.
 5. Verificar transición automática del ticket AM a `TO REFINEMENT`.
 6. Borrar ambos tickets (REQ y AM).
+
+---
+
+### Learning 4 — Miles respondía en hilos sin haber sido @mencionado (REQ-83, 2026-05-11)
+
+**Contexto.** Miles respondía automáticamente con "¿Cuál es el área específica a la que pertenece este requerimiento?" en hilos de canales `req-product-*` sin haber sido @mencionado. El comportamiento se observó en `req-product-trading-desk` (hilo del 08/05/2026), donde Miles respondió varias veces en el mismo hilo sin que ningún usuario lo invocara.
+
+**Causa raíz.** El workflow `miles-slack-event-router` reenvía al conversation handler todos los `thread_reply` — incluyendo conversaciones operativas donde Miles nunca fue invocado. El conversation handler, a su vez, no tenía ningún nodo que verificara si Miles había sido previamente activo en ese hilo. El nodo `Is Notification Thread?` rama NO conectaba directamente a `Is Session Closed?`, que al no encontrar el mensaje de éxito simplemente continuaba hacia el LLM y respondía.
+
+**Síntomas observables.**
+- Miles interrumpe conversaciones operativas/técnicas en canales `req-product-*`.
+- Usuarios responden "No le des bola a Miles" o ignoran los mensajes.
+- Ruido en canales que no son requerimientos formales.
+
+**Solución adoptada — versión `silent-unless-invited` (2026-05-11).** Se agregaron dos nodos en `miles-conversation-handler` entre `Is Notification Thread?` (rama NO) e `Is Session Closed?`:
+
+1. **`Has Miles Been Active?`** (nodo IF) — evalúa si `source !== 'thread_reply'` (siempre procede para `mention` y `claude`) o si existe algún mensaje de bot en el historial del hilo distinto al mensaje raíz. Condición:
+   ```
+   source !== 'thread_reply' ? true : msgs.some(m => m.bot_id && m.ts !== thread_ts)
+   ```
+   - YES → continúa hacia `Is Session Closed?` (comportamiento existente)
+   - NO → `Ignore — Miles Not In Thread` (noOp)
+
+2. **`Ignore — Miles Not In Thread`** (nodo noOp) — termina la ejecución silenciosamente.
+
+**Por qué el fix vive en el handler y no en el router.** Filtrar por canal en el router no resuelve nada: los `req-product-*` son exactamente los canales donde Miles debe operar. El problema no es el canal sino la ausencia de estado de sesión. El fix en el handler preserva el comportamiento correcto para todos los casos: `mention` y `claude` siempre proceden, `thread_reply` solo procede si Miles ya estaba activo.
+
+**Validación.** Prueba manual en `req-product-trading-desk` (2026-05-11):
+- Reply en hilo sin Miles activo → Miles no respondió ✅
+- @Miles en hilo nuevo + follow-up sin @Miles → Miles respondió en ambos turnos ✅
+
+**Principio derivado.** En agentes conversacionales que escuchan canales compartidos, el criterio de activación no debe ser solo el tipo de evento (`thread_reply`) sino el estado de sesión del agente en ese contexto específico (¿fue invocado previamente en este hilo?). Sin este filtro, cualquier evento del canal activa el agente independientemente de si tiene contexto válido para responder.
 
 ---
 
