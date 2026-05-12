@@ -23,7 +23,7 @@ import type { KanbanAxis, KanbanState } from '@/types/kanban';
 import { useManifestModule } from '@/composables/useManifestModule';
 import { INBOX_MANIFEST_KEY } from '@/manifests/framework.template.inbox.actions';
 import { INBOX_SOLICITUDES } from '@/mocks/genericos/inbox';
-import { CURRENT_USER, findUser } from '@/mocks/genericos/users';
+import { CURRENT_USER, MOCK_USERS, findUser } from '@/mocks/genericos/users';
 import type {
   InboxType,
   Solicitud,
@@ -90,6 +90,11 @@ const search = ref('');
 const filterConcept = ref<string>('');
 const filterState = ref<string>('');
 const filterType = ref<'' | InboxType>('');
+/** '' = Todos · '__unassigned__' = Sin asignar · '<user_id>' = filtered to that user. */
+const filterAssignee = ref<string>('');
+
+/** Human users available as assignee filter options (system actor excluded). */
+const ASSIGNEE_FILTER_USERS = MOCK_USERS.filter((u) => u.role !== 'system');
 
 // ─── Reactive dataset (mock-backed) ──────────────────────────────────
 const solicitudes = ref<Solicitud[]>(
@@ -109,6 +114,11 @@ const filteredSolicitudes = computed<Solicitud[]>(() => {
   return solicitudes.value.filter((s) => {
     if (filterType.value && s.type !== filterType.value) return false;
     if (filterConcept.value && s.concept !== filterConcept.value) return false;
+    if (filterAssignee.value) {
+      if (filterAssignee.value === '__unassigned__') {
+        if (s.assignee !== null && s.assignee !== undefined) return false;
+      } else if (s.assignee !== filterAssignee.value) return false;
+    }
     if (filterState.value && s.state !== filterState.value) return false;
     if (term) {
       const haystack = `${s.id} ${solicitudTitle(s)} ${solicitudSummary(s)}`.toLowerCase();
@@ -404,6 +414,18 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
       >
         <option value="">Concepto · Todos</option>
         <option v-for="c in ACTIVE_CONCEPTS" :key="c" :value="c">{{ c }}</option>
+      </select>
+      <select
+        v-model="filterAssignee"
+        class="rounded-md border border-b-2 bg-card px-3 py-2 text-xs text-t-2"
+        aria-label="Filtrar por responsable asignado"
+        data-testid="filter-assignee"
+      >
+        <option value="">Asignado a · Todos</option>
+        <option value="__unassigned__">Sin asignar</option>
+        <option v-for="u in ASSIGNEE_FILTER_USERS" :key="u.id" :value="u.id">
+          {{ u.name }}
+        </option>
       </select>
       <select
         v-model="filterState"
