@@ -80,6 +80,16 @@ const APROBACION_PAGO: InboxTypeConfig = {
     { id: 'forwarded', label: 'Derivada', terminal_state: 'completed' },
     { id: 'rejected', label: 'Rechazada', terminal_state: 'rejected' },
   ],
+  // Example trigger declaration. Newly-created `aprobacion_pago`
+  // Solicitudes acquire a `triggered_actions[]` row via the mock
+  // executor in `<InboxCreateDialog>` so the user sees the
+  // `<TriggeredActionsPanel>` in the Drawer on creation.
+  triggers_on_create: [
+    {
+      action_id: 'demo.example.crear_factura_borrador',
+      payload_mapping: { 'factura.amount': 'amount', 'factura.vendor': 'vendor' },
+    },
+  ],
 };
 
 const REVISION_LEGAJO: InboxTypeConfig = {

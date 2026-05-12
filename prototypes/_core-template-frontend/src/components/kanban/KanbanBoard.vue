@@ -245,13 +245,13 @@ function selectAxis(axisId: string): void {
       </nav>
 
       <!-- Single-axis fallback: no tabs to switch between, so we keep
-           the textual "Organizando por:" pointer for the user. -->
+           the textual "Organizado por:" pointer for the user. -->
       <div v-else-if="props.axis" class="flex flex-col">
         <p v-if="props.title" class="text-[10px] font-bold uppercase tracking-wider text-t-3">
           {{ props.title }}
         </p>
         <p class="text-sm font-semibold text-t-1">
-          Organizando por: {{ props.axis.label }}
+          Organizado por: {{ props.axis.label }}
         </p>
       </div>
     </header>
