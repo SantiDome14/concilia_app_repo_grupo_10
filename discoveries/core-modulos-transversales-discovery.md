@@ -481,6 +481,147 @@ Durante la sesion se exploro modelar `execution: manual | programmatic` como dim
 
 ---
 
+## Refinamiento del modelo del Inbox — Sesion 2026-05-12 (parte 2)
+
+Segunda sesion de refinamiento del mismo dia sobre el Centro de Solicitudes. Mientras la parte 1 (mas arriba) formalizo dos principios arquitectonicos (Wizard of Oz + scope explicito) sin modificar el modelo de datos, esta parte 2 **modifica el modelo de datos del Inbox** y reposiciona el Inbox conceptualmente como vista filtrada en lugar de contenedor universal. El feature `centro-de-solicitudes.md` se actualizo en consecuencia; REQ-71 y AM-1017 quedan pendientes de refactor en una sesion siguiente.
+
+No se modificaron REQs en Jira en esta sesion — el trabajo fue de modelo conceptual y propagacion al feature.
+
+### Cambio de framing: Inbox como vista filtrada
+
+La parte 1 dejo claro que jobs programaticos puros (sync, audit, normalizacion) viven en codigo, fuera del Centro. Esta parte 2 va un paso mas alla y reposiciona el Inbox dentro del Centro:
+
+> El Centro persiste **todas** las ejecuciones (humanas y programaticas) en bbdd para audit y reporting. El **Inbox solo renderiza** las que requieren accion humana en este momento. La regla queda en una sola linea: `execution_mode === 'human' OR state === 'failed'`.
+
+Esto resuelve una tension latente del modelo previo: los registros programaticos exitosos no tenian buen lugar — el Centro no los recibia formalmente, pero su outcome era util para audit. Ahora viven en bbdd como cualquier registro, solo que no se visualizan en el Inbox.
+
+### Matriz origen × ejecucion como modelo formal
+
+La parte 1 habia explicitamente decidido **no incorporar `execution: manual | programmatic`** al modelo (decision #10 del feature, vigente hasta esta sesion). Esta parte 2 revisa esa decision y **si incorpora la dimension** — pero con dos campos ortogonales en lugar de uno:
+
+- `type: 'request' | 'task'` — origen del request (humano vs programatico).
+- `execution_mode: 'human' | 'programmatic'` — modo de ejecucion.
+
+Las cuatro combinaciones generan los cuadrantes de la matriz:
+
+| `type` | `execution_mode` | Cuadrante | Visible en Inbox |
+|---|---|---|---|
+| `request` | `human` | Solicitud | Siempre |
+| `task` | `human` | Task | Siempre |
+| `request` | `programmatic` | Funcion invocada | Solo si Failed |
+| `task` | `programmatic` | Background job | Solo si Failed |
+
+La razon del cambio respecto a la decision #10 anterior: incorporar la dimension explicitamente al modelo permite que los registros programaticos exitosos vivan en bbdd con identidad propia (auditables, reportables), y que cuando fallan se vuelvan visibles en el Inbox como tareas pendientes sin necesidad de mecanica especial. Lo que la decision #10 trataba de evitar — complicar el modelo del Inbox visible — se preserva con la regla de filtrado, sin negar la realidad de que existen ejecuciones programaticas.
+
+### Estado `failed` con retry
+
+Se agrega un quinto estado canonico: `failed`. Aplica **solo a tipos con `execution_mode: 'programmatic'`** (los `human` no entran a `failed` porque no hay un endpoint que pueda fallar tecnicamente — su falla seria una decision de operador y se modela como `rejected`).
+
+Un registro programatico que falla:
+
+1. Transita a `state: 'failed'` con `failure_reason` poblado por el endpoint.
+2. Se vuelve visible en el Inbox (regla de filtrado).
+3. Expone CTA "Retry" en el Drawer (o en una Alerta asociada, cuando aplica).
+4. Retry re-invoca el `endpoint_ref` con el mismo payload. `retry_count++`. Si exito → `completed`. Si falla → permanece `failed` con `failure_reason` actualizado.
+
+**Retry siempre manual en V1.** Sin auto-retry con back-off, sin escalamiento automatico. Si un tipo necesita auto-retry, vive en codigo del endpoint o en infraestructura de cola — no en el Centro. V2 evalua auto-retry declarable por tipo.
+
+### Endpoint publico invocable como primitiva comun
+
+Toda entrada del catalogo con `execution_mode: 'programmatic'` declara un `endpoint_ref` que apunta al endpoint publico que ejecuta la logica del tipo. **Es la primitiva comun de los cuatro escenarios de invocacion** de la ejecucion programatica:
+
+| Escenario | Quien invoca |
+|---|---|
+| Scheduler (serie recurrente o asociacion consumidor-tipo) | Sistema con identidad `system` |
+| Accion del manifest (CTA en una vista del modulo destino) | Usuario via Manifest Engine (REQ-68) |
+| Retry desde el Drawer del Inbox | Operador del area |
+| Retry desde una Alerta | Operador del area |
+
+Desde la perspectiva del endpoint, los cuatro escenarios son indistinguibles — recibe el mismo `payload` y devuelve el mismo `{ status, result, error_reason }`. La diferencia esta solo en quien lo invoca y en que metadata del audit trail queda registrada.
+
+Consecuencia importante: **todo lo programaticamente ejecutable es invocable desde la UI**. Si un tipo falla, el operador siempre tiene un boton de Retry. Si una integracion se rompe, hay una via manual para re-disparar.
+
+### Asociacion consumidor-tipo predefinido con `lead_time`
+
+La decision #7 anterior modelaba el coupling Reportes ↔ Inbox como una Tarea con `auto_archive` generada **al momento de ejecutar el reporte**. Si la dependencia ya estaba completa por otro lado, la Tarea se cerraba sola. Reactivo.
+
+Esta parte 2 invierte el flujo: el consumidor scheduleado (reporte, cierre periodico, vencimiento) declara una **asociacion** con un tipo del catalogo del Inbox, especificando con cuanta antelacion al deadline del consumidor quiere que la instancia este disponible para el area dueña. **Proactivo**.
+
+Entidad nueva: `ConsumerTypeAssociation` con campos `consumer_ref`, `consumer_kind`, `concept`, `target_app`, `target_role`, `default_assignee`, `lead_time_days`, `payload_template`, `association_state`.
+
+**El `lead_time_days` vive en la asociacion, no en el tipo.** El mismo `concept` (ej: conciliacion operativa mensual) puede ser dependencia de N consumidores con tiempos distintos (UIF con 5 dias, BCRA con 3, CNV con 7). Cada asociacion declara su propio lead time.
+
+**Generalizacion mas alla de reportes.** El mecanismo cubre tambien cierres periodicos (`consumer_kind: 'period_close'`), vencimientos regulatorios (`'expiration'`) y cualquier otro caso scheduleado (`'other'`). La decision #7 queda revisada: aplica el patron generalizado, no solo a reportes.
+
+### Evidencias como seccion del Drawer/Dialog
+
+Nuevo campo `evidence: Evidence[]` en el modelo del registro. Tres tipos canonicos:
+
+| `kind` | Cuando aplica | Contenido |
+|---|---|---|
+| `manual_check` | Tipos con `execution_mode: 'human'` — confirmacion de ejecucion por parte del responsable | `{ confirmed: true, confirmed_at }` |
+| `attachment` | Tipos con `execution_mode: 'human'` — archivos de soporte | `{ file_ref, file_name, mime_type, size_bytes }` |
+| `system_log` | Tipos con `execution_mode: 'programmatic'` — log del endpoint | `{ log_text, status, endpoint_response_ref }` |
+
+**Coexisten con `closeAction` + comentario** — no lo reemplazan. `closeAction` captura **que se decidio** al cerrar; el comentario aporta justificacion textual; la evidencia captura **como se demostro el trabajo**. Los tres conviven en el `<ClosureModal>` para tipos `human`. Para tipos `programmatic`, el `system_log` se popula automaticamente desde el endpoint.
+
+Inmutables tras cierre. Base para audit interno, compliance regulatoria y auditorias externas.
+
+### Dos fechas semanticas distintas
+
+El modelo previo tenia solo `created_at` (tecnico) y `due_at` (deadline). Esta sesion agrega `requested_at`:
+
+| Campo | Semantica |
+|---|---|
+| `created_at` | Timestamp tecnico de persistencia del registro |
+| `requested_at` | Cuando se solicita formalmente. **Puede ser futura** (caso de generacion anticipada por consumidor-tipo) |
+| `due_at` | Deadline para ejecutar |
+
+Ejemplo concreto. Reporte UIF se ejecuta el dia 15. Declara asociacion con `lead_time_days: 5`. El dia 10 (a las 09:00), el scheduler crea la instancia → `created_at = 10/09:00`, `requested_at = 10/09:00` (la solicitud se formaliza en ese momento), `due_at = 15/00:00`. Caso donde `created_at` y `requested_at` no coinciden: una solicitud agendada con anticipacion pero registrada antes (V2 plausible).
+
+### Dos vistas del usuario: Mi bandeja + Mis enviadas
+
+El modelo previo asumia una sola vista implicita: "lo que tengo que hacer". Esta sesion agrega una segunda vista top-level:
+
+- **Mi bandeja** — lo que el usuario tiene que ejecutar (`assignee = user_actual` o `target_role` corresponde).
+- **Mis enviadas** — las Solicitudes que el usuario creo hacia otros (`source_user = user_actual`), para seguimiento.
+
+La segunda vista nace de una observacion concreta de Yasmani: un usuario que crea una solicitud a otra area (ej: CLP solicita un retiro a OPS) necesita poder ver en que estado esta sin recorrer el modulo destino. Hoy ese seguimiento se hace por canales informales (Slack, mail); con "Mis enviadas" pasa a ser parte del modulo Inbox.
+
+Las Tareas generadas por sistema (sin `source_user`) no aparecen en "Mis enviadas" de nadie — solo en "Mi bandeja" de los destinatarios.
+
+### Naming: prosa en español, modelo en ingles
+
+Resolucion de la inconsistencia previa entre REQ y feature (REQ usaba `type` para el clasificador de negocio y `kind` para Solicitud/Tarea; el feature usaba `concept` para el clasificador y `type` para Solicitud/Tarea):
+
+- **Prosa de documentacion y UI** — español: "Solicitud", "Tarea".
+- **Campos del modelo** — ingles: `type: 'request' | 'task'`, `execution_mode: 'human' | 'programmatic'`, `concept` para clasificador de negocio.
+
+Esto se aplico en el feature actualizado en esta sesion. REQ-71 hereda el cambio cuando se haga su refactor.
+
+### Decisiones del feature actualizadas en esta sesion
+
+Ver `features/common/centro-de-solicitudes.md` § Decisiones clave. Resumen:
+
+- **Revisadas:** #7 (asociacion reportes↔tipos pasa de reactiva a anticipada y se generaliza), #10 (el modelo si incorpora `execution_mode`).
+- **Nuevas (#11–#19):** cinco estados con `failed`; matriz `type` × `execution_mode`; Inbox como vista filtrada; endpoint publico invocable; asociacion consumidor-tipo con `lead_time`; evidencias coexistentes; dos fechas semanticas; dos vistas del usuario; naming hibrido español/ingles.
+
+### Pendientes que surgen de esta sesion
+
+- **Refactor de REQ-71 + propagacion a AM-1017.** El REQ todavia describe el modelo previo (cuatro estados, sin matriz origen×ejecucion explicita, sin evidencias, sin Mis enviadas, sin endpoint publico, sin asociacion consumidor-tipo). Pendiente para una sesion siguiente.
+- **Cleanup paralelo de REQ-71 + REQ-68/69/73/59/74 para sacar filtracion tecnica.** Los REQs transversales tienen TypeScript inline, nombres de componentes Vue especificos, referencias a paths del repo (`src/types/genericos.ts`, etc.) y decisiones de implementacion que pertenecen al PRD tecnico, no al REQ de Producto. Esto se identifico al revisar REQ-71 en esta sesion; aplica al set completo.
+- **Actualizar `centro-de-reporteria.md`** para reflejar el nuevo mecanismo de `ConsumerTypeAssociation` (decision #7 revisada). El feature de Reportes describe el modelo anterior de `report_dependency_block` con `auto_archive`.
+- **AM-1017** debe recibir la version refactorizada de REQ-71 con la nota convencional al inicio.
+
+### Como retomar en otra sesion
+
+1. **El feature `centro-de-solicitudes.md` es la fuente de verdad mas reciente** — refleja el modelo completo al cierre del 2026-05-12.
+2. **El REQ-71 esta desactualizado** respecto al feature. No usarlo como referencia para el modelo conceptual; usar el feature.
+3. **El AM-1017 espejo tambien esta desactualizado.** Cuando se refactore REQ-71, propagar al AM con la nota convencional.
+4. Antes de refactorizar REQ-71, considerar el cleanup transversal de los 6 REQs (sacar filtracion tecnica que entro durante el enrichment del 2026-05-10).
+
+---
+
 ## Referencias
 
 - `core-template-frontend-discovery.md` — paradigma del template del cual derivan los 6 transversales.
