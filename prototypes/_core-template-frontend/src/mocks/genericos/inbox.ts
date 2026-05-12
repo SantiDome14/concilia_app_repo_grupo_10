@@ -49,12 +49,12 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
         at: Date.parse('2026-04-28T10:30:05Z'),
       },
     ],
-    created_at: '2026-04-28T10:30:00Z',
-    updated_at: '2026-04-28T10:30:00Z',
+    created_at: '2026-05-12T08:00:00Z',
+    updated_at: '2026-05-12T08:00:00Z',
     timeline: [
       {
         id: 'evt-001-1',
-        at: '2026-04-28T10:30:00Z',
+        at: '2026-05-12T08:00:00Z',
         actor_id: 'u-4',
         actor_name: 'Sistema',
         kind: 'system',
@@ -89,12 +89,12 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
       description: 'Validar documentación KYC y firma autorizada',
       cliente: 'Acme S.A.',
     },
-    created_at: '2026-04-27T14:15:00Z',
-    updated_at: '2026-04-28T09:20:00Z',
+    created_at: '2026-05-11T14:00:00Z',
+    updated_at: '2026-05-12T09:20:00Z',
     timeline: [
       {
         id: 'evt-002-1',
-        at: '2026-04-27T14:15:00Z',
+        at: '2026-05-11T14:00:00Z',
         actor_id: 'u-1',
         actor_name: 'Yasmani Rodríguez',
         kind: 'system',
@@ -102,7 +102,7 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
       },
       {
         id: 'evt-002-2',
-        at: '2026-04-28T09:20:00Z',
+        at: '2026-05-12T09:20:00Z',
         actor_id: 'u-2',
         actor_name: 'María González',
         kind: 'state_change',
@@ -112,7 +112,7 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
     comments: [
       {
         id: 'cmt-002-1',
-        at: '2026-04-28T09:25:00Z',
+        at: '2026-05-12T09:25:00Z',
         author_id: 'u-2',
         author_name: 'María González',
         body: 'Pidiendo el RUT actualizado al cliente — pausamos hasta recibirlo.',
@@ -140,12 +140,12 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
       currency: 'USD',
       vendor: 'Cloud Provider',
     },
-    created_at: '2026-04-29T08:00:00Z',
-    updated_at: '2026-04-29T08:00:00Z',
+    created_at: '2026-05-12T10:00:00Z',
+    updated_at: '2026-05-12T10:00:00Z',
     timeline: [
       {
         id: 'evt-003-1',
-        at: '2026-04-29T08:00:00Z',
+        at: '2026-05-12T10:00:00Z',
         actor_id: 'u-4',
         actor_name: 'Sistema',
         kind: 'system',
@@ -270,12 +270,12 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
       limite_actual: 50000,
       limite_solicitado: 150000,
     },
-    created_at: '2026-04-29T11:45:00Z',
-    updated_at: '2026-04-29T11:45:00Z',
+    created_at: '2026-05-11T11:45:00Z',
+    updated_at: '2026-05-11T11:45:00Z',
     timeline: [
       {
         id: 'evt-006-1',
-        at: '2026-04-29T11:45:00Z',
+        at: '2026-05-11T11:45:00Z',
         actor_id: 'u-4',
         actor_name: 'Sistema',
         kind: 'system',
@@ -303,12 +303,12 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
       usuario_id: 'u-int-321',
       motivo: 'Fin de contrato — revocación total de accesos',
     },
-    created_at: '2026-04-29T12:00:00Z',
-    updated_at: '2026-04-29T12:00:00Z',
+    created_at: '2026-05-11T12:00:00Z',
+    updated_at: '2026-05-11T12:00:00Z',
     timeline: [
       {
         id: 'evt-007-1',
-        at: '2026-04-29T12:00:00Z',
+        at: '2026-05-11T12:00:00Z',
         actor_id: 'u-4',
         actor_name: 'Sistema',
         kind: 'system',
@@ -335,12 +335,12 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
       usuario_id: 'ext-aud-44',
       motivo: 'Cierre de auditoría trimestral — devolución de equipo',
     },
-    created_at: '2026-04-28T15:00:00Z',
-    updated_at: '2026-04-29T08:30:00Z',
+    created_at: '2026-05-10T15:00:00Z',
+    updated_at: '2026-05-12T08:30:00Z',
     timeline: [
       {
         id: 'evt-008-1',
-        at: '2026-04-28T15:00:00Z',
+        at: '2026-05-10T15:00:00Z',
         actor_id: 'u-4',
         actor_name: 'Sistema',
         kind: 'system',
@@ -348,7 +348,7 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
       },
       {
         id: 'evt-008-2',
-        at: '2026-04-29T08:30:00Z',
+        at: '2026-05-12T08:30:00Z',
         actor_id: 'u-5',
         actor_name: 'Lucía Fernández',
         kind: 'taken',

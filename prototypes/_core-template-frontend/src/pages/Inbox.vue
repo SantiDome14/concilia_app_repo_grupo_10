@@ -56,6 +56,10 @@ function solicitudOwnerName(s: Solicitud): string {
   return findUser(s.owner)?.name ?? '';
 }
 
+function solicitudAssigneeName(s: Solicitud): string {
+  return findUser(s.assignee)?.name ?? '';
+}
+
 function typeLabel(type: InboxType): string {
   return type === 'tarea' ? 'Tarea' : 'Solicitud';
 }
@@ -64,14 +68,10 @@ function typeVariant(type: InboxType): 'info' | 'neutral' {
   return type === 'tarea' ? 'neutral' : 'info';
 }
 
-/** snake_case → Title Case. e.g. 'aprobacion_pago' → 'Aprobacion Pago'. */
+/** snake_case → UPPERCASE with spaces. e.g. 'aprobacion_pago' → 'APROBACION PAGO'. */
 function humanizeConcept(c: string): string {
   if (!c) return '';
-  return c
-    .split('_')
-    .filter((w) => w.length > 0)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(' ');
+  return c.replace(/_/g, ' ').toUpperCase();
 }
 
 type SlaChip = {
@@ -489,7 +489,7 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Origen</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Estado</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">SLA</th>
-              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Responsable</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Asignado a</th>
               <th class="px-3.5 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-t-3">Acciones</th>
             </tr>
           </thead>
@@ -521,7 +521,7 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
                   {{ slaChip(s).label }}
                 </Badge>
               </td>
-              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ solicitudOwnerName(s) || '—' }}</td>
+              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ solicitudAssigneeName(s) || 'Sin asignar' }}</td>
               <td class="px-3.5 py-2.5 text-center" @click.stop>
                 <div class="flex items-center justify-center">
                   <ManifestActionsMenu
@@ -573,8 +573,8 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
               <span>
                 <Badge variant="neutral">{{ humanizeConcept(s.concept) }}</Badge>
               </span>
-              <span class="text-t-4">Owner</span>
-              <span class="text-t-2">{{ solicitudOwnerName(s) || '—' }}</span>
+              <span class="text-t-4">Asignado a</span>
+              <span class="text-t-2">{{ solicitudAssigneeName(s) || 'Sin asignar' }}</span>
             </div>
           </template>
           <template #footer>
@@ -625,7 +625,7 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
                 <p class="line-clamp-2 text-xs text-t-3">{{ solicitudSummary(record as Solicitud) || '—' }}</p>
               </template>
               <template #footer>
-                <span>{{ solicitudOwnerName(record as Solicitud) || 'Sin owner' }}</span>
+                <span>{{ solicitudAssigneeName(record as Solicitud) || 'Sin asignar' }}</span>
                 <Badge
                   :variant="slaChip(record as Solicitud).variant"
                   class="inline-flex items-center gap-1"
@@ -692,6 +692,10 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
             <div class="text-[13px] font-semibold text-t-2">
               {{ drawerSolicitud.source_app }} · {{ drawerSolicitud.source_module }}
             </div>
+          </div>
+          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+            <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Asignado a</div>
+            <div class="text-[13px] font-semibold text-t-2">{{ solicitudAssigneeName(drawerSolicitud) || 'Sin asignar' }}</div>
           </div>
           <div class="rounded-md border border-b-2 bg-[#111] p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Owner</div>
