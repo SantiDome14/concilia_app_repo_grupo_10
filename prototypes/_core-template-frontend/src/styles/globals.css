@@ -68,6 +68,13 @@
    Design tokens — dark theme (default).
    ──────────────────────────────────────────────────────────────── */
 :root {
+  /* Tell the browser to render native form controls (inputs, selects,
+     scrollbars, autofill backgrounds) using the dark user-agent
+     stylesheet. Overridden by `:root.light` below. Without this, native
+     <input> backgrounds can leak through the bg-card-2 utility under
+     some prefers-color-scheme combinations. */
+  color-scheme: dark;
+
   /* Brand — change this to re-theme (HSL triple: H S% L%)
      OPS red:    0 84% 60%
      TRD blue:   217 91% 60%
@@ -122,6 +129,10 @@
    colors keep their HSL — they read correctly on both backgrounds.
    ──────────────────────────────────────────────────────────────── */
 :root.light {
+  /* Swap to light user-agent styles for native form controls, matching
+     the inverted surface ladder below. */
+  color-scheme: light;
+
   --bg: 0 0% 100%;
   --surf: 0 0% 98%;
   --card: 0 0% 96%;
