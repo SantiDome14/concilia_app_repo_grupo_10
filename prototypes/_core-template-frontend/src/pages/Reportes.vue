@@ -43,7 +43,9 @@ import { cn } from '@/lib/cn';
 // Each sub-tab has its own KPI strip, its own filters, and its own body.
 //
 // Cross-app coordination: Generar dispatches REPORT_DEPENDENCY events
-// for blocked deps so other modules can subscribe and surface alerts.
+// for blocked deps. Destination apps subscribe and create a Tarea in
+// their Centro de Solicitudes (NOT an Alerta) — REPORT_DEPENDENCY is
+// human-intervention work to unblock generation.
 // ════════════════════════════════════════════════════════════════════
 
 const reportesMod = useManifestModule(REPORTES_MANIFEST_KEY);
@@ -278,8 +280,9 @@ onMounted(() => {
 // ─── Card actions ────────────────────────────────────────────────────
 function generar(r: Report): void {
   // Block + emit REPORT_DEPENDENCY for any unfulfilled deps within their
-  // SLA window (depsStatus.blocked) — if so we surface the block via
-  // window event so destination apps can subscribe and create alerts.
+  // SLA window (depsStatus.blocked). The destination app subscribes and
+  // creates a Tarea in its Centro de Solicitudes (with auto_archive on
+  // dependency completion) — not an Alerta.
   const status = depsStatus(r, today.value);
   if (status && !status.ready) {
     for (const dep of unfulfilled(r)) {

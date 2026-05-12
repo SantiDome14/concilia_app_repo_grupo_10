@@ -128,8 +128,8 @@ export const REPORTS_CATALOG: Report[] = [
       },
       {
         app: 'LEX',
-        module: 'Alertas',
-        task: 'Cierre de alertas del período',
+        module: 'Compliance',
+        task: 'Cierre de revisiones de legajo del período',
         owner_role: 'COMPLIANCE',
         sla_days_before: 1,
         completed: true,
