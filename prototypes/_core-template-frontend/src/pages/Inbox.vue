@@ -284,15 +284,26 @@ function handleKanbanTransition(payload: {
     return;
   }
   // Free transition — write the new state immediately + emit a timeline event.
+  // For `pendiente → en_proceso` we mirror the `inbox.tomar` manifest action:
+  // auto-assign owner to the current user (when null) and use the `taken`
+  // event kind. Other free transitions emit a generic `state_change`.
+  const wasTomar =
+    payload.fromState === 'pendiente'
+    && payload.toState === 'en_proceso';
   s.state = payload.toState as SolicitudState;
   s.updated_at = new Date().toISOString();
+  if (wasTomar && s.owner === null) {
+    s.owner = CURRENT_USER.id;
+  }
   s.timeline.push({
     id: `evt-${s.id}-${Date.now()}`,
     at: s.updated_at,
     actor_id: CURRENT_USER.id,
     actor_name: CURRENT_USER.name,
-    kind: 'state_change',
-    label: `Estado: ${stateLabel(payload.toState)}`,
+    kind: wasTomar ? 'taken' : 'state_change',
+    label: wasTomar
+      ? 'Tomada — en proceso'
+      : `Estado: ${stateLabel(payload.toState)}`,
   });
 }
 

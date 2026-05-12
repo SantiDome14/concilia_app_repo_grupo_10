@@ -65,6 +65,30 @@ describe('applyCTA', () => {
     expect(typeof fin.created_at).toBe('number');
   });
 
+  it('substitutes "$current_user" in set_fields with the invoker userId', () => {
+    const cta: ModuleCTA = {
+      id: 'demo.crear',
+      label: 'Crear',
+      is_module_cta: true,
+      creates_record_type: 'movimiento_manual',
+      on_confirm: { set_fields: { 'fin.created_by': '$current_user' } },
+    };
+    const { deps } = makeDeps();
+    const result = applyCTA(
+      {
+        cta,
+        manifestKey: 'demo.test',
+        formValues: { name: 'X' },
+        creator: (_cta, fv) => ({ id: 'M-9001', name: fv.name }),
+        userId: 'U-42',
+      },
+      deps,
+    );
+    const created = result.created as Record<string, unknown>;
+    const fin = created.fin as Record<string, unknown>;
+    expect(fin.created_by).toBe('U-42');
+  });
+
   it('emits one audit entry with kind:"cta" + is_module_cta:true', () => {
     const cta: ModuleCTA = {
       id: 'demo.crear',

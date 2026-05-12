@@ -60,7 +60,11 @@ export function applyCTA(input: ApplyCTAInput, deps: ApplyDeps): ApplyCTAResult 
     if (oc.set_fields) {
       const now = Date.now();
       for (const [path, raw] of Object.entries(oc.set_fields)) {
-        setField(created, path, raw === '$now' ? now : raw);
+        setField(
+          created,
+          path,
+          raw === '$now' ? now : raw === '$current_user' ? userId : raw,
+        );
       }
     }
   }

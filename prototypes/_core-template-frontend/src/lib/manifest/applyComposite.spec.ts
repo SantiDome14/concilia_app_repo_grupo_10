@@ -60,6 +60,30 @@ describe('applyComposite', () => {
     expect((record.aux as Record<string, unknown>).flag).toBe(true);
   });
 
+  it('substitutes "$current_user" in composite set_fields with the invoker userId', () => {
+    const a1: Action = {
+      id: 'a1',
+      dimension: 'governance',
+      label: 'A1',
+      on_confirm: { set_fields: { taken_by: '$current_user' } },
+    };
+    const record: Record<string, unknown> = { id: 'R-1' };
+    const { deps } = makeDeps();
+    applyComposite(
+      {
+        manifestKey: 'demo.test',
+        manifest,
+        axisId: 'governance',
+        record,
+        enabledActions: [a1],
+        formValues: {},
+        userId: 'U-42',
+      },
+      deps,
+    );
+    expect(record.taken_by).toBe('U-42');
+  });
+
   it('runs ONE recompute even when multiple actions declare it', () => {
     const a1: Action = {
       id: 'a1',

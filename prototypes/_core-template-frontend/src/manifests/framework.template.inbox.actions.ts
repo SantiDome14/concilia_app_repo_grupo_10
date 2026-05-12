@@ -97,7 +97,11 @@ export const INBOX_MANIFEST: Manifest = {
         confirm_label: 'Tomar',
       },
       on_confirm: {
-        set_fields: { state: 'en_proceso', updated_at: '$now' },
+        set_fields: {
+          state: 'en_proceso',
+          owner: '$current_user',
+          updated_at: '$now',
+        },
         audit: true,
         toast: 'Solicitud tomada',
       },

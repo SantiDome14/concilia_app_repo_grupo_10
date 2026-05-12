@@ -70,7 +70,8 @@ export function applyComposite(
     }
     if (oc.set_fields) {
       for (const [path, raw] of Object.entries(oc.set_fields)) {
-        const v = raw === '$now' ? now : raw;
+        const v =
+          raw === '$now' ? now : raw === '$current_user' ? userId : raw;
         setField(record, path, v);
         changes[path] = v;
       }
