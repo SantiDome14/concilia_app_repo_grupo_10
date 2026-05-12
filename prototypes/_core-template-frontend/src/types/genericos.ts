@@ -10,6 +10,30 @@
 // Reused primitives (`TimelineEvent`, `Comment`) are re-exported from
 // `@/types/drawer` so a single import surface satisfies both the Drawer
 // component layer and the canonical module-data layer.
+//
+// ── Architectural principles formalized 2026-05-12 ──────────────────
+//
+// Two paradigm principles govern how these types are consumed by apps;
+// they live as Requirements in the canonical spec
+// (`openspec/specs/core-modulo-genericos/spec.md`) and any deviation is
+// rejected at PR review:
+//
+//   1. "Wizard of Oz" — External CTAs MUST invoke a capability of the
+//      target app, not a specific execution route. The capability decides
+//      at runtime whether the invocation is satisfied by direct
+//      integration (no Solicitud in the Centro) or by creating a
+//      Solicitud/Tarea (Centro entry). Switching paths MUST NOT require
+//      a change to the calling CTA.
+//
+//   2. Centro scope exclusivity — The Inbox/Centro de Solicitudes hosts
+//      ONLY Solicitudes/Tareas requiring human intervention from the
+//      backoffice. Pure programmatic jobs (sync, audit, normalization,
+//      cron) live in code as Task Definitions, not as records of these
+//      types. A job MAY declare opt-in fallback to the Centro for human
+//      escalation on failure; without the fallback, failures route to
+//      Observability alerts only. The Solicitud model MUST NOT grow an
+//      `execution: manual | programmatic` discriminator — every record
+//      here is implicitly human-action work.
 // ════════════════════════════════════════════════════════════════════
 
 import type { TimelineEvent, Comment } from './drawer';
