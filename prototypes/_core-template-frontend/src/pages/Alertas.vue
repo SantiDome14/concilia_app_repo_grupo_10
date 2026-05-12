@@ -51,22 +51,22 @@ const alertasMod = useManifestModule(ALERTAS_MANIFEST_KEY);
 // ─── State ───────────────────────────────────────────────────────────
 const view = ref<ViewMode>('list');
 const search = ref('');
-const filterType = ref<string>('');
+const filterConcept = ref<string>('');
 const filterSeverity = ref<string>('');
 const filterState = ref<string>('');
 
 const alertas = ref<Alerta[]>(ALERTS.map((a) => ({ ...a })));
 
-const ACTIVE_TYPES = computed(() => {
+const ACTIVE_CONCEPTS = computed(() => {
   const set = new Set<string>();
-  for (const a of alertas.value) set.add(a.type);
+  for (const a of alertas.value) set.add(a.concept);
   return Array.from(set).sort();
 });
 
 const filteredAlertas = computed<Alerta[]>(() => {
   const term = search.value.trim().toLowerCase();
   return alertas.value.filter((a) => {
-    if (filterType.value && a.type !== filterType.value) return false;
+    if (filterConcept.value && a.concept !== filterConcept.value) return false;
     if (filterSeverity.value && a.severity !== filterSeverity.value) return false;
     if (filterState.value && a.state !== filterState.value) return false;
     if (term) {
@@ -315,13 +315,13 @@ const STATE_FILTER_OPTIONS: AlertaState[] = ['new', 'in_review', 'resolved', 'di
       </div>
       <div class="flex-1" />
       <select
-        v-model="filterType"
+        v-model="filterConcept"
         class="rounded-md border border-b-2 bg-card px-3 py-2 text-xs text-t-2"
-        aria-label="Filtrar por tipo"
-        data-testid="filter-type"
+        aria-label="Filtrar por concepto"
+        data-testid="filter-concept"
       >
-        <option value="">Tipo · Todos</option>
-        <option v-for="t in ACTIVE_TYPES" :key="t" :value="t">{{ t }}</option>
+        <option value="">Concepto · Todos</option>
+        <option v-for="c in ACTIVE_CONCEPTS" :key="c" :value="c">{{ c }}</option>
       </select>
       <select
         v-model="filterSeverity"
@@ -364,7 +364,7 @@ const STATE_FILTER_OPTIONS: AlertaState[] = ['new', 'in_review', 'resolved', 'di
             <tr class="border-b border-b-2">
               <th class="px-[18px] py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">ID</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Título</th>
-              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Tipo</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Concepto</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Severidad</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Estado</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Detectada</th>
@@ -383,7 +383,7 @@ const STATE_FILTER_OPTIONS: AlertaState[] = ['new', 'in_review', 'resolved', 'di
                 <span class="font-mono text-xs text-t-3">{{ a.id }}</span>
               </td>
               <td class="px-3.5 py-2.5 text-[13px] font-semibold text-t-2">{{ a.title }}</td>
-              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ a.type }}</td>
+              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ a.concept }}</td>
               <td class="px-3.5 py-2.5">
                 <Badge :variant="severityVariant(a.severity)">
                   {{ a.severity ? SEVERITY_LABELS[a.severity] : '—' }}
@@ -475,7 +475,7 @@ const STATE_FILTER_OPTIONS: AlertaState[] = ['new', 'in_review', 'resolved', 'di
                 <p class="line-clamp-2 text-xs text-t-3">{{ (record as Alerta).summary || '—' }}</p>
               </template>
               <template #footer>
-                <span>{{ (record as Alerta).type }}</span>
+                <span>{{ (record as Alerta).concept }}</span>
                 <Badge :variant="severityVariant((record as Alerta).severity)">
                   {{ (record as Alerta).severity ? SEVERITY_LABELS[(record as Alerta).severity!] : '—' }}
                 </Badge>
@@ -520,27 +520,27 @@ const STATE_FILTER_OPTIONS: AlertaState[] = ['new', 'in_review', 'resolved', 'di
         </h3>
         <div
           v-if="drawerAlerta.summary"
-          class="rounded-md border border-b-2 bg-[#111] p-3"
+          class="rounded-md border border-b-2 bg-surf p-3"
         >
           <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Contexto</div>
           <div class="whitespace-pre-wrap text-[13px] text-t-2">{{ drawerAlerta.summary }}</div>
         </div>
         <div class="grid grid-cols-2 gap-2.5 text-sm">
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
-            <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Tipo</div>
-            <div class="text-[13px] font-semibold text-t-2">{{ drawerAlerta.type }}</div>
+          <div class="rounded-md border border-b-2 bg-surf p-3">
+            <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Concepto</div>
+            <div class="text-[13px] font-semibold text-t-2">{{ drawerAlerta.concept }}</div>
           </div>
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="rounded-md border border-b-2 bg-surf p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Severidad</div>
             <Badge :variant="severityVariant(drawerAlerta.severity)">
               {{ drawerAlerta.severity ? SEVERITY_LABELS[drawerAlerta.severity] : '—' }}
             </Badge>
           </div>
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="rounded-md border border-b-2 bg-surf p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Categoría</div>
             <div class="text-[13px] font-semibold text-t-2">{{ drawerAlerta.category }}</div>
           </div>
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="rounded-md border border-b-2 bg-surf p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Origen</div>
             <div class="text-[13px] font-semibold text-t-2">
               {{ drawerAlerta.source_app }} · {{ drawerAlerta.source_module }}
@@ -548,7 +548,7 @@ const STATE_FILTER_OPTIONS: AlertaState[] = ['new', 'in_review', 'resolved', 'di
           </div>
           <div
             v-if="drawerAlerta.closure_comment"
-            class="col-span-2 rounded-md border border-b-2 bg-[#111] p-3"
+            class="col-span-2 rounded-md border border-b-2 bg-surf p-3"
           >
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Justificación de cierre</div>
             <div class="whitespace-pre-wrap text-[13px] text-t-2">{{ drawerAlerta.closure_comment }}</div>

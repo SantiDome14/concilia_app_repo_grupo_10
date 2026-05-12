@@ -47,7 +47,7 @@ export function applyAction(
     input;
 
   const onConfirm: OnConfirm = action.on_confirm ?? {};
-  const changes = computeChanges(onConfirm, formValues);
+  const changes = computeChanges(onConfirm, formValues, userId);
 
   // 1. update_fields → cherry-pick declared formValues into each record.
   for (const record of records) {
@@ -58,11 +58,12 @@ export function applyAction(
         }
       }
     }
-    // 2. set_fields → literal writes; '$now' magic.
+    // 2. set_fields → literal writes; '$now' + '$current_user' magic.
     if (onConfirm.set_fields) {
       const now = Date.now();
       for (const [path, raw] of Object.entries(onConfirm.set_fields)) {
-        const value = raw === '$now' ? now : raw;
+        const value =
+          raw === '$now' ? now : raw === '$current_user' ? userId : raw;
         setField(record, path, value);
       }
     }
@@ -96,13 +97,11 @@ export function applyAction(
         timestamp: ts,
         user_id: userId,
         action_id: action.id,
+        manifest_key: manifestKey,
         record_ids: ids,
         changes,
       };
-      // We attach manifest_key as an extra field on the entry payload —
-      // the AuditEntry type accepts the discriminated shape; we widen by
-      // spreading into the append call.
-      deps.auditAppend({ ...entry, manifest_key: manifestKey } as unknown as AuditEntryBatch);
+      deps.auditAppend(entry);
     } else {
       const first = records[0];
       const recordId = typeof first?.id === 'string' ? first.id : '';
@@ -111,10 +110,11 @@ export function applyAction(
         timestamp: ts,
         user_id: userId,
         action_id: action.id,
+        manifest_key: manifestKey,
         record_id: recordId,
         changes,
       };
-      deps.auditAppend({ ...entry, manifest_key: manifestKey } as unknown as AuditEntrySingle);
+      deps.auditAppend(entry);
     }
   }
 
@@ -135,6 +135,7 @@ export function applyAction(
 function computeChanges(
   onConfirm: OnConfirm,
   formValues: Record<string, unknown>,
+  userId: string,
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   if (Array.isArray(onConfirm.update_fields)) {
@@ -147,7 +148,7 @@ function computeChanges(
   if (onConfirm.set_fields) {
     const now = Date.now();
     for (const [path, raw] of Object.entries(onConfirm.set_fields)) {
-      out[path] = raw === '$now' ? now : raw;
+      out[path] = raw === '$now' ? now : raw === '$current_user' ? userId : raw;
     }
   }
   return out;

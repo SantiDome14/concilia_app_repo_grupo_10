@@ -32,8 +32,8 @@ const STUBS = {
 };
 
 const SAMPLE_TYPE: InboxTypeConfig = {
-  type: 'aprobacion_pago',
-  kind: 'solicitud',
+  concept: 'aprobacion_pago',
+  type: 'solicitud',
   label: 'Aprobación de pago',
   target_app: 'CORE',
   target_role: 'FIN_OFFICER',
@@ -49,8 +49,8 @@ const SAMPLE_TYPE: InboxTypeConfig = {
 };
 
 const TAREA_TYPE: InboxTypeConfig = {
-  type: 'baja_usuario',
-  kind: 'tarea',
+  concept: 'baja_usuario',
+  type: 'tarea',
   label: 'Baja de usuario',
   target_app: 'CORE',
   payload_schema: [
@@ -116,15 +116,15 @@ describe('InboxCreateDialog', () => {
     expect(createdEvents).toBeTruthy();
     const s = createdEvents![0]![0] as {
       state: string;
-      kind: string;
       type: string;
+      concept: string;
       target_app: string;
       source_module: string;
       payload: { title?: string };
     };
     expect(s.state).toBe('pendiente');
-    expect(s.kind).toBe('solicitud');
-    expect(s.type).toBe('aprobacion_pago');
+    expect(s.type).toBe('solicitud');
+    expect(s.concept).toBe('aprobacion_pago');
     expect(s.target_app).toBe('CORE');
     expect(s.source_module).toBe('inbox');
     expect(s.payload.title).toBe('Aprobar pago');
@@ -135,10 +135,12 @@ describe('InboxCreateDialog', () => {
       kind: string;
       is_module_cta?: boolean;
       created_record_type?: string;
+      manifest_key?: string;
     };
     expect(last.kind).toBe('cta');
     expect(last.is_module_cta).toBe(true);
     expect(last.created_record_type).toBe('aprobacion_pago');
+    expect(last.manifest_key).toBe('framework.template.inbox');
   });
 
   it('records `triggered_actions[]` and a `kind: action_invoked` timeline event when the type declares triggers_on_create', async () => {

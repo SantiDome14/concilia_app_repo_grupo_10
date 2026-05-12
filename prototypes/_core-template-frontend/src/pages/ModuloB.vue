@@ -425,10 +425,10 @@ function onCargarManual(): void {
             </div>
           </button>
 
-          <div v-if="row.sociedad.open" class="border-t border-b-1 bg-[#181818]">
+          <div v-if="row.sociedad.open" class="border-t border-b-1 bg-card">
             <!-- Accounts header -->
             <div
-              class="grid items-center gap-3.5 border-b border-b-2 bg-[#161616] px-[18px] py-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4"
+              class="grid items-center gap-3.5 border-b border-b-2 bg-card-2 px-[18px] py-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4"
               style="grid-template-columns: 32px 2fr 1fr 1fr 1fr 1fr"
             >
               <div></div>

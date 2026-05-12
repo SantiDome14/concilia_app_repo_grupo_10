@@ -70,7 +70,8 @@ export function applyComposite(
     }
     if (oc.set_fields) {
       for (const [path, raw] of Object.entries(oc.set_fields)) {
-        const v = raw === '$now' ? now : raw;
+        const v =
+          raw === '$now' ? now : raw === '$current_user' ? userId : raw;
         setField(record, path, v);
         changes[path] = v;
       }
@@ -102,15 +103,13 @@ export function applyComposite(
       timestamp: now,
       user_id: userId,
       action_id: `composite:${axisId}`,
+      manifest_key: manifestKey,
       record_id: recordId,
       child_action_ids: childActionIds,
       axis_id: axisId,
       changes,
     };
-    deps.auditAppend({
-      ...entry,
-      manifest_key: manifestKey,
-    } as unknown as AuditEntryComposite);
+    deps.auditAppend(entry);
   }
 
   // Toast — single composite-flavored message. Use the first action's

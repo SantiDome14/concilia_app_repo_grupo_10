@@ -40,8 +40,8 @@ export type ManifestKey = string;
 // Predicates — the 8-form alphabet
 // ────────────────────────────────────────────────────────────────────
 
-export type PredicateRecordTypeIn = { record_type_in: string[] };
-export type PredicateRecordTypeNotIn = { record_type_not_in: string[] };
+export type PredicateRecordConceptIn = { record_concept_in: string[] };
+export type PredicateRecordConceptNotIn = { record_concept_not_in: string[] };
 export type PredicateFieldIsNull = { field_is_null: string };
 export type PredicateFieldIsNotNull = { field_is_not_null: string };
 export type PredicateFieldEquals = {
@@ -56,19 +56,19 @@ export type PredicateAny = { any: Predicate[] };
 /**
  * A predicate object. Multi-key combinations of the 8 forms are
  * AND-merged at evaluation time. Authors MAY combine forms on a
- * single object (e.g. `{ record_type_in: [...], field_is_null: "x" }`).
+ * single object (e.g. `{ record_concept_in: [...], field_is_null: "x" }`).
  */
 export type Predicate =
-  | PredicateRecordTypeIn
-  | PredicateRecordTypeNotIn
+  | PredicateRecordConceptIn
+  | PredicateRecordConceptNotIn
   | PredicateFieldIsNull
   | PredicateFieldIsNotNull
   | PredicateFieldEquals
   | PredicateFieldIn
   | PredicateAll
   | PredicateAny
-  | (Partial<PredicateRecordTypeIn> &
-      Partial<PredicateRecordTypeNotIn> &
+  | (Partial<PredicateRecordConceptIn> &
+      Partial<PredicateRecordConceptNotIn> &
       Partial<PredicateFieldIsNull> &
       Partial<PredicateFieldIsNotNull> &
       Partial<PredicateFieldEquals> &
@@ -313,7 +313,9 @@ export type ModuleCTA = {
   dimension?: Dimension;
   description?: string;
   icon?: string;
-  creates_record_type?: string;
+  /** When set, the engine looks up a registered creator and the resulting
+   *  record is logged with `created_record_type` in the audit entry. */
+  creates_record_concept?: string;
   capabilities?: Capabilities;
   dialog?: Dialog;
   on_confirm?: OnConfirm;
@@ -345,7 +347,10 @@ export type KanbanAxis = {
 export type Manifest = {
   app: string;
   module: string;
-  record_type?: string | null;
+  /** The business classifier this manifest manages (e.g. 'aprobacion_pago'
+   *  for an Inbox-scoped manifest). Renamed from the previous `record_type`
+   *  in the 2026-05-12 rename. */
+  record_concept?: string | null;
   scope?: 'record' | 'module';
   schema_version?: string;
   required_imputations?: string[];
@@ -376,6 +381,10 @@ export type AuditEntryBase = {
   timestamp: number;
   user_id: string;
   action_id: string;
+  /** Registry key of the manifest the action belongs to. Mandatory per
+   *  `core-actions-manifest` Requirement: "Audit log MUST emit one of four
+   *  discriminated entry shapes via useAuditLog().append()". */
+  manifest_key: ManifestKey;
   changes: Record<string, unknown>;
 };
 

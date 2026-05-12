@@ -23,6 +23,7 @@ import InboxTypeSelector from './InboxTypeSelector.vue';
 import DynamicPayloadForm from './DynamicPayloadForm.vue';
 import { useAuditLog } from '@/composables/useAuditLog';
 import { CURRENT_USER, MOCK_USERS } from '@/mocks/genericos/users';
+import { INBOX_MANIFEST_KEY } from '@/manifests/framework.template.inbox.actions';
 import type {
   InboxTypeConfig,
   Solicitud,
@@ -149,7 +150,7 @@ function submit(): void {
         actor_id: CURRENT_USER.id,
         actor_name: CURRENT_USER.name,
         kind: 'system',
-        label: `${t.kind === 'tarea' ? 'Tarea' : 'Solicitud'} creada manualmente desde el Inbox`,
+        label: `${t.type === 'tarea' ? 'Tarea' : 'Solicitud'} creada manualmente desde el Inbox`,
       },
     ];
     // Mocked trigger execution: per Decision 9, the engine doesn't
@@ -168,8 +169,8 @@ function submit(): void {
 
     const newSolicitud: Solicitud = {
       id,
+      concept: t.concept,
       type: t.type,
-      kind: t.kind,
       source_app: t.target_app, // creating from within the target app's own Inbox
       source_module: 'inbox',
       target_app: t.target_app,
@@ -189,15 +190,16 @@ function submit(): void {
     audit.append({
       kind: 'cta',
       action_id: 'inbox.crear_manual',
+      manifest_key: INBOX_MANIFEST_KEY,
       record_id: newSolicitud.id,
-      created_record_type: newSolicitud.type,
+      created_record_type: newSolicitud.concept,
       is_module_cta: true,
       user_id: CURRENT_USER.id,
       timestamp: Date.now(),
       changes: { ...(newSolicitud.payload as Record<string, unknown>) },
     });
 
-    toast.success(t.kind === 'tarea' ? 'Tarea creada' : 'Solicitud creada', {
+    toast.success(t.type === 'tarea' ? 'Tarea creada' : 'Solicitud creada', {
       description: `${newSolicitud.id} — ${t.label}`,
     });
 

@@ -38,22 +38,17 @@ describe('evalPredicate', () => {
     });
   });
 
-  describe('record_type_in / record_type_not_in', () => {
-    it('matches via _record_type', () => {
-      const r = { _record_type: 'DEP' };
-      expect(evalPredicate({ record_type_in: ['DEP', 'RET'] }, r)).toBe(true);
-      expect(evalPredicate({ record_type_in: ['RET'] }, r)).toBe(false);
+  describe('record_concept_in / record_concept_not_in', () => {
+    it('matches via concept', () => {
+      const r = { concept: 'DEP' };
+      expect(evalPredicate({ record_concept_in: ['DEP', 'RET'] }, r)).toBe(true);
+      expect(evalPredicate({ record_concept_in: ['RET'] }, r)).toBe(false);
     });
 
-    it('falls back to tipo when _record_type is absent', () => {
-      const r = { tipo: 'DEP' };
-      expect(evalPredicate({ record_type_in: ['DEP'] }, r)).toBe(true);
-    });
-
-    it('record_type_not_in inverts', () => {
-      const r = { _record_type: 'DEP' };
-      expect(evalPredicate({ record_type_not_in: ['DEP'] }, r)).toBe(false);
-      expect(evalPredicate({ record_type_not_in: ['RET'] }, r)).toBe(true);
+    it('record_concept_not_in inverts', () => {
+      const r = { concept: 'DEP' };
+      expect(evalPredicate({ record_concept_not_in: ['DEP'] }, r)).toBe(false);
+      expect(evalPredicate({ record_concept_not_in: ['RET'] }, r)).toBe(true);
     });
   });
 
@@ -161,16 +156,16 @@ describe('evalPredicate', () => {
 
   describe('multi-key AND-merge', () => {
     it('AND-merges keys on the same object', () => {
-      const r = { _record_type: 'DEP', cliente_id: null };
+      const r = { concept: 'DEP', cliente_id: null };
       expect(
         evalPredicate(
-          { record_type_in: ['DEP'], field_is_null: 'cliente_id' },
+          { record_concept_in: ['DEP'], field_is_null: 'cliente_id' },
           r,
         ),
       ).toBe(true);
       expect(
         evalPredicate(
-          { record_type_in: ['RET'], field_is_null: 'cliente_id' },
+          { record_concept_in: ['RET'], field_is_null: 'cliente_id' },
           r,
         ),
       ).toBe(false);

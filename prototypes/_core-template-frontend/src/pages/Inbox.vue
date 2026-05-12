@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { Search } from 'lucide-vue-next';
+import { Clock, Search } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 import { Badge, type BadgeVariants } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,14 +23,13 @@ import type { KanbanAxis, KanbanState } from '@/types/kanban';
 import { useManifestModule } from '@/composables/useManifestModule';
 import { INBOX_MANIFEST_KEY } from '@/manifests/framework.template.inbox.actions';
 import { INBOX_SOLICITUDES } from '@/mocks/genericos/inbox';
-import { CURRENT_USER, findUser } from '@/mocks/genericos/users';
+import { CURRENT_USER, MOCK_USERS, findUser } from '@/mocks/genericos/users';
 import type {
-  InboxKind,
+  InboxType,
   Solicitud,
   SolicitudState,
   TimelineEvent,
 } from '@/types/genericos';
-import { cn } from '@/lib/cn';
 
 // ─── Display helpers ─────────────────────────────────────────────────
 // `Solicitud<TPayload>` lifts type-specific text into `payload`; for the
@@ -57,12 +56,44 @@ function solicitudOwnerName(s: Solicitud): string {
   return findUser(s.owner)?.name ?? '';
 }
 
-function kindLabel(kind: InboxKind): string {
-  return kind === 'tarea' ? 'Tarea' : 'Solicitud';
+function solicitudAssigneeName(s: Solicitud): string {
+  return findUser(s.assignee)?.name ?? '';
 }
 
-function kindVariant(kind: InboxKind): 'info' | 'neutral' {
-  return kind === 'tarea' ? 'neutral' : 'info';
+/** Uppercase the first character, leave the rest as-is. Idempotent on
+ *  already-cased strings. e.g. 'inbox' → 'Inbox', 'CORE' → 'CORE'. */
+function titleCase(s: string): string {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+}
+
+function typeLabel(type: InboxType): string {
+  return type === 'tarea' ? 'Tarea' : 'Solicitud';
+}
+
+function typeVariant(type: InboxType): 'info' | 'neutral' {
+  return type === 'tarea' ? 'neutral' : 'info';
+}
+
+/** snake_case → UPPERCASE with spaces. e.g. 'aprobacion_pago' → 'APROBACION PAGO'. */
+function humanizeConcept(c: string): string {
+  if (!c) return '';
+  return c.replace(/_/g, ' ').toUpperCase();
+}
+
+type SlaChip = {
+  variant: BadgeVariants['variant'];
+  label: string;
+  showIcon: boolean;
+};
+
+function slaChip(s: Solicitud): SlaChip {
+  if (s.sla_hours === null || s.sla_hours === undefined) {
+    return { variant: 'neutral', label: '—', showIcon: false };
+  }
+  if (isInSla(s)) {
+    return { variant: 'success', label: `${s.sla_hours}h`, showIcon: true };
+  }
+  return { variant: 'danger', label: 'Vencida', showIcon: true };
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -87,9 +118,14 @@ const inbox = useManifestModule(INBOX_MANIFEST_KEY);
 // ─── Page state ──────────────────────────────────────────────────────
 const view = ref<ViewMode>('list');
 const search = ref('');
-const filterType = ref<string>('');
+const filterConcept = ref<string>('');
 const filterState = ref<string>('');
-const filterKind = ref<'' | InboxKind>('');
+const filterType = ref<'' | InboxType>('');
+/** '' = Todos · '__unassigned__' = Sin asignar · '<user_id>' = filtered to that user. */
+const filterAssignee = ref<string>('');
+
+/** Human users available as assignee filter options (system actor excluded). */
+const ASSIGNEE_FILTER_USERS = MOCK_USERS.filter((u) => u.role !== 'system');
 
 // ─── Reactive dataset (mock-backed) ──────────────────────────────────
 const solicitudes = ref<Solicitud[]>(
@@ -98,17 +134,22 @@ const solicitudes = ref<Solicitud[]>(
 
 const TERMINAL_STATES: SolicitudState[] = ['completed', 'rejected'];
 
-const ACTIVE_TYPES = computed(() => {
+const ACTIVE_CONCEPTS = computed(() => {
   const set = new Set<string>();
-  for (const s of solicitudes.value) set.add(s.type);
+  for (const s of solicitudes.value) set.add(s.concept);
   return Array.from(set).sort();
 });
 
 const filteredSolicitudes = computed<Solicitud[]>(() => {
   const term = search.value.trim().toLowerCase();
   return solicitudes.value.filter((s) => {
-    if (filterKind.value && s.kind !== filterKind.value) return false;
     if (filterType.value && s.type !== filterType.value) return false;
+    if (filterConcept.value && s.concept !== filterConcept.value) return false;
+    if (filterAssignee.value) {
+      if (filterAssignee.value === '__unassigned__') {
+        if (s.assignee !== null && s.assignee !== undefined) return false;
+      } else if (s.assignee !== filterAssignee.value) return false;
+    }
     if (filterState.value && s.state !== filterState.value) return false;
     if (term) {
       const haystack = `${s.id} ${solicitudTitle(s)} ${solicitudSummary(s)}`.toLowerCase();
@@ -284,15 +325,26 @@ function handleKanbanTransition(payload: {
     return;
   }
   // Free transition — write the new state immediately + emit a timeline event.
+  // For `pendiente → en_proceso` we mirror the `inbox.tomar` manifest action:
+  // auto-assign owner to the current user (when null) and use the `taken`
+  // event kind. Other free transitions emit a generic `state_change`.
+  const wasTomar =
+    payload.fromState === 'pendiente'
+    && payload.toState === 'en_proceso';
   s.state = payload.toState as SolicitudState;
   s.updated_at = new Date().toISOString();
+  if (wasTomar && s.owner === null) {
+    s.owner = CURRENT_USER.id;
+  }
   s.timeline.push({
     id: `evt-${s.id}-${Date.now()}`,
     at: s.updated_at,
     actor_id: CURRENT_USER.id,
     actor_name: CURRENT_USER.name,
-    kind: 'state_change',
-    label: `Estado: ${stateLabel(payload.toState)}`,
+    kind: wasTomar ? 'taken' : 'state_change',
+    label: wasTomar
+      ? 'Tomada — en proceso'
+      : `Estado: ${stateLabel(payload.toState)}`,
   });
 }
 
@@ -376,23 +428,35 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
       </div>
       <div class="flex-1" />
       <select
-        v-model="filterKind"
-        class="rounded-md border border-b-2 bg-card px-3 py-2 text-xs text-t-2"
-        aria-label="Filtrar por kind"
-        data-testid="filter-kind"
-      >
-        <option value="">Kind · Todos</option>
-        <option value="solicitud">Solicitudes</option>
-        <option value="tarea">Tareas</option>
-      </select>
-      <select
         v-model="filterType"
         class="rounded-md border border-b-2 bg-card px-3 py-2 text-xs text-t-2"
         aria-label="Filtrar por tipo"
         data-testid="filter-type"
       >
         <option value="">Tipo · Todos</option>
-        <option v-for="t in ACTIVE_TYPES" :key="t" :value="t">{{ t }}</option>
+        <option value="solicitud">Solicitudes</option>
+        <option value="tarea">Tareas</option>
+      </select>
+      <select
+        v-model="filterConcept"
+        class="rounded-md border border-b-2 bg-card px-3 py-2 text-xs text-t-2"
+        aria-label="Filtrar por concepto"
+        data-testid="filter-concept"
+      >
+        <option value="">Concepto · Todos</option>
+        <option v-for="c in ACTIVE_CONCEPTS" :key="c" :value="c">{{ c }}</option>
+      </select>
+      <select
+        v-model="filterAssignee"
+        class="rounded-md border border-b-2 bg-card px-3 py-2 text-xs text-t-2"
+        aria-label="Filtrar por responsable asignado"
+        data-testid="filter-assignee"
+      >
+        <option value="">Asignado a · Todos</option>
+        <option value="__unassigned__">Sin asignar</option>
+        <option v-for="u in ASSIGNEE_FILTER_USERS" :key="u.id" :value="u.id">
+          {{ u.name }}
+        </option>
       </select>
       <select
         v-model="filterState"
@@ -425,13 +489,13 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
           <thead>
             <tr class="border-b border-b-2">
               <th class="px-[18px] py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">ID</th>
-              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Kind</th>
-              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Título</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Tipo</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Título</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Concepto</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Origen</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Estado</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">SLA</th>
-              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Responsable</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Asignado a</th>
               <th class="px-3.5 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-t-3">Acciones</th>
             </tr>
           </thead>
@@ -447,25 +511,23 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
                 <span class="font-mono text-xs text-t-3">{{ s.id }}</span>
               </td>
               <td class="px-3.5 py-2.5">
-                <Badge :variant="kindVariant(s.kind)">{{ kindLabel(s.kind) }}</Badge>
+                <Badge :variant="typeVariant(s.type)">{{ typeLabel(s.type) }}</Badge>
               </td>
               <td class="px-3.5 py-2.5 text-[13px] font-semibold text-t-2">{{ solicitudTitle(s) }}</td>
-              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ s.type }}</td>
-              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ s.source_module }}</td>
+              <td class="px-3.5 py-2.5">
+                <Badge variant="neutral">{{ humanizeConcept(s.concept) }}</Badge>
+              </td>
+              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ titleCase(s.source_module) }}</td>
               <td class="px-3.5 py-2.5">
                 <Badge :variant="statusVariant(s.state)">{{ stateLabel(s.state) }}</Badge>
               </td>
-              <td
-                :class="
-                  cn(
-                    'px-3.5 py-2.5 text-xs',
-                    isInSla(s) ? 'text-t-3' : 'text-danger font-semibold',
-                  )
-                "
-              >
-                {{ s.sla_hours === null ? '—' : isInSla(s) ? `${s.sla_hours}h` : 'Vencida' }}
+              <td class="px-3.5 py-2.5">
+                <Badge :variant="slaChip(s).variant" class="inline-flex items-center gap-1">
+                  <Clock v-if="slaChip(s).showIcon" class="h-3 w-3" />
+                  {{ slaChip(s).label }}
+                </Badge>
               </td>
-              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ solicitudOwnerName(s) || '—' }}</td>
+              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ solicitudAssigneeName(s) || '—' }}</td>
               <td class="px-3.5 py-2.5 text-center" @click.stop>
                 <div class="flex items-center justify-center">
                   <ManifestActionsMenu
@@ -499,7 +561,7 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
               <span class="font-mono text-[11px] text-t-4">{{ s.id }}</span>
               <span class="truncate text-sm font-semibold text-t-1">{{ solicitudTitle(s) }}</span>
             </div>
-            <Badge :variant="kindVariant(s.kind)">{{ kindLabel(s.kind) }}</Badge>
+            <Badge :variant="typeVariant(s.type)">{{ typeLabel(s.type) }}</Badge>
             <Badge :variant="statusVariant(s.state)">{{ stateLabel(s.state) }}</Badge>
             <span @click.stop>
               <ManifestActionsMenu
@@ -513,17 +575,20 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
           <template #body>
             <p class="line-clamp-3 text-xs text-t-3">{{ solicitudSummary(s) || '—' }}</p>
             <div class="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[11px]">
-              <span class="text-t-4">Tipo</span>
-              <span class="text-t-2">{{ s.type }}</span>
-              <span class="text-t-4">Owner</span>
-              <span class="text-t-2">{{ solicitudOwnerName(s) || '—' }}</span>
+              <span class="text-t-4">Concepto</span>
+              <span>
+                <Badge variant="neutral">{{ humanizeConcept(s.concept) }}</Badge>
+              </span>
+              <span class="text-t-4">Asignado a</span>
+              <span class="text-t-2">{{ solicitudAssigneeName(s) || '—' }}</span>
             </div>
           </template>
           <template #footer>
             <span>{{ s.created_at.slice(0, 10) }}</span>
-            <span :class="isInSla(s) ? 'text-success' : 'text-danger'">
-              {{ s.sla_hours === null ? '' : isInSla(s) ? `SLA ${s.sla_hours}h` : 'SLA vencida' }}
-            </span>
+            <Badge :variant="slaChip(s).variant" class="inline-flex items-center gap-1">
+              <Clock v-if="slaChip(s).showIcon" class="h-3 w-3" />
+              {{ slaChip(s).label }}
+            </Badge>
           </template>
         </CardItem>
       </CardsGrid>
@@ -551,8 +616,8 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
                   <span class="font-mono text-[11px] text-t-4">{{ (record as Solicitud).id }}</span>
                   <span class="truncate text-sm font-semibold text-t-1">{{ solicitudTitle(record as Solicitud) }}</span>
                 </div>
-                <Badge :variant="kindVariant((record as Solicitud).kind)">
-                  {{ kindLabel((record as Solicitud).kind) }}
+                <Badge :variant="typeVariant((record as Solicitud).type)">
+                  {{ typeLabel((record as Solicitud).type) }}
                 </Badge>
                 <span @click.stop>
                   <ManifestActionsMenu
@@ -566,10 +631,14 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
                 <p class="line-clamp-2 text-xs text-t-3">{{ solicitudSummary(record as Solicitud) || '—' }}</p>
               </template>
               <template #footer>
-                <span>{{ solicitudOwnerName(record as Solicitud) || 'Sin owner' }}</span>
-                <span :class="isInSla(record as Solicitud) ? 'text-success' : 'text-danger'">
-                  {{ (record as Solicitud).sla_hours === null ? '' : isInSla(record as Solicitud) ? `SLA ${(record as Solicitud).sla_hours}h` : 'Vencida' }}
-                </span>
+                <span>{{ solicitudAssigneeName(record as Solicitud) || '—' }}</span>
+                <Badge
+                  :variant="slaChip(record as Solicitud).variant"
+                  class="inline-flex items-center gap-1"
+                >
+                  <Clock v-if="slaChip(record as Solicitud).showIcon" class="h-3 w-3" />
+                  {{ slaChip(record as Solicitud).label }}
+                </Badge>
               </template>
             </CardItem>
           </template>
@@ -610,44 +679,55 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
           Información
         </h3>
         <div class="grid grid-cols-2 gap-2.5 text-sm">
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
-            <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Kind</div>
+          <div class="rounded-md border border-b-2 bg-surf p-3">
+            <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Tipo</div>
             <div>
-              <Badge :variant="kindVariant(drawerSolicitud.kind)">
-                {{ kindLabel(drawerSolicitud.kind) }}
+              <Badge :variant="typeVariant(drawerSolicitud.type)">
+                {{ typeLabel(drawerSolicitud.type) }}
               </Badge>
             </div>
           </div>
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
-            <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Tipo</div>
-            <div class="text-[13px] font-semibold text-t-2">{{ drawerSolicitud.type }}</div>
-          </div>
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
-            <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Origen</div>
-            <div class="text-[13px] font-semibold text-t-2">
-              {{ drawerSolicitud.source_app }} · {{ drawerSolicitud.source_module }}
+          <div class="rounded-md border border-b-2 bg-surf p-3">
+            <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Concepto</div>
+            <div>
+              <Badge variant="neutral">{{ humanizeConcept(drawerSolicitud.concept) }}</Badge>
             </div>
           </div>
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="rounded-md border border-b-2 bg-surf p-3">
+            <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Origen</div>
+            <div class="text-[13px] font-semibold text-t-2">
+              {{ titleCase(drawerSolicitud.source_app) }} · {{ titleCase(drawerSolicitud.source_module) }}
+            </div>
+          </div>
+          <div class="rounded-md border border-b-2 bg-surf p-3">
+            <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Asignado a</div>
+            <div class="text-[13px] font-semibold text-t-2">{{ solicitudAssigneeName(drawerSolicitud) || 'Sin asignar' }}</div>
+          </div>
+          <div class="rounded-md border border-b-2 bg-surf p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Owner</div>
             <div class="text-[13px] font-semibold text-t-2">{{ solicitudOwnerName(drawerSolicitud) || 'Sin asignar' }}</div>
           </div>
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="rounded-md border border-b-2 bg-surf p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">SLA</div>
-            <div class="text-[13px] font-semibold text-t-2">
-              {{ drawerSolicitud.sla_hours === null ? 'Sin SLA' : `${drawerSolicitud.sla_hours}h` }}
+            <div>
+              <Badge :variant="slaChip(drawerSolicitud).variant" class="inline-flex items-center gap-1">
+                <Clock v-if="slaChip(drawerSolicitud).showIcon" class="h-3 w-3" />
+                {{ slaChip(drawerSolicitud).label === '—'
+                    ? (drawerSolicitud.sla_hours === null ? 'Sin SLA' : '—')
+                    : slaChip(drawerSolicitud).label }}
+              </Badge>
             </div>
           </div>
           <div
             v-if="solicitudSummary(drawerSolicitud)"
-            class="col-span-2 rounded-md border border-b-2 bg-[#111] p-3"
+            class="col-span-2 rounded-md border border-b-2 bg-surf p-3"
           >
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Contexto</div>
             <div class="whitespace-pre-wrap text-[13px] text-t-2">{{ solicitudSummary(drawerSolicitud) }}</div>
           </div>
           <div
             v-if="drawerSolicitud.closure_comment"
-            class="col-span-2 rounded-md border border-b-2 bg-[#111] p-3"
+            class="col-span-2 rounded-md border border-b-2 bg-surf p-3"
           >
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Comentario de cierre</div>
             <div class="whitespace-pre-wrap text-[13px] text-t-2">{{ drawerSolicitud.closure_comment }}</div>

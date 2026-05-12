@@ -207,7 +207,7 @@ Cuando se detecta una dependencia no completada (ya sea en generación manual o 
 
 La Tarea:
 
-- `kind: 'tarea'`, `source_app: 'reportes'`, `target_app: blocking_app`, `target_role` declarado por la dependencia.
+- `type: 'tarea'`, `source_app: 'reportes'`, `target_app: blocking_app`, `target_role` declarado por la dependencia.
 - Payload: `{ report_id, report_name, report_run_id?, blocking_module, blocking_type, recurring_definition_id?, description, due_at }`.
 - `auto_archive`: configurado con `condition_ref` que evalúa `dependencies[].completed: true` para esta dependencia. Cuando la dependencia se libera (porque alguna instancia bloqueante de la serie o tipo se cerró con éxito), el motor del Inbox evalúa la condición y auto-cierra la Tarea con `closed_by: 'system'` + `closure_action: 'dependency_resolved'`.
 - Si la dependencia es una instancia específica de una **serie recurrente** del Inbox (REQ-71), `recurring_definition_id` apunta a la `RecurringInboxItemDefinition`; el motor matchea contra la próxima instancia completada de esa serie.

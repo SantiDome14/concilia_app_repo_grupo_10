@@ -33,42 +33,6 @@ Every Ardua core app cloned from `core-template-frontend` SHALL ship the four cr
 
 ---
 
-### Requirement: Inbox houses Solicitudes; the canonical TS identifier MUST be `Solicitud`
-
-The Inbox module SHALL manage entities named `Solicitud` in TypeScript code; the canonical identifier is the **generic** `Solicitud<TPayload = unknown>` exported from `src/types/genericos.ts` and SHALL NOT be aliased to "Item", "Ticket", or any other generic noun. The interface SHALL declare required fields `id: string`, `type: string`, `kind: InboxKind`, `source_app: string`, `source_module: string`, `target_app: string`, `owner: string | null`, `state: SolicitudState`, `payload: TPayload`, `timeline: TimelineEvent[]`, `comments: Comment[]`, `created_at: string`, `updated_at: string`; and optional fields `target_role?: string`, `assignee?: string | null`, `severity?: Severity`, `sla_hours?: number | null`, `due_at?: number`, `recurring_definition_id?: string`, `triggered_actions?: TriggeredAction[]`, `closure_action?: string`, `closure_comment?: string`, `closed_by?: string`, `closed_at?: number`. The `kind` field is the canonical discriminator between Solicitudes (third-party-requested) and Tareas (self-issued); both share the same engine, lifecycle, and `<ClosureModal>` mechanics. The Inbox page SHALL NOT render a `<Segmenter>` for record-set segmentation; users narrow the visible records via the L3 filter row (Tipo / Estado / `kind` / Mías). The detail surface for any Solicitud/Tarea SHALL be the side `<Drawer>` (`meta.detail = 'drawer'`); a centered modal is forbidden.
-
-#### Scenario: Solicitud<TPayload> is imported from the canonical types file
-
-- **GIVEN** an app's Inbox page or extension types
-- **WHEN** the file imports the canonical shape
-- **THEN** the import statement reads `import type { Solicitud } from '@/types/genericos';`; apps that need typed payload pin it via `type KycSolicitud = Solicitud<KycPayload>`; redefining the base generic in app code is forbidden
-
-#### Scenario: kind is the discriminator between Solicitud and Tarea
-
-- **GIVEN** two records of the same engine
-- **WHEN** one is created from a CLP CTA targeting OPS (`kind: 'solicitud'`) and the other from a recurring series internal to OPS (`kind: 'tarea'`)
-- **THEN** both share `state`, `timeline`, `comments`, `closeActions[]` mechanics; the only differences are the label/badge in the UI and the vocabulary of the closeActions
-
-#### Scenario: assignee is distinct from owner
-
-- **GIVEN** a Solicitud with `assignee: 'u-2'` and `owner: null` in state `pendiente`
-- **WHEN** an operator clicks "Tomar"
-- **THEN** the engine sets `owner: <current_user_id>` and transitions state to `en_proceso`; the `assignee` field is unchanged; the Timeline records both events separately (one `kind: 'taken'` and zero `kind: 'assigned'` for this transition)
-
-#### Scenario: App-specific Solicitud pins the payload type
-
-- **GIVEN** an app declares `type WithdrawalSolicitud = Solicitud<{ client: string; amount: number; currency: string; }>`
-- **WHEN** the app reads `s.payload.amount`
-- **THEN** the field is typed as `number`; TypeScript narrows correctly without `as` casts; the base fields (`id`, `type`, `kind`, `target_app`, `state`, etc.) remain required
-
-#### Scenario: Removing kind is a contract violation
-
-- **GIVEN** an app introduces `interface Solicitud { ... }` without a `kind` field, or reads existing Solicitudes ignoring `kind`
-- **WHEN** PR review checks the change
-- **THEN** the change is REJECTED — `kind` is the canonical discriminator and the UI MUST render the correct badge per `kind`
-
----
-
 ### Requirement: Inbox MUST declare a state machine with terminal-state ClosureModal
 
 Every app's Inbox SHALL declare two constants per the `core-data-tables` state-machine contract: `INBOX_STATES` (the ordered list of states with `column_label`, `order`, `terminal` flags) and `INBOX_TRANSITIONS` (the from/to/mode declarations). The default vocabulary MUST be `'pendiente' | 'en_proceso' | 'completed' | 'rejected'`; apps MAY override labels via `InboxTypeConfig.state_labels` but MUST NOT change the mechanism (always four states, terminals immutable). Transitions to terminal states MUST declare `mode: 'modal'` and MUST open the shared `<ClosureModal>` from `core-modals`. The `<ClosureModal>` confirmation MUST require a `closeActions` choice drawn from `InboxTypeConfig[type].closeActions[]` of the Solicitud's type; when the matching type declares `closeActions[].requires_comment` (default `true`) the closure comment SHALL be required with a minimum of 10 characters. The closure SHALL persist `state`, `closure_action`, `closure_comment` (when provided), `closed_by`, `closed_at`, and a `TimelineEvent { kind: 'closed', at, by, payload: { action, comment } }` on the Solicitud.
@@ -99,49 +63,6 @@ Every app's Inbox SHALL declare two constants per the `core-data-tables` state-m
 
 ---
 
-### Requirement: Alertas houses system-detected events with profile A/B/C/D semantics
-
-The Alertas module SHALL house system-detected events that require human attention. Every `ALERT_TYPE` declared in an app's config MUST carry a `category: AlertCategory` discriminator (canonical values: `'triage' | 'workflow' | 'metric' | 'cross_app_panel'`) that activates exactly one canonical UI pattern per type:
-
-- **`triage` (formerly profile A)** — Active triage list. Inbox-style list without owner / SLA. New alerts surface; users mark resolved or dismissed.
-- **`workflow` (formerly profile B)** — Master-detail with sub-categorization. Drawer with Timeline + Comments. Terminal-state `<ClosureModal>` with justification.
-- **`metric` (formerly profile C)** — Time-series with charts. Chart-first surface; alerts are derived from a metric crossing a threshold; resolution is automatic when the metric returns inside the threshold.
-- **`cross_app_panel` (formerly profile D)** — Cross-app KPI dashboard. Consolidated KPIs with cross-app filters; not an actionable list. Lives prioritarily as `<CrossAppPanelCard>` of the Dashboard, not as a row in the Alertas list.
-
-The `Alerta` interface SHALL be exported from `src/types/genericos.ts` with the discriminator `category: AlertCategory`. Apps SHALL activate exactly one category per `ALERT_TYPE` — mixing categories within a single ALERT_TYPE is forbidden. The Alertas page SHALL read each row's `category` and render the corresponding UI pattern. The previous `AlertProfile` type name and `Alerta.profile` field name SHALL NOT appear in code; PR review rejects any reintroduction.
-
-#### Scenario: workflow category renders the workflow surface
-
-- **GIVEN** an `ALERT_TYPE` declared with `category: 'workflow'` and an `Alerta` row of that type
-- **WHEN** the user clicks the row
-- **THEN** the side `<Drawer>` opens with Timeline + Comments; the Tablero (Kanban) view is available; terminal-state transitions (`* → resolved`, `* → dismissed`) MUST go through the `<ClosureModal>` with justification ≥10 chars
-
-#### Scenario: triage category renders the simple triage list
-
-- **GIVEN** an `ALERT_TYPE` declared with `category: 'triage'`
-- **WHEN** the user opens the corresponding Alerta
-- **THEN** the row resolves with a single click (no Drawer, no Timeline by default); the resolution action surfaces a confirmation toast per `core-error-handling`
-
-#### Scenario: metric category renders a chart-first surface
-
-- **GIVEN** an `ALERT_TYPE` declared with `category: 'metric'` (e.g. saldo anomaly)
-- **WHEN** the user navigates to the Alertas section filtered to that type
-- **THEN** the page renders a chart of the underlying metric with thresholds overlaid; the alert list appears as a compact secondary panel; resolution is automatic when the metric returns inside the threshold
-
-#### Scenario: cross_app_panel category renders as a Dashboard card by default
-
-- **GIVEN** an `ALERT_TYPE` declared with `category: 'cross_app_panel'` (e.g. daily limit utilization across CLP / OPS / FIN)
-- **WHEN** the destination app's Dashboard renders
-- **THEN** the alert is surfaced as a `<CrossAppPanelCard>` card; it MUST NOT appear in the Alertas triage list (the triage list filters out `cross_app_panel` types)
-
-#### Scenario: Mixing categories within a single ALERT_TYPE is forbidden
-
-- **GIVEN** an `ALERT_TYPE` declares `category: ['triage', 'workflow']` (an array, attempting to mix)
-- **WHEN** the app config validates
-- **THEN** the validation FAILS with an error indicating that exactly one category MUST be activated per ALERT_TYPE
-
----
-
 ### Requirement: Alertas terminal states (`resolved` and `dismissed`) MUST require a justification via the ClosureModal
 
 For every `ALERT_TYPE` whose `category` is `workflow`, transitions to terminal states `'resolved'` and `'dismissed'` MUST declare `mode: 'modal'` per the `core-data-tables` state-machine contract and MUST open the shared `<ClosureModal>` from `core-modals`. The justification SHALL be entered as a non-empty string of at least 10 characters and is persisted on the alert's `closure_comment` field. The `<ClosureModal>` MUST surface the justification field as required (label + asterisk + character-count helper). On confirm, a `TimelineEvent { kind: 'closed', at: <ts>, payload: { state: 'resolved' | 'dismissed', comment: '...' } }` MUST be appended. `triage` types MAY skip the justification when `ALERTS_CONFIG.requireClosureComment` is `false` for that type; `metric` and `cross_app_panel` rarely transition through the user UI (auto-close or dashboard read-only) and the justification rule is effectively `workflow`-mandatory.
@@ -163,36 +84,6 @@ For every `ALERT_TYPE` whose `category` is `workflow`, transitions to terminal s
 - **GIVEN** an `ALERT_TYPE` with `category: 'triage'` and `ALERTS_CONFIG.requireClosureComment` set to `false` for this type
 - **WHEN** the user clicks "Marcar como atendida"
 - **THEN** the alert closes without opening the `<ClosureModal>`; a confirmation toast is shown; `closure_comment` is not set; a minimal `TimelineEvent { kind: 'closed', at: <ts> }` is appended
-
----
-
-### Requirement: Reports MAY emit REPORT_DEPENDENCY events; destination Alertas MUST consume them as `profile: 'A'`
-
-When a `Report` declares a `dependencies[]` list and the user attempts to generate the report (clicks "Generar"), the engine SHALL evaluate each dependency. If any dependency entry has `completed: false`, the Generar action MUST be BLOCKED and the engine MUST emit a `REPORT_DEPENDENCY` event addressed to the **Inbox** of the destination app indicated by `blocking_app`. The destination app's Inbox MUST consume incoming `REPORT_DEPENDENCY` events and create a **Tarea** (`kind: 'tarea'`) with `type: 'report_dependency_block'`, payload including `report_id`, `report_name`, `blocking_module`, `blocking_type`, `recurring_definition_id?` (when the dependency binds to a recurring series of the Inbox per `RecurringInboxItemDefinition`), `description`, `due_at`. The Tarea type MUST declare `auto_archive` whose `condition_ref` evaluates `dependencies[].completed: true` for the specific dependency. When the dependency resolves (either a human closes the relevant Solicitud/Tarea or a recurring series completes its bounded instance), the engine SHALL auto-close the Tarea — `state: 'completed'`, `closure_action: 'dependency_resolved'`, `closed_by: 'system'`, `closed_at: <ts>`, and a `TimelineEvent { kind: 'closed', at: <ts>, by: 'system' }`. The previous routing of `REPORT_DEPENDENCY` events as Alertas with `profile: 'A'` SHALL NOT appear in the codebase; PR review rejects any reintroduction.
-
-#### Scenario: Generar is blocked when a dependency is unfulfilled
-
-- **GIVEN** a `Report` whose `dependencies` includes `{ blocking_app: 'OPS', blocking_module: 'movements', blocking_type: 'daily_reconciliation', completed: false }`
-- **WHEN** the user clicks "Generar"
-- **THEN** the action is blocked with a per-row toast that names the blocking app + module + type; the engine emits a `REPORT_DEPENDENCY` event addressed to the OPS Inbox
-
-#### Scenario: Destination Inbox creates a Tarea of type `report_dependency_block`
-
-- **GIVEN** the OPS app subscribes to `REPORT_DEPENDENCY` events
-- **WHEN** an event arrives with `report_id: 'rpt-monthly-tax'`, `blocking_app: 'OPS'`, `blocking_module: 'movements'`, `blocking_type: 'daily_reconciliation'`, `recurring_definition_id?: 'series-daily-recon'`
-- **THEN** the OPS Inbox creates a Tarea (`kind: 'tarea'`) of `type: 'report_dependency_block'`, `state: 'pendiente'`, payload describing the blocking report; the Tarea is routed by `target_role` of the `InboxTypeConfig` for `report_dependency_block`
-
-#### Scenario: Dependency resolution auto-archives the Tarea
-
-- **GIVEN** an OPS Tarea of type `report_dependency_block` raised because reconciliation was incomplete
-- **WHEN** the OPS operator closes the related `daily_reconciliation` Tarea (or a recurring series instance completes successfully)
-- **THEN** the engine evaluates the `auto_archive.condition_ref`, sets the `report_dependency_block` Tarea's `state: 'completed'`, `closure_action: 'dependency_resolved'`, `closed_by: 'system'`, `closed_at: <ts>`; the user does not interact with the auto-close
-
-#### Scenario: Routing REPORT_DEPENDENCY to Alertas is a contract violation
-
-- **GIVEN** a developer proposes routing `REPORT_DEPENDENCY` events to the destination app's Alertas instead of the Inbox
-- **WHEN** PR review checks the proposal against this Requirement
-- **THEN** the change is REJECTED — the 2026-05-11 product decision routes the event to the Inbox as a Tarea; the Alertas route is removed
 
 ---
 
@@ -453,100 +344,49 @@ The Solicitud canonical model SHALL NOT grow an `execution: manual | programmati
 
 ### Requirement: Inbox MUST expose a typed registry `InboxTypeConfig` declaring `creable_manualmente`, `manual_creation_capability`, `payload_schema`, `closeActions[]`, `triggers_on_create[]`, `available_actions[]`, `push_notification?`, `auto_archive?`
 
-Every app's Inbox SHALL declare a typed registry `INBOX_TYPES_REGISTRY: Readonly<Record<string, InboxTypeConfig>>` in `src/config/inbox-types.ts` (or in an app-specific equivalent that the Inbox page imports). Each registry entry SHALL declare:
+Every app's Inbox SHALL declare a typed registry `INBOX_TYPES_REGISTRY: Readonly<Record<string, InboxTypeConfig>>` in `src/config/inbox-types.ts` (or in an app-specific equivalent that the Inbox page imports). The registry is keyed by `concept` (the business classifier — `Solicitud.concept`). Each registry entry SHALL declare:
 
-- `type: string` — the canonical type identifier matching `Solicitud.type` / `Alerta.type` of records of this type.
-- `kind: InboxKind` — `'solicitud'` or `'tarea'`; mandatory; drives label/badge and closeActions vocabulary.
-- `label: string` — human-readable label of the type.
-- `target_app: string` — the app that owns Solicitudes/Tareas of this type.
+- `concept: string` — the canonical business classifier identifier matching `Solicitud.concept` of records of this kind.
+- `type: InboxType` — `'solicitud'` or `'tarea'`; mandatory; drives label/badge and closeActions vocabulary.
+- `label: string` — human-readable label of the concept.
+- `target_app: string` — the app that owns Solicitudes/Tareas of this concept.
 - `target_role?: string` — capability for routing notifications.
 - `payload_schema: DynamicFormSchema` — the schema that `<DynamicPayloadForm>` consumes to render the create form; consumed by the template's existing `useDynamicForm` composable.
-- `sla_hours?: number` — default SLA window for new records of this type.
-- `creable_manualmente?: boolean` — default `false`; when `true`, the type is creatable from the Inbox main CTA.
+- `sla_hours?: number` — default SLA window for new records of this concept.
+- `creable_manualmente?: boolean` — default `false`; when `true`, the concept is creatable from the Inbox main CTA.
 - `manual_creation_capability?: string` — capability required for manual creation from the Inbox CTA; SHALL be honored even when `creable_manualmente: true` is set.
 - `closeActions: CloseAction[]` — at least one entry; each `{ id, label, terminal_state, requires_comment? }`. The `<ClosureModal>` lists these as the close-action choices.
 - `triggers_on_create?: TriggerSpec[]` — manifest-engine actions to invoke automatically on creation, each with `action_id` + optional `payload_mapping`.
-- `available_actions?: ActionSpec[]` — CTAs that appear in the `<Drawer>` of records of this type, with `enable_when` predicate.
-- `push_notification?` — declares optional canales `browser` / `email` / `slack` (each opt-in per type; in-app badge is always-on, not declared per type).
+- `available_actions?: ActionSpec[]` — CTAs that appear in the `<Drawer>` of records of this concept, with `enable_when` predicate.
+- `push_notification?` — declares optional canales `browser` / `email` / `slack` (each opt-in per concept; in-app badge is always-on, not declared per concept).
 - `auto_archive?` — declarative auto-close rule: `{ condition_ref: string; closure_action: string }`. The engine evaluates `condition_ref` over time and auto-closes the record with `closure_action` when the condition becomes true; `closed_by: 'system'`.
 - `state_labels?: Partial<Record<SolicitudState, string>>` — visual override of state labels; never changes the mechanism.
 
-The registry SHALL be immutable at runtime (`Readonly<...>`). The Inbox page SHALL import the registry and use it to: (a) resolve close-action vocabularies for the `<ClosureModal>`; (b) gate the main CTA (see next Requirement); (c) render labels and badges. Apps SHALL NOT mutate the registry at runtime; new types are added via a fresh declaration + PR.
+The registry SHALL be immutable at runtime (`Readonly<...>`). The Inbox page SHALL import the registry and use it to: (a) resolve close-action vocabularies for the `<ClosureModal>`; (b) gate the main CTA (see next Requirement); (c) render labels and badges. Apps SHALL NOT mutate the registry at runtime; new concepts are added via a fresh declaration + PR.
 
-#### Scenario: A type is creable_manualmente AND the user has the capability
+#### Scenario: A concept is creable_manualmente AND the user has the capability
 
 - **GIVEN** an `InboxTypeConfig` entry for `'aprobacion_pago'` with `creable_manualmente: true` and `manual_creation_capability: 'INBOX_CREATE'`, and a user with `capabilities: ['INBOX_CREATE']`
 - **WHEN** the Inbox page renders
-- **THEN** the type is included in the result of `listCreableTypes(user.capabilities)`; the main CTA surfaces this type in the type-selector wizard
+- **THEN** the concept is included in the result of `listCreableTypes(user.capabilities)`; the main CTA surfaces this concept in the type-selector wizard
 
-#### Scenario: A type is creable_manualmente but the user lacks the capability
+#### Scenario: A concept is creable_manualmente but the user lacks the capability
 
-- **GIVEN** the same type, but a user with `capabilities: []`
+- **GIVEN** the same concept, but a user with `capabilities: []`
 - **WHEN** `listCreableTypes(user.capabilities)` is called
-- **THEN** the type is NOT included in the result; the main CTA does not list it in the type selector
+- **THEN** the concept is NOT included in the result; the main CTA does not list it in the type selector
 
-#### Scenario: A type is NOT creable_manualmente
+#### Scenario: A concept is NOT creable_manualmente
 
 - **GIVEN** an `InboxTypeConfig` entry with `creable_manualmente: false` (or omitted; default is `false`)
 - **WHEN** `listCreableTypes(...)` is called
-- **THEN** the type is NEVER in the result regardless of the user's capabilities; the type can still arrive via API ingestion or recurring series, just not from the manual CTA
+- **THEN** the concept is NEVER in the result regardless of the user's capabilities; the concept can still arrive via API ingestion or recurring series, just not from the manual CTA
 
 #### Scenario: auto_archive closes the record on condition evaluation
 
 - **GIVEN** an `InboxTypeConfig` for `report_dependency_block` with `auto_archive: { condition_ref: 'reportDeps.completed === true', closure_action: 'dependency_resolved' }`
 - **WHEN** the engine evaluates the condition at a later time and it returns true
 - **THEN** the Tarea transitions to `state: 'completed'`, `closure_action: 'dependency_resolved'`, `closed_by: 'system'`, `closed_at: <ts>`; a `TimelineEvent { kind: 'closed', by: 'system' }` is appended
-
----
-
-### Requirement: Inbox MUST expose a main CTA "Crear Solicitud / Tarea" filtered by `InboxTypeConfig.creable_manualmente: true` and `manual_creation_capability`; the label is derived from `kind` of the available types
-
-The Inbox page SHALL render a main CTA in the L1 header (alongside the `<ViewToggle>`) that lets the operator manually create a Solicitud or Tarea of a type declared `creable_manualmente: true` in `INBOX_TYPES_REGISTRY`, gated by the current user's `manual_creation_capability` per type. The CTA SHALL behave as follows:
-
-- **Visibility.** When no entry in `INBOX_TYPES_REGISTRY` declares `creable_manualmente: true`, the CTA SHALL NOT render. When at least one type declares it but the current user has no `manual_creation_capability` of any such type, the CTA SHALL render **disabled** with a tooltip ("Sin permiso para crear") — consistent with the universal-`⋯`-menu pattern of `core-actions-menu` (the CTA never disappears arbitrarily when the registry has creable types; the disabled state communicates lack of capability).
-- **Label.** Derived from the available types (those that pass both filters):
-  - Only `kind: 'solicitud'` types available → label "Crear Solicitud".
-  - Only `kind: 'tarea'` types available → label "Crear Tarea".
-  - Both kinds available → label "Crear" (generic).
-- **Click → wizard.** Clicking opens a 2-step `<InboxCreateDialog>`. Step 1: `<InboxTypeSelector>` lists the filtered types with kind-badge. Step 2: `<DynamicPayloadForm>` renders the payload form from the selected type's `payload_schema` plus common metadata (assignee picker, optional `sla_hours` / `due_at` when the type declares them).
-- **Submit.** Builds a `Solicitud<TPayload>` with `state: 'pendiente'`, `source_app: <current_app>`, `source_module: 'inbox'`, `target_app: <inbox_target>`, `kind`, `payload`, optional `assignee`, optional `due_at`, optional `sla_hours`. Persists. Triggers `triggers_on_create[]` per the type config. Disparates notifications per `push_notification` (in-app always; opt-in canales as declared). Emits an `AuditEntryCTA` with `is_module_cta: true`, `created_record_type: <type>`, `kind: 'cta'`.
-
-The CTA is NOT a row action and is NOT declared in `Manifest.module_ctas[]` — it lives outside the manifest engine because the type-selector wizard requires multi-step state that the single-dialog manifest CTA does not model. The shared audit trail (`useAuditLog()`) is the bridge that keeps the new CTA observable on the same surface as manifest-emitted entries.
-
-#### Scenario: CTA hides when no type is creable_manualmente
-
-- **GIVEN** an `INBOX_TYPES_REGISTRY` where every entry has `creable_manualmente: false` (or omits it)
-- **WHEN** the Inbox page renders
-- **THEN** the main CTA is NOT in the DOM
-
-#### Scenario: CTA renders disabled when the user lacks any matching capability
-
-- **GIVEN** a registry with at least one creable type whose `manual_creation_capability` is `'INBOX_CREATE'`, and the current user has no `INBOX_CREATE` capability
-- **WHEN** the Inbox page renders
-- **THEN** the CTA renders in a disabled state with tooltip "Sin permiso para crear"; clicking is a no-op
-
-#### Scenario: Label is kind-derived
-
-- **GIVEN** two creable types both with `kind: 'solicitud'`
-- **WHEN** the CTA renders
-- **THEN** its label is "Crear Solicitud"
-- **AND GIVEN** the registry adds a third creable type with `kind: 'tarea'`
-- **WHEN** the CTA re-renders
-- **THEN** its label is "Crear" (mixed kinds)
-
-#### Scenario: Submit creates a Solicitud and emits AuditEntryCTA
-
-- **GIVEN** the wizard is on step 2 with a valid form for type `aprobacion_pago` (`kind: 'solicitud'`); user clicks Submit
-- **WHEN** the submit handler runs
-- **THEN** a new Solicitud lands in `solicitudes.value` with `state: 'pendiente'`, populated `payload`, `kind: 'solicitud'`, `target_app` per the registry entry, `source_module: 'inbox'`, `assignee` if the user picked one; AND `useAuditLog().append(...)` is called once with `{ kind: 'cta', is_module_cta: true, created_record_type: 'aprobacion_pago', record_id: <new id>, manifest_key: INBOX_MANIFEST_KEY, ... }`; AND a success toast renders ("Solicitud creada"); AND the wizard closes.
-
-#### Scenario: triggers_on_create fires for the new record
-
-- **GIVEN** a type with `triggers_on_create: [{ action_id: 'fin.crear_factura_borrador', payload_mapping: { ... } }]`
-- **WHEN** a Solicitud of that type is created via the CTA
-- **THEN** the engine records each declared trigger as `triggered_actions[]` entries on the new Solicitud with `status: 'pending'`; a `TimelineEvent { kind: 'action_invoked', label: 'Trigger: fin.crear_factura_borrador' }` is appended (V1 — the actual action invocation through the manifest engine is V2-scoped per Design Decision 9 of this change)
-
----
 
 ### Requirement: Solicitud `assignee` is distinct from `owner`; both are independently mutable in non-terminal states
 
@@ -665,42 +505,6 @@ Manual generation (`/Generar` clicked) follows the dependency-block rule regardl
 - **WHEN** the engine evaluates dependencies
 - **THEN** generation is BLOCKED; a toast names the blocking app + module + type; a Tarea `report_dependency_block` is emitted to the `blocking_app` Inbox; no `ReportRun` is persisted
 
-### Requirement: Inbox views MUST surface the `kind` discriminator as a badge and the L3 filter row MUST expose a kind filter
-
-The Inbox page SHALL render the `kind` (`'solicitud' | 'tarea'`) discriminator of every visible record as a `<Badge>` per the canonical `Solicitud` / `Tarea` labels in **all four** surfaces: list rows, card headers, kanban cards, and the Drawer header area. The L3 filter row SHALL also expose a **kind filter** (separate from the Tipo and Estado filters; native `<select>` is permitted at the L3 row per the existing Inbox convention; `<Segmenter>` is forbidden because the Inbox spec disallows record-set segmentation). The kind filter SHALL expose three options regardless of how many entries of each kind exist in the dataset: `"Todos"`, `"Solicitudes"`, `"Tareas"`. When the filter is `"Todos"` (or unset) the view SHALL render records of both kinds; when set to a specific kind, the view SHALL hide records of the other kind. The kind filter is independent of and AND-merges with the Tipo and Estado filters.
-
-#### Scenario: Kind badge appears in every view
-
-- **GIVEN** a Solicitud with `kind: 'solicitud'` and a Tarea with `kind: 'tarea'` both present in the dataset
-- **WHEN** the Inbox page renders
-- **THEN** the row of the Solicitud surfaces a `<Badge>` labeled `"Solicitud"` (and the row of the Tarea a `<Badge>` labeled `"Tarea"`) in the list view, the cards view, the kanban view, and on the header of the Drawer when opened — four surfaces total
-
-#### Scenario: Kind filter narrows the visible dataset to one kind
-
-- **GIVEN** the L3 filter row with `Kind = "Tareas"` selected
-- **WHEN** `filteredSolicitudes` recomputes
-- **THEN** only records with `kind: 'tarea'` are rendered in the active view; the L2 KPI counters recompute over the narrowed set
-
-#### Scenario: Kind filter "Todos" renders both kinds simultaneously
-
-- **GIVEN** the L3 filter row with `Kind = "Todos"`
-- **WHEN** `filteredSolicitudes` recomputes
-- **THEN** both Solicitudes and Tareas render together; each row carries its own kind badge so the user can disambiguate at a glance
-
-#### Scenario: Kind filter coexists with the Tipo and Estado filters
-
-- **GIVEN** the L3 filter row with `Kind = "Solicitudes"`, `Tipo = "aprobacion_pago"`, `Estado = "pendiente"`
-- **WHEN** `filteredSolicitudes` recomputes
-- **THEN** only records with `kind: 'solicitud' AND type === 'aprobacion_pago' AND state === 'pendiente'` are rendered; all three filters AND-merge
-
-#### Scenario: Hiding the kind badge from any of the four surfaces is a contract violation
-
-- **GIVEN** a PR proposes removing the kind badge from the list view (or any of the other three surfaces)
-- **WHEN** PR review checks the change against this Requirement
-- **THEN** the change is REJECTED — the kind discriminator MUST be visible on all four surfaces simultaneously
-
----
-
 ### Requirement: Drawer MUST render a `triggered_actions` panel when the Solicitud carries one or more entries
 
 When the Drawer opens for a Solicitud whose `triggered_actions[]` is non-empty, the Drawer body SHALL render a labeled section (`"Acciones disparadas"` — or equivalent) listing every entry. Each row SHALL surface:
@@ -738,4 +542,351 @@ The panel SHALL be hidden entirely when `triggered_actions` is `undefined` or an
 - **GIVEN** a PR proposes hiding the panel even when entries are non-empty (e.g. behind a collapsed toggle by default)
 - **WHEN** PR review checks the change against this Requirement
 - **THEN** the change is REJECTED — when entries are populated, the panel MUST render eagerly so the user sees the trigger status without extra clicks
+
+### Requirement: Inbox houses Solicitudes; the canonical TS identifier MUST be Solicitud<TPayload>
+
+The Inbox module SHALL manage entities named `Solicitud` in TypeScript code; the canonical identifier is the **generic** `Solicitud<TPayload = unknown>` exported from `src/types/genericos.ts` and SHALL NOT be aliased to "Item", "Ticket", or any other generic noun. The interface SHALL declare required fields `id: string`, `concept: string`, `type: InboxType`, `source_app: string`, `source_module: string`, `target_app: string`, `owner: string | null`, `state: SolicitudState`, `payload: TPayload`, `timeline: TimelineEvent[]`, `comments: Comment[]`, `created_at: string`, `updated_at: string`; and optional fields `target_role?: string`, `assignee?: string | null`, `severity?: Severity`, `sla_hours?: number | null`, `due_at?: number`, `recurring_definition_id?: string`, `triggered_actions?: TriggeredAction[]`, `closure_action?: string`, `closure_comment?: string`, `closed_by?: string`, `closed_at?: number`. The `type: InboxType` field (canonical values `'solicitud' | 'tarea'`) is the **discriminator** between Solicitudes (third-party-requested) and Tareas (self-issued); both share the same engine, lifecycle, and `<ClosureModal>` mechanics. The `concept: string` field (e.g. `'aprobacion_pago'`, `'revision_legajo'`) is the **business classifier** — what this Solicitud is about — and matches the key of an entry in `INBOX_TYPES_REGISTRY`. The Inbox page SHALL NOT render a `<Segmenter>` for record-set segmentation; users narrow the visible records via the L3 filter row (Concepto / Estado / Tipo / Mías). The detail surface for any Solicitud/Tarea SHALL be the side `<Drawer>` (`meta.detail = 'drawer'`); a centered modal is forbidden.
+
+#### Scenario: Solicitud<TPayload> is imported from the canonical types file
+
+- **GIVEN** an app's Inbox page or extension types
+- **WHEN** the file imports the canonical shape
+- **THEN** the import statement reads `import type { Solicitud } from '@/types/genericos';`; apps that need typed payload pin it via `type KycSolicitud = Solicitud<KycPayload>`; redefining the base generic in app code is forbidden
+
+#### Scenario: type is the discriminator between Solicitud and Tarea
+
+- **GIVEN** two records of the same engine
+- **WHEN** one is created from a CLP CTA targeting OPS (`type: 'solicitud'`) and the other from a recurring series internal to OPS (`type: 'tarea'`)
+- **THEN** both share `state`, `timeline`, `comments`, `closeActions[]` mechanics; the only differences are the label/badge in the UI and the vocabulary of the closeActions
+
+#### Scenario: assignee is distinct from owner
+
+- **GIVEN** a Solicitud with `assignee: 'u-2'` and `owner: null` in state `pendiente`
+- **WHEN** an operator clicks "Tomar"
+- **THEN** the engine sets `owner: <current_user_id>` and transitions state to `en_proceso`; the `assignee` field is unchanged; the Timeline records both events separately (one `kind: 'taken'` and zero `kind: 'assigned'` for this transition)
+
+#### Scenario: App-specific Solicitud pins the payload type
+
+- **GIVEN** an app declares `type WithdrawalSolicitud = Solicitud<{ client: string; amount: number; currency: string; }>`
+- **WHEN** the app reads `s.payload.amount`
+- **THEN** the field is typed as `number`; TypeScript narrows correctly without `as` casts; the base fields (`id`, `concept`, `type`, `target_app`, `state`, etc.) remain required
+
+#### Scenario: Removing type or concept is a contract violation
+
+- **GIVEN** an app introduces `interface Solicitud { ... }` without a `type` field or without a `concept` field
+- **WHEN** PR review checks the change
+- **THEN** the change is REJECTED — `type` is the canonical discriminator (`'solicitud' | 'tarea'`) and `concept` is the business classifier; the UI MUST render the correct badge per `type` and the engine MUST resolve `InboxTypeConfig` via `concept`
+
+---
+
+### Requirement: Alertas houses system-detected events with category triage/workflow/metric/cross_app_panel semantics
+
+The Alertas module SHALL house system-detected events that require human attention. Every `ALERT_TYPE` declared in an app's config MUST carry a `category: AlertCategory` discriminator (canonical values: `'triage' | 'workflow' | 'metric' | 'cross_app_panel'`) that activates exactly one canonical UI pattern per type:
+
+- **`triage` (formerly profile A)** — Active triage list. Inbox-style list without owner / SLA. New alerts surface; users mark resolved or dismissed.
+- **`workflow` (formerly profile B)** — Master-detail with sub-categorization. Drawer with Timeline + Comments. Terminal-state `<ClosureModal>` with justification.
+- **`metric` (formerly profile C)** — Time-series with charts. Chart-first surface; alerts are derived from a metric crossing a threshold; resolution is automatic when the metric returns inside the threshold.
+- **`cross_app_panel` (formerly profile D)** — Cross-app KPI dashboard. Consolidated KPIs with cross-app filters; not an actionable list. Lives prioritarily as `<CrossAppPanelCard>` of the Dashboard, not as a row in the Alertas list.
+
+The `Alerta` interface SHALL be exported from `src/types/genericos.ts` with two top-level classifying fields: a mandatory `category: AlertCategory` (the UI-pattern discriminator above) AND a mandatory `concept: string` (the business classifier — e.g. `'saldo_anomaly'`, `'login_failure'`, `'cron_failed'`, `'capacity_warning'`). The `concept` field is the parallel of `Solicitud.concept` per `core-modulo-genericos` — both records use the same name for the same axis. Apps SHALL activate exactly one category per `ALERT_TYPE` — mixing categories within a single ALERT_TYPE is forbidden. The Alertas page SHALL read each row's `category` and render the corresponding UI pattern; the L3 filter row SHALL expose a "Concepto" filter (mirroring the Inbox `concept` filter). The previous `AlertProfile` type name and `Alerta.profile` field name SHALL NOT appear in code; the previous `Alerta.type` field name (renamed to `Alerta.concept` on 2026-05-12) SHALL NOT appear either; PR review rejects any reintroduction of those old names.
+
+#### Scenario: workflow category renders the workflow surface
+
+- **GIVEN** an `ALERT_TYPE` declared with `category: 'workflow'` and an `Alerta` row of that type
+- **WHEN** the user clicks the row
+- **THEN** the side `<Drawer>` opens with Timeline + Comments; the Tablero (Kanban) view is available; terminal-state transitions (`* → resolved`, `* → dismissed`) MUST go through the `<ClosureModal>` with justification ≥10 chars
+
+#### Scenario: triage category renders the simple triage list
+
+- **GIVEN** an `ALERT_TYPE` declared with `category: 'triage'`
+- **WHEN** the user opens the corresponding Alerta
+- **THEN** the row resolves with a single click (no Drawer, no Timeline by default); the resolution action surfaces a confirmation toast per `core-error-handling`
+
+#### Scenario: metric category renders a chart-first surface
+
+- **GIVEN** an `ALERT_TYPE` declared with `category: 'metric'` (e.g. saldo anomaly)
+- **WHEN** the user navigates to the Alertas section filtered to that concept
+- **THEN** the page renders a chart of the underlying metric with thresholds overlaid; the alert list appears as a compact secondary panel; resolution is automatic when the metric returns inside the threshold
+
+#### Scenario: cross_app_panel category renders as a Dashboard card by default
+
+- **GIVEN** an `ALERT_TYPE` declared with `category: 'cross_app_panel'` (e.g. daily limit utilization across CLP / OPS / FIN)
+- **WHEN** the destination app's Dashboard renders
+- **THEN** the alert is surfaced as a `<CrossAppPanelCard>` card; it MUST NOT appear in the Alertas triage list (the triage list filters out `cross_app_panel` concepts)
+
+#### Scenario: Mixing categories within a single ALERT_TYPE is forbidden
+
+- **GIVEN** an `ALERT_TYPE` declares `category: ['triage', 'workflow']` (an array, attempting to mix)
+- **WHEN** the app config validates
+- **THEN** the validation FAILS with an error indicating that exactly one category MUST be activated per ALERT_TYPE
+
+#### Scenario: Reading Alerta.type from code is a contract violation
+
+- **GIVEN** a PR proposes reading `a.type` from an Alerta record
+- **WHEN** PR review checks the change against this Requirement
+- **THEN** the change is REJECTED — the business classifier field on Alerta is `concept`, not `type` (the 2026-05-12 rename moved it to align with `Solicitud.concept`); reintroducing `Alerta.type` creates the cross-record naming drift the rename was meant to close
+
+### Requirement: Reports MAY emit REPORT_DEPENDENCY events; destination Inbox MUST consume them as Tarea report_dependency_block with declarative auto_archive
+
+When a `Report` declares a `dependencies[]` list and the user attempts to generate the report (clicks "Generar"), the engine SHALL evaluate each dependency. If any dependency entry has `completed: false`, the Generar action MUST be BLOCKED and the engine MUST emit a `REPORT_DEPENDENCY` event addressed to the **Inbox** of the destination app indicated by `blocking_app`. The destination app's Inbox MUST consume incoming `REPORT_DEPENDENCY` events and create a **Tarea** (`kind: 'tarea'`) with `type: 'report_dependency_block'`, payload including `report_id`, `report_name`, `blocking_module`, `blocking_type`, `recurring_definition_id?` (when the dependency binds to a recurring series of the Inbox per `RecurringInboxItemDefinition`), `description`, `due_at`. The Tarea type MUST declare `auto_archive` whose `condition_ref` evaluates `dependencies[].completed: true` for the specific dependency. When the dependency resolves (either a human closes the relevant Solicitud/Tarea or a recurring series completes its bounded instance), the engine SHALL auto-close the Tarea — `state: 'completed'`, `closure_action: 'dependency_resolved'`, `closed_by: 'system'`, `closed_at: <ts>`, and a `TimelineEvent { kind: 'closed', at: <ts>, by: 'system' }`. The previous routing of `REPORT_DEPENDENCY` events as Alertas with `profile: 'A'` SHALL NOT appear in the codebase; PR review rejects any reintroduction.
+
+#### Scenario: Generar is blocked when a dependency is unfulfilled
+
+- **GIVEN** a `Report` whose `dependencies` includes `{ blocking_app: 'OPS', blocking_module: 'movements', blocking_type: 'daily_reconciliation', completed: false }`
+- **WHEN** the user clicks "Generar"
+- **THEN** the action is blocked with a per-row toast that names the blocking app + module + type; the engine emits a `REPORT_DEPENDENCY` event addressed to the OPS Inbox
+
+#### Scenario: Destination Inbox creates a Tarea of type `report_dependency_block`
+
+- **GIVEN** the OPS app subscribes to `REPORT_DEPENDENCY` events
+- **WHEN** an event arrives with `report_id: 'rpt-monthly-tax'`, `blocking_app: 'OPS'`, `blocking_module: 'movements'`, `blocking_type: 'daily_reconciliation'`, `recurring_definition_id?: 'series-daily-recon'`
+- **THEN** the OPS Inbox creates a Tarea (`kind: 'tarea'`) of `type: 'report_dependency_block'`, `state: 'pendiente'`, payload describing the blocking report; the Tarea is routed by `target_role` of the `InboxTypeConfig` for `report_dependency_block`
+
+#### Scenario: Dependency resolution auto-archives the Tarea
+
+- **GIVEN** an OPS Tarea of type `report_dependency_block` raised because reconciliation was incomplete
+- **WHEN** the OPS operator closes the related `daily_reconciliation` Tarea (or a recurring series instance completes successfully)
+- **THEN** the engine evaluates the `auto_archive.condition_ref`, sets the `report_dependency_block` Tarea's `state: 'completed'`, `closure_action: 'dependency_resolved'`, `closed_by: 'system'`, `closed_at: <ts>`; the user does not interact with the auto-close
+
+#### Scenario: Routing REPORT_DEPENDENCY to Alertas is a contract violation
+
+- **GIVEN** a developer proposes routing `REPORT_DEPENDENCY` events to the destination app's Alertas instead of the Inbox
+- **WHEN** PR review checks the proposal against this Requirement
+- **THEN** the change is REJECTED — the 2026-05-11 product decision routes the event to the Inbox as a Tarea; the Alertas route is removed
+
+---
+
+### Requirement: Inbox MUST expose a main CTA "Crear Solicitud / Tarea" filtered by InboxTypeConfig.creable_manualmente: true and manual_creation_capability; the label is derived from type of the available configs
+
+The Inbox page SHALL render a main CTA in the L1 header (alongside the `<ViewToggle>`) that lets the operator manually create a Solicitud or Tarea of a type declared `creable_manualmente: true` in `INBOX_TYPES_REGISTRY`, gated by the current user's `manual_creation_capability` per type. The CTA SHALL behave as follows:
+
+- **Visibility.** When no entry in `INBOX_TYPES_REGISTRY` declares `creable_manualmente: true`, the CTA SHALL NOT render. When at least one type declares it but the current user has no `manual_creation_capability` of any such type, the CTA SHALL render **disabled** with a tooltip ("Sin permiso para crear") — consistent with the universal-`⋯`-menu pattern of `core-actions-menu` (the CTA never disappears arbitrarily when the registry has creable types; the disabled state communicates lack of capability).
+- **Label.** Derived from the available types (those that pass both filters):
+  - Only `kind: 'solicitud'` types available → label "Crear Solicitud".
+  - Only `kind: 'tarea'` types available → label "Crear Tarea".
+  - Both kinds available → label "Crear" (generic).
+- **Click → wizard.** Clicking opens a 2-step `<InboxCreateDialog>`. Step 1: `<InboxTypeSelector>` lists the filtered types with kind-badge. Step 2: `<DynamicPayloadForm>` renders the payload form from the selected type's `payload_schema` plus common metadata (assignee picker, optional `sla_hours` / `due_at` when the type declares them).
+- **Submit.** Builds a `Solicitud<TPayload>` with `state: 'pendiente'`, `source_app: <current_app>`, `source_module: 'inbox'`, `target_app: <inbox_target>`, `kind`, `payload`, optional `assignee`, optional `due_at`, optional `sla_hours`. Persists. Triggers `triggers_on_create[]` per the type config. Disparates notifications per `push_notification` (in-app always; opt-in canales as declared). Emits an `AuditEntryCTA` with `is_module_cta: true`, `created_record_type: <type>`, `kind: 'cta'`.
+
+The CTA is NOT a row action and is NOT declared in `Manifest.module_ctas[]` — it lives outside the manifest engine because the type-selector wizard requires multi-step state that the single-dialog manifest CTA does not model. The shared audit trail (`useAuditLog()`) is the bridge that keeps the new CTA observable on the same surface as manifest-emitted entries.
+
+#### Scenario: CTA hides when no type is creable_manualmente
+
+- **GIVEN** an `INBOX_TYPES_REGISTRY` where every entry has `creable_manualmente: false` (or omits it)
+- **WHEN** the Inbox page renders
+- **THEN** the main CTA is NOT in the DOM
+
+#### Scenario: CTA renders disabled when the user lacks any matching capability
+
+- **GIVEN** a registry with at least one creable type whose `manual_creation_capability` is `'INBOX_CREATE'`, and the current user has no `INBOX_CREATE` capability
+- **WHEN** the Inbox page renders
+- **THEN** the CTA renders in a disabled state with tooltip "Sin permiso para crear"; clicking is a no-op
+
+#### Scenario: Label is kind-derived
+
+- **GIVEN** two creable types both with `kind: 'solicitud'`
+- **WHEN** the CTA renders
+- **THEN** its label is "Crear Solicitud"
+- **AND GIVEN** the registry adds a third creable type with `kind: 'tarea'`
+- **WHEN** the CTA re-renders
+- **THEN** its label is "Crear" (mixed kinds)
+
+#### Scenario: Submit creates a Solicitud and emits AuditEntryCTA
+
+- **GIVEN** the wizard is on step 2 with a valid form for type `aprobacion_pago` (`kind: 'solicitud'`); user clicks Submit
+- **WHEN** the submit handler runs
+- **THEN** a new Solicitud lands in `solicitudes.value` with `state: 'pendiente'`, populated `payload`, `kind: 'solicitud'`, `target_app` per the registry entry, `source_module: 'inbox'`, `assignee` if the user picked one; AND `useAuditLog().append(...)` is called once with `{ kind: 'cta', is_module_cta: true, created_record_type: 'aprobacion_pago', record_id: <new id>, manifest_key: INBOX_MANIFEST_KEY, ... }`; AND a success toast renders ("Solicitud creada"); AND the wizard closes.
+
+#### Scenario: triggers_on_create fires for the new record
+
+- **GIVEN** a type with `triggers_on_create: [{ action_id: 'fin.crear_factura_borrador', payload_mapping: { ... } }]`
+- **WHEN** a Solicitud of that type is created via the CTA
+- **THEN** the engine records each declared trigger as `triggered_actions[]` entries on the new Solicitud with `status: 'pending'`; a `TimelineEvent { kind: 'action_invoked', label: 'Trigger: fin.crear_factura_borrador' }` is appended (V1 — the actual action invocation through the manifest engine is V2-scoped per Design Decision 9 of this change)
+
+---
+
+### Requirement: Inbox views MUST surface the type discriminator as a badge and the L3 filter row MUST expose a type filter
+
+The Inbox page SHALL render the `kind` (`'solicitud' | 'tarea'`) discriminator of every visible record as a `<Badge>` per the canonical `Solicitud` / `Tarea` labels in **all four** surfaces: list rows, card headers, kanban cards, and the Drawer header area. The L3 filter row SHALL also expose a **kind filter** (separate from the Tipo and Estado filters; native `<select>` is permitted at the L3 row per the existing Inbox convention; `<Segmenter>` is forbidden because the Inbox spec disallows record-set segmentation). The kind filter SHALL expose three options regardless of how many entries of each kind exist in the dataset: `"Todos"`, `"Solicitudes"`, `"Tareas"`. When the filter is `"Todos"` (or unset) the view SHALL render records of both kinds; when set to a specific kind, the view SHALL hide records of the other kind. The kind filter is independent of and AND-merges with the Tipo and Estado filters.
+
+#### Scenario: Kind badge appears in every view
+
+- **GIVEN** a Solicitud with `kind: 'solicitud'` and a Tarea with `kind: 'tarea'` both present in the dataset
+- **WHEN** the Inbox page renders
+- **THEN** the row of the Solicitud surfaces a `<Badge>` labeled `"Solicitud"` (and the row of the Tarea a `<Badge>` labeled `"Tarea"`) in the list view, the cards view, the kanban view, and on the header of the Drawer when opened — four surfaces total
+
+#### Scenario: Kind filter narrows the visible dataset to one kind
+
+- **GIVEN** the L3 filter row with `Kind = "Tareas"` selected
+- **WHEN** `filteredSolicitudes` recomputes
+- **THEN** only records with `kind: 'tarea'` are rendered in the active view; the L2 KPI counters recompute over the narrowed set
+
+#### Scenario: Kind filter "Todos" renders both kinds simultaneously
+
+- **GIVEN** the L3 filter row with `Kind = "Todos"`
+- **WHEN** `filteredSolicitudes` recomputes
+- **THEN** both Solicitudes and Tareas render together; each row carries its own kind badge so the user can disambiguate at a glance
+
+#### Scenario: Kind filter coexists with the Tipo and Estado filters
+
+- **GIVEN** the L3 filter row with `Kind = "Solicitudes"`, `Tipo = "aprobacion_pago"`, `Estado = "pendiente"`
+- **WHEN** `filteredSolicitudes` recomputes
+- **THEN** only records with `kind: 'solicitud' AND type === 'aprobacion_pago' AND state === 'pendiente'` are rendered; all three filters AND-merge
+
+#### Scenario: Hiding the kind badge from any of the four surfaces is a contract violation
+
+- **GIVEN** a PR proposes removing the kind badge from the list view (or any of the other three surfaces)
+- **WHEN** PR review checks the change against this Requirement
+- **THEN** the change is REJECTED — the kind discriminator MUST be visible on all four surfaces simultaneously
+
+---
+
+### Requirement: Inbox L3 filter row MUST expose an assignee filter with `Todos` / `Sin asignar` / per-user options
+
+The Inbox page SHALL render an assignee filter in the L3 filter row alongside the existing Tipo / Concepto / Estado filters. The filter narrows the visible records to those whose `assignee` field matches the user's selection. The filter SHALL be a single native `<select>` (consistent with the other L3 filters; per the Inbox-no-Segmenter Requirement) exposing three canonical option modes:
+
+- **`''` (empty value, default — "Todos")** — no filtering on assignee; every visible record passes regardless of `assignee` value.
+- **`'__unassigned__'` ("Sin asignar")** — only records with `assignee === null` OR `assignee === undefined` pass. Records assigned to any user are hidden.
+- **`'<user_id>'` (any registered user id, e.g. `'u-2'`)** — only records with `assignee === <user_id>` pass.
+
+The per-user options exposed in the dropdown SHALL be sourced from the app's user directory (the template mocks the directory via `MOCK_USERS` from `@/mocks/genericos/users`; real apps wire the directory via their auth provider). System actors (e.g. the seed `'Sistema'` user with id `'u-4'` and `role: 'system'`) MUST NOT appear in the dropdown — only human users. The filter SHALL AND-merge with every other L3 filter (Tipo, Concepto, Estado, search term).
+
+#### Scenario: Default "Todos" passes every record regardless of assignee
+
+- **GIVEN** the L3 filter row with `filterAssignee = ''`
+- **WHEN** `filteredSolicitudes` recomputes
+- **THEN** the dataset is unchanged on the assignee axis; records with `assignee === null`, `assignee === undefined`, AND records with any user-id assignee all pass
+
+#### Scenario: "Sin asignar" hides every record with a non-null assignee
+
+- **GIVEN** the L3 filter row with `filterAssignee = '__unassigned__'`
+- **WHEN** `filteredSolicitudes` recomputes
+- **THEN** records with `assignee === null` or `assignee === undefined` pass; records with any string assignee are hidden
+
+#### Scenario: Per-user filter narrows to the matching assignee
+
+- **GIVEN** the L3 filter row with `filterAssignee = 'u-2'` and a dataset containing records with `assignee` values `'u-1'`, `'u-2'`, `null`
+- **WHEN** `filteredSolicitudes` recomputes
+- **THEN** only the records with `assignee === 'u-2'` pass; the `'u-1'` and `null` records are hidden
+
+#### Scenario: AND-merge with the other L3 filters
+
+- **GIVEN** the L3 filter row with `filterAssignee = '__unassigned__'`, `filterType = 'solicitud'`, `filterState = 'pendiente'`
+- **WHEN** `filteredSolicitudes` recomputes
+- **THEN** only records that simultaneously satisfy `assignee === null`, `type === 'solicitud'`, AND `state === 'pendiente'` pass; all three filters AND-merge
+
+#### Scenario: System actor is excluded from the per-user option list
+
+- **GIVEN** `MOCK_USERS` contains an entry with `role: 'system'` (e.g. the seed `'Sistema'` user)
+- **WHEN** the assignee `<select>` renders its options
+- **THEN** the system user is NOT listed; only entries with `role !== 'system'` appear
+
+### Requirement: Inbox display layer MUST render `Solicitud.concept` as a title-cased Badge chip and SLA as a Badge chip with a clock icon
+
+The Inbox page SHALL render the `Solicitud.concept` (business classifier) field in a `<Badge>` chip with text **in UPPERCASE** across all four view surfaces (list row, card body, kanban card body when applicable, Drawer info grid). The chip MUST NOT show the raw snake_case value: it SHALL apply a `humanizeConcept` transformation that replaces underscores with spaces and uppercases the entire string (e.g. `'aprobacion_pago'` → `'APROBACION PAGO'`, `'revision_legajo'` → `'REVISION LEGAJO'`). The chip variant SHALL be `neutral` (concept is a classifier, not a status — it doesn't carry semantic color).
+
+The Inbox page SHALL also render the SLA value in a `<Badge>` chip with a `<Clock>` icon (from `lucide-vue-next`) across the list row, card footer, kanban card footer, and Drawer info grid. The chip variant SHALL be:
+
+- `success` when the Solicitud is **in SLA** (the SLA window has not yet elapsed) — text reads `<n>h` (e.g. `"24h"`).
+- `danger` when the Solicitud is **out of SLA** (deadline passed) — text reads `"Vencida"`.
+- `neutral` when `sla_hours === null` / `undefined` — text reads `"—"` and the clock icon MAY be hidden.
+
+The text content of both chips is identical to the previous bare-text rendering — this is a pure visual polish (chip wrapper + icon + UPPERCASE transformation); the underlying data and filter logic remain unchanged.
+
+#### Scenario: concept renders as an UPPERCASE chip
+
+- **GIVEN** a Solicitud with `concept: 'aprobacion_pago'`
+- **WHEN** the list view renders the row
+- **THEN** the concept cell contains a `<Badge variant="neutral">` whose text is `"APROBACION PAGO"`; the raw snake_case `"aprobacion_pago"` SHALL NOT appear; the title-cased form `"Aprobacion Pago"` SHALL NOT appear either
+
+#### Scenario: SLA in-window renders a success chip with clock icon
+
+- **GIVEN** a Solicitud with `sla_hours: 24` whose creation timestamp puts it within the window
+- **WHEN** the list view renders the SLA cell
+- **THEN** the cell contains a `<Badge variant="success">` with a `<Clock>` icon and the text `"24h"`
+
+#### Scenario: SLA out-of-window renders a danger chip with clock icon and "Vencida" text
+
+- **GIVEN** a Solicitud with `sla_hours: 8` whose creation timestamp puts it past the window
+- **WHEN** the list view renders the SLA cell
+- **THEN** the cell contains a `<Badge variant="danger">` with a `<Clock>` icon and the text `"Vencida"`
+
+#### Scenario: No SLA tracking renders a neutral placeholder
+
+- **GIVEN** a Solicitud with `sla_hours: null`
+- **WHEN** the list view renders the SLA cell
+- **THEN** the cell text reads `"—"` in neutral styling; the chip pattern + icon MAY be omitted in this case (the placeholder is the canonical "no SLA tracking" signal)
+
+#### Scenario: Chip pattern is consistent across list, cards, kanban footer, drawer
+
+- **GIVEN** the same Solicitud rendered in the list view, then the cards view, then the kanban card footer, then opened in the Drawer
+- **WHEN** the user navigates between surfaces
+- **THEN** the concept renders as a `<Badge variant="neutral">` with UPPERCASE text in all four surfaces; the SLA renders as a `<Badge>` with a `<Clock>` icon and the matching variant in all four surfaces (where applicable per the existing surface layouts); no surface displays raw snake_case concept, title-cased concept, or unwrapped SLA text
+
+### Requirement: Inbox list, cards, and kanban views MUST display the assignee in the primary responsable cell, paired with the L3 assignee filter; the Drawer keeps both Owner and Asignado a as separate cards
+
+The Inbox page's list / cards / kanban views SHALL display the **assignee** (the directed-to user — `Solicitud.assignee`) in the primary "responsable" cell, NOT the owner (`Solicitud.owner`, the transient currently-working user). The cell label SHALL be "Asignado a" (in Spanish) to align with the L3 filter label that operates on the same field. The Drawer info grid SHALL render TWO separate cards: **Asignado a** (reading `findUser(s.assignee)?.name`) AND **Owner** (reading `findUser(s.owner)?.name`) — preserving the audit-style distinction between "who this is directed to" and "who is actively working it now" for the detail surface only.
+
+#### Scenario: List column header is "Asignado a"; cell shows the assignee name
+
+- **GIVEN** a Solicitud with `assignee: 'u-1'`, `owner: null`
+- **WHEN** the list view renders the row
+- **THEN** the column header reads "Asignado a" (not "Responsable"); the cell shows the resolved name of `'u-1'` (e.g. `"Yasmani Rodríguez"`), NOT `"—"`
+
+#### Scenario: List view filtering by assignee surfaces records whose Asignado a cell matches
+
+- **GIVEN** a user picks `"Yasmani Rodríguez"` in the L3 assignee filter
+- **WHEN** `filteredSolicitudes` recomputes
+- **THEN** every visible row's "Asignado a" cell reads `"Yasmani Rodríguez"` — the filter and the column show the same field; no row appears whose visible cell is empty or shows a different user
+
+#### Scenario: Cards body shows "Asignado a" with the assignee name
+
+- **GIVEN** the cards view rendering a Solicitud with `assignee: 'u-2'`, `owner: null`
+- **WHEN** the card body renders
+- **THEN** the body grid shows a row labeled "Asignado a" with the resolved name of `'u-2'`
+
+#### Scenario: Kanban card footer shows the assignee with "Sin asignar" fallback
+
+- **GIVEN** a kanban card whose Solicitud has `assignee: null`
+- **WHEN** the card footer renders
+- **THEN** the footer shows the text `"Sin asignar"` (not `"Sin owner"`)
+
+#### Scenario: Drawer renders both Asignado a and Owner cards
+
+- **GIVEN** a Solicitud with `assignee: 'u-1'`, `owner: null`
+- **WHEN** the user opens the Drawer for the Solicitud
+- **THEN** the info grid renders two distinct cards: an "Asignado a" card with `"Yasmani Rodríguez"` AND an "Owner" card with `"Sin asignar"` (since owner is null). The Drawer is the only surface where both fields render side-by-side; the list / cards / kanban views show only assignee.
+
+### Requirement: Inbox manifest MUST surface concept-filtered actions as Drawer / row CTAs alongside the generic state actions
+
+The Inbox's manifest (`framework.template.inbox` in the template; per-app manifests for cloned apps) SHALL declare actions that go beyond the four canonical state-machine actions (`inbox.asignar_assignee`, `inbox.tomar`, `inbox.cerrar_solicitud`, `inbox.rechazar`). These extra actions are how Solicitudes/Tareas **invoke other functionality** — navigating to another module, opening a pre-filled form, escalating to a different area, calling an external API, etc. Per the `core-modulo-genericos` Requirement on `InboxTypeConfig`, the registry's `available_actions[]` entries are the declarative pointer; the actions themselves live in the manifest and are filtered to the matching concept via `show_when: { record_concept_in: [...] }`.
+
+The manifest engine's existing surface — `<ManifestActionsMenu>` for row actions and the page's primary-actions slot for the Drawer — automatically renders these actions on Solicitudes whose `concept` matches a declared `record_concept_in` list. No additional rendering path is required. The action's `dialog` describes what will happen (info banner) and the user confirms; `on_confirm.toast` provides the user-facing success signal. Real apps replace the toast with the actual side-effect (router navigation, opening a different module's create form, calling an API endpoint, …) by wiring `on_confirm` or by registering an `afterMutation` hook.
+
+The template SHALL ship at least three example actions to demonstrate the pattern across both `kind: 'solicitud'` and `kind: 'tarea'` types: a navigation-style action ("Ver cliente"), a form-open style action ("Generar factura"), and an escalation-style action ("Escalar a compliance"). These examples render as Drawer CTAs only on the matching concept; opening the Drawer of a different concept SHALL show only the state-machine actions plus any matching examples.
+
+#### Scenario: Concept-filtered action appears in the Drawer only for the matching concept
+
+- **GIVEN** an inbox manifest with `inbox.ver_cliente` declared with `show_when: { record_concept_in: ['aprobacion_pago'] }` AND two Solicitudes — one with `concept: 'aprobacion_pago'`, one with `concept: 'baja_usuario'`
+- **WHEN** the user opens the Drawer on the `aprobacion_pago` Solicitud
+- **THEN** the Drawer header surfaces a primary-action button labeled `"Ver cliente"` alongside the state actions (Tomar / Cerrar / Rechazar)
+- **AND** when the user opens the Drawer on the `baja_usuario` Tarea, the `"Ver cliente"` button is absent (the `show_when` predicate hides it)
+
+#### Scenario: Concept-filtered action surfaces a toast on confirm (template demo)
+
+- **GIVEN** the user clicks `"Ver cliente"` in the Drawer of an `aprobacion_pago` Solicitud
+- **WHEN** the dialog renders with its info banner ("Esto abriría /clientes/<id>") and the user clicks confirm
+- **THEN** a `vue-sonner` toast appears with the action's `on_confirm.toast` message (e.g. `"Navegación a cliente …"`); the audit log appends a `kind: 'single'` entry referencing `action_id: 'inbox.ver_cliente'`; no actual navigation happens in the template (real apps replace the toast with a router push or external call)
+
+#### Scenario: Concept-filtered actions ALSO appear in the per-row menu, not only in the Drawer
+
+- **GIVEN** an `aprobacion_pago` Solicitud rendered in the list view; the `<ManifestActionsMenu>` portal mounted in the row's actions cell
+- **WHEN** the user clicks the `⋯` menu on that row
+- **THEN** the menu includes the same concept-filtered actions (Ver cliente, Generar factura) alongside the state actions; selecting one fires the same dialog + `on_confirm.toast` path as from the Drawer
+
+#### Scenario: Removing the show_when predicate is a contract violation
+
+- **GIVEN** a PR proposes removing the `show_when: { record_concept_in: [...] }` predicate from a concept-filtered action, making it visible on every Solicitud regardless of concept
+- **WHEN** PR review checks the change against this Requirement
+- **THEN** the change is REJECTED unless the action is genuinely generic (e.g. the state actions Tomar / Cerrar / Rechazar) — concept-filtered actions exist precisely because they invoke business functionality that only makes sense for the matching concept; un-filtering them dilutes the Drawer surface
 

@@ -4,8 +4,8 @@ import InboxTypeSelector from './InboxTypeSelector.vue';
 import type { InboxTypeConfig } from '@/types/genericos';
 
 const SOLICITUD: InboxTypeConfig = {
-  type: 'aprobacion_pago',
-  kind: 'solicitud',
+  concept: 'aprobacion_pago',
+  type: 'solicitud',
   label: 'Aprobación de pago',
   target_app: 'CORE',
   target_role: 'FIN_OFFICER',
@@ -16,8 +16,8 @@ const SOLICITUD: InboxTypeConfig = {
 };
 
 const TAREA: InboxTypeConfig = {
-  type: 'baja_usuario',
-  kind: 'tarea',
+  concept: 'baja_usuario',
+  type: 'tarea',
   label: 'Baja de usuario',
   target_app: 'CORE',
   payload_schema: [],
@@ -27,7 +27,7 @@ const TAREA: InboxTypeConfig = {
 };
 
 describe('InboxTypeSelector', () => {
-  it('renders one entry per type with kind-badge + label + target_app', () => {
+  it('renders one entry per type with type-badge + label + target_app', () => {
     const wrapper = mount(InboxTypeSelector, { props: { types: [SOLICITUD, TAREA] } });
     const items = wrapper.findAll('[data-testid^="inbox-type-"]');
     expect(items.length).toBe(2);

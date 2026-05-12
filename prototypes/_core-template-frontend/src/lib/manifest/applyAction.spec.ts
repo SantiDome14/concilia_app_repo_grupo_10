@@ -103,6 +103,33 @@ describe('applyAction', () => {
     expect(fin.intercompany_at).toBe(1_700_000_000_000);
   });
 
+  it('substitutes "$current_user" in set_fields with the invoker userId', () => {
+    const action: Action = {
+      id: 'demo.test.gov.tomar',
+      dimension: 'governance',
+      label: 'Tomar',
+      on_confirm: {
+        set_fields: { state: 'en_proceso', owner: '$current_user' },
+      },
+    };
+    const record: Record<string, unknown> = { id: 'R-1', state: 'pendiente', owner: null };
+    const { deps } = makeDeps();
+    applyAction(
+      {
+        action,
+        manifestKey: 'demo.test',
+        manifest: baseManifest,
+        records: [record],
+        formValues: {},
+        isBatch: false,
+        userId: 'U-42',
+      },
+      deps,
+    );
+    expect(record.state).toBe('en_proceso');
+    expect(record.owner).toBe('U-42');
+  });
+
   it('runs the imputacion recompute and stores the result on the record', () => {
     const action: Action = {
       id: 'demo.test.imp.assign',

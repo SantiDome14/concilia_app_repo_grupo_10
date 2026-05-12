@@ -47,7 +47,7 @@ const STATUS_LABEL: Record<TriggeredAction['status'], string> = {
       <li
         v-for="(entry, idx) in entries"
         :key="`${entry.action_ref}-${idx}`"
-        class="rounded-md border border-b-2 bg-[#111] p-3"
+        class="rounded-md border border-b-2 bg-surf p-3"
         :data-testid="`triggered-action-${idx}`"
       >
         <div class="flex items-center justify-between gap-3">

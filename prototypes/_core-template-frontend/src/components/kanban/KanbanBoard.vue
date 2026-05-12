@@ -202,7 +202,7 @@ function selectAxis(axisId: string): void {
     <header class="flex flex-wrap items-center gap-3">
       <!-- Multi-axis: a small "Ejes" label introduces the tab strip;
            the tab strip itself is the active-axis indicator, so the
-           "Organizando por:" pointer is dropped. -->
+           "Agrupado por:" pointer is dropped. -->
       <span
         v-if="showAxisTabs"
         class="text-[10px] font-bold uppercase tracking-wider text-t-3"
@@ -245,13 +245,13 @@ function selectAxis(axisId: string): void {
       </nav>
 
       <!-- Single-axis fallback: no tabs to switch between, so we keep
-           the textual "Organizado por:" pointer for the user. -->
+           the textual "Agrupado por:" pointer for the user. -->
       <div v-else-if="props.axis" class="flex flex-col">
         <p v-if="props.title" class="text-[10px] font-bold uppercase tracking-wider text-t-3">
           {{ props.title }}
         </p>
         <p class="text-sm font-semibold text-t-1">
-          Organizado por: {{ props.axis.label }}
+          Agrupado por: {{ props.axis.label }}
         </p>
       </div>
     </header>
