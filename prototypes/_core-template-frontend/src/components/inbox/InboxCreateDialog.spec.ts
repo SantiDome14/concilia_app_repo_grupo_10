@@ -135,10 +135,12 @@ describe('InboxCreateDialog', () => {
       kind: string;
       is_module_cta?: boolean;
       created_record_type?: string;
+      manifest_key?: string;
     };
     expect(last.kind).toBe('cta');
     expect(last.is_module_cta).toBe(true);
     expect(last.created_record_type).toBe('aprobacion_pago');
+    expect(last.manifest_key).toBe('framework.template.inbox');
   });
 
   it('records `triggered_actions[]` and a `kind: action_invoked` timeline event when the type declares triggers_on_create', async () => {

@@ -23,6 +23,7 @@ import InboxTypeSelector from './InboxTypeSelector.vue';
 import DynamicPayloadForm from './DynamicPayloadForm.vue';
 import { useAuditLog } from '@/composables/useAuditLog';
 import { CURRENT_USER, MOCK_USERS } from '@/mocks/genericos/users';
+import { INBOX_MANIFEST_KEY } from '@/manifests/framework.template.inbox.actions';
 import type {
   InboxTypeConfig,
   Solicitud,
@@ -189,6 +190,7 @@ function submit(): void {
     audit.append({
       kind: 'cta',
       action_id: 'inbox.crear_manual',
+      manifest_key: INBOX_MANIFEST_KEY,
       record_id: newSolicitud.id,
       created_record_type: newSolicitud.type,
       is_module_cta: true,

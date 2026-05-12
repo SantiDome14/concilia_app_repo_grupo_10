@@ -79,15 +79,13 @@ export function applyCTA(input: ApplyCTAInput, deps: ApplyDeps): ApplyCTAResult 
       timestamp: Date.now(),
       user_id: userId,
       action_id: cta.id,
+      manifest_key: manifestKey,
       record_id: recordId,
       created_record_type: cta.creates_record_type ?? null,
       is_module_cta: true,
       changes: { ...formValues },
     };
-    deps.auditAppend({
-      ...entry,
-      manifest_key: manifestKey,
-    } as unknown as AuditEntryCTA);
+    deps.auditAppend(entry);
   }
 
   // Toast.

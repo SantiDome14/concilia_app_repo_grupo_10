@@ -97,13 +97,11 @@ export function applyAction(
         timestamp: ts,
         user_id: userId,
         action_id: action.id,
+        manifest_key: manifestKey,
         record_ids: ids,
         changes,
       };
-      // We attach manifest_key as an extra field on the entry payload —
-      // the AuditEntry type accepts the discriminated shape; we widen by
-      // spreading into the append call.
-      deps.auditAppend({ ...entry, manifest_key: manifestKey } as unknown as AuditEntryBatch);
+      deps.auditAppend(entry);
     } else {
       const first = records[0];
       const recordId = typeof first?.id === 'string' ? first.id : '';
@@ -112,10 +110,11 @@ export function applyAction(
         timestamp: ts,
         user_id: userId,
         action_id: action.id,
+        manifest_key: manifestKey,
         record_id: recordId,
         changes,
       };
-      deps.auditAppend({ ...entry, manifest_key: manifestKey } as unknown as AuditEntrySingle);
+      deps.auditAppend(entry);
     }
   }
 

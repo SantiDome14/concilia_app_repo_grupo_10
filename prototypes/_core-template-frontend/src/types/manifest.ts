@@ -376,6 +376,10 @@ export type AuditEntryBase = {
   timestamp: number;
   user_id: string;
   action_id: string;
+  /** Registry key of the manifest the action belongs to. Mandatory per
+   *  `core-actions-manifest` Requirement: "Audit log MUST emit one of four
+   *  discriminated entry shapes via useAuditLog().append()". */
+  manifest_key: ManifestKey;
   changes: Record<string, unknown>;
 };
 

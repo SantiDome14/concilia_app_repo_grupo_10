@@ -33,42 +33,6 @@ Every Ardua core app cloned from `core-template-frontend` SHALL ship the four cr
 
 ---
 
-### Requirement: Inbox houses Solicitudes; the canonical TS identifier MUST be `Solicitud`
-
-The Inbox module SHALL manage entities named `Solicitud` in TypeScript code; the canonical identifier is the **generic** `Solicitud<TPayload = unknown>` exported from `src/types/genericos.ts` and SHALL NOT be aliased to "Item", "Ticket", or any other generic noun. The interface SHALL declare required fields `id: string`, `type: string`, `kind: InboxKind`, `source_app: string`, `source_module: string`, `target_app: string`, `owner: string | null`, `state: SolicitudState`, `payload: TPayload`, `timeline: TimelineEvent[]`, `comments: Comment[]`, `created_at: string`, `updated_at: string`; and optional fields `target_role?: string`, `assignee?: string | null`, `severity?: Severity`, `sla_hours?: number | null`, `due_at?: number`, `recurring_definition_id?: string`, `triggered_actions?: TriggeredAction[]`, `closure_action?: string`, `closure_comment?: string`, `closed_by?: string`, `closed_at?: number`. The `kind` field is the canonical discriminator between Solicitudes (third-party-requested) and Tareas (self-issued); both share the same engine, lifecycle, and `<ClosureModal>` mechanics. The Inbox page SHALL NOT render a `<Segmenter>` for record-set segmentation; users narrow the visible records via the L3 filter row (Tipo / Estado / `kind` / Mías). The detail surface for any Solicitud/Tarea SHALL be the side `<Drawer>` (`meta.detail = 'drawer'`); a centered modal is forbidden.
-
-#### Scenario: Solicitud<TPayload> is imported from the canonical types file
-
-- **GIVEN** an app's Inbox page or extension types
-- **WHEN** the file imports the canonical shape
-- **THEN** the import statement reads `import type { Solicitud } from '@/types/genericos';`; apps that need typed payload pin it via `type KycSolicitud = Solicitud<KycPayload>`; redefining the base generic in app code is forbidden
-
-#### Scenario: kind is the discriminator between Solicitud and Tarea
-
-- **GIVEN** two records of the same engine
-- **WHEN** one is created from a CLP CTA targeting OPS (`kind: 'solicitud'`) and the other from a recurring series internal to OPS (`kind: 'tarea'`)
-- **THEN** both share `state`, `timeline`, `comments`, `closeActions[]` mechanics; the only differences are the label/badge in the UI and the vocabulary of the closeActions
-
-#### Scenario: assignee is distinct from owner
-
-- **GIVEN** a Solicitud with `assignee: 'u-2'` and `owner: null` in state `pendiente`
-- **WHEN** an operator clicks "Tomar"
-- **THEN** the engine sets `owner: <current_user_id>` and transitions state to `en_proceso`; the `assignee` field is unchanged; the Timeline records both events separately (one `kind: 'taken'` and zero `kind: 'assigned'` for this transition)
-
-#### Scenario: App-specific Solicitud pins the payload type
-
-- **GIVEN** an app declares `type WithdrawalSolicitud = Solicitud<{ client: string; amount: number; currency: string; }>`
-- **WHEN** the app reads `s.payload.amount`
-- **THEN** the field is typed as `number`; TypeScript narrows correctly without `as` casts; the base fields (`id`, `type`, `kind`, `target_app`, `state`, etc.) remain required
-
-#### Scenario: Removing kind is a contract violation
-
-- **GIVEN** an app introduces `interface Solicitud { ... }` without a `kind` field, or reads existing Solicitudes ignoring `kind`
-- **WHEN** PR review checks the change
-- **THEN** the change is REJECTED — `kind` is the canonical discriminator and the UI MUST render the correct badge per `kind`
-
----
-
 ### Requirement: Inbox MUST declare a state machine with terminal-state ClosureModal
 
 Every app's Inbox SHALL declare two constants per the `core-data-tables` state-machine contract: `INBOX_STATES` (the ordered list of states with `column_label`, `order`, `terminal` flags) and `INBOX_TRANSITIONS` (the from/to/mode declarations). The default vocabulary MUST be `'pendiente' | 'en_proceso' | 'completed' | 'rejected'`; apps MAY override labels via `InboxTypeConfig.state_labels` but MUST NOT change the mechanism (always four states, terminals immutable). Transitions to terminal states MUST declare `mode: 'modal'` and MUST open the shared `<ClosureModal>` from `core-modals`. The `<ClosureModal>` confirmation MUST require a `closeActions` choice drawn from `InboxTypeConfig[type].closeActions[]` of the Solicitud's type; when the matching type declares `closeActions[].requires_comment` (default `true`) the closure comment SHALL be required with a minimum of 10 characters. The closure SHALL persist `state`, `closure_action`, `closure_comment` (when provided), `closed_by`, `closed_at`, and a `TimelineEvent { kind: 'closed', at, by, payload: { action, comment } }` on the Solicitud.
@@ -99,49 +63,6 @@ Every app's Inbox SHALL declare two constants per the `core-data-tables` state-m
 
 ---
 
-### Requirement: Alertas houses system-detected events with profile A/B/C/D semantics
-
-The Alertas module SHALL house system-detected events that require human attention. Every `ALERT_TYPE` declared in an app's config MUST carry a `category: AlertCategory` discriminator (canonical values: `'triage' | 'workflow' | 'metric' | 'cross_app_panel'`) that activates exactly one canonical UI pattern per type:
-
-- **`triage` (formerly profile A)** — Active triage list. Inbox-style list without owner / SLA. New alerts surface; users mark resolved or dismissed.
-- **`workflow` (formerly profile B)** — Master-detail with sub-categorization. Drawer with Timeline + Comments. Terminal-state `<ClosureModal>` with justification.
-- **`metric` (formerly profile C)** — Time-series with charts. Chart-first surface; alerts are derived from a metric crossing a threshold; resolution is automatic when the metric returns inside the threshold.
-- **`cross_app_panel` (formerly profile D)** — Cross-app KPI dashboard. Consolidated KPIs with cross-app filters; not an actionable list. Lives prioritarily as `<CrossAppPanelCard>` of the Dashboard, not as a row in the Alertas list.
-
-The `Alerta` interface SHALL be exported from `src/types/genericos.ts` with the discriminator `category: AlertCategory`. Apps SHALL activate exactly one category per `ALERT_TYPE` — mixing categories within a single ALERT_TYPE is forbidden. The Alertas page SHALL read each row's `category` and render the corresponding UI pattern. The previous `AlertProfile` type name and `Alerta.profile` field name SHALL NOT appear in code; PR review rejects any reintroduction.
-
-#### Scenario: workflow category renders the workflow surface
-
-- **GIVEN** an `ALERT_TYPE` declared with `category: 'workflow'` and an `Alerta` row of that type
-- **WHEN** the user clicks the row
-- **THEN** the side `<Drawer>` opens with Timeline + Comments; the Tablero (Kanban) view is available; terminal-state transitions (`* → resolved`, `* → dismissed`) MUST go through the `<ClosureModal>` with justification ≥10 chars
-
-#### Scenario: triage category renders the simple triage list
-
-- **GIVEN** an `ALERT_TYPE` declared with `category: 'triage'`
-- **WHEN** the user opens the corresponding Alerta
-- **THEN** the row resolves with a single click (no Drawer, no Timeline by default); the resolution action surfaces a confirmation toast per `core-error-handling`
-
-#### Scenario: metric category renders a chart-first surface
-
-- **GIVEN** an `ALERT_TYPE` declared with `category: 'metric'` (e.g. saldo anomaly)
-- **WHEN** the user navigates to the Alertas section filtered to that type
-- **THEN** the page renders a chart of the underlying metric with thresholds overlaid; the alert list appears as a compact secondary panel; resolution is automatic when the metric returns inside the threshold
-
-#### Scenario: cross_app_panel category renders as a Dashboard card by default
-
-- **GIVEN** an `ALERT_TYPE` declared with `category: 'cross_app_panel'` (e.g. daily limit utilization across CLP / OPS / FIN)
-- **WHEN** the destination app's Dashboard renders
-- **THEN** the alert is surfaced as a `<CrossAppPanelCard>` card; it MUST NOT appear in the Alertas triage list (the triage list filters out `cross_app_panel` types)
-
-#### Scenario: Mixing categories within a single ALERT_TYPE is forbidden
-
-- **GIVEN** an `ALERT_TYPE` declares `category: ['triage', 'workflow']` (an array, attempting to mix)
-- **WHEN** the app config validates
-- **THEN** the validation FAILS with an error indicating that exactly one category MUST be activated per ALERT_TYPE
-
----
-
 ### Requirement: Alertas terminal states (`resolved` and `dismissed`) MUST require a justification via the ClosureModal
 
 For every `ALERT_TYPE` whose `category` is `workflow`, transitions to terminal states `'resolved'` and `'dismissed'` MUST declare `mode: 'modal'` per the `core-data-tables` state-machine contract and MUST open the shared `<ClosureModal>` from `core-modals`. The justification SHALL be entered as a non-empty string of at least 10 characters and is persisted on the alert's `closure_comment` field. The `<ClosureModal>` MUST surface the justification field as required (label + asterisk + character-count helper). On confirm, a `TimelineEvent { kind: 'closed', at: <ts>, payload: { state: 'resolved' | 'dismissed', comment: '...' } }` MUST be appended. `triage` types MAY skip the justification when `ALERTS_CONFIG.requireClosureComment` is `false` for that type; `metric` and `cross_app_panel` rarely transition through the user UI (auto-close or dashboard read-only) and the justification rule is effectively `workflow`-mandatory.
@@ -163,36 +84,6 @@ For every `ALERT_TYPE` whose `category` is `workflow`, transitions to terminal s
 - **GIVEN** an `ALERT_TYPE` with `category: 'triage'` and `ALERTS_CONFIG.requireClosureComment` set to `false` for this type
 - **WHEN** the user clicks "Marcar como atendida"
 - **THEN** the alert closes without opening the `<ClosureModal>`; a confirmation toast is shown; `closure_comment` is not set; a minimal `TimelineEvent { kind: 'closed', at: <ts> }` is appended
-
----
-
-### Requirement: Reports MAY emit REPORT_DEPENDENCY events; destination Alertas MUST consume them as `profile: 'A'`
-
-When a `Report` declares a `dependencies[]` list and the user attempts to generate the report (clicks "Generar"), the engine SHALL evaluate each dependency. If any dependency entry has `completed: false`, the Generar action MUST be BLOCKED and the engine MUST emit a `REPORT_DEPENDENCY` event addressed to the **Inbox** of the destination app indicated by `blocking_app`. The destination app's Inbox MUST consume incoming `REPORT_DEPENDENCY` events and create a **Tarea** (`kind: 'tarea'`) with `type: 'report_dependency_block'`, payload including `report_id`, `report_name`, `blocking_module`, `blocking_type`, `recurring_definition_id?` (when the dependency binds to a recurring series of the Inbox per `RecurringInboxItemDefinition`), `description`, `due_at`. The Tarea type MUST declare `auto_archive` whose `condition_ref` evaluates `dependencies[].completed: true` for the specific dependency. When the dependency resolves (either a human closes the relevant Solicitud/Tarea or a recurring series completes its bounded instance), the engine SHALL auto-close the Tarea — `state: 'completed'`, `closure_action: 'dependency_resolved'`, `closed_by: 'system'`, `closed_at: <ts>`, and a `TimelineEvent { kind: 'closed', at: <ts>, by: 'system' }`. The previous routing of `REPORT_DEPENDENCY` events as Alertas with `profile: 'A'` SHALL NOT appear in the codebase; PR review rejects any reintroduction.
-
-#### Scenario: Generar is blocked when a dependency is unfulfilled
-
-- **GIVEN** a `Report` whose `dependencies` includes `{ blocking_app: 'OPS', blocking_module: 'movements', blocking_type: 'daily_reconciliation', completed: false }`
-- **WHEN** the user clicks "Generar"
-- **THEN** the action is blocked with a per-row toast that names the blocking app + module + type; the engine emits a `REPORT_DEPENDENCY` event addressed to the OPS Inbox
-
-#### Scenario: Destination Inbox creates a Tarea of type `report_dependency_block`
-
-- **GIVEN** the OPS app subscribes to `REPORT_DEPENDENCY` events
-- **WHEN** an event arrives with `report_id: 'rpt-monthly-tax'`, `blocking_app: 'OPS'`, `blocking_module: 'movements'`, `blocking_type: 'daily_reconciliation'`, `recurring_definition_id?: 'series-daily-recon'`
-- **THEN** the OPS Inbox creates a Tarea (`kind: 'tarea'`) of `type: 'report_dependency_block'`, `state: 'pendiente'`, payload describing the blocking report; the Tarea is routed by `target_role` of the `InboxTypeConfig` for `report_dependency_block`
-
-#### Scenario: Dependency resolution auto-archives the Tarea
-
-- **GIVEN** an OPS Tarea of type `report_dependency_block` raised because reconciliation was incomplete
-- **WHEN** the OPS operator closes the related `daily_reconciliation` Tarea (or a recurring series instance completes successfully)
-- **THEN** the engine evaluates the `auto_archive.condition_ref`, sets the `report_dependency_block` Tarea's `state: 'completed'`, `closure_action: 'dependency_resolved'`, `closed_by: 'system'`, `closed_at: <ts>`; the user does not interact with the auto-close
-
-#### Scenario: Routing REPORT_DEPENDENCY to Alertas is a contract violation
-
-- **GIVEN** a developer proposes routing `REPORT_DEPENDENCY` events to the destination app's Alertas instead of the Inbox
-- **WHEN** PR review checks the proposal against this Requirement
-- **THEN** the change is REJECTED — the 2026-05-11 product decision routes the event to the Inbox as a Tarea; the Alertas route is removed
 
 ---
 
@@ -738,4 +629,113 @@ The panel SHALL be hidden entirely when `triggered_actions` is `undefined` or an
 - **GIVEN** a PR proposes hiding the panel even when entries are non-empty (e.g. behind a collapsed toggle by default)
 - **WHEN** PR review checks the change against this Requirement
 - **THEN** the change is REJECTED — when entries are populated, the panel MUST render eagerly so the user sees the trigger status without extra clicks
+
+### Requirement: Inbox houses Solicitudes; the canonical TS identifier MUST be Solicitud<TPayload>
+
+The Inbox module SHALL manage entities named `Solicitud` in TypeScript code; the canonical identifier is the **generic** `Solicitud<TPayload = unknown>` exported from `src/types/genericos.ts` and SHALL NOT be aliased to "Item", "Ticket", or any other generic noun. The interface SHALL declare required fields `id: string`, `type: string`, `kind: InboxKind`, `source_app: string`, `source_module: string`, `target_app: string`, `owner: string | null`, `state: SolicitudState`, `payload: TPayload`, `timeline: TimelineEvent[]`, `comments: Comment[]`, `created_at: string`, `updated_at: string`; and optional fields `target_role?: string`, `assignee?: string | null`, `severity?: Severity`, `sla_hours?: number | null`, `due_at?: number`, `recurring_definition_id?: string`, `triggered_actions?: TriggeredAction[]`, `closure_action?: string`, `closure_comment?: string`, `closed_by?: string`, `closed_at?: number`. The `kind` field is the canonical discriminator between Solicitudes (third-party-requested) and Tareas (self-issued); both share the same engine, lifecycle, and `<ClosureModal>` mechanics. The Inbox page SHALL NOT render a `<Segmenter>` for record-set segmentation; users narrow the visible records via the L3 filter row (Tipo / Estado / `kind` / Mías). The detail surface for any Solicitud/Tarea SHALL be the side `<Drawer>` (`meta.detail = 'drawer'`); a centered modal is forbidden.
+
+#### Scenario: Solicitud<TPayload> is imported from the canonical types file
+
+- **GIVEN** an app's Inbox page or extension types
+- **WHEN** the file imports the canonical shape
+- **THEN** the import statement reads `import type { Solicitud } from '@/types/genericos';`; apps that need typed payload pin it via `type KycSolicitud = Solicitud<KycPayload>`; redefining the base generic in app code is forbidden
+
+#### Scenario: kind is the discriminator between Solicitud and Tarea
+
+- **GIVEN** two records of the same engine
+- **WHEN** one is created from a CLP CTA targeting OPS (`kind: 'solicitud'`) and the other from a recurring series internal to OPS (`kind: 'tarea'`)
+- **THEN** both share `state`, `timeline`, `comments`, `closeActions[]` mechanics; the only differences are the label/badge in the UI and the vocabulary of the closeActions
+
+#### Scenario: assignee is distinct from owner
+
+- **GIVEN** a Solicitud with `assignee: 'u-2'` and `owner: null` in state `pendiente`
+- **WHEN** an operator clicks "Tomar"
+- **THEN** the engine sets `owner: <current_user_id>` and transitions state to `en_proceso`; the `assignee` field is unchanged; the Timeline records both events separately (one `kind: 'taken'` and zero `kind: 'assigned'` for this transition)
+
+#### Scenario: App-specific Solicitud pins the payload type
+
+- **GIVEN** an app declares `type WithdrawalSolicitud = Solicitud<{ client: string; amount: number; currency: string; }>`
+- **WHEN** the app reads `s.payload.amount`
+- **THEN** the field is typed as `number`; TypeScript narrows correctly without `as` casts; the base fields (`id`, `type`, `kind`, `target_app`, `state`, etc.) remain required
+
+#### Scenario: Removing kind is a contract violation
+
+- **GIVEN** an app introduces `interface Solicitud { ... }` without a `kind` field, or reads existing Solicitudes ignoring `kind`
+- **WHEN** PR review checks the change
+- **THEN** the change is REJECTED — `kind` is the canonical discriminator and the UI MUST render the correct badge per `kind`
+
+---
+
+### Requirement: Alertas houses system-detected events with category triage/workflow/metric/cross_app_panel semantics
+
+The Alertas module SHALL house system-detected events that require human attention. Every `ALERT_TYPE` declared in an app's config MUST carry a `category: AlertCategory` discriminator (canonical values: `'triage' | 'workflow' | 'metric' | 'cross_app_panel'`) that activates exactly one canonical UI pattern per type:
+
+- **`triage` (formerly profile A)** — Active triage list. Inbox-style list without owner / SLA. New alerts surface; users mark resolved or dismissed.
+- **`workflow` (formerly profile B)** — Master-detail with sub-categorization. Drawer with Timeline + Comments. Terminal-state `<ClosureModal>` with justification.
+- **`metric` (formerly profile C)** — Time-series with charts. Chart-first surface; alerts are derived from a metric crossing a threshold; resolution is automatic when the metric returns inside the threshold.
+- **`cross_app_panel` (formerly profile D)** — Cross-app KPI dashboard. Consolidated KPIs with cross-app filters; not an actionable list. Lives prioritarily as `<CrossAppPanelCard>` of the Dashboard, not as a row in the Alertas list.
+
+The `Alerta` interface SHALL be exported from `src/types/genericos.ts` with the discriminator `category: AlertCategory`. Apps SHALL activate exactly one category per `ALERT_TYPE` — mixing categories within a single ALERT_TYPE is forbidden. The Alertas page SHALL read each row's `category` and render the corresponding UI pattern. The previous `AlertProfile` type name and `Alerta.profile` field name SHALL NOT appear in code; PR review rejects any reintroduction.
+
+#### Scenario: workflow category renders the workflow surface
+
+- **GIVEN** an `ALERT_TYPE` declared with `category: 'workflow'` and an `Alerta` row of that type
+- **WHEN** the user clicks the row
+- **THEN** the side `<Drawer>` opens with Timeline + Comments; the Tablero (Kanban) view is available; terminal-state transitions (`* → resolved`, `* → dismissed`) MUST go through the `<ClosureModal>` with justification ≥10 chars
+
+#### Scenario: triage category renders the simple triage list
+
+- **GIVEN** an `ALERT_TYPE` declared with `category: 'triage'`
+- **WHEN** the user opens the corresponding Alerta
+- **THEN** the row resolves with a single click (no Drawer, no Timeline by default); the resolution action surfaces a confirmation toast per `core-error-handling`
+
+#### Scenario: metric category renders a chart-first surface
+
+- **GIVEN** an `ALERT_TYPE` declared with `category: 'metric'` (e.g. saldo anomaly)
+- **WHEN** the user navigates to the Alertas section filtered to that type
+- **THEN** the page renders a chart of the underlying metric with thresholds overlaid; the alert list appears as a compact secondary panel; resolution is automatic when the metric returns inside the threshold
+
+#### Scenario: cross_app_panel category renders as a Dashboard card by default
+
+- **GIVEN** an `ALERT_TYPE` declared with `category: 'cross_app_panel'` (e.g. daily limit utilization across CLP / OPS / FIN)
+- **WHEN** the destination app's Dashboard renders
+- **THEN** the alert is surfaced as a `<CrossAppPanelCard>` card; it MUST NOT appear in the Alertas triage list (the triage list filters out `cross_app_panel` types)
+
+#### Scenario: Mixing categories within a single ALERT_TYPE is forbidden
+
+- **GIVEN** an `ALERT_TYPE` declares `category: ['triage', 'workflow']` (an array, attempting to mix)
+- **WHEN** the app config validates
+- **THEN** the validation FAILS with an error indicating that exactly one category MUST be activated per ALERT_TYPE
+
+---
+
+### Requirement: Reports MAY emit REPORT_DEPENDENCY events; destination Inbox MUST consume them as Tarea report_dependency_block with declarative auto_archive
+
+When a `Report` declares a `dependencies[]` list and the user attempts to generate the report (clicks "Generar"), the engine SHALL evaluate each dependency. If any dependency entry has `completed: false`, the Generar action MUST be BLOCKED and the engine MUST emit a `REPORT_DEPENDENCY` event addressed to the **Inbox** of the destination app indicated by `blocking_app`. The destination app's Inbox MUST consume incoming `REPORT_DEPENDENCY` events and create a **Tarea** (`kind: 'tarea'`) with `type: 'report_dependency_block'`, payload including `report_id`, `report_name`, `blocking_module`, `blocking_type`, `recurring_definition_id?` (when the dependency binds to a recurring series of the Inbox per `RecurringInboxItemDefinition`), `description`, `due_at`. The Tarea type MUST declare `auto_archive` whose `condition_ref` evaluates `dependencies[].completed: true` for the specific dependency. When the dependency resolves (either a human closes the relevant Solicitud/Tarea or a recurring series completes its bounded instance), the engine SHALL auto-close the Tarea — `state: 'completed'`, `closure_action: 'dependency_resolved'`, `closed_by: 'system'`, `closed_at: <ts>`, and a `TimelineEvent { kind: 'closed', at: <ts>, by: 'system' }`. The previous routing of `REPORT_DEPENDENCY` events as Alertas with `profile: 'A'` SHALL NOT appear in the codebase; PR review rejects any reintroduction.
+
+#### Scenario: Generar is blocked when a dependency is unfulfilled
+
+- **GIVEN** a `Report` whose `dependencies` includes `{ blocking_app: 'OPS', blocking_module: 'movements', blocking_type: 'daily_reconciliation', completed: false }`
+- **WHEN** the user clicks "Generar"
+- **THEN** the action is blocked with a per-row toast that names the blocking app + module + type; the engine emits a `REPORT_DEPENDENCY` event addressed to the OPS Inbox
+
+#### Scenario: Destination Inbox creates a Tarea of type `report_dependency_block`
+
+- **GIVEN** the OPS app subscribes to `REPORT_DEPENDENCY` events
+- **WHEN** an event arrives with `report_id: 'rpt-monthly-tax'`, `blocking_app: 'OPS'`, `blocking_module: 'movements'`, `blocking_type: 'daily_reconciliation'`, `recurring_definition_id?: 'series-daily-recon'`
+- **THEN** the OPS Inbox creates a Tarea (`kind: 'tarea'`) of `type: 'report_dependency_block'`, `state: 'pendiente'`, payload describing the blocking report; the Tarea is routed by `target_role` of the `InboxTypeConfig` for `report_dependency_block`
+
+#### Scenario: Dependency resolution auto-archives the Tarea
+
+- **GIVEN** an OPS Tarea of type `report_dependency_block` raised because reconciliation was incomplete
+- **WHEN** the OPS operator closes the related `daily_reconciliation` Tarea (or a recurring series instance completes successfully)
+- **THEN** the engine evaluates the `auto_archive.condition_ref`, sets the `report_dependency_block` Tarea's `state: 'completed'`, `closure_action: 'dependency_resolved'`, `closed_by: 'system'`, `closed_at: <ts>`; the user does not interact with the auto-close
+
+#### Scenario: Routing REPORT_DEPENDENCY to Alertas is a contract violation
+
+- **GIVEN** a developer proposes routing `REPORT_DEPENDENCY` events to the destination app's Alertas instead of the Inbox
+- **WHEN** PR review checks the proposal against this Requirement
+- **THEN** the change is REJECTED — the 2026-05-11 product decision routes the event to the Inbox as a Tarea; the Alertas route is removed
+
+---
 
