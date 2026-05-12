@@ -249,7 +249,8 @@ export type AlertaState = 'new' | 'in_review' | 'resolved' | 'dismissed' | strin
 
 export type Alerta = {
   id: string;
-  type: string;
+  /** Business classifier — e.g. 'saldo_anomaly', 'login_failure'. */
+  concept: string;
   category: AlertCategory;
   source_app: string;
   source_module: string;
@@ -460,7 +461,7 @@ export function isAlerta(value: unknown): value is Alerta {
   const v = value as Record<string, unknown>;
   return (
     typeof v.id === 'string' &&
-    typeof v.type === 'string' &&
+    typeof v.concept === 'string' &&
     typeof v.category === 'string' &&
     ['triage', 'workflow', 'metric', 'cross_app_panel'].includes(v.category as string) &&
     typeof v.source_app === 'string'

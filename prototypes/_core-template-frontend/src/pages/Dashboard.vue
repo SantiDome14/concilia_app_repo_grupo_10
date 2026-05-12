@@ -394,7 +394,7 @@ const TREND_CLASSES: Record<'up' | 'down' | 'flat', string> = {
             <div class="flex min-w-0 flex-1 flex-col gap-0.5">
               <div class="truncate text-[13px] font-semibold text-t-1">{{ a.title }}</div>
               <div class="text-[11px] text-t-4">
-                {{ a.type }} · {{ timeAgo(a.detected_at) }}
+                {{ a.concept }} · {{ timeAgo(a.detected_at) }}
               </div>
             </div>
             <Badge :variant="alertStateVariant(a.state)">{{ STATE_LABELS[a.state] ?? a.state }}</Badge>

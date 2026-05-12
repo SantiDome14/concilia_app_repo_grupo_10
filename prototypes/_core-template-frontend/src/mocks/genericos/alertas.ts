@@ -13,7 +13,7 @@ import type { Alerta } from '@/types/genericos';
 export const ALERTS: Alerta[] = [
   {
     id: 'ALT-001',
-    type: 'saldo_anomaly',
+    concept: 'saldo_anomaly',
     category: 'triage',
     source_app: 'CORE',
     source_module: 'alertas',
@@ -36,7 +36,7 @@ export const ALERTS: Alerta[] = [
   },
   {
     id: 'ALT-002',
-    type: 'login_failure',
+    concept: 'login_failure',
     category: 'triage',
     source_app: 'CORE',
     source_module: 'alertas',
@@ -59,7 +59,7 @@ export const ALERTS: Alerta[] = [
   },
   {
     id: 'ALT-003',
-    type: 'cron_failed',
+    concept: 'cron_failed',
     category: 'triage',
     source_app: 'CORE',
     source_module: 'alertas',
@@ -99,7 +99,7 @@ export const ALERTS: Alerta[] = [
   },
   {
     id: 'ALT-004',
-    type: 'saldo_anomaly',
+    concept: 'saldo_anomaly',
     category: 'triage',
     source_app: 'CORE',
     source_module: 'alertas',
@@ -131,7 +131,7 @@ export const ALERTS: Alerta[] = [
   },
   {
     id: 'ALT-005',
-    type: 'login_failure',
+    concept: 'login_failure',
     category: 'triage',
     source_app: 'CORE',
     source_module: 'alertas',
@@ -163,7 +163,7 @@ export const ALERTS: Alerta[] = [
   },
   {
     id: 'ALT-006',
-    type: 'capacity_warning',
+    concept: 'capacity_warning',
     category: 'triage',
     source_app: 'CORE',
     source_module: 'alertas',
