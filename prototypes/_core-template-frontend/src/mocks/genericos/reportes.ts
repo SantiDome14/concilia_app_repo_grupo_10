@@ -5,9 +5,15 @@
 // lines 5149-5185) — five reports including a CRON Mensual, a CRON
 // Semanal, an On-demand, one with two dependencies (one completed),
 // and one locked. HISTORY runs span success/error and manual/cron.
+//
+// 2026-05-10 product-spec alignment additions (mandatory on every Report):
+//   - `permissions: ReportPermissions` — 4 independent capability lists
+//   - `consumer_apps: ConsumerAppRef[]` — empty = headless
+//   - `allows_auto_generation: boolean` — drives próximo-emisión and
+//     dependency-incomplete event bifurcation
 // ════════════════════════════════════════════════════════════════════
 
-import type { Report, ReportRun } from '@/types/genericos';
+import type { Report, ReportRun, ReportPermissions } from '@/types/genericos';
 
 /**
  * Baseline category configuration. Apps extend or override this map
@@ -29,6 +35,17 @@ export const REPORT_CATEGORY_BY_KEY: Record<string, ReportCategoryDef> = Object.
   REPORT_CATEGORIES.map((c) => [c.key, c]),
 );
 
+// Default permissions shared by template-shipped reports. Apps that
+// clone the template tighten these per-report using their own
+// capability catalog (per `core-modulo-genericos` Requirement:
+// Reportes MUST declare ReportPermissions with secure defaults).
+const TEMPLATE_DEFAULT_PERMISSIONS: ReportPermissions = {
+  view: ['VIEW_REPORTS'],
+  execute: ['EXECUTE_REPORTS'],
+  edit: ['EDIT_REPORTS'],
+  delete: ['DELETE_REPORTS'],
+};
+
 export const REPORTS_CATALOG: Report[] = [
   {
     id: 'rpt_001',
@@ -43,6 +60,9 @@ export const REPORTS_CATALOG: Report[] = [
     retention: '5 años',
     params: ['Período (mes/año)'],
     antic: 7,
+    permissions: TEMPLATE_DEFAULT_PERMISSIONS,
+    consumer_apps: [{ app: 'CORE' }],
+    allows_auto_generation: true,
   },
   {
     id: 'rpt_002',
@@ -57,6 +77,9 @@ export const REPORTS_CATALOG: Report[] = [
     retention: '2 años',
     params: ['Semana', 'Año'],
     antic: 2,
+    permissions: TEMPLATE_DEFAULT_PERMISSIONS,
+    consumer_apps: [{ app: 'CORE' }],
+    allows_auto_generation: true,
   },
   {
     id: 'rpt_003',
@@ -69,6 +92,11 @@ export const REPORTS_CATALOG: Report[] = [
     format: 'CSV',
     retention: '1 año',
     params: ['Descripción del caso'],
+    permissions: TEMPLATE_DEFAULT_PERMISSIONS,
+    consumer_apps: [{ app: 'CORE' }],
+    // On-demand: no auto-generation path. Próximo-emisión events
+    // (when applicable) route to the consumer Inbox as a Tarea.
+    allows_auto_generation: false,
   },
   {
     id: 'rpt_004',
@@ -92,6 +120,11 @@ export const REPORTS_CATALOG: Report[] = [
         owner_role: 'OPS_OFFICER',
         sla_days_before: 2,
         completed: false,
+        // Binds to a recurring Inbox series (Decision 10): when an
+        // instance of `daily_reconciliation` closes, the dependency
+        // auto-resolves and any open `report_dependency_block` Tarea
+        // auto-archives.
+        recurring_definition_id: 'series-daily-reconciliation',
       },
       {
         app: 'LEX',
@@ -102,6 +135,9 @@ export const REPORTS_CATALOG: Report[] = [
         completed: true,
       },
     ],
+    permissions: TEMPLATE_DEFAULT_PERMISSIONS,
+    consumer_apps: [{ app: 'CORE' }],
+    allows_auto_generation: true,
   },
   {
     id: 'rpt_005',
@@ -114,6 +150,9 @@ export const REPORTS_CATALOG: Report[] = [
     format: 'PDF',
     locked: true,
     locked_reason: 'Bloqueado · ejemplo de reporte futuro',
+    permissions: TEMPLATE_DEFAULT_PERMISSIONS,
+    consumer_apps: [{ app: 'CORE' }],
+    allows_auto_generation: false,
   },
 ];
 
@@ -194,6 +233,20 @@ export const REPORT_RUNS: ReportRun[] = [
     requested_by_name: 'Sistema (CRON)',
     trigger: { type: 'cron' },
     params: 'Período: Marzo 2026',
+    // Example: this run was generated with one dependency still pending
+    // (rpt_004 has `allows_auto_generation: true`). The snapshot is
+    // persisted so an audit can reconstruct what was incomplete.
+    dependencies_unmet: [
+      {
+        app: 'OPS',
+        module: 'Movimientos',
+        task: 'Conciliación operativa cerrada',
+        owner_role: 'OPS_OFFICER',
+        sla_days_before: 2,
+        recurring_definition_id: 'series-daily-reconciliation',
+        state_at_run: 'pending',
+      },
+    ],
   },
   {
     id: 'g008',

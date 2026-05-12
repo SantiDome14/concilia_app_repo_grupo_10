@@ -1,37 +1,4 @@
-# core-modulo-genericos Specification
-
-## Purpose
-TBD - created by archiving change add-core-modulo-genericos. Update Purpose after archive.
-## Requirements
-### Requirement: Every core app MUST ship the four standard modules
-
-Every Ardua core app cloned from `core-template-frontend` SHALL ship the four cross-cutting standard modules — Dashboard, Inbox, Alertas, and Reportes — with their canonical routes (`/dashboard`, `/inbox`, `/alertas`, `/reportes`), pages (`src/pages/Dashboard.vue`, `src/pages/Inbox.vue`, `src/pages/Alertas.vue`, `src/pages/Reportes.vue`), and sidebar entries. The four sidebar entries MUST appear at the top of the sidebar's generics block, NOT inside any domain `<SidebarBlock>`, in the order: Dashboard, Inbox, Alertas, Reportes. Apps SHALL NOT remove any of the four routes or pages. When an app has no Solicitudes, no Alertas, or no Reportes today, the corresponding page MUST still render and surface an `<EmptyState>` with the canonical empty message; capability-gating an entire route via `meta.capabilities` is permitted but the route declaration itself MUST remain.
-
-#### Scenario: All four routes are registered in the seed router
-
-- **GIVEN** a fresh clone of `core-template-frontend`
-- **WHEN** the app boots
-- **THEN** `router.getRoutes()` includes routes named `'dashboard'`, `'inbox'`, `'alertas'`, `'reportes'` AND each route resolves to its canonical page component (`Dashboard.vue`, `Inbox.vue`, `Alertas.vue`, `Reportes.vue`)
-
-#### Scenario: Sidebar generics block renders the four entries above any domain block
-
-- **GIVEN** an app with one or more domain `<SidebarBlock>` groups declared
-- **WHEN** the `<Sidebar>` renders
-- **THEN** the first four entries (in DOM order) are Dashboard, Inbox, Alertas, Reportes (no `<SidebarBlock>` wrapper around them); the domain `<SidebarBlock>` groups appear AFTER the four generics
-
-#### Scenario: An app without Solicitudes still ships the Inbox page
-
-- **GIVEN** an app whose `INBOX_CONFIG` declares no Solicitud types and whose dataset is empty
-- **WHEN** the user navigates to `/inbox`
-- **THEN** the page renders an `<EmptyState>` with a canonical empty message (e.g. "No hay Solicitudes en este momento") AND the route + sidebar entry remain present
-
-#### Scenario: Removing a generic page is a contract violation
-
-- **GIVEN** an app deletes `src/pages/Reportes.vue` or removes the `/reportes` route
-- **WHEN** `openspec validate --all --strict` runs (or PR review checks the page list)
-- **THEN** the change is REJECTED — the four generic modules are mandatory; capability-gating via `meta.capabilities` is the only sanctioned way to disable a route, and the route declaration MUST remain
-
----
+## MODIFIED Requirements
 
 ### Requirement: Inbox houses Solicitudes; the canonical TS identifier MUST be `Solicitud`
 
@@ -196,130 +163,6 @@ When a `Report` declares a `dependencies[]` list and the user attempts to genera
 
 ---
 
-### Requirement: Dashboard MUST be a card-grid consolidated home; NO L1/L2/L3, NO domain operations
-
-The Dashboard page (`src/pages/Dashboard.vue`) SHALL use a responsive card-grid layout (a CSS-grid or flex auto-fit composition with cards as the primary element); it MUST NOT use the L1/L2/L3 page-header / KPI-strip / section-table pattern declared by `core-layout`. The Dashboard MUST aggregate: KPIs from active domain modules (each KPI clickable, navigating to the relevant module); counters for the three list-shaped generics (Inbox unread Solicitudes count, Alertas critical-count, Reportes pending-runs / unfulfilled-dependencies count); and ONE OR MORE consolidated activity surfaces — either a single "Actividad reciente" timeline crossing modules, OR per-module activity widgets (canonical examples: an "Alertas activas" widget surfacing the most recent active alerts; a "Próximos vencimientos" widget surfacing reportes about to emit), OR a combination of both. The Dashboard MUST NOT carry domain-specific actions, filters, sub-tabs, or batch CTAs — those belong in the domain modules. Dashboard cards MUST be clickable and navigate to the relevant module on click.
-
-#### Scenario: Dashboard does not use the L1/L2/L3 pattern
-
-- **GIVEN** the user navigates to `/dashboard`
-- **WHEN** the page renders
-- **THEN** there is NO L1 page header (no title + actions row), NO L2 KPI strip (the KPIs are part of the card grid, not a separate strip), NO L3 section + table — the page is exclusively a responsive card grid
-
-#### Scenario: Dashboard surfaces counters for the three list-shaped generics
-
-- **GIVEN** the app has 7 unread Solicitudes, 3 critical Alertas, and 2 unfulfilled report dependencies
-- **WHEN** the Dashboard renders
-- **THEN** the card grid includes (at minimum) a card showing "Inbox · 7 Solicitudes activas", a card showing "Alertas · 3 críticas", a card showing "Reportes · 2 pendientes"; each card is clickable
-
-#### Scenario: Dashboard surfaces per-module activity widgets
-
-- **GIVEN** an app whose Dashboard composes the consolidated home from per-module activity widgets instead of a single "Actividad reciente" timeline
-- **WHEN** the Dashboard renders
-- **THEN** the card grid includes (a) an "Alertas activas" widget rendering the most recent active alerts (state in `new` or `in_review`) with a "Ver todas" link to `/alertas`, AND (b) a "Próximos vencimientos" widget rendering the next reportes ordered by `next` ascending with a "Ver catálogo" link to `/reportes`; each list row is clickable and navigates to the relevant module
-
-#### Scenario: Clicking a Dashboard card navigates to the relevant module
-
-- **GIVEN** the user is on `/dashboard`
-- **WHEN** the user clicks the "Inbox · 7 Solicitudes activas" card
-- **THEN** the router navigates to `/inbox`; the Inbox lands on the Activos segment by default
-
-#### Scenario: Filters or sub-tabs on Dashboard are a contract violation
-
-- **GIVEN** an app adds a filter dropdown or a `<Segmenter>` to the Dashboard page
-- **WHEN** PR review checks the page against this contract
-- **THEN** the change is REJECTED — Dashboard MUST be read-only orientation; filters and sub-tabs belong in domain modules
-
-### Requirement: Decision heuristic for new content placement; "What NOT to put here" rules are normative
-
-When introducing a new pattern, contributors MUST apply this placement heuristic in this exact order, first match wins:
-
-1. Is it a request with an owner and a lifecycle (To Do → In Progress → Done) requiring a human decision? → **Inbox**.
-2. Is it a system-detected event needing human attention or system auto-resolution? → **Alertas**.
-3. Is it consolidated information with async processing or inter-area coordination? → **Reportes**.
-4. None of the above? → it's domain-specific; goes in a domain module.
-
-Each generic module SHALL also enforce a normative "What NOT to put here" list:
-
-- **Inbox is NOT for** system-detected events (those are Alertas), simple per-module exports (those live in the domain module), or merely-informational notifications (those are toasts per `core-error-handling`).
-- **Alertas is NOT for** human-originated Solicitudes (those are Inbox), planned tasks (those are domain modules or Inbox), or static catalog browsing (that's Reportes Catálogo or a domain module).
-- **Reportes is NOT for** actionable items requiring user decisions (those are Inbox), simple CSV exports of a domain table (those are domain-module actions), or live dashboards (that's Dashboard or a domain module).
-- **Dashboard is NOT for** domain operations (those go in domain modules), filterable lists (those are domain or list-shaped generics), or sub-tabs / multi-segment navigation (that's a domain module).
-
-PR reviewers SHALL reject changes that violate either the heuristic or the prohibitions.
-
-#### Scenario: A request with owner + lifecycle goes to Inbox
-
-- **GIVEN** a new feature requires the user to receive cross-app withdrawal requests, assign owners, transition states, and persist a justification on close
-- **WHEN** the developer applies the heuristic
-- **THEN** the feature lands in Inbox (heuristic step 1 — request with owner + lifecycle); placing it in Alertas is REJECTED in PR review
-
-#### Scenario: A system-detected anomaly goes to Alertas
-
-- **GIVEN** a new feature requires the system to detect a balance anomaly and surface it for human triage
-- **WHEN** the developer applies the heuristic
-- **THEN** the feature lands in Alertas (heuristic step 2 — system-detected event); placing it in Inbox or in a domain module is REJECTED in PR review
-
-#### Scenario: Inbox is NOT for static notifications
-
-- **GIVEN** a developer proposes adding a "system maintenance window" informational notification list to Inbox
-- **WHEN** PR review checks against the prohibitions
-- **THEN** the change is REJECTED — Inbox is NOT for merely-informational notifications; the right surface is a toast or banner per `core-error-handling`
-
-#### Scenario: Dashboard is NOT for filterable lists
-
-- **GIVEN** a developer proposes adding a filterable transaction list to the Dashboard
-- **WHEN** PR review checks against the Dashboard prohibitions
-- **THEN** the change is REJECTED — Dashboard is NOT for filterable lists; the surface belongs in the domain module that owns the data
-
----
-
-### Requirement: Shared TS types MUST live in `src/types/genericos.ts`; app-specific extensions extend the base types
-
-The TypeScript types `Solicitud<TPayload>`, `SolicitudState`, `InboxKind`, `TimelineEvent`, `Comment`, `Alerta`, `AlertCategory`, `Report`, `ReportRun`, `ReportDependency`, `ReportDependencySnapshot`, `ReportPermissions`, `ConsumerAppRef`, `InboxTypeConfig`, `RecurringInboxItemDefinition`, `CloseAction`, `TriggerSpec`, `ActionSpec`, `TriggeredAction` SHALL be exported from `src/types/genericos.ts` and SHALL be the single source of truth for the four generic modules' data shapes. App-specific extensions SHALL extend the base types via TypeScript interface extension (`type WithdrawalSolicitud = Solicitud<{ amount: number; ... }>`) or via generic narrowing. Apps SHALL NOT redefine the base interfaces in app code; doing so is a contract violation enforced at PR review (and optionally via a custom ESLint rule `no-redefine-genericos`). When apps need an additional base field that is universal across the core, the change MUST land in `src/types/genericos.ts` via a follow-up OpenSpec change that amends `core-modulo-genericos`.
-
-#### Scenario: Base types are imported from the canonical file
-
-- **GIVEN** any module file that needs the base shape
-- **WHEN** the file imports the type
-- **THEN** the import statement reads `import type { Solicitud, Alerta, Report, ReportRun, InboxTypeConfig } from '@/types/genericos';`; redefining the interface in app code is rejected
-
-#### Scenario: App-specific Solicitud pins the payload generic
-
-- **GIVEN** an app declares `type WithdrawalSolicitud = Solicitud<{ client: string; amount: number; reference: string; }>`
-- **WHEN** TypeScript compiles
-- **THEN** the extended type has the base required fields (`id`, `type`, `kind`, `source_app`, `target_app`, `owner`, `state`, `payload`, `timeline`, `comments`, …) PLUS the typed payload narrowing; the generic Inbox engine consumes the base fields without knowing about the payload narrowing
-
-#### Scenario: Redefining the base interface in app code is rejected
-
-- **GIVEN** an app introduces `interface Solicitud { id: string; titulo: string; }` (re-declaration with different fields) inside `src/modules/<app>/types.ts`
-- **WHEN** PR review (or the optional ESLint rule `no-redefine-genericos`) runs
-- **THEN** the change is REJECTED — the base interface MUST live in `src/types/genericos.ts` only
-
----
-
-### Requirement: Dashboard MAY surface a period selector and an app-specific evolution chart placeholder; both are non-interactive with the underlying records
-
-The Dashboard MAY render an optional period selector (canonical labels: "Últimos 7 días" / "Últimos 30 días" / "Últimos 90 días") pinned to the top-right of the page area, on the same row as the page title, scoped to the time-based KPI values it renders. The period selector SHALL NOT re-segment any list, SHALL NOT act as a `<Segmenter>`, and SHALL NOT be promoted to L1 of any other page — its scope is the Dashboard surface only and its effect is recomputing the KPI numerators. The Dashboard MAY also render an optional evolution chart placeholder card that the cloning app fills in with its app-specific metric (canonical placement: a 2/3-width card in a row paired with a 1/3-width activity widget such as "Alertas activas"). The placeholder card SHALL NOT carry actions, filters, or domain operations — its only role is to be a labeled empty surface that the app's chart implementation fills.
-
-#### Scenario: Period selector is pinned to the top-right of the Dashboard
-
-- **GIVEN** an app's Dashboard renders the period selector
-- **WHEN** the page header area lays out
-- **THEN** the period selector appears on the same horizontal row as the page title at the top-right of the page area; it is NOT a `<Segmenter>` and it is NOT placed inline with the activity widgets below
-
-#### Scenario: Changing the period recomputes KPIs without re-segmenting any list
-
-- **GIVEN** the Dashboard renders with the period set to "Últimos 30 días"
-- **WHEN** the user changes the period to "Últimos 7 días"
-- **THEN** the KPI values that depend on time (e.g. counters of activity within the period) are recomputed against the new range; the activity widgets ("Alertas activas", "Próximos vencimientos") may re-render their lists if they depend on the period; NO list elsewhere in the app is segmented or re-segmented as a result
-
-#### Scenario: Evolution chart placeholder ships empty in the template; cloning apps fill it
-
-- **GIVEN** a fresh clone of `core-template-frontend` with the Dashboard rendering its evolution chart placeholder card
-- **WHEN** the user views `/dashboard`
-- **THEN** the placeholder card renders with a labeled header (e.g. "Evolución (placeholder)") and a dashed-border empty region indicating where the cloning app should insert its app-specific chart; the card carries NO actions, filters, or domain operations
-
 ### Requirement: Reportes MUST split Catálogo / Ejecución via the Type B Tabs pattern; each tab has its own shape, filters, and columns
 
 The Reportes module SHALL split its surface into two functional sub-tabs — **Catálogo** and **Ejecución** — implemented via the Type B Tabs pattern contracted by `core-module-types`: a `<Segmenter>` placed below the page header (NOT in the L1 actions area), exposing the two tabs over independent data models. Catálogo SHALL list `Report` entries (templates / definitions); Ejecución SHALL list `ReportRun` entries (generated runs).
@@ -360,96 +203,31 @@ The two tabs MUST NOT share columns, filters, or actions. Row visibility in Cat�
 
 ---
 
-### Requirement: Dashboard evolution chart placeholder MUST be filled by a canonical chart wrapper
+### Requirement: Shared TS types MUST live in `src/types/genericos.ts`; app-specific extensions extend the base types
 
-The Dashboard's evolution chart placeholder card (contracted as optional in `core-modulo-genericos` per the archived change `2026-04-30-extend-core-modulo-genericos-dashboard-widgets`) SHALL be filled by one of the canonical chart wrappers contracted in `core-charts`: `<LineChart>`, `<BarChart>`, or `<AreaChart>`. The placeholder card SHALL NOT be filled with a hand-rolled SVG, a third-party chart library, or a static image. The card retains its other contracted constraints (no actions, no filters, no sub-tabs, no domain operations) — only the rendering primitive is now contracted.
+The TypeScript types `Solicitud<TPayload>`, `SolicitudState`, `InboxKind`, `TimelineEvent`, `Comment`, `Alerta`, `AlertCategory`, `Report`, `ReportRun`, `ReportDependency`, `ReportDependencySnapshot`, `ReportPermissions`, `ConsumerAppRef`, `InboxTypeConfig`, `RecurringInboxItemDefinition`, `CloseAction`, `TriggerSpec`, `ActionSpec`, `TriggeredAction` SHALL be exported from `src/types/genericos.ts` and SHALL be the single source of truth for the four generic modules' data shapes. App-specific extensions SHALL extend the base types via TypeScript interface extension (`type WithdrawalSolicitud = Solicitud<{ amount: number; ... }>`) or via generic narrowing. Apps SHALL NOT redefine the base interfaces in app code; doing so is a contract violation enforced at PR review (and optionally via a custom ESLint rule `no-redefine-genericos`). When apps need an additional base field that is universal across the core, the change MUST land in `src/types/genericos.ts` via a follow-up OpenSpec change that amends `core-modulo-genericos`.
 
-#### Scenario: Apps fill the placeholder with a canonical wrapper
+#### Scenario: Base types are imported from the canonical file
 
-- **GIVEN** a fresh clone of the template where the Dashboard placeholder is empty
-- **WHEN** the cloning app implements its evolution chart
-- **THEN** the implementation uses `<LineChart>`, `<BarChart>`, or `<AreaChart>` from `core-charts`; the choice depends on the app's metric (continuous → line/area, categorical → bar)
+- **GIVEN** any module file that needs the base shape
+- **WHEN** the file imports the type
+- **THEN** the import statement reads `import type { Solicitud, Alerta, Report, ReportRun, InboxTypeConfig } from '@/types/genericos';`; redefining the interface in app code is rejected
 
-#### Scenario: Hand-rolled SVG in the placeholder is forbidden
+#### Scenario: App-specific Solicitud pins the payload generic
 
-- **GIVEN** an app fills the placeholder with a hand-coded SVG line chart
-- **WHEN** the change is reviewed
-- **THEN** the review MUST reject the implementation — the canonical wrappers are the contracted rendering primitive; hand-rolled SVGs introduce visual drift across apps
+- **GIVEN** an app declares `type WithdrawalSolicitud = Solicitud<{ client: string; amount: number; reference: string; }>`
+- **WHEN** TypeScript compiles
+- **THEN** the extended type has the base required fields (`id`, `type`, `kind`, `source_app`, `target_app`, `owner`, `state`, `payload`, `timeline`, `comments`, …) PLUS the typed payload narrowing; the generic Inbox engine consumes the base fields without knowing about the payload narrowing
 
-#### Scenario: Placeholder constraints still apply
+#### Scenario: Redefining the base interface in app code is rejected
 
-- **GIVEN** an app fills the placeholder with `<LineChart>` and adds a period selector inside the card
-- **WHEN** the change is reviewed
-- **THEN** the review MUST reject the implementation — the period selector belongs at the Dashboard's top-right per the archived requirement, not inside the chart card; the chart card itself stays free of actions, filters, or sub-tabs
-
-### Requirement: External CTAs MUST invoke a capability of the target app, not a specific execution route ("Wizard of Oz" principle)
-
-A CTA in one app of the financial-core (CLP, Pago Directo, RFQ Gateway, FIN, OPS, …) that needs work done by another app SHALL invoke a **capability** declared by the destination app (e.g. `ejecutar_retiro` of OPS, `validar_kyc` of LEX, `liquidar_operacion` of TRD) and SHALL NOT couple to a specific execution path. The capability — implemented inside the destination app — SHALL decide at runtime, based on its own configuration (which MAY vary by amount, client, hour, operation type, or any other parameter the destination app owns), whether to satisfy the invocation by:
-
-- **(a) Direct integration** — the destination app processes the request immediately and returns the result. No Solicitud is created in the Centro de Solicitudes; the CTA receives a synchronous outcome.
-- **(b) Creating a Solicitud/Tarea in the Centro** — the destination app persists the work as a Solicitud/Tarea in its Inbox and returns a handle. The CTA subscribes to the eventual state of that Solicitud and surfaces "en proceso" → "completado" / "rechazado" to the user when the human operator closes it.
-
-The decision between (a) and (b) is **implementation-level** and is the destination app's concern only. The calling CTA SHALL render the same UI for the user regardless of which path is taken — the only difference visible to the user is whether the outcome is immediate (a) or eventual (b). Switching from (b) to (a) — automating a previously-human capability — MUST NOT require any change to the calling CTA's code. This habilita the "Wizard of Oz arquitectónico" pattern: a product can launch with 100 % human execution in the Centro on day one and automate progressively by changing the destination app's internal configuration only.
-
-The CTA SHALL NOT contain logic that explicitly creates a Solicitud in the Centro on behalf of the destination app. CTAs that need to model "submit to Centro" semantics (e.g. an internal Inbox-create form on the same module) are a different pattern — that pattern is the **manual creation flow** scoped to the destination app's own Inbox, not the cross-app CTA pattern this Requirement governs.
-
-#### Scenario: Capability resolves via direct integration
-
-- **GIVEN** an OPS capability `ejecutar_retiro` whose configuration routes retiros under USD 10 000 through a direct integration with the PSP
-- **WHEN** a CLP user clicks "Retirar" with amount USD 5 000 and the CTA invokes `ejecutar_retiro`
-- **THEN** the destination app processes the retiro inline (no Solicitud is persisted in the OPS Inbox), the CTA receives the success outcome synchronously, and the CLP user sees "completado" without any intermediate state
-
-#### Scenario: Capability resolves by creating a Solicitud in the Centro
-
-- **GIVEN** the same OPS capability `ejecutar_retiro` whose configuration routes retiros over USD 10 000 to the Centro for human review
-- **WHEN** a CLP user clicks "Retirar" with amount USD 50 000 and the CTA invokes `ejecutar_retiro`
-- **THEN** the destination app persists a Solicitud of type `retiro_aprobacion` in the OPS Inbox with `state: 'pendiente'`, returns a handle to the CLP CTA, the CLP user sees "en proceso" while the Solicitud is open, and the user transitions to "completado" or "rechazado" when an OPS operator closes the Solicitud via the `<ClosureModal>`
-
-#### Scenario: Switching paths is invisible to the calling CTA
-
-- **GIVEN** the same CTA code on CLP invoking `ejecutar_retiro`
-- **WHEN** the OPS team changes the runtime configuration of `ejecutar_retiro` to lift the threshold from USD 10 000 to USD 100 000 (so retiros previously routed to the Centro now resolve via direct integration)
-- **THEN** the CLP CTA continues to work unchanged; no PR, no redeploy, no test against the CLP repo is required; the change is purely on the OPS side
-
-#### Scenario: A CTA hard-wired to "create Solicitud" is a contract violation
-
-- **GIVEN** a CLP developer proposes a "Retirar" CTA whose `on_click` calls the OPS Inbox endpoint directly with a hand-built Solicitud payload, bypassing the `ejecutar_retiro` capability
-- **WHEN** PR review checks the implementation against this Requirement
-- **THEN** the change is REJECTED — the CTA MUST invoke the capability, not the persistence endpoint; the capability owns the (a) / (b) decision
+- **GIVEN** an app introduces `interface Solicitud { id: string; titulo: string; }` (re-declaration with different fields) inside `src/modules/<app>/types.ts`
+- **WHEN** PR review (or the optional ESLint rule `no-redefine-genericos`) runs
+- **THEN** the change is REJECTED — the base interface MUST live in `src/types/genericos.ts` only
 
 ---
 
-### Requirement: Centro de Solicitudes scope is exclusive to human-intervention work; pure programmatic jobs live outside
-
-The Inbox / Centro de Solicitudes SHALL house only Solicitudes/Tareas that require **human intervention from the backoffice**. Pure programmatic jobs — synchronization of records, audit sweeps, data normalization, depuración / cleanup, cron-driven internal maintenance, scheduler infrastructure of Reportes — MUST NOT be modeled as Solicitudes or Tareas. They live in code as **Task Definitions of Tecnología**, scheduler infrastructure, or equivalent technical primitives. Their state, retries, lag, and failures are observability concerns, not Centro concerns.
-
-A programmatic job MAY declare an **opt-in fallback to the Centro**. When the fallback is enabled and the job fails (or hits an unrecoverable state that requires human follow-up), the system SHALL invoke the Centro endpoint with `source_app: 'system'` and create a Solicitud/Tarea for human escalation. The Solicitud carries enough context (job identifier, run id, failure reason, payload snapshot) for an operator to act. Without the fallback, the same failure routes to Observabilidad alerts only and the Centro is not touched.
-
-The Solicitud canonical model SHALL NOT grow an `execution: manual | programmatic` discriminator. Pure programmatic jobs live outside the Centro entirely, so the discriminator would be meaningless. Every Solicitud / Tarea in the Centro is implicitly "manual / requires-human-action" — the `kind: 'solicitud' | 'tarea'` discriminator that already exists captures the semantic / presentational difference (a third-party-requested unit vs a self-issued unit), not the mode of execution.
-
-#### Scenario: Programmatic job completes without touching the Centro
-
-- **GIVEN** a daily cron job `sync_psp_movements` that pulls movements from a PSP and persists them in the OPS movements table, with no fallback declared
-- **WHEN** the job runs successfully on a given day
-- **THEN** no Solicitud is created in the OPS Inbox; the OPS operator does not see any entry for the run; the job's state is tracked only in the Tecnología scheduler logs
-
-#### Scenario: Programmatic job with opt-in fallback escalates failure to the Centro
-
-- **GIVEN** the same job `sync_psp_movements` but configured with `fallback_to_centro: { enabled: true, target_role: 'OPS_OFFICER', type: 'sync_failure_escalation' }`
-- **WHEN** the job fails on a given day with an unrecoverable error
-- **THEN** the system invokes the Centro endpoint with `source_app: 'system'`, `target_app: 'OPS'`, `type: 'sync_failure_escalation'`, payload including the run id and the error message, creating a Solicitud (or Tarea, per the type's `kind`) in `state: 'pendiente'` for an OPS operator to follow up
-
-#### Scenario: A "data sync job tracking view" in the Inbox is a contract violation
-
-- **GIVEN** a developer proposes adding to the Inbox a list of in-flight cron job runs ("sync running", "sync paused", "sync errored at step 3"), framed as Tareas
-- **WHEN** PR review checks the proposal against this Requirement
-- **THEN** the change is REJECTED — cron job state is observability data and belongs in monitoring (Grafana / equivalent), not in the human-work Centro; an opt-in fallback that creates a Solicitud on failure is the only sanctioned interaction between programmatic jobs and the Centro
-
-#### Scenario: An `execution: 'programmatic'` field on Solicitud is a contract violation
-
-- **GIVEN** a developer proposes adding `execution: 'manual' | 'programmatic'` to the `Solicitud` type to distinguish endpoints invoked by humans from endpoints invoked by schedulers
-- **WHEN** PR review checks the proposal against this Requirement
-- **THEN** the change is REJECTED — pure programmatic jobs do not appear in the Centro at all, so the discriminator is meaningless inside the model; the `kind: 'solicitud' | 'tarea'` discriminator already in place captures the only relevant axis (third-party-requested vs self-issued); the 2026-05-12 product session explicitly decided against this addition
+## ADDED Requirements
 
 ### Requirement: Inbox MUST expose a typed registry `InboxTypeConfig` declaring `creable_manualmente`, `manual_creation_capability`, `payload_schema`, `closeActions[]`, `triggers_on_create[]`, `available_actions[]`, `push_notification?`, `auto_archive?`
 
@@ -664,4 +442,3 @@ Manual generation (`/Generar` clicked) follows the dependency-block rule regardl
 - **GIVEN** a Report (regardless of `allows_auto_generation`) with one dependency `completed: false`, and the user clicks "Generar"
 - **WHEN** the engine evaluates dependencies
 - **THEN** generation is BLOCKED; a toast names the blocking app + module + type; a Tarea `report_dependency_block` is emitted to the `blocking_app` Inbox; no `ReportRun` is persisted
-

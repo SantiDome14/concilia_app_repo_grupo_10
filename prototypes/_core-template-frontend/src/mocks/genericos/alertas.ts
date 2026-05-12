@@ -1,9 +1,11 @@
 // ════════════════════════════════════════════════════════════════════
 // Mock Alertas — seed data for the Alertas module
 // ────────────────────────────────────────────────────────────────────
-// All entries default to profile A (active triage list) — the canonical
-// template default. Apps that need profile B/C/D add their own datasets
-// alongside or replace these entirely.
+// All entries default to category `triage` (active triage list) — the
+// canonical template default. Apps that need `workflow`, `metric`, or
+// `cross_app_panel` add their own datasets alongside or replace these
+// entirely. (The 2026-05-10 product enrichment renamed profiles A/B/C/D
+// to categories triage/workflow/metric/cross_app_panel.)
 // ════════════════════════════════════════════════════════════════════
 
 import type { Alerta } from '@/types/genericos';
@@ -12,7 +14,7 @@ export const ALERTS: Alerta[] = [
   {
     id: 'ALT-001',
     type: 'saldo_anomaly',
-    profile: 'A',
+    category: 'triage',
     source_app: 'CORE',
     source_module: 'alertas',
     state: 'new',
@@ -35,7 +37,7 @@ export const ALERTS: Alerta[] = [
   {
     id: 'ALT-002',
     type: 'login_failure',
-    profile: 'A',
+    category: 'triage',
     source_app: 'CORE',
     source_module: 'alertas',
     state: 'new',
@@ -58,7 +60,7 @@ export const ALERTS: Alerta[] = [
   {
     id: 'ALT-003',
     type: 'cron_failed',
-    profile: 'A',
+    category: 'triage',
     source_app: 'CORE',
     source_module: 'alertas',
     state: 'in_review',
@@ -98,7 +100,7 @@ export const ALERTS: Alerta[] = [
   {
     id: 'ALT-004',
     type: 'saldo_anomaly',
-    profile: 'A',
+    category: 'triage',
     source_app: 'CORE',
     source_module: 'alertas',
     state: 'resolved',
@@ -130,7 +132,7 @@ export const ALERTS: Alerta[] = [
   {
     id: 'ALT-005',
     type: 'login_failure',
-    profile: 'A',
+    category: 'triage',
     source_app: 'CORE',
     source_module: 'alertas',
     state: 'dismissed',
@@ -162,7 +164,7 @@ export const ALERTS: Alerta[] = [
   {
     id: 'ALT-006',
     type: 'capacity_warning',
-    profile: 'A',
+    category: 'triage',
     source_app: 'CORE',
     source_module: 'alertas',
     state: 'new',

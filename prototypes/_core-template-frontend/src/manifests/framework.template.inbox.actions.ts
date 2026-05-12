@@ -2,12 +2,17 @@
 // Inbox manifest — framework.template.inbox
 // ────────────────────────────────────────────────────────────────────
 // Declares the canonical Solicitud lifecycle actions:
-//   - asignar_owner    — free assignment (any non-terminal state)
-//   - cerrar_solicitud — terminal transition to `completed` (modal)
-//   - rechazar         — terminal transition to `rejected` (modal)
+//   - asignar_assignee — set/change the directed-to user (any non-terminal state)
+//   - tomar             — set owner + transition to `en_proceso` (free)
+//   - cerrar_solicitud  — terminal transition to `completed` (modal)
+//   - rechazar          — terminal transition to `rejected` (modal)
 //
 // Plus the kanban axis for the state machine. Pages import this object
 // and call `useManifestRegistryStore().register('framework.template.inbox', INBOX_MANIFEST)`.
+//
+// `assignee` (directed-to) and `owner` (currently working) are independent
+// per `core-modulo-genericos` Requirement: "Solicitud assignee is distinct
+// from owner; both are independently mutable".
 // ════════════════════════════════════════════════════════════════════
 
 import type { Manifest } from '@/types/manifest';
@@ -21,12 +26,12 @@ export const INBOX_MANIFEST: Manifest = {
   schema_version: '1',
   actions: [
     {
-      id: 'inbox.asignar_owner',
+      id: 'inbox.asignar_assignee',
       dimension: 'governance',
-      label: 'Asignar responsable',
-      description: 'Asigna un owner a la Solicitud',
+      label: 'Asignar / Reasignar',
+      description: 'Asigna o cambia el responsable directo de la Solicitud',
       icon: 'user',
-      target_field: 'owner_id',
+      target_field: 'assignee',
       show_when: {
         record_type_in: [
           'aprobacion_pago',
@@ -43,10 +48,10 @@ export const INBOX_MANIFEST: Manifest = {
       },
       dialog: {
         title: 'Asignar responsable',
-        description: 'Seleccioná el owner que tomará la Solicitud',
+        description: 'Seleccioná el usuario al que va dirigida la Solicitud',
         fields: [
           {
-            id: 'owner_id',
+            id: 'assignee',
             label: 'Responsable',
             type: 'select',
             required: true,
@@ -61,10 +66,40 @@ export const INBOX_MANIFEST: Manifest = {
         confirm_label: 'Asignar',
       },
       on_confirm: {
-        update_fields: ['owner_id'],
+        update_fields: ['assignee'],
         set_fields: { updated_at: '$now' },
         audit: true,
         toast: 'Responsable asignado',
+      },
+    },
+    {
+      id: 'inbox.tomar',
+      dimension: 'governance',
+      label: 'Tomar',
+      description: 'Toma la Solicitud — asigna owner y transiciona a en_proceso',
+      icon: 'play',
+      target_field: 'owner',
+      show_when: {
+        record_type_in: [
+          'aprobacion_pago',
+          'revision_legajo',
+          'baja_usuario',
+          'cambio_limite',
+        ],
+      },
+      enable_when: {
+        field_equals: { field: 'state', value: 'pendiente' },
+      },
+      dialog: {
+        title: 'Tomar Solicitud',
+        description: 'Te asignás como owner y la Solicitud pasa a en_proceso.',
+        fields: [],
+        confirm_label: 'Tomar',
+      },
+      on_confirm: {
+        set_fields: { state: 'en_proceso', updated_at: '$now' },
+        audit: true,
+        toast: 'Solicitud tomada',
       },
     },
     {
