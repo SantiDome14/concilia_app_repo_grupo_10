@@ -36,11 +36,11 @@ El alta de un nuevo reporte no es operación de runtime — es flujo de requerim
 | Scheduler de generaciones automáticas | CRON consulta catálogo, dispara generaciones según `next_emission_date`, emite eventos a Alertas |
 | Persistencia de ejecuciones | `ReportRun` inmutables con metadata completa, archivos re-descargables hasta vencimiento de retención |
 | Política de retención por reporte | Categorías: `regulatorio` / `contable` / `operativo` / `interno`; `legal_basis` mandatorio para regulatorios y contables |
-| Mecanismo `REPORT_DEPENDENCY` | Coordinación con Inbox cuando un reporte tiene dependencias bloqueantes en otra app — modelado como **Tarea al Inbox del `blocking_app` con `auto_archive`** (no como alerta) |
-| Bifurcación por `allows_auto_generation` | Reporte próximo a emitir con `true` → Alerta; con `false` → Tarea al Inbox. Generación automática con dependencias incompletas → `dependencies_unmet[]` + Alerta `reporte_dependencias_incompletas` al consumidor |
+| Asociaciones consumidor-tipo del reporte | Mecanismo unificado para todo trabajo humano vinculado a un reporte: tanto **dependencias bloqueantes** (otra app debe completar tipo X antes) como **generación manual próxima a emitir** (`allows_auto_generation: false`). Modelado via `ConsumerTypeAssociation` del Centro de Solicitudes (REQ-71) con `consumer_ref: <report_id>` |
+| Bifurcación del CRON por `allows_auto_generation` | `true` → genera automáticamente cuando vence `next_emission_date`, verifica satisfacción de asociaciones, emite Alerta si hay incompletas; `false` → no genera, la generación humana llega vía Tarea del Inbox declarada por la asociación `generate_report_manually` |
 | Reportes cross-app | Múltiples `consumer_apps[]` por reporte; ejecuciones únicas compartidas |
 | Reportes headless | `consumer_apps[]` vacío — generados pero no expuestos en UI |
-| Flujo formal V1 de alta | Solicitud estructurada → REQ hijo → función de generación → registry |
+| Flujo formal V1 de alta | Solicitud estructurada → REQ hijo → función de generación + asociaciones declaradas → registry |
 
 ### Afuera (v2, sujeto a viabilidad)
 
@@ -70,13 +70,12 @@ interface Report {
   regulation?: string;
   periodicity?: 'on_demand' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'semestral' | 'annual' | 'ad_hoc';
   next_emission_date?: number;
-  alert_anticipation_days?: number;
+  alert_anticipation_days?: number;  // antelación para Alerta "próximo a emitir" — solo aplica si allows_auto_generation: true
   format: 'PDF' | 'XLSX' | 'CSV';
   generator_ref: string;             // referencia a la función de generación
   retention_policy: RetentionPolicy;
   params: Record<string, unknown>;
   allows_auto_generation: boolean;
-  dependencies?: ReportDependency[];
   cron_enabled?: boolean;
   cron_active?: boolean;
   locked?: boolean;
@@ -100,24 +99,13 @@ interface RetentionPolicy {
   legal_basis?: string;              // mandatorio para regulatorio/contable
 }
 
-interface ReportDependency {
-  blocking_app: string;
-  blocking_module: string;
-  blocking_type: string;             // tipo de instancia bloqueante (ej: 'daily_reconciliation')
-  recurring_definition_id?: string;  // cuando es instancia específica de una serie recurrente del Inbox (REQ-71)
-  description: string;
-  completed?: boolean;               // marcado por el motor cuando la dependencia se libera
-  completed_at?: number;
-  completed_ref?: string;            // referencia a la Solicitud/Tarea que cerró
-}
-
-interface ReportDependencySnapshot {
-  blocking_app: string;
-  blocking_module: string;
-  blocking_type: string;
-  recurring_definition_id?: string;
-  description: string;
-  state_at_run: 'pending' | 'completed';
+interface ConsumerAssociationSnapshot {
+  association_id: string;            // ID de la ConsumerTypeAssociation
+  concept: string;                   // tipo del Inbox que era dependencia
+  satisfaction_mode: 'generate_new' | 'verify_existing';
+  state_at_run: 'satisfied' | 'unsatisfied';
+  instance_ref?: string;             // ID de la instancia (la generada en generate_new, o la verificada en verify_existing si existió)
+  description?: string;
 }
 
 interface ReportRun {
@@ -131,11 +119,13 @@ interface ReportRun {
   output_url?: string;
   error_message?: string;
   retention_expired?: boolean;
-  dependencies_unmet?: ReportDependencySnapshot[];  // poblado cuando se generó con dependencias no completadas
+  dependencies_unmet?: ConsumerAssociationSnapshot[];  // poblado cuando se generó con asociaciones no satisfechas
 }
 ```
 
 `ConsumerAppRef` define **dónde aparece** el reporte; `permissions` define **qué usuarios** pueden ver/ejecutar/editar/eliminar. Dimensiones ortogonales.
+
+**Las dependencias del reporte ya no viven embebidas en `Report`.** Cada dependencia o requisito humano se modela como una `ConsumerTypeAssociation` del Centro de Solicitudes (REQ-71), declarada con `consumer_ref: <report_id>` y `consumer_kind: 'report'`. Para obtener las dependencias de un reporte, el motor consulta el catálogo de asociaciones filtrando por `consumer_ref`. Ver § Asociaciones consumidor-tipo del reporte.
 
 ---
 
@@ -147,7 +137,7 @@ interface ReportRun {
 |---|---|---|
 | `view` | Filtra el catálogo y las ejecuciones | Sin la capability, el reporte **no existe** para ese usuario |
 | `execute` | Ejecución manual + scheduling | Con `view` pero sin `execute`, el reporte es read-only |
-| `edit` | Modificación de definición, metadata, CRON, `consumer_apps[]`, `dependencies[]` | Sin esta capability "Editar metadata" no aparece |
+| `edit` | Modificación de definición, metadata, CRON, `consumer_apps[]`, asociaciones | Sin esta capability "Editar metadata" no aparece |
 | `delete` | Archivado / baja | Default solo `ADMIN_GROUP` |
 
 Permite separación realista de responsabilidades:
@@ -174,15 +164,15 @@ El capability provider de REQ-68 resuelve `user_id → capabilities[]` vía la c
 
 ## Comportamiento
 
-**Generación manual.** Click en "Generar" → endpoint valida `permissions.execute`, valida parámetros, verifica `dependencies[]`. Si todas están `completed: true`, invoca `generator_ref`, persiste `ReportRun`, retorna referencia descargable. Si alguna no está completada: **no genera**, emite Tarea `report_dependency_block` al Inbox del `blocking_app` (ver § REPORT_DEPENDENCY) y devuelve `dependencies_pending`.
+**Generación manual.** Click en "Generar" → endpoint valida `permissions.execute`, valida parámetros, consulta `ConsumerTypeAssociation`s del reporte (donde `consumer_ref: <report_id>` y `association_state: 'active'`), verifica satisfacción de cada una según su `satisfaction_mode` (ver § Asociaciones consumidor-tipo del reporte). Si todas satisfechas: invoca `generator_ref`, persiste `ReportRun`, retorna referencia descargable. Si alguna no satisfecha: **no genera**, devuelve `dependencies_pending` con la lista de asociaciones no satisfechas (la Tarea del Inbox correspondiente ya existe si la asociación es `generate_new`, o la verificación fallida queda registrada si es `verify_existing`).
 
-**Generación automática (CRON) — bifurcación por `allows_auto_generation`.** Scheduler periódico consulta el catálogo, identifica reportes con `cron_active: true` cuya fecha venció o está dentro del umbral; verifica dependencias y bifurca:
+**Generación automática (CRON) — bifurcación por `allows_auto_generation`.** Scheduler periódico consulta el catálogo, identifica reportes con `cron_active: true` cuya fecha venció o está dentro del umbral; bifurca según `allows_auto_generation`:
 
-| Estado de dependencias | `allows_auto_generation` | Comportamiento |
+| `allows_auto_generation` | Satisfacción de asociaciones | Comportamiento |
 |---|---|---|
-| Todas `completed: true` | cualquiera | Invoca `generator_ref` con identidad de sistema, persiste `ReportRun` con `trigger: { type: 'cron' }`, actualiza `next_emission_date` |
-| Alguna `completed: false` | `true` | **Genera de todos modos** con los datos disponibles, persiste `ReportRun` con `dependencies_unmet[]` poblado (snapshot de las pendientes al momento del run), emite Alerta `reporte_dependencias_incompletas` al consumidor + Tarea `report_dependency_block` al `blocking_app` |
-| Alguna `completed: false` | `false` | **No genera.** Emite Tarea `report_dependency_block` al Inbox del `blocking_app` para que se libere la dependencia. La próxima corrida del scheduler re-evaluará |
+| `true` | Todas satisfechas | Invoca `generator_ref` con identidad de sistema, persiste `ReportRun` con `trigger: { type: 'cron' }`, actualiza `next_emission_date` |
+| `true` | Alguna no satisfecha | **Genera de todos modos** con los datos disponibles, persiste `ReportRun` con `dependencies_unmet[]` poblado (snapshot de las asociaciones no satisfechas al momento del run), emite Alerta `reporte_dependencias_incompletas` al consumidor |
+| `false` | — | **No genera automáticamente.** La generación humana llega al Inbox vía la asociación `generate_report_manually` (ver § Asociaciones consumidor-tipo del reporte). Cuando el operador genere el reporte desde el Inbox, sigue el camino de generación manual descrito arriba |
 
 No aplica check de `permissions.execute` en generación CRON (identidad de sistema).
 
@@ -199,40 +189,74 @@ No aplica check de `permissions.execute` en generación CRON (identidad de siste
 
 ---
 
-## Mecanismo `REPORT_DEPENDENCY` y eventos a Alertas
+## Asociaciones consumidor-tipo del reporte
 
-### Dependencias bloqueantes → Tarea al Inbox del `blocking_app`
+Toda interacción humana que un reporte requiere — desde otras áreas (dependencias bloqueantes) o desde el propio responsable del reporte (generación manual) — se modela como **una o más `ConsumerTypeAssociation`** del Centro de Solicitudes (REQ-71). Este es el mecanismo unificado que reemplaza tanto el `REPORT_DEPENDENCY` anterior (reactivo con `auto_archive`) como las Tareas `reporte_proximo_emision_manual` (que antes se emitían reactivamente).
 
-Cuando se detecta una dependencia no completada (ya sea en generación manual o automática), el motor emite una **Tarea** del tipo `report_dependency_block` al Centro de Solicitudes del `blocking_app`, **no una Alerta**.
+### Modelo unificado
 
-La Tarea:
+Cada asociación se declara con:
 
-- `type: 'tarea'`, `source_app: 'reportes'`, `target_app: blocking_app`, `target_role` declarado por la dependencia.
-- Payload: `{ report_id, report_name, report_run_id?, blocking_module, blocking_type, recurring_definition_id?, description, due_at }`.
-- `auto_archive`: configurado con `condition_ref` que evalúa `dependencies[].completed: true` para esta dependencia. Cuando la dependencia se libera (porque alguna instancia bloqueante de la serie o tipo se cerró con éxito), el motor del Inbox evalúa la condición y auto-cierra la Tarea con `closed_by: 'system'` + `closure_action: 'dependency_resolved'`.
-- Si la dependencia es una instancia específica de una **serie recurrente** del Inbox (REQ-71), `recurring_definition_id` apunta a la `RecurringInboxItemDefinition`; el motor matchea contra la próxima instancia completada de esa serie.
+- `consumer_ref: <report_id>` — el reporte que la requiere.
+- `consumer_kind: 'report'`.
+- `concept` — tipo del Inbox que es la dependencia (puede ser cualquier tipo del catálogo, incluyendo el tipo genérico `generate_report_manually` cuando aplica a reportes manuales).
+- `target_app`, `target_role`, `default_assignee` — quién la trabaja.
+- `lead_time_days` — antelación al `next_emission_date` del reporte.
+- `satisfaction_mode` — `generate_new` o `verify_existing` (ver § Modos).
+- `verify_window_days?` — requerido si `satisfaction_mode: 'verify_existing'`.
+- `payload_template?` — precarga campos del payload del Inbox (aplica solo a `generate_new`).
 
-Esto reemplaza el diseño previo "`REPORT_DEPENDENCY` como Alerta con cierre manual". El nuevo diseño:
+El motor del Inbox (no el motor de Reportes) ejecuta el comportamiento de la asociación según su `satisfaction_mode`.
 
-1. **Convive con la semántica del Inbox** — una dependencia bloqueante es una Tarea que alguien (humano o serie recurrente) tiene que destrabar.
-2. **Permite auto-archive declarativo** sin depender del auto-cierre algorítmico general de Alertas (que sigue diferido a v2).
-3. **Asigna routing** vía `target_role` y opcionalmente `default_assignee` cuando se crea por serie recurrente.
+### Dos casos cubiertos por el mismo mecanismo
 
-### Eventos del scheduler a Alertas
+**Caso 1 — Dependencia bloqueante de otra app.** El reporte X requiere que el área Y haya completado el tipo `Z` antes de su `next_emission_date`. Se declara una asociación con `concept: Z`, `target_app: <app de Y>`, `target_role: <rol responsable>`, y `satisfaction_mode` según convenga (`verify_existing` si Y ya tiene una serie recurrente del concept; `generate_new` si requiere disparar una instancia específica para este reporte).
 
-El scheduler y el motor de generación emiten `ALERT_TYPE`s al Centro de Alertas. Los eventos bifurcan por `allows_auto_generation` cuando aplica:
+**Caso 2 — Generación manual del propio reporte** (`allows_auto_generation: false`). El reporte X requiere que un humano lo genere. Se declara una asociación con `concept: 'generate_report_manually'` (tipo genérico del catálogo del Inbox), `target_app: <app donde se genera>`, `target_role: <rol que genera>`, `satisfaction_mode: 'generate_new'`, `payload_template: { report_id: X, period: <período aplicable> }`. Cuando se cumple `next_emission_date - lead_time_days`, el scheduler del Inbox crea la Tarea en el área dueña con CTA "Generar reporte". Al ejecutarse la generación exitosamente, la Tarea se completa.
 
-| Evento | `ALERT_TYPE` o Tarea | Destino | Disparador |
+### Modos de satisfacción
+
+| Modo | Semántica | Cuándo usar |
+|---|---|---|
+| `generate_new` (default) | El scheduler del Inbox crea una instancia anticipada del tipo cuando se cumple `lead_time_days`. El reporte la consume vía `consumer_association_id` cuando llega su `next_emission_date` | El concept no existe como serie recurrente del área dueña, o las cadencias son incompatibles. Aplica siempre al caso 2 (`generate_report_manually`) |
+| `verify_existing` | El scheduler **no genera instancia**. Al `next_emission_date` del reporte (o en `lead_time_days` previos como early warning), verifica que exista al menos una instancia del concept en estado `Completed` dentro de `verify_window_days`. Si existe, la dependencia está satisfecha; si no, se considera no satisfecha | Caso 1 donde el área dueña ya tiene una serie recurrente del concept que cubre la cadencia del reporte. Ej: reporte UIF mensual depende de `daily_reconciliation` de OPS — `verify_existing` con `verify_window_days: 1` |
+
+### Tipo genérico `generate_report_manually`
+
+Es un tipo del catálogo del Inbox (declarado una sola vez, no por cada reporte) con la siguiente shape:
+
+- `type: 'task'`, `execution_mode: 'human'`.
+- `payload`: `{ report_id, period? }`.
+- CTA principal: "Generar reporte" — invoca el endpoint de generación del reporte referenciado en el payload.
+- Cierre automático: cuando el `ReportRun` asociado completa con `status: 'ok'`, la Tarea transita a `Completed` (vía trigger en el endpoint de Reportes que reporta éxito al Centro).
+
+Esto evita declarar un tipo del Inbox por cada reporte manual. Un único tipo genérico atiende a todos.
+
+### Convivencia con `dependencies_unmet[]`
+
+El `ReportRun.dependencies_unmet[]` sigue siendo el mecanismo de auditoría: cuando un reporte se ejecuta (manual o auto) con asociaciones no satisfechas, el snapshot queda registrado en el run con `ConsumerAssociationSnapshot[]`. Esto permite:
+
+- Auditoría regulatoria: reconstruir qué dependencias estaban incompletas al momento de emitir el reporte.
+- Análisis operativo: identificar áreas con tasa alta de incumplimiento de dependencias.
+- Alerta `reporte_dependencias_incompletas` al consumer cuando aplica (solo bajo `allows_auto_generation: true`).
+
+---
+
+## Eventos del scheduler a Alertas
+
+El scheduler y el motor de generación emiten `ALERT_TYPE`s al Centro de Alertas para los eventos puramente informativos. Las Tareas humanas viven en el Inbox vía las asociaciones (sección anterior), no se duplican como alertas.
+
+| Evento | `ALERT_TYPE` | Destino | Disparador |
 |---|---|---|---|
-| Próximo a emitir, `allows_auto_generation: true` | Alerta `reporte_proximo_emision_auto` | `consumer_apps[]` | `next_emission_date - alert_anticipation_days` |
-| Próximo a emitir, `allows_auto_generation: false` | **Tarea** `reporte_proximo_emision_manual` al Inbox | `consumer_apps[]` (o el responsable de ejecutar) | `next_emission_date - alert_anticipation_days` |
-| Vencido (`next_emission_date` pasó sin generación exitosa) | Alerta `reporte_vencido` | `consumer_apps[]` | Detección periódica del scheduler |
-| Error en generación | Alerta `reporte_error_generacion` | `consumer_apps[]` | `ReportRun.status: 'error'` |
-| Emitido automáticamente | Alerta `reporte_emitido_automaticamente` | `consumer_apps[]` | `ReportRun` con `trigger: { type: 'cron' }` y `status: 'ok'` |
-| Generado con dependencias incompletas | Alerta `reporte_dependencias_incompletas` | `consumer_apps[]` | `ReportRun.dependencies_unmet[]` poblado |
-| Dependencia bloqueante detectada | **Tarea** `report_dependency_block` con `auto_archive` | Inbox del `blocking_app` | Generación (manual o auto) con dependencia `completed: false` |
+| Próximo a emitir, `allows_auto_generation: true` | `reporte_proximo_emision_auto` | `consumer_apps[]` | `next_emission_date - alert_anticipation_days` |
+| Vencido (`next_emission_date` pasó sin generación exitosa) | `reporte_vencido` | `consumer_apps[]` | Detección periódica del scheduler |
+| Error en generación | `reporte_error_generacion` | `consumer_apps[]` | `ReportRun.status: 'error'` |
+| Emitido automáticamente | `reporte_emitido_automaticamente` | `consumer_apps[]` | `ReportRun` con `trigger: { type: 'cron' }` y `status: 'ok'` |
+| Generado con asociaciones no satisfechas | `reporte_dependencias_incompletas` | `consumer_apps[]` | `ReportRun.dependencies_unmet[]` poblado |
 
-La lista no es exhaustiva. Cualquier evento sistémico relevante del dominio Reportes puede modelarse como nuevo `ALERT_TYPE` o tipo de Tarea siguiendo el flujo formal (REQ-73 §11 o REQ-71 §13).
+La lista no es exhaustiva. Cualquier evento sistémico relevante del dominio Reportes puede modelarse como nuevo `ALERT_TYPE` siguiendo el flujo formal (REQ-73 §11).
+
+> **Cambio respecto a versión anterior:** Las filas "Próximo a emitir manual" y "Dependencia bloqueante detectada" — que antes emitían Tareas reactivas al Inbox — desaparecen de esta tabla. Ese trabajo humano ahora lo gestiona el Centro de Solicitudes vía las asociaciones declaradas en el alta del reporte, no como reacción del scheduler de Reportes.
 
 ---
 
@@ -240,7 +264,7 @@ La lista no es exhaustiva. Cualquier evento sistémico relevante del dominio Rep
 
 | Capa | Implementación |
 |---|---|
-| Backend | Servicio transversal del core: endpoint único, scheduler, persistencia de ejecuciones, capability checks, canal de eventos a Alertas |
+| Backend | Servicio transversal del core: endpoint único, scheduler, persistencia de ejecuciones, capability checks, canal de eventos a Alertas, declaración de `ConsumerTypeAssociation` durante el alta |
 | UI | Por app consumidora: cada app declarada en `consumer_apps[]` renderiza Catálogo + Ejecución, filtrados por `permissions.view` |
 | Reportes multi-app | Un `Report` con N entradas en `consumer_apps[]` aparece en N catálogos; las `ReportRun` son únicas y compartidas |
 | Reportes headless | `consumer_apps[]` vacío — generados pero no expuestos en UI. Útil para schedulers externos, integraciones con reguladores, agentes IA |
@@ -253,8 +277,8 @@ La lista no es exhaustiva. Cualquier evento sistémico relevante del dominio Rep
 | Con | Cómo |
 |---|---|
 | **Acciones / Manifest Engine** (REQ-68) | (a) Las acciones del Catálogo son del manifest; (b) el capability provider resuelve `user → capabilities`; (c) el catálogo canónico de capabilities vive ahí y este servicio las referencia por ID |
-| **Centro de Alertas** (`centro-de-alertas.md`, REQ-73) | Receptor de eventos del scheduler y del motor de generación: `reporte_proximo_emision_auto`, `reporte_vencido`, `reporte_error_generacion`, `reporte_emitido_automaticamente`, `reporte_dependencias_incompletas` |
-| **Centro de Solicitudes** (`centro-de-solicitudes.md`, REQ-71) | Receptor de Tareas: `report_dependency_block` (con `auto_archive` declarativo) y `reporte_proximo_emision_manual` (cuando `allows_auto_generation: false`). Consumidor de `recurring_definition_id` para vincular dependencias con instancias de series recurrentes |
+| **Centro de Alertas** (`centro-de-alertas.md`, REQ-73) | Receptor de eventos informativos del scheduler y del motor de generación: `reporte_proximo_emision_auto`, `reporte_vencido`, `reporte_error_generacion`, `reporte_emitido_automaticamente`, `reporte_dependencias_incompletas` |
+| **Centro de Solicitudes** (`centro-de-solicitudes.md`, REQ-71) | Provee la entidad `ConsumerTypeAssociation` que Reportería declara para representar dependencias bloqueantes y necesidades de generación manual. El motor del Inbox ejecuta el comportamiento de cada asociación (generación anticipada en `generate_new`, verificación en `verify_existing`) sin que el scheduler de Reportería tenga que coordinar Tareas reactivamente. Provee también el tipo genérico `generate_report_manually` que Reportería usa para modelar el caso 2 (reportes manuales próximos a emitir) |
 | **Vistas** (REQ-69) | Contrato de tabs alternables (Catálogo / Ejecución) + mecánica de tabla y filtros |
 | **Auth0** | Identidad del invocador; los claims alimentan al capability provider de REQ-68 |
 
@@ -270,7 +294,7 @@ La lista no es exhaustiva. Cualquier evento sistémico relevante del dominio Rep
 | **FIN** | pendiente | Contables (balance, P&L consolidado, mayor, asientos, conciliación global, tesorería) | — |
 | **CLP** | a evaluar | Cliente (estado de cuenta, movimientos, posición, fees, certificados) | A evaluar cuando avance beta CLP |
 
-Los REQs por área entregan: qué reportes declara cada app, qué categorías, qué `dependencies[]`, qué `permissions` aplica por reporte (capabilities concretas), qué capacidades opcionales activa, y la función de generación concreta (`generator_ref`).
+Los REQs por área entregan: qué reportes declara cada app, qué categorías, qué `ConsumerTypeAssociation`s declara cada reporte (con `concept`, `satisfaction_mode`, `lead_time_days`, etc.), qué `permissions` aplica por reporte (capabilities concretas), qué capacidades opcionales activa, y la función de generación concreta (`generator_ref`).
 
 ---
 
@@ -286,17 +310,23 @@ Vinculante. Solicitudes incompletas se rechazan.
    - `consumer_apps[]`
    - `retention_policy` (duración + categoría + `legal_basis` cuando aplique)
    - `allows_auto_generation`
-   - `dependencies[]`
+   - **`associations[]`** — lista de `ConsumerTypeAssociation`s a declarar al alta. Para cada una: `concept`, `target_app`, `target_role`, `default_assignee?`, `lead_time_days`, `satisfaction_mode`, `verify_window_days?` (si aplica), `payload_template?`. Si `allows_auto_generation: false`, debe incluirse al menos una asociación con `concept: 'generate_report_manually'`
    - **`permissions`** — declaración explícita de capability IDs para los 4 niveles, o default seguro
 
-2. **Producto valida coherencia** y abre un REQ hijo con el shape completo del `Report`:
+2. **Producto valida coherencia** y abre dos REQs hijos:
+   - REQ hijo para Tecnología con el shape completo del `Report`
+   - REQ hijo (o coordinación con REQ-71 owner) para registrar cada `ConsumerTypeAssociation` en el catálogo del Centro de Solicitudes
+   
+   Validaciones típicas:
    - Categoría regulatoria sin `legal_basis` es inconsistente
    - Periodicidad mensual con retención de 1 semana es inconsistente
    - Capability IDs deben existir en el catálogo canónico de REQ-68
+   - Cada `concept` de las asociaciones debe existir en el catálogo del Inbox del `target_app`
+   - `allows_auto_generation: false` sin asociación `generate_report_manually` es inconsistente
 
-3. **Tecnología implementa la función de generación** y la registra (`generator_ref`).
+3. **Tecnología implementa la función de generación** y la registra (`generator_ref`). Tecnología registra también las asociaciones en el Centro de Solicitudes.
 
-4. **Despliegue.** El reporte aparece en la UI de cada app declarada en `consumer_apps[]`, visible solo para usuarios con `permissions.view`.
+4. **Despliegue.** El reporte aparece en la UI de cada app declarada en `consumer_apps[]`, visible solo para usuarios con `permissions.view`. Las asociaciones quedan activas; el scheduler del Inbox comienza a generar/verificar según `lead_time_days`.
 
 ---
 
@@ -311,21 +341,24 @@ Vinculante. Solicitudes incompletas se rechazan.
 | 5 | Pre-2026-05 | `ReportRun` **inmutables** con metadata preservada indefinidamente; archivos sujetos a `retention_policy.duration` |
 | 6 | Pre-2026-05 | **Categorías de retención** estandarizadas (`regulatorio` / `contable` / `operativo` / `interno`) con `legal_basis` mandatorio para las dos primeras |
 | 7 | Pre-2026-05 | V2 (IA Playground + builder visual + Marketplace) marcada explícitamente como **sujeta a viabilidad, no commitment**. V1 debe ser autosuficiente |
-| 8 | 2026-05-11 | **`REPORT_DEPENDENCY` se modela como Tarea al Centro de Solicitudes** del `blocking_app` con `auto_archive` declarativo, no como Alerta. La condición de auto-archive evalúa `dependencies[].completed: true` para la dependencia específica. Cuando aplica a instancias recurrentes del Inbox (REQ-71), se referencia vía `recurring_definition_id` |
-| 9 | 2026-05-11 | **Principio elevado:** la gestión y ejecución de reportes son fuente de alertas hacia el Centro de Alertas. Los eventos típicos enumerados en § "Mecanismo `REPORT_DEPENDENCY`" no son exhaustivos — cualquier evento relevante del dominio Reportes puede modelarse como un nuevo `ALERT_TYPE` o tipo de Tarea siguiendo el flujo formal (REQ-73 §11 / REQ-71 §13) |
-| 10 | 2026-05-11 | **Bifurcación por `allows_auto_generation` para "reporte próximo a emitir":** `true` → Alerta `reporte_proximo_emision_auto`; `false` → Tarea `reporte_proximo_emision_manual` al Inbox. Razonamiento: un reporte manual próximo a emitir requiere acción humana específica (la propia generación), no es solo una condición a anunciar |
-| 11 | 2026-05-11 | **`ReportRun.dependencies_unmet[]`** — cuando un reporte con `allows_auto_generation: true` se genera con dependencias no completadas, persiste snapshot de las dependencias pendientes al momento del run. Emite Alerta `reporte_dependencias_incompletas` al consumidor + Tarea `report_dependency_block` al `blocking_app` |
-| 12 | 2026-05-11 | **`ReportDependency.recurring_definition_id?`** — cuando la dependencia es una instancia específica de una serie recurrente del Inbox (REQ-71), se referencia por el ID de la definición. Permite vincular reportería regulatoria con tareas operativas recurrentes (ej: reporte UIF depende de `daily_reconciliation` del día previo) |
-| 13 | 2026-05-12 | **Alineamiento con principio "Wizard of Oz arquitectónico":** el invocador del endpoint de Reportes no decide la ruta de ejecución. El servicio decide internamente si la generación es completamente programática (CRON sin dependencias bloqueantes) o si requiere intervención humana (emite Tareas al Centro de Solicitudes: `report_dependency_block`, `reporte_proximo_emision_manual`). Consistente con el modelo del Centro de Solicitudes (`centro-de-solicitudes.md` §"Principio arquitectónico: capacidades, no rutas") |
+| 8 | ~~2026-05-11~~ → **revisada 2026-05-12** | ~~`REPORT_DEPENDENCY` se modela como Tarea al Inbox del `blocking_app` con `auto_archive`~~. **Revisada:** las dependencias del reporte se modelan como `ConsumerTypeAssociation`s del Centro de Solicitudes (REQ-71) con `consumer_ref: <report_id>`. El comportamiento es **anticipado** (`generate_new` crea instancia con `lead_time_days` de antelación) o **verificativo** (`verify_existing` chequea instancias existentes), reemplazando el modelo reactivo con `auto_archive`. Ver § Asociaciones consumidor-tipo del reporte |
+| 9 | 2026-05-11 | **Principio elevado:** la gestión y ejecución de reportes son fuente de alertas hacia el Centro de Alertas. Los eventos típicos enumerados en § "Eventos del scheduler a Alertas" no son exhaustivos — cualquier evento relevante del dominio Reportes puede modelarse como un nuevo `ALERT_TYPE` siguiendo el flujo formal (REQ-73 §11) |
+| 10 | ~~2026-05-11~~ → **revisada 2026-05-12** | ~~Bifurcación por `allows_auto_generation`: `true` → Alerta `reporte_proximo_emision_auto`; `false` → Tarea reactiva `reporte_proximo_emision_manual` al Inbox~~. **Revisada:** la bifurcación se mantiene, pero el caso `false` ya no emite Tarea reactiva. La generación manual se modela proactivamente como `ConsumerTypeAssociation` con `concept: 'generate_report_manually'` declarada al alta del reporte. El scheduler del Inbox genera la Tarea anticipadamente según `lead_time_days` |
+| 11 | 2026-05-11 | **`ReportRun.dependencies_unmet[]`** — cuando un reporte con `allows_auto_generation: true` se genera con asociaciones no satisfechas, persiste snapshot vía `ConsumerAssociationSnapshot[]`. Emite Alerta `reporte_dependencias_incompletas` al consumidor |
+| 12 | ~~2026-05-11~~ → **superseded 2026-05-12** | ~~`ReportDependency.recurring_definition_id?` para vincular con series recurrentes del Inbox~~. **Superseded:** el mecanismo de `verify_existing` en `ConsumerTypeAssociation` cumple el mismo propósito de forma más general. La asociación con `satisfaction_mode: 'verify_existing'` y `verify_window_days` se apoya en instancias existentes del concept (provengan de series recurrentes o de otros caminos) sin necesidad de referencia explícita a la definición de la serie |
+| 13 | 2026-05-12 | **Alineamiento con principio "Wizard of Oz arquitectónico":** el invocador del endpoint de Reportes no decide la ruta de ejecución. El servicio decide internamente si la generación es completamente programática (CRON sin asociaciones no satisfechas) o si requiere intervención humana (esa intervención ya está pre-existente en el Inbox vía las asociaciones). Consistente con el modelo del Centro de Solicitudes (`centro-de-solicitudes.md` §"Principio arquitectónico: capacidades, no rutas") |
+| 14 | 2026-05-12 | **Modelo unificado de trabajo humano vinculado a reportes:** todo trabajo humano que un reporte requiere — sea de otra área (dependencia bloqueante) o de su propia área (generación manual) — se modela bajo el mismo mecanismo: `ConsumerTypeAssociation` declarada al alta del reporte. Esto elimina la convivencia previa de dos mecanismos (Tarea reactiva con `auto_archive` para dependencias + Tarea reactiva sin auto_archive para próximo a emitir manual) y los unifica en un único patrón proactivo |
+| 15 | 2026-05-12 | **Tipo genérico `generate_report_manually` en el catálogo del Inbox:** un único tipo del catálogo cubre todas las generaciones manuales de reportes, parametrizado por `payload: { report_id, period }`. Evita declarar un tipo del Inbox por cada reporte manual. El cierre de la Tarea se trigerea automáticamente cuando el `ReportRun` asociado completa con `status: 'ok'` |
+| 16 | 2026-05-12 | **`Report.dependencies[]` eliminada del modelo;** las dependencias son entidades del Centro de Solicitudes, consultables vía `ConsumerTypeAssociation` filtrando por `consumer_ref: <report_id>`. `ConsumerAssociationSnapshot` reemplaza a `ReportDependencySnapshot` en `ReportRun.dependencies_unmet[]`. La declaración de asociaciones se hace en el flujo formal de alta del reporte vía la sección `associations[]` de la solicitud |
 
 ---
 
 ## Frentes abiertos
 
 - **Construcción de v1** — entregable de Tecnología bajo AM-1004 (TO REFINEMENT)
-- **REQ-54 (LEX) — Centro de Reportería Regulatoria y Operativa** — en SENT TO DEV, desbloqueado por REQ-59
-- **REQs por área para OPS, FIN, TRD, CLP** — surgen a demanda
-- **Decisiones técnicas con Tecnología:** vinculación reporte↔función, arquitectura del scheduler, almacenamiento y retención por entidad, contrato del endpoint, viabilidad de V2
+- **REQ-54 (LEX) — Centro de Reportería Regulatoria y Operativa** — en SENT TO DEV, desbloqueado por REQ-59. Requiere revisión para alinearse con el nuevo modelo de asociaciones (las dependencias UIF↔OPS deberían declararse como asociaciones con `verify_existing`)
+- **REQs por área para OPS, FIN, TRD, CLP** — surgen a demanda; cada uno declara sus asociaciones al alta
+- **Decisiones técnicas con Tecnología:** vinculación reporte↔función, arquitectura del scheduler, almacenamiento y retención por entidad, contrato del endpoint, alta atómica de Report + sus ConsumerTypeAssociations, viabilidad de V2
 
 ---
 
@@ -334,6 +367,6 @@ Vinculante. Solicitudes incompletas se rechazan.
 - REQ entregable: REQ-59 · espejo en AM-1004
 - Discovery relacionado: `discoveries/core-modulos-transversales-discovery.md`
 - Features relacionadas:
-  - Centro de Alertas (`centro-de-alertas.md`) — receptor de los `ALERT_TYPE`s que emite este servicio (próximo-emisión-auto, vencido, error-generación, emitido-automáticamente, dependencias-incompletas)
-  - Centro de Solicitudes (`centro-de-solicitudes.md`) — receptor de Tareas con `auto_archive` (`report_dependency_block`) y Tareas manuales (`reporte_proximo_emision_manual`). Vincula dependencias contra series recurrentes vía `recurring_definition_id`
-- REQ consumidor: REQ-54 (LEX — Centro de Reportería Regulatoria y Operativa)
+  - Centro de Alertas (`centro-de-alertas.md`) — receptor de los `ALERT_TYPE`s puramente informativos que emite este servicio (próximo-emisión-auto, vencido, error-generación, emitido-automáticamente, dependencias-incompletas). Las Tareas humanas ya **no** se canalizan vía Alertas
+  - Centro de Solicitudes (`centro-de-solicitudes.md`) — provee la entidad `ConsumerTypeAssociation` y el tipo genérico `generate_report_manually`. Es el mecanismo único de coordinación de trabajo humano vinculado a reportes (dependencias bloqueantes + generaciones manuales)
+- REQ consumidor: REQ-54 (LEX — Centro de Reportería Regulatoria y Operativa) — pendiente revisión para alineamiento con modelo de asociaciones

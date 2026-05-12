@@ -84,7 +84,7 @@ El badge en el Drawer y los filtros del Inbox usan el `type` para diferenciar "S
 | Modelo canónico `Solicitud<TPayload>` | Definido en `src/types/genericos.ts`, no redefinible. Incluye `type`, `execution_mode`, `concept`, `assignee`, `source_user`, `requested_at`, `evidence[]`, `retry_count`, `consumer_association_id` |
 | `InboxTypeConfig` | Registry por `concept` con `type` y `execution_mode` mandatorios, `endpoint_ref` (para programmatic), `closeActions[]` (para human), triggers, CTAs, push, auto-archive |
 | Entidad `RecurringInboxItemDefinition` | Serie recurrente declarada con cadencia, `default_assignee`, `payload_template`, `series_state` |
-| Entidad `ConsumerTypeAssociation` | Asociación consumidor-tipo predefinido con `lead_time_days` configurable. Generación anticipada de instancias |
+| Entidad `ConsumerTypeAssociation` | Asociación consumidor-tipo predefinido con `lead_time_days` configurable y dos modos de satisfacción (`generate_new` / `verify_existing`). Habilita generación anticipada o verificación de instancias existentes |
 | Estados canónicos | `pendiente` · `en_proceso` · `completed` · `rejected` · `failed` (cinco estados; terminales `completed` y `rejected` inmutables; `failed` con retry) |
 | Endpoint público invocable | Primitiva común para tipos con `execution_mode: 'programmatic'`. Sirve a cuatro escenarios: scheduler, Acción/CTA del manifest, retry desde Drawer, retry desde Alerta |
 | Asignación manual (`assignee`) | Editable en cualquier estado no terminal vía CTA "Asignar/Reasignar/Liberar" |
@@ -278,7 +278,9 @@ interface ConsumerTypeAssociation {
   target_role?: string;
   default_assignee?: string | null;
   lead_time_days: number;                                // días antes del deadline del consumer
-  payload_template?: Record<string, unknown>;
+  satisfaction_mode: 'generate_new' | 'verify_existing'; // cómo se considera satisfecha la dependencia
+  verify_window_days?: number;                           // requerido si satisfaction_mode === 'verify_existing'
+  payload_template?: Record<string, unknown>;            // aplica solo a satisfaction_mode='generate_new'
   association_state: 'active' | 'paused' | 'archived';
   created_at: number;
   updated_at: number;
@@ -319,7 +321,7 @@ La mecánica (cinco estados, `<ClosureModal>` mandatorio en transición a termin
 | **(b) Manual desde el propio módulo Inbox** | Usuario con `manual_creation_capability` | Usuario autenticado | Inbox del `target_app` | CTA "Crear Solicitud/Tarea" filtrado a tipos con `creable_manualmente: true` |
 | **(c) Automática vía API** | Backend del core o sistema externo | Credencial de sistema | App o sistema invocador | Cubre fallback opt-in de jobs programáticos puros al fallar |
 | **(d) Automática recurrente** | Scheduler del Inbox | `'system'` | `'system'` | Toma `RecurringInboxItemDefinition` con `series_state: 'active'` cuya `next_creation_date` venció |
-| **(e) Anticipada por consumidor** | Scheduler del Inbox | `'system'` | `'system'` | Toma `ConsumerTypeAssociation` con `association_state: 'active'`; calcula `consumer_deadline − lead_time_days` y genera la instancia cuando esa fecha llega. Vincula vía `consumer_association_id` |
+| **(e) Anticipada por consumidor** | Scheduler del Inbox | `'system'` | `'system'` | Toma `ConsumerTypeAssociation` con `association_state: 'active'` y `satisfaction_mode: 'generate_new'`; calcula `consumer_deadline − lead_time_days` y genera la instancia cuando esa fecha llega. Vincula vía `consumer_association_id`. Las asociaciones con `satisfaction_mode: 'verify_existing'` no generan vía este camino — solo verifican al deadline del consumidor |
 
 En todos los casos: validación de `concept` en el registry del `target_app`, derivación de `type` y `execution_mode` desde el `InboxTypeConfig`, persistencia con `state: 'pendiente'`, ejecución de `triggers_on_create[]`, disparo de notificaciones (§ Asignación, routing y notificaciones).
 
@@ -463,7 +465,26 @@ Caso de uso paradigmático: el reporte UIF se ejecuta el día 15 de cada mes. Su
 
 - **El `lead_time_days` vive en la asociación, no en el tipo.** El mismo tipo del Inbox puede ser dependencia de N consumidores con tiempos distintos (ej: la conciliación operativa puede ser requerida con 5 días para UIF y con 3 días para BCRA). Cada asociación declara su propio lead time.
 - **Generalización.** El mecanismo no es exclusivo de reportes (`consumer_kind: 'report'`). Cubre también cierres periódicos (`'period_close'`), vencimientos regulatorios (`'expiration'`) y cualquier otro caso scheduleado (`'other'`).
-- **La instancia es independiente de la serie recurrente.** Si el mismo `concept` también tiene una serie recurrente activa (ej: la conciliación operativa se hace mensualmente por sí sola), las instancias de la asociación y de la serie son objetos separados — el área decide cómo trabajarlas. Si el área quiere evitar duplicación, la asociación reemplaza a la serie (o la serie reemplaza a la asociación). Esto es decisión operativa por área.
+- **Convivencia con series recurrentes resuelta por el `satisfaction_mode`** (ver subsección siguiente). Cuando el mismo `concept` ya tiene una serie recurrente activa que cubre el patrón temporal de la dependencia, la asociación puede declararse con `satisfaction_mode: 'verify_existing'` para apoyarse en las instancias que la serie genera, en lugar de duplicarlas.
+
+### Modos de satisfacción
+
+La asociación declara cómo se considera satisfecha la dependencia vía `satisfaction_mode`:
+
+| Modo | Comportamiento | Cuándo usar |
+|---|---|---|
+| `generate_new` (default) | El scheduler crea una instancia anticipada nueva cuando se cumple `lead_time_days` antes del deadline del consumidor. La instancia queda vinculada vía `consumer_association_id` y carga `payload_template` si está declarado | El concept no existe en una serie recurrente del área, o existe pero con cadencia incompatible. El consumidor necesita ese trabajo específicamente por su deadline |
+| `verify_existing` | El scheduler **no genera instancia**. Al deadline del consumidor, verifica que exista al menos una instancia del `concept` en estado `Completed` dentro de la ventana `verify_window_days` previos al deadline. Si existe, la dependencia está satisfecha; si no, el consumidor registra dependencia insatisfecha y emite alerta | El concept ya tiene una serie recurrente activa del área dueña que cubre el patrón temporal. Evita generar trabajo redundante |
+
+**Caso paradigmático de `verify_existing`:** el reporte UIF es mensual (deadline día 15). Depende de la conciliación operativa del día previo. OPS ya tiene una serie recurrente diaria `daily_reconciliation`. La asociación se declara con `satisfaction_mode: 'verify_existing'` y `verify_window_days: 1` — al día 15, verifica que la instancia del día 14 (o anteriores hasta 1 día atrás) esté `Completed`. OPS no recibe Tarea adicional; la conciliación que ya hace cubre la dependencia.
+
+**Caso paradigmático de `generate_new`:** el reporte trimestral X requiere un análisis específico que solo se hace para ese reporte, no como parte de un proceso recurrente. La asociación se declara con `satisfaction_mode: 'generate_new'` y `lead_time_days: 5` — 5 días antes del deadline del reporte, se genera la Tarea anticipadamente para que el área dueña la trabaje.
+
+**Implicancias del modo elegido:**
+
+- `payload_template`, `default_assignee` y `target_role` aplican solo a `generate_new` (porque hay instancia nueva que asignar). En `verify_existing` se ignoran.
+- `consumer_association_id` en la instancia (campo del registro `Solicitud<TPayload>`) se popula solo en `generate_new` — las instancias existentes verificadas no se modifican.
+- Cambiar el modo de una asociación activa requiere REQ formal en V1.
 
 ### Flujo formal de alta de asociaciones
 
@@ -618,6 +639,7 @@ El repositorio es base consultable. Reportes típicos vía REQ-59:
 | 17 | 2026-05-12 | **Dos fechas semánticas distintas:** `requested_at` (cuándo se solicita formalmente; puede ser futura para generaciones anticipadas) y `due_at` (deadline para ejecutar). `created_at` se mantiene como timestamp técnico de persistencia |
 | 18 | 2026-05-12 | **Dos vistas top-level del usuario:** Mi bandeja (lo que tengo que ejecutar) + Mis enviadas (las que yo creé a otros, para seguimiento). Toggle en el módulo Inbox |
 | 19 | 2026-05-12 | **Naming:** prosa en español ("Solicitud" / "Tarea"), campos del modelo en inglés (`type: 'request' \| 'task'`, `execution_mode: 'human' \| 'programmatic'`, `concept` como clasificador de negocio). Resuelve la inconsistencia previa entre REQ y feature |
+| 20 | 2026-05-12 | **Modos de satisfacción de la asociación consumidor-tipo:** `generate_new` (default — el scheduler crea una instancia anticipada cuando se cumple `lead_time_days`) y `verify_existing` (el scheduler verifica al deadline del consumidor que exista al menos una instancia del concept en estado `Completed` dentro de `verify_window_days`). Resuelve el caso de reportes regulatorios que se apoyan en series recurrentes operativas ya existentes — evita generar tareas redundantes |
 
 ---
 
