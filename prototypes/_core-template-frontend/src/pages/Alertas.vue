@@ -31,7 +31,7 @@ import type {
 } from '@/types/genericos';
 
 // ════════════════════════════════════════════════════════════════════
-// Alertas — system-detected events surface (L1/L2/L3, profile A default)
+// Alertas — system-detected events surface (L1/L2/L3, category 'triage' default)
 // ────────────────────────────────────────────────────────────────────
 //   L1 — title + ViewToggle.
 //   L2 — KPI cards (Críticas hoy, En revisión, Resueltas mes, Descartadas mes).
@@ -537,8 +537,8 @@ const STATE_FILTER_OPTIONS: AlertaState[] = ['new', 'in_review', 'resolved', 'di
             </Badge>
           </div>
           <div class="rounded-md border border-b-2 bg-[#111] p-3">
-            <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Perfil</div>
-            <div class="text-[13px] font-semibold text-t-2">{{ drawerAlerta.profile }}</div>
+            <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Categoría</div>
+            <div class="text-[13px] font-semibold text-t-2">{{ drawerAlerta.category }}</div>
           </div>
           <div class="rounded-md border border-b-2 bg-[#111] p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Origen</div>

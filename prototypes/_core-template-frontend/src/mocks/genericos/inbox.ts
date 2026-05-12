@@ -5,6 +5,15 @@
 // severities so list / cards / kanban views all surface variety in
 // the empty new app. Real apps override by providing their own
 // dataset and disabling these mocks.
+//
+// Schema conventions:
+//   - `payload` follows the `payload_schema` of the matching
+//     `InboxTypeConfig` in `@/config/inbox-types`.
+//   - `assignee` is the user the record is directed to (settable on
+//     create / mutable later); `owner` is the user actively working it
+//     now (null in `pendiente`; auto-set on transition to `en_proceso`).
+//   - Closed records carry `closure_action`, `closed_by`, `closed_at`
+//     and `closure_comment` (≥10 chars for `rejected`).
 // ════════════════════════════════════════════════════════════════════
 
 import type { Solicitud } from '@/types/genericos';
@@ -13,17 +22,25 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
   {
     id: 'SOL-001',
     type: 'aprobacion_pago',
+    kind: 'solicitud',
     source_app: 'CORE',
     source_module: 'inbox',
-    owner_id: 'u-1',
-    owner_name: 'Yasmani Rodríguez',
+    target_app: 'CORE',
+    target_role: 'FIN_OFFICER',
+    owner: null,
+    assignee: 'u-1',
     sla_hours: 24,
     state: 'pendiente',
     severity: 'high',
+    payload: {
+      title: 'Aprobar pago a proveedor #4521',
+      description: 'Pago de servicios de hosting Q2',
+      amount: 12450,
+      currency: 'USD',
+      vendor: 'Hosting Provider #4521',
+    },
     created_at: '2026-04-28T10:30:00Z',
     updated_at: '2026-04-28T10:30:00Z',
-    title: 'Aprobar pago a proveedor #4521',
-    summary: 'Pago de servicios de hosting Q2 — USD 12.450,00',
     timeline: [
       {
         id: 'evt-001-1',
@@ -39,17 +56,23 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
   {
     id: 'SOL-002',
     type: 'revision_legajo',
+    kind: 'solicitud',
     source_app: 'CORE',
     source_module: 'inbox',
-    owner_id: 'u-2',
-    owner_name: 'María González',
+    target_app: 'CORE',
+    target_role: 'LEX_OFFICER',
+    owner: 'u-2',
+    assignee: 'u-2',
     sla_hours: 48,
     state: 'en_proceso',
     severity: 'medium',
+    payload: {
+      title: 'Revisión de legajo cliente Acme S.A.',
+      description: 'Validar documentación KYC y firma autorizada',
+      cliente: 'Acme S.A.',
+    },
     created_at: '2026-04-27T14:15:00Z',
     updated_at: '2026-04-28T09:20:00Z',
-    title: 'Revisión de legajo cliente Acme S.A.',
-    summary: 'Validar documentación KYC y firma autorizada',
     timeline: [
       {
         id: 'evt-002-1',
@@ -82,17 +105,25 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
   {
     id: 'SOL-003',
     type: 'aprobacion_pago',
+    kind: 'solicitud',
     source_app: 'CORE',
     source_module: 'inbox',
-    owner_id: 'u-3',
-    owner_name: 'Juan Pérez',
+    target_app: 'CORE',
+    target_role: 'FIN_OFFICER',
+    owner: null,
+    assignee: 'u-3',
     sla_hours: 8,
     state: 'pendiente',
     severity: 'critical',
+    payload: {
+      title: 'Pago urgente — vencimiento hoy',
+      description: 'Servicios cloud con vencimiento 18:00 hs',
+      amount: 3200,
+      currency: 'USD',
+      vendor: 'Cloud Provider',
+    },
     created_at: '2026-04-29T08:00:00Z',
     updated_at: '2026-04-29T08:00:00Z',
-    title: 'Pago urgente — vencimiento hoy',
-    summary: 'Servicios cloud — USD 3.200,00 con vencimiento 18:00 hs',
     timeline: [
       {
         id: 'evt-003-1',
@@ -108,18 +139,27 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
   {
     id: 'SOL-004',
     type: 'baja_usuario',
+    kind: 'tarea',
     source_app: 'CORE',
     source_module: 'inbox',
-    owner_id: 'u-1',
-    owner_name: 'Yasmani Rodríguez',
+    target_app: 'CORE',
+    target_role: 'ADMIN_OPS',
+    owner: 'u-1',
+    assignee: 'u-1',
     sla_hours: 72,
     state: 'completed',
     severity: 'low',
+    payload: {
+      title: 'Baja de usuario externo — consultor temporal',
+      usuario_id: 'ext-consultor-99',
+      motivo: 'Revocación de accesos al sistema y devolución de equipos',
+    },
+    closure_action: 'completed',
+    closure_comment: 'Accesos revocados, equipo devuelto y formateado.',
+    closed_by: 'u-1',
+    closed_at: Date.parse('2026-04-23T16:45:00Z'),
     created_at: '2026-04-22T11:00:00Z',
     updated_at: '2026-04-23T16:45:00Z',
-    title: 'Baja de usuario externo — consultor temporal',
-    summary: 'Revocación de accesos al sistema y devolución de equipos',
-    closure_comment: 'Accesos revocados, equipo devuelto y formateado.',
     timeline: [
       {
         id: 'evt-004-1',
@@ -127,7 +167,7 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
         actor_id: 'u-1',
         actor_name: 'Yasmani Rodríguez',
         kind: 'system',
-        label: 'Solicitud creada',
+        label: 'Tarea creada',
       },
       {
         id: 'evt-004-2',
@@ -151,18 +191,27 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
   {
     id: 'SOL-005',
     type: 'revision_legajo',
+    kind: 'solicitud',
     source_app: 'CORE',
     source_module: 'inbox',
-    owner_id: 'u-5',
-    owner_name: 'Lucía Fernández',
+    target_app: 'CORE',
+    target_role: 'LEX_OFFICER',
+    owner: 'u-5',
+    assignee: 'u-5',
     sla_hours: 24,
     state: 'rejected',
     severity: 'medium',
+    payload: {
+      title: 'Solicitud de alta — cliente faltó documentación',
+      description: 'Cliente sin DNI vigente al momento de la solicitud',
+      cliente: '(pendiente)',
+    },
+    closure_action: 'incomplete',
+    closure_comment: 'Rechazada: documentación incompleta. Cliente puede re-aplicar tras renovación de DNI.',
+    closed_by: 'u-5',
+    closed_at: Date.parse('2026-04-21T10:20:00Z'),
     created_at: '2026-04-20T09:00:00Z',
     updated_at: '2026-04-21T10:20:00Z',
-    title: 'Solicitud de alta — cliente faltó documentación',
-    summary: 'Cliente sin DNI vigente al momento de la solicitud',
-    closure_comment: 'Rechazada: documentación incompleta. Cliente puede re-aplicar tras renovación de DNI.',
     timeline: [
       {
         id: 'evt-005-1',
@@ -186,17 +235,25 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
   {
     id: 'SOL-006',
     type: 'cambio_limite',
+    kind: 'solicitud',
     source_app: 'CORE',
     source_module: 'inbox',
-    owner_id: null,
-    owner_name: '',
+    target_app: 'CORE',
+    target_role: 'FIN_OFFICER',
+    owner: null,
+    assignee: null,
     sla_hours: 48,
     state: 'pendiente',
     severity: 'medium',
+    payload: {
+      title: 'Aumento de límite operativo — Sucursal Norte',
+      description: 'Solicitud sin asignar — requiere asignar responsable',
+      cliente: 'Sucursal Norte',
+      limite_actual: 50000,
+      limite_solicitado: 150000,
+    },
     created_at: '2026-04-29T11:45:00Z',
     updated_at: '2026-04-29T11:45:00Z',
-    title: 'Aumento de límite operativo — Sucursal Norte',
-    summary: 'Solicitud sin asignar — requiere asignar responsable',
     timeline: [
       {
         id: 'evt-006-1',

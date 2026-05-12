@@ -18,17 +18,43 @@ import {
 } from '@/components/drawer';
 import { KanbanBoard } from '@/components/kanban';
 import { ManifestActionsMenu } from '@/components/manifest';
+import { InboxCreateCTA } from '@/components/inbox';
 import type { KanbanAxis, KanbanState } from '@/types/kanban';
 import { useManifestModule } from '@/composables/useManifestModule';
 import { INBOX_MANIFEST_KEY } from '@/manifests/framework.template.inbox.actions';
 import { INBOX_SOLICITUDES } from '@/mocks/genericos/inbox';
-import { CURRENT_USER } from '@/mocks/genericos/users';
+import { CURRENT_USER, findUser } from '@/mocks/genericos/users';
 import type {
   Solicitud,
   SolicitudState,
   TimelineEvent,
 } from '@/types/genericos';
 import { cn } from '@/lib/cn';
+
+// ─── Display helpers ─────────────────────────────────────────────────
+// `Solicitud<TPayload>` lifts type-specific text into `payload`; for the
+// generic Inbox UI we look the headline / summary up from a payload
+// convention (`title`, `description` or `summary`). Type-specific
+// renderers MAY override later via per-type config.
+type DisplayPayload = {
+  title?: string;
+  summary?: string;
+  description?: string;
+};
+
+function solicitudTitle(s: Solicitud): string {
+  const p = (s.payload ?? {}) as DisplayPayload;
+  return p.title ?? s.type ?? s.id;
+}
+
+function solicitudSummary(s: Solicitud): string {
+  const p = (s.payload ?? {}) as DisplayPayload;
+  return p.description ?? p.summary ?? '';
+}
+
+function solicitudOwnerName(s: Solicitud): string {
+  return findUser(s.owner)?.name ?? '';
+}
 
 // ════════════════════════════════════════════════════════════════════
 // Inbox — Solicitudes management surface (L1/L2/L3)
@@ -74,7 +100,7 @@ const filteredSolicitudes = computed<Solicitud[]>(() => {
     if (filterType.value && s.type !== filterType.value) return false;
     if (filterState.value && s.state !== filterState.value) return false;
     if (term) {
-      const haystack = `${s.id} ${s.title} ${s.summary ?? ''}`.toLowerCase();
+      const haystack = `${s.id} ${solicitudTitle(s)} ${solicitudSummary(s)}`.toLowerCase();
       if (!haystack.includes(term)) return false;
     }
     return true;
@@ -97,7 +123,7 @@ const kpis = computed(() => {
 });
 
 function isInSla(s: Solicitud): boolean {
-  if (s.sla_hours === null) return true;
+  if (s.sla_hours === null || s.sla_hours === undefined) return true;
   const created = Date.parse(s.created_at);
   if (Number.isNaN(created)) return true;
   const deadline = created + s.sla_hours * 3_600_000;
@@ -109,6 +135,16 @@ const drawerOpen = ref(false);
 const drawerSolicitud = ref<Solicitud | null>(null);
 
 function openDrawer(s: Solicitud): void {
+  drawerSolicitud.value = s;
+  drawerOpen.value = true;
+}
+
+// ─── Main CTA wiring ──────────────────────────────────────────────────
+// `<InboxCreateCTA>` emits the newly-created Solicitud; we persist into
+// the reactive mock dataset. The audit entry was already emitted by
+// `<InboxCreateDialog>` (single source for `AuditEntryCTA`).
+function handleCreatedSolicitud(s: Solicitud): void {
+  solicitudes.value.push(s);
   drawerSolicitud.value = s;
   drawerOpen.value = true;
 }
@@ -264,6 +300,7 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
         </p>
       </div>
       <div class="flex items-center gap-3">
+        <InboxCreateCTA @created="handleCreatedSolicitud" />
         <ViewToggle v-model="view" :views="['list', 'cards', 'kanban']" />
       </div>
     </header>
@@ -387,7 +424,7 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
               <td class="px-[18px] py-2.5">
                 <span class="font-mono text-xs text-t-3">{{ s.id }}</span>
               </td>
-              <td class="px-3.5 py-2.5 text-[13px] font-semibold text-t-2">{{ s.title }}</td>
+              <td class="px-3.5 py-2.5 text-[13px] font-semibold text-t-2">{{ solicitudTitle(s) }}</td>
               <td class="px-3.5 py-2.5 text-xs text-t-3">{{ s.type }}</td>
               <td class="px-3.5 py-2.5 text-xs text-t-3">{{ s.source_module }}</td>
               <td class="px-3.5 py-2.5">
@@ -403,7 +440,7 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
               >
                 {{ s.sla_hours === null ? '—' : isInSla(s) ? `${s.sla_hours}h` : 'Vencida' }}
               </td>
-              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ s.owner_name || '—' }}</td>
+              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ solicitudOwnerName(s) || '—' }}</td>
               <td class="px-3.5 py-2.5 text-center" @click.stop>
                 <div class="flex items-center justify-center">
                   <ManifestActionsMenu
@@ -435,7 +472,7 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
           <template #header>
             <div class="flex min-w-0 flex-1 items-center gap-2">
               <span class="font-mono text-[11px] text-t-4">{{ s.id }}</span>
-              <span class="truncate text-sm font-semibold text-t-1">{{ s.title }}</span>
+              <span class="truncate text-sm font-semibold text-t-1">{{ solicitudTitle(s) }}</span>
             </div>
             <Badge :variant="statusVariant(s.state)">{{ stateLabel(s.state) }}</Badge>
             <span @click.stop>
@@ -448,12 +485,12 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
             </span>
           </template>
           <template #body>
-            <p class="line-clamp-3 text-xs text-t-3">{{ s.summary || '—' }}</p>
+            <p class="line-clamp-3 text-xs text-t-3">{{ solicitudSummary(s) || '—' }}</p>
             <div class="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[11px]">
               <span class="text-t-4">Tipo</span>
               <span class="text-t-2">{{ s.type }}</span>
               <span class="text-t-4">Owner</span>
-              <span class="text-t-2">{{ s.owner_name || '—' }}</span>
+              <span class="text-t-2">{{ solicitudOwnerName(s) || '—' }}</span>
             </div>
           </template>
           <template #footer>
@@ -486,7 +523,7 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
               <template #header>
                 <div class="flex min-w-0 flex-1 items-center gap-2">
                   <span class="font-mono text-[11px] text-t-4">{{ (record as Solicitud).id }}</span>
-                  <span class="truncate text-sm font-semibold text-t-1">{{ (record as Solicitud).title }}</span>
+                  <span class="truncate text-sm font-semibold text-t-1">{{ solicitudTitle(record as Solicitud) }}</span>
                 </div>
                 <span @click.stop>
                   <ManifestActionsMenu
@@ -497,10 +534,10 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
                 </span>
               </template>
               <template #body>
-                <p class="line-clamp-2 text-xs text-t-3">{{ (record as Solicitud).summary || '—' }}</p>
+                <p class="line-clamp-2 text-xs text-t-3">{{ solicitudSummary(record as Solicitud) || '—' }}</p>
               </template>
               <template #footer>
-                <span>{{ (record as Solicitud).owner_name || 'Sin owner' }}</span>
+                <span>{{ solicitudOwnerName(record as Solicitud) || 'Sin owner' }}</span>
                 <span :class="isInSla(record as Solicitud) ? 'text-success' : 'text-danger'">
                   {{ (record as Solicitud).sla_hours === null ? '' : isInSla(record as Solicitud) ? `SLA ${(record as Solicitud).sla_hours}h` : 'Vencida' }}
                 </span>
@@ -516,8 +553,8 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
       v-if="drawerSolicitud"
       :open="drawerOpen"
       :record-id="drawerSolicitud.id"
-      :title="drawerSolicitud.title"
-      :subtitle="drawerSolicitud.summary"
+      :title="solicitudTitle(drawerSolicitud)"
+      :subtitle="solicitudSummary(drawerSolicitud) || undefined"
       :status-badge="{ label: stateLabel(drawerSolicitud.state), variant: statusVariant(drawerSolicitud.state) }"
       data-testid="inbox-drawer"
       @update:open="(v) => (v ? null : closeDrawer())"
@@ -556,7 +593,7 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
           </div>
           <div class="rounded-md border border-b-2 bg-[#111] p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Owner</div>
-            <div class="text-[13px] font-semibold text-t-2">{{ drawerSolicitud.owner_name || 'Sin asignar' }}</div>
+            <div class="text-[13px] font-semibold text-t-2">{{ solicitudOwnerName(drawerSolicitud) || 'Sin asignar' }}</div>
           </div>
           <div class="rounded-md border border-b-2 bg-[#111] p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">SLA</div>
@@ -565,11 +602,11 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
             </div>
           </div>
           <div
-            v-if="drawerSolicitud.summary"
+            v-if="solicitudSummary(drawerSolicitud)"
             class="col-span-2 rounded-md border border-b-2 bg-[#111] p-3"
           >
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Contexto</div>
-            <div class="whitespace-pre-wrap text-[13px] text-t-2">{{ drawerSolicitud.summary }}</div>
+            <div class="whitespace-pre-wrap text-[13px] text-t-2">{{ solicitudSummary(drawerSolicitud) }}</div>
           </div>
           <div
             v-if="drawerSolicitud.closure_comment"
