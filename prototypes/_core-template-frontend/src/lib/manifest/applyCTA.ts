@@ -2,7 +2,7 @@
 // Apply path — module CTA confirms
 // ────────────────────────────────────────────────────────────────────
 // Per Requirement 14:
-//   - When `creates_record_type` is declared, the engine MUST look up
+//   - When `creates_record_concept` is declared, the engine MUST look up
 //     a registered creator. Missing creator → throw ManifestError.
 //   - On success, append an audit entry with kind:"cta".
 // ════════════════════════════════════════════════════════════════════
@@ -33,7 +33,7 @@ export type ApplyCTAResult = {
 };
 
 /**
- * Runs the CTA path. When `cta.creates_record_type` is declared and the
+ * Runs the CTA path. When `cta.creates_record_concept` is declared and the
  * creator is null, throws `ManifestError` (caller catches → toasts the
  * "factory no registrada" error and keeps the dialog open).
  */
@@ -42,7 +42,7 @@ export function applyCTA(input: ApplyCTAInput, deps: ApplyDeps): ApplyCTAResult 
 
   let created: Record<string, unknown> | null = null;
 
-  if (cta.creates_record_type) {
+  if (cta.creates_record_concept) {
     if (creator === null) {
       throw new ManifestError(`no creator registered for ${manifestKey}`);
     }
@@ -81,7 +81,7 @@ export function applyCTA(input: ApplyCTAInput, deps: ApplyDeps): ApplyCTAResult 
       action_id: cta.id,
       manifest_key: manifestKey,
       record_id: recordId,
-      created_record_type: cta.creates_record_type ?? null,
+      created_record_type: cta.creates_record_concept ?? null,
       is_module_cta: true,
       changes: { ...formValues },
     };

@@ -23,7 +23,7 @@ describe('applyCTA', () => {
       id: 'demo.crear',
       label: 'Crear',
       is_module_cta: true,
-      creates_record_type: 'movimiento_manual',
+      creates_record_concept: 'movimiento_manual',
     };
     const { deps } = makeDeps();
     expect(() =>
@@ -45,7 +45,7 @@ describe('applyCTA', () => {
       id: 'demo.crear',
       label: 'Crear',
       is_module_cta: true,
-      creates_record_type: 'movimiento_manual',
+      creates_record_concept: 'movimiento_manual',
       on_confirm: { set_fields: { 'fin.created_at': '$now' } },
     };
     const { deps } = makeDeps();
@@ -70,7 +70,7 @@ describe('applyCTA', () => {
       id: 'demo.crear',
       label: 'Crear',
       is_module_cta: true,
-      creates_record_type: 'movimiento_manual',
+      creates_record_concept: 'movimiento_manual',
       on_confirm: { set_fields: { 'fin.created_by': '$current_user' } },
     };
     const { deps } = makeDeps();
@@ -94,7 +94,7 @@ describe('applyCTA', () => {
       id: 'demo.crear',
       label: 'Crear',
       is_module_cta: true,
-      creates_record_type: 'movimiento_manual',
+      creates_record_concept: 'movimiento_manual',
     };
     const { deps, audit } = makeDeps();
     applyCTA(
@@ -122,7 +122,7 @@ describe('applyCTA', () => {
       id: 'demo.crear',
       label: 'Crear',
       is_module_cta: true,
-      creates_record_type: 'movimiento_manual',
+      creates_record_concept: 'movimiento_manual',
       on_confirm: { audit: false },
     };
     const { deps, audit } = makeDeps();

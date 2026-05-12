@@ -22,10 +22,10 @@ describe('resolveActions', () => {
       const m = manifest([
         {
           ...baseAction,
-          show_when: { record_type_in: ['DEP'] },
+          show_when: { record_concept_in: ['DEP'] },
         },
       ]);
-      const out = resolveActions({ _record_type: 'RET' }, m, 'ADMIN');
+      const out = resolveActions({ concept: 'RET' }, m, 'ADMIN');
       expect(out).toHaveLength(0);
     });
 
@@ -33,10 +33,10 @@ describe('resolveActions', () => {
       const m = manifest([
         {
           ...baseAction,
-          show_when: { record_type_in: ['DEP'] },
+          show_when: { record_concept_in: ['DEP'] },
         },
       ]);
-      const out = resolveActions({ _record_type: 'DEP' }, m, 'ADMIN');
+      const out = resolveActions({ concept: 'DEP' }, m, 'ADMIN');
       expect(out).toHaveLength(1);
       expect(out[0]?.enabled).toBe(true);
       expect(out[0]?.tag).toBeNull();

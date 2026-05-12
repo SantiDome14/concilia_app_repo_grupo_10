@@ -35,13 +35,13 @@ describe('INBOX_TYPES_REGISTRY', () => {
 });
 
 describe('getInboxTypeConfig', () => {
-  it('returns the matching entry for a declared type', () => {
+  it('returns the matching entry for a declared concept', () => {
     const cfg = getInboxTypeConfig('aprobacion_pago');
-    expect(cfg?.type).toBe('aprobacion_pago');
-    expect(cfg?.kind).toBe('solicitud');
+    expect(cfg?.concept).toBe('aprobacion_pago');
+    expect(cfg?.type).toBe('solicitud');
   });
 
-  it('returns undefined for an undeclared type', () => {
+  it('returns undefined for an undeclared concept', () => {
     expect(getInboxTypeConfig('does_not_exist')).toBeUndefined();
   });
 });
@@ -49,7 +49,7 @@ describe('getInboxTypeConfig', () => {
 describe('listCreableTypes', () => {
   it('returns only entries with creable_manualmente: true', () => {
     const types = listCreableTypes(['INBOX_CREATE']);
-    const ids = types.map((t) => t.type);
+    const ids = types.map((t) => t.concept);
     expect(ids).toContain('aprobacion_pago');
     expect(ids).toContain('revision_legajo');
     expect(ids).not.toContain('baja_usuario'); // creable_manualmente omitted
@@ -57,15 +57,15 @@ describe('listCreableTypes', () => {
   });
 
   it('filters by manual_creation_capability', () => {
-    expect(listCreableTypes([]).map((t) => t.type)).toEqual([]);
+    expect(listCreableTypes([]).map((t) => t.concept)).toEqual([]);
     expect(listCreableTypes(['INBOX_CREATE']).length).toBe(2);
-    expect(listCreableTypes(['WRONG_CAP']).map((t) => t.type)).toEqual([]);
+    expect(listCreableTypes(['WRONG_CAP']).map((t) => t.concept)).toEqual([]);
   });
 
   it('honors the wildcard "*" capability', () => {
     const all = listCreableTypes(['*']);
     expect(all.length).toBe(2);
-    expect(all.map((t) => t.type).sort()).toEqual(
+    expect(all.map((t) => t.concept).sort()).toEqual(
       ['aprobacion_pago', 'revision_legajo'],
     );
   });

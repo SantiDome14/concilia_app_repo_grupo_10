@@ -18,8 +18,8 @@ vi.mock('@/config/inbox-types', () => {
 
 let mockHasCreable: () => boolean = () => false;
 let mockListCreable: (caps: readonly string[]) => Array<{
-  type: string;
-  kind: 'solicitud' | 'tarea';
+  concept: string;
+  type: 'solicitud' | 'tarea';
 }> = () => [];
 
 vi.mock('vue-sonner', () => ({
@@ -71,11 +71,11 @@ describe('InboxCreateCTA', () => {
     expect(btn.attributes('title')).toBe('Sin permiso para crear');
   });
 
-  it('renders enabled with label "Crear Solicitud" when only solicitud-kind types are creable', () => {
+  it('renders enabled with label "Crear Solicitud" when only solicitud-type configs are creable', () => {
     mockHasCreable = () => true;
     mockListCreable = () => [
-      { type: 't1', kind: 'solicitud' },
-      { type: 't2', kind: 'solicitud' },
+      { concept: 't1', type: 'solicitud' },
+      { concept: 't2', type: 'solicitud' },
     ];
     setActivePinia(createPinia());
     setUser(['*']);
@@ -86,9 +86,9 @@ describe('InboxCreateCTA', () => {
     expect(btn.text()).toContain('Crear Solicitud');
   });
 
-  it('renders label "Crear Tarea" when only tarea-kind types are creable', () => {
+  it('renders label "Crear Tarea" when only tarea-type configs are creable', () => {
     mockHasCreable = () => true;
-    mockListCreable = () => [{ type: 't1', kind: 'tarea' }];
+    mockListCreable = () => [{ concept: 't1', type: 'tarea' }];
     setActivePinia(createPinia());
     setUser(['*']);
     const wrapper = mountCta();
@@ -97,11 +97,11 @@ describe('InboxCreateCTA', () => {
     );
   });
 
-  it('renders label "Crear" (generic) when mixed kinds are creable', () => {
+  it('renders label "Crear" (generic) when mixed types are creable', () => {
     mockHasCreable = () => true;
     mockListCreable = () => [
-      { type: 't1', kind: 'solicitud' },
-      { type: 't2', kind: 'tarea' },
+      { concept: 't1', type: 'solicitud' },
+      { concept: 't2', type: 'tarea' },
     ];
     setActivePinia(createPinia());
     setUser(['*']);

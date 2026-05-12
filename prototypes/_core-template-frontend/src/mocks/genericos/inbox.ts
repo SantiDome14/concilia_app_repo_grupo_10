@@ -21,8 +21,8 @@ import type { Solicitud } from '@/types/genericos';
 export const INBOX_SOLICITUDES: Solicitud[] = [
   {
     id: 'SOL-001',
-    type: 'aprobacion_pago',
-    kind: 'solicitud',
+    concept: 'aprobacion_pago',
+    type: 'solicitud',
     source_app: 'CORE',
     source_module: 'inbox',
     target_app: 'CORE',
@@ -73,8 +73,8 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
   },
   {
     id: 'SOL-002',
-    type: 'revision_legajo',
-    kind: 'solicitud',
+    concept: 'revision_legajo',
+    type: 'solicitud',
     source_app: 'CORE',
     source_module: 'inbox',
     target_app: 'CORE',
@@ -122,8 +122,8 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
   },
   {
     id: 'SOL-003',
-    type: 'aprobacion_pago',
-    kind: 'solicitud',
+    concept: 'aprobacion_pago',
+    type: 'solicitud',
     source_app: 'CORE',
     source_module: 'inbox',
     target_app: 'CORE',
@@ -156,8 +156,8 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
   },
   {
     id: 'SOL-004',
-    type: 'baja_usuario',
-    kind: 'tarea',
+    concept: 'baja_usuario',
+    type: 'tarea',
     source_app: 'CORE',
     source_module: 'inbox',
     target_app: 'CORE',
@@ -208,8 +208,8 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
   },
   {
     id: 'SOL-005',
-    type: 'revision_legajo',
-    kind: 'solicitud',
+    concept: 'revision_legajo',
+    type: 'solicitud',
     source_app: 'CORE',
     source_module: 'inbox',
     target_app: 'CORE',
@@ -252,8 +252,8 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
   },
   {
     id: 'SOL-006',
-    type: 'cambio_limite',
-    kind: 'solicitud',
+    concept: 'cambio_limite',
+    type: 'solicitud',
     source_app: 'CORE',
     source_module: 'inbox',
     target_app: 'CORE',
@@ -287,8 +287,8 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
   // ── Active Tareas (kind: 'tarea') exercising the kind axis ──────────
   {
     id: 'TAR-007',
-    type: 'baja_usuario',
-    kind: 'tarea',
+    concept: 'baja_usuario',
+    type: 'tarea',
     source_app: 'CORE',
     source_module: 'inbox',
     target_app: 'CORE',
@@ -319,8 +319,8 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
   },
   {
     id: 'TAR-008',
-    type: 'baja_usuario',
-    kind: 'tarea',
+    concept: 'baja_usuario',
+    type: 'tarea',
     source_app: 'CORE',
     source_module: 'inbox',
     target_app: 'CORE',
@@ -359,8 +359,8 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
   },
   {
     id: 'TAR-009',
-    type: 'baja_usuario',
-    kind: 'tarea',
+    concept: 'baja_usuario',
+    type: 'tarea',
     source_app: 'CORE',
     source_module: 'inbox',
     target_app: 'CORE',

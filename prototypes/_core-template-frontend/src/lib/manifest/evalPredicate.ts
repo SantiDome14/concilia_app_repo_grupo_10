@@ -10,8 +10,8 @@ import type { Predicate } from '@/types/manifest';
 import { resolveField } from './dotPath';
 
 const KNOWN_KEYS = new Set<string>([
-  'record_type_in',
-  'record_type_not_in',
+  'record_concept_in',
+  'record_concept_not_in',
   'field_is_null',
   'field_is_not_null',
   'field_equals',
@@ -30,12 +30,9 @@ function isProd(): boolean {
   return false;
 }
 
-/** Reads the record's type, falling back from `_record_type` to `tipo`. */
-function readRecordType(record: Record<string, unknown>): unknown {
-  if ('_record_type' in record && record._record_type !== undefined) {
-    return record._record_type;
-  }
-  return record.tipo;
+/** Reads the record's business classifier (the `concept` field). */
+function readRecordConcept(record: Record<string, unknown>): unknown {
+  return record.concept;
 }
 
 /** Predicate evaluator entry point. */
@@ -79,15 +76,15 @@ function evalKey(
   record: Record<string, unknown>,
 ): boolean {
   switch (key) {
-    case 'record_type_in': {
+    case 'record_concept_in': {
       const list = predicate[key] as unknown;
-      const recordType = readRecordType(record);
-      return Array.isArray(list) && list.includes(recordType);
+      const concept = readRecordConcept(record);
+      return Array.isArray(list) && list.includes(concept);
     }
-    case 'record_type_not_in': {
+    case 'record_concept_not_in': {
       const list = predicate[key] as unknown;
-      const recordType = readRecordType(record);
-      return Array.isArray(list) && !list.includes(recordType);
+      const concept = readRecordConcept(record);
+      return Array.isArray(list) && !list.includes(concept);
     }
     case 'field_is_null': {
       const path = predicate[key] as unknown;

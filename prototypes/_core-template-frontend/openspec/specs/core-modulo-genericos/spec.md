@@ -344,100 +344,49 @@ The Solicitud canonical model SHALL NOT grow an `execution: manual | programmati
 
 ### Requirement: Inbox MUST expose a typed registry `InboxTypeConfig` declaring `creable_manualmente`, `manual_creation_capability`, `payload_schema`, `closeActions[]`, `triggers_on_create[]`, `available_actions[]`, `push_notification?`, `auto_archive?`
 
-Every app's Inbox SHALL declare a typed registry `INBOX_TYPES_REGISTRY: Readonly<Record<string, InboxTypeConfig>>` in `src/config/inbox-types.ts` (or in an app-specific equivalent that the Inbox page imports). Each registry entry SHALL declare:
+Every app's Inbox SHALL declare a typed registry `INBOX_TYPES_REGISTRY: Readonly<Record<string, InboxTypeConfig>>` in `src/config/inbox-types.ts` (or in an app-specific equivalent that the Inbox page imports). The registry is keyed by `concept` (the business classifier — `Solicitud.concept`). Each registry entry SHALL declare:
 
-- `type: string` — the canonical type identifier matching `Solicitud.type` / `Alerta.type` of records of this type.
-- `kind: InboxKind` — `'solicitud'` or `'tarea'`; mandatory; drives label/badge and closeActions vocabulary.
-- `label: string` — human-readable label of the type.
-- `target_app: string` — the app that owns Solicitudes/Tareas of this type.
+- `concept: string` — the canonical business classifier identifier matching `Solicitud.concept` of records of this kind.
+- `type: InboxType` — `'solicitud'` or `'tarea'`; mandatory; drives label/badge and closeActions vocabulary.
+- `label: string` — human-readable label of the concept.
+- `target_app: string` — the app that owns Solicitudes/Tareas of this concept.
 - `target_role?: string` — capability for routing notifications.
 - `payload_schema: DynamicFormSchema` — the schema that `<DynamicPayloadForm>` consumes to render the create form; consumed by the template's existing `useDynamicForm` composable.
-- `sla_hours?: number` — default SLA window for new records of this type.
-- `creable_manualmente?: boolean` — default `false`; when `true`, the type is creatable from the Inbox main CTA.
+- `sla_hours?: number` — default SLA window for new records of this concept.
+- `creable_manualmente?: boolean` — default `false`; when `true`, the concept is creatable from the Inbox main CTA.
 - `manual_creation_capability?: string` — capability required for manual creation from the Inbox CTA; SHALL be honored even when `creable_manualmente: true` is set.
 - `closeActions: CloseAction[]` — at least one entry; each `{ id, label, terminal_state, requires_comment? }`. The `<ClosureModal>` lists these as the close-action choices.
 - `triggers_on_create?: TriggerSpec[]` — manifest-engine actions to invoke automatically on creation, each with `action_id` + optional `payload_mapping`.
-- `available_actions?: ActionSpec[]` — CTAs that appear in the `<Drawer>` of records of this type, with `enable_when` predicate.
-- `push_notification?` — declares optional canales `browser` / `email` / `slack` (each opt-in per type; in-app badge is always-on, not declared per type).
+- `available_actions?: ActionSpec[]` — CTAs that appear in the `<Drawer>` of records of this concept, with `enable_when` predicate.
+- `push_notification?` — declares optional canales `browser` / `email` / `slack` (each opt-in per concept; in-app badge is always-on, not declared per concept).
 - `auto_archive?` — declarative auto-close rule: `{ condition_ref: string; closure_action: string }`. The engine evaluates `condition_ref` over time and auto-closes the record with `closure_action` when the condition becomes true; `closed_by: 'system'`.
 - `state_labels?: Partial<Record<SolicitudState, string>>` — visual override of state labels; never changes the mechanism.
 
-The registry SHALL be immutable at runtime (`Readonly<...>`). The Inbox page SHALL import the registry and use it to: (a) resolve close-action vocabularies for the `<ClosureModal>`; (b) gate the main CTA (see next Requirement); (c) render labels and badges. Apps SHALL NOT mutate the registry at runtime; new types are added via a fresh declaration + PR.
+The registry SHALL be immutable at runtime (`Readonly<...>`). The Inbox page SHALL import the registry and use it to: (a) resolve close-action vocabularies for the `<ClosureModal>`; (b) gate the main CTA (see next Requirement); (c) render labels and badges. Apps SHALL NOT mutate the registry at runtime; new concepts are added via a fresh declaration + PR.
 
-#### Scenario: A type is creable_manualmente AND the user has the capability
+#### Scenario: A concept is creable_manualmente AND the user has the capability
 
 - **GIVEN** an `InboxTypeConfig` entry for `'aprobacion_pago'` with `creable_manualmente: true` and `manual_creation_capability: 'INBOX_CREATE'`, and a user with `capabilities: ['INBOX_CREATE']`
 - **WHEN** the Inbox page renders
-- **THEN** the type is included in the result of `listCreableTypes(user.capabilities)`; the main CTA surfaces this type in the type-selector wizard
+- **THEN** the concept is included in the result of `listCreableTypes(user.capabilities)`; the main CTA surfaces this concept in the type-selector wizard
 
-#### Scenario: A type is creable_manualmente but the user lacks the capability
+#### Scenario: A concept is creable_manualmente but the user lacks the capability
 
-- **GIVEN** the same type, but a user with `capabilities: []`
+- **GIVEN** the same concept, but a user with `capabilities: []`
 - **WHEN** `listCreableTypes(user.capabilities)` is called
-- **THEN** the type is NOT included in the result; the main CTA does not list it in the type selector
+- **THEN** the concept is NOT included in the result; the main CTA does not list it in the type selector
 
-#### Scenario: A type is NOT creable_manualmente
+#### Scenario: A concept is NOT creable_manualmente
 
 - **GIVEN** an `InboxTypeConfig` entry with `creable_manualmente: false` (or omitted; default is `false`)
 - **WHEN** `listCreableTypes(...)` is called
-- **THEN** the type is NEVER in the result regardless of the user's capabilities; the type can still arrive via API ingestion or recurring series, just not from the manual CTA
+- **THEN** the concept is NEVER in the result regardless of the user's capabilities; the concept can still arrive via API ingestion or recurring series, just not from the manual CTA
 
 #### Scenario: auto_archive closes the record on condition evaluation
 
 - **GIVEN** an `InboxTypeConfig` for `report_dependency_block` with `auto_archive: { condition_ref: 'reportDeps.completed === true', closure_action: 'dependency_resolved' }`
 - **WHEN** the engine evaluates the condition at a later time and it returns true
 - **THEN** the Tarea transitions to `state: 'completed'`, `closure_action: 'dependency_resolved'`, `closed_by: 'system'`, `closed_at: <ts>`; a `TimelineEvent { kind: 'closed', by: 'system' }` is appended
-
----
-
-### Requirement: Inbox MUST expose a main CTA "Crear Solicitud / Tarea" filtered by `InboxTypeConfig.creable_manualmente: true` and `manual_creation_capability`; the label is derived from `kind` of the available types
-
-The Inbox page SHALL render a main CTA in the L1 header (alongside the `<ViewToggle>`) that lets the operator manually create a Solicitud or Tarea of a type declared `creable_manualmente: true` in `INBOX_TYPES_REGISTRY`, gated by the current user's `manual_creation_capability` per type. The CTA SHALL behave as follows:
-
-- **Visibility.** When no entry in `INBOX_TYPES_REGISTRY` declares `creable_manualmente: true`, the CTA SHALL NOT render. When at least one type declares it but the current user has no `manual_creation_capability` of any such type, the CTA SHALL render **disabled** with a tooltip ("Sin permiso para crear") — consistent with the universal-`⋯`-menu pattern of `core-actions-menu` (the CTA never disappears arbitrarily when the registry has creable types; the disabled state communicates lack of capability).
-- **Label.** Derived from the available types (those that pass both filters):
-  - Only `kind: 'solicitud'` types available → label "Crear Solicitud".
-  - Only `kind: 'tarea'` types available → label "Crear Tarea".
-  - Both kinds available → label "Crear" (generic).
-- **Click → wizard.** Clicking opens a 2-step `<InboxCreateDialog>`. Step 1: `<InboxTypeSelector>` lists the filtered types with kind-badge. Step 2: `<DynamicPayloadForm>` renders the payload form from the selected type's `payload_schema` plus common metadata (assignee picker, optional `sla_hours` / `due_at` when the type declares them).
-- **Submit.** Builds a `Solicitud<TPayload>` with `state: 'pendiente'`, `source_app: <current_app>`, `source_module: 'inbox'`, `target_app: <inbox_target>`, `kind`, `payload`, optional `assignee`, optional `due_at`, optional `sla_hours`. Persists. Triggers `triggers_on_create[]` per the type config. Disparates notifications per `push_notification` (in-app always; opt-in canales as declared). Emits an `AuditEntryCTA` with `is_module_cta: true`, `created_record_type: <type>`, `kind: 'cta'`.
-
-The CTA is NOT a row action and is NOT declared in `Manifest.module_ctas[]` — it lives outside the manifest engine because the type-selector wizard requires multi-step state that the single-dialog manifest CTA does not model. The shared audit trail (`useAuditLog()`) is the bridge that keeps the new CTA observable on the same surface as manifest-emitted entries.
-
-#### Scenario: CTA hides when no type is creable_manualmente
-
-- **GIVEN** an `INBOX_TYPES_REGISTRY` where every entry has `creable_manualmente: false` (or omits it)
-- **WHEN** the Inbox page renders
-- **THEN** the main CTA is NOT in the DOM
-
-#### Scenario: CTA renders disabled when the user lacks any matching capability
-
-- **GIVEN** a registry with at least one creable type whose `manual_creation_capability` is `'INBOX_CREATE'`, and the current user has no `INBOX_CREATE` capability
-- **WHEN** the Inbox page renders
-- **THEN** the CTA renders in a disabled state with tooltip "Sin permiso para crear"; clicking is a no-op
-
-#### Scenario: Label is kind-derived
-
-- **GIVEN** two creable types both with `kind: 'solicitud'`
-- **WHEN** the CTA renders
-- **THEN** its label is "Crear Solicitud"
-- **AND GIVEN** the registry adds a third creable type with `kind: 'tarea'`
-- **WHEN** the CTA re-renders
-- **THEN** its label is "Crear" (mixed kinds)
-
-#### Scenario: Submit creates a Solicitud and emits AuditEntryCTA
-
-- **GIVEN** the wizard is on step 2 with a valid form for type `aprobacion_pago` (`kind: 'solicitud'`); user clicks Submit
-- **WHEN** the submit handler runs
-- **THEN** a new Solicitud lands in `solicitudes.value` with `state: 'pendiente'`, populated `payload`, `kind: 'solicitud'`, `target_app` per the registry entry, `source_module: 'inbox'`, `assignee` if the user picked one; AND `useAuditLog().append(...)` is called once with `{ kind: 'cta', is_module_cta: true, created_record_type: 'aprobacion_pago', record_id: <new id>, manifest_key: INBOX_MANIFEST_KEY, ... }`; AND a success toast renders ("Solicitud creada"); AND the wizard closes.
-
-#### Scenario: triggers_on_create fires for the new record
-
-- **GIVEN** a type with `triggers_on_create: [{ action_id: 'fin.crear_factura_borrador', payload_mapping: { ... } }]`
-- **WHEN** a Solicitud of that type is created via the CTA
-- **THEN** the engine records each declared trigger as `triggered_actions[]` entries on the new Solicitud with `status: 'pending'`; a `TimelineEvent { kind: 'action_invoked', label: 'Trigger: fin.crear_factura_borrador' }` is appended (V1 — the actual action invocation through the manifest engine is V2-scoped per Design Decision 9 of this change)
-
----
 
 ### Requirement: Solicitud `assignee` is distinct from `owner`; both are independently mutable in non-terminal states
 
@@ -556,42 +505,6 @@ Manual generation (`/Generar` clicked) follows the dependency-block rule regardl
 - **WHEN** the engine evaluates dependencies
 - **THEN** generation is BLOCKED; a toast names the blocking app + module + type; a Tarea `report_dependency_block` is emitted to the `blocking_app` Inbox; no `ReportRun` is persisted
 
-### Requirement: Inbox views MUST surface the `kind` discriminator as a badge and the L3 filter row MUST expose a kind filter
-
-The Inbox page SHALL render the `kind` (`'solicitud' | 'tarea'`) discriminator of every visible record as a `<Badge>` per the canonical `Solicitud` / `Tarea` labels in **all four** surfaces: list rows, card headers, kanban cards, and the Drawer header area. The L3 filter row SHALL also expose a **kind filter** (separate from the Tipo and Estado filters; native `<select>` is permitted at the L3 row per the existing Inbox convention; `<Segmenter>` is forbidden because the Inbox spec disallows record-set segmentation). The kind filter SHALL expose three options regardless of how many entries of each kind exist in the dataset: `"Todos"`, `"Solicitudes"`, `"Tareas"`. When the filter is `"Todos"` (or unset) the view SHALL render records of both kinds; when set to a specific kind, the view SHALL hide records of the other kind. The kind filter is independent of and AND-merges with the Tipo and Estado filters.
-
-#### Scenario: Kind badge appears in every view
-
-- **GIVEN** a Solicitud with `kind: 'solicitud'` and a Tarea with `kind: 'tarea'` both present in the dataset
-- **WHEN** the Inbox page renders
-- **THEN** the row of the Solicitud surfaces a `<Badge>` labeled `"Solicitud"` (and the row of the Tarea a `<Badge>` labeled `"Tarea"`) in the list view, the cards view, the kanban view, and on the header of the Drawer when opened — four surfaces total
-
-#### Scenario: Kind filter narrows the visible dataset to one kind
-
-- **GIVEN** the L3 filter row with `Kind = "Tareas"` selected
-- **WHEN** `filteredSolicitudes` recomputes
-- **THEN** only records with `kind: 'tarea'` are rendered in the active view; the L2 KPI counters recompute over the narrowed set
-
-#### Scenario: Kind filter "Todos" renders both kinds simultaneously
-
-- **GIVEN** the L3 filter row with `Kind = "Todos"`
-- **WHEN** `filteredSolicitudes` recomputes
-- **THEN** both Solicitudes and Tareas render together; each row carries its own kind badge so the user can disambiguate at a glance
-
-#### Scenario: Kind filter coexists with the Tipo and Estado filters
-
-- **GIVEN** the L3 filter row with `Kind = "Solicitudes"`, `Tipo = "aprobacion_pago"`, `Estado = "pendiente"`
-- **WHEN** `filteredSolicitudes` recomputes
-- **THEN** only records with `kind: 'solicitud' AND type === 'aprobacion_pago' AND state === 'pendiente'` are rendered; all three filters AND-merge
-
-#### Scenario: Hiding the kind badge from any of the four surfaces is a contract violation
-
-- **GIVEN** a PR proposes removing the kind badge from the list view (or any of the other three surfaces)
-- **WHEN** PR review checks the change against this Requirement
-- **THEN** the change is REJECTED — the kind discriminator MUST be visible on all four surfaces simultaneously
-
----
-
 ### Requirement: Drawer MUST render a `triggered_actions` panel when the Solicitud carries one or more entries
 
 When the Drawer opens for a Solicitud whose `triggered_actions[]` is non-empty, the Drawer body SHALL render a labeled section (`"Acciones disparadas"` — or equivalent) listing every entry. Each row SHALL surface:
@@ -632,7 +545,7 @@ The panel SHALL be hidden entirely when `triggered_actions` is `undefined` or an
 
 ### Requirement: Inbox houses Solicitudes; the canonical TS identifier MUST be Solicitud<TPayload>
 
-The Inbox module SHALL manage entities named `Solicitud` in TypeScript code; the canonical identifier is the **generic** `Solicitud<TPayload = unknown>` exported from `src/types/genericos.ts` and SHALL NOT be aliased to "Item", "Ticket", or any other generic noun. The interface SHALL declare required fields `id: string`, `type: string`, `kind: InboxKind`, `source_app: string`, `source_module: string`, `target_app: string`, `owner: string | null`, `state: SolicitudState`, `payload: TPayload`, `timeline: TimelineEvent[]`, `comments: Comment[]`, `created_at: string`, `updated_at: string`; and optional fields `target_role?: string`, `assignee?: string | null`, `severity?: Severity`, `sla_hours?: number | null`, `due_at?: number`, `recurring_definition_id?: string`, `triggered_actions?: TriggeredAction[]`, `closure_action?: string`, `closure_comment?: string`, `closed_by?: string`, `closed_at?: number`. The `kind` field is the canonical discriminator between Solicitudes (third-party-requested) and Tareas (self-issued); both share the same engine, lifecycle, and `<ClosureModal>` mechanics. The Inbox page SHALL NOT render a `<Segmenter>` for record-set segmentation; users narrow the visible records via the L3 filter row (Tipo / Estado / `kind` / Mías). The detail surface for any Solicitud/Tarea SHALL be the side `<Drawer>` (`meta.detail = 'drawer'`); a centered modal is forbidden.
+The Inbox module SHALL manage entities named `Solicitud` in TypeScript code; the canonical identifier is the **generic** `Solicitud<TPayload = unknown>` exported from `src/types/genericos.ts` and SHALL NOT be aliased to "Item", "Ticket", or any other generic noun. The interface SHALL declare required fields `id: string`, `concept: string`, `type: InboxType`, `source_app: string`, `source_module: string`, `target_app: string`, `owner: string | null`, `state: SolicitudState`, `payload: TPayload`, `timeline: TimelineEvent[]`, `comments: Comment[]`, `created_at: string`, `updated_at: string`; and optional fields `target_role?: string`, `assignee?: string | null`, `severity?: Severity`, `sla_hours?: number | null`, `due_at?: number`, `recurring_definition_id?: string`, `triggered_actions?: TriggeredAction[]`, `closure_action?: string`, `closure_comment?: string`, `closed_by?: string`, `closed_at?: number`. The `type: InboxType` field (canonical values `'solicitud' | 'tarea'`) is the **discriminator** between Solicitudes (third-party-requested) and Tareas (self-issued); both share the same engine, lifecycle, and `<ClosureModal>` mechanics. The `concept: string` field (e.g. `'aprobacion_pago'`, `'revision_legajo'`) is the **business classifier** — what this Solicitud is about — and matches the key of an entry in `INBOX_TYPES_REGISTRY`. The Inbox page SHALL NOT render a `<Segmenter>` for record-set segmentation; users narrow the visible records via the L3 filter row (Concepto / Estado / Tipo / Mías). The detail surface for any Solicitud/Tarea SHALL be the side `<Drawer>` (`meta.detail = 'drawer'`); a centered modal is forbidden.
 
 #### Scenario: Solicitud<TPayload> is imported from the canonical types file
 
@@ -640,10 +553,10 @@ The Inbox module SHALL manage entities named `Solicitud` in TypeScript code; the
 - **WHEN** the file imports the canonical shape
 - **THEN** the import statement reads `import type { Solicitud } from '@/types/genericos';`; apps that need typed payload pin it via `type KycSolicitud = Solicitud<KycPayload>`; redefining the base generic in app code is forbidden
 
-#### Scenario: kind is the discriminator between Solicitud and Tarea
+#### Scenario: type is the discriminator between Solicitud and Tarea
 
 - **GIVEN** two records of the same engine
-- **WHEN** one is created from a CLP CTA targeting OPS (`kind: 'solicitud'`) and the other from a recurring series internal to OPS (`kind: 'tarea'`)
+- **WHEN** one is created from a CLP CTA targeting OPS (`type: 'solicitud'`) and the other from a recurring series internal to OPS (`type: 'tarea'`)
 - **THEN** both share `state`, `timeline`, `comments`, `closeActions[]` mechanics; the only differences are the label/badge in the UI and the vocabulary of the closeActions
 
 #### Scenario: assignee is distinct from owner
@@ -656,13 +569,13 @@ The Inbox module SHALL manage entities named `Solicitud` in TypeScript code; the
 
 - **GIVEN** an app declares `type WithdrawalSolicitud = Solicitud<{ client: string; amount: number; currency: string; }>`
 - **WHEN** the app reads `s.payload.amount`
-- **THEN** the field is typed as `number`; TypeScript narrows correctly without `as` casts; the base fields (`id`, `type`, `kind`, `target_app`, `state`, etc.) remain required
+- **THEN** the field is typed as `number`; TypeScript narrows correctly without `as` casts; the base fields (`id`, `concept`, `type`, `target_app`, `state`, etc.) remain required
 
-#### Scenario: Removing kind is a contract violation
+#### Scenario: Removing type or concept is a contract violation
 
-- **GIVEN** an app introduces `interface Solicitud { ... }` without a `kind` field, or reads existing Solicitudes ignoring `kind`
+- **GIVEN** an app introduces `interface Solicitud { ... }` without a `type` field or without a `concept` field
 - **WHEN** PR review checks the change
-- **THEN** the change is REJECTED — `kind` is the canonical discriminator and the UI MUST render the correct badge per `kind`
+- **THEN** the change is REJECTED — `type` is the canonical discriminator (`'solicitud' | 'tarea'`) and `concept` is the business classifier; the UI MUST render the correct badge per `type` and the engine MUST resolve `InboxTypeConfig` via `concept`
 
 ---
 
@@ -736,6 +649,91 @@ When a `Report` declares a `dependencies[]` list and the user attempts to genera
 - **GIVEN** a developer proposes routing `REPORT_DEPENDENCY` events to the destination app's Alertas instead of the Inbox
 - **WHEN** PR review checks the proposal against this Requirement
 - **THEN** the change is REJECTED — the 2026-05-11 product decision routes the event to the Inbox as a Tarea; the Alertas route is removed
+
+---
+
+### Requirement: Inbox MUST expose a main CTA "Crear Solicitud / Tarea" filtered by InboxTypeConfig.creable_manualmente: true and manual_creation_capability; the label is derived from type of the available configs
+
+The Inbox page SHALL render a main CTA in the L1 header (alongside the `<ViewToggle>`) that lets the operator manually create a Solicitud or Tarea of a type declared `creable_manualmente: true` in `INBOX_TYPES_REGISTRY`, gated by the current user's `manual_creation_capability` per type. The CTA SHALL behave as follows:
+
+- **Visibility.** When no entry in `INBOX_TYPES_REGISTRY` declares `creable_manualmente: true`, the CTA SHALL NOT render. When at least one type declares it but the current user has no `manual_creation_capability` of any such type, the CTA SHALL render **disabled** with a tooltip ("Sin permiso para crear") — consistent with the universal-`⋯`-menu pattern of `core-actions-menu` (the CTA never disappears arbitrarily when the registry has creable types; the disabled state communicates lack of capability).
+- **Label.** Derived from the available types (those that pass both filters):
+  - Only `kind: 'solicitud'` types available → label "Crear Solicitud".
+  - Only `kind: 'tarea'` types available → label "Crear Tarea".
+  - Both kinds available → label "Crear" (generic).
+- **Click → wizard.** Clicking opens a 2-step `<InboxCreateDialog>`. Step 1: `<InboxTypeSelector>` lists the filtered types with kind-badge. Step 2: `<DynamicPayloadForm>` renders the payload form from the selected type's `payload_schema` plus common metadata (assignee picker, optional `sla_hours` / `due_at` when the type declares them).
+- **Submit.** Builds a `Solicitud<TPayload>` with `state: 'pendiente'`, `source_app: <current_app>`, `source_module: 'inbox'`, `target_app: <inbox_target>`, `kind`, `payload`, optional `assignee`, optional `due_at`, optional `sla_hours`. Persists. Triggers `triggers_on_create[]` per the type config. Disparates notifications per `push_notification` (in-app always; opt-in canales as declared). Emits an `AuditEntryCTA` with `is_module_cta: true`, `created_record_type: <type>`, `kind: 'cta'`.
+
+The CTA is NOT a row action and is NOT declared in `Manifest.module_ctas[]` — it lives outside the manifest engine because the type-selector wizard requires multi-step state that the single-dialog manifest CTA does not model. The shared audit trail (`useAuditLog()`) is the bridge that keeps the new CTA observable on the same surface as manifest-emitted entries.
+
+#### Scenario: CTA hides when no type is creable_manualmente
+
+- **GIVEN** an `INBOX_TYPES_REGISTRY` where every entry has `creable_manualmente: false` (or omits it)
+- **WHEN** the Inbox page renders
+- **THEN** the main CTA is NOT in the DOM
+
+#### Scenario: CTA renders disabled when the user lacks any matching capability
+
+- **GIVEN** a registry with at least one creable type whose `manual_creation_capability` is `'INBOX_CREATE'`, and the current user has no `INBOX_CREATE` capability
+- **WHEN** the Inbox page renders
+- **THEN** the CTA renders in a disabled state with tooltip "Sin permiso para crear"; clicking is a no-op
+
+#### Scenario: Label is kind-derived
+
+- **GIVEN** two creable types both with `kind: 'solicitud'`
+- **WHEN** the CTA renders
+- **THEN** its label is "Crear Solicitud"
+- **AND GIVEN** the registry adds a third creable type with `kind: 'tarea'`
+- **WHEN** the CTA re-renders
+- **THEN** its label is "Crear" (mixed kinds)
+
+#### Scenario: Submit creates a Solicitud and emits AuditEntryCTA
+
+- **GIVEN** the wizard is on step 2 with a valid form for type `aprobacion_pago` (`kind: 'solicitud'`); user clicks Submit
+- **WHEN** the submit handler runs
+- **THEN** a new Solicitud lands in `solicitudes.value` with `state: 'pendiente'`, populated `payload`, `kind: 'solicitud'`, `target_app` per the registry entry, `source_module: 'inbox'`, `assignee` if the user picked one; AND `useAuditLog().append(...)` is called once with `{ kind: 'cta', is_module_cta: true, created_record_type: 'aprobacion_pago', record_id: <new id>, manifest_key: INBOX_MANIFEST_KEY, ... }`; AND a success toast renders ("Solicitud creada"); AND the wizard closes.
+
+#### Scenario: triggers_on_create fires for the new record
+
+- **GIVEN** a type with `triggers_on_create: [{ action_id: 'fin.crear_factura_borrador', payload_mapping: { ... } }]`
+- **WHEN** a Solicitud of that type is created via the CTA
+- **THEN** the engine records each declared trigger as `triggered_actions[]` entries on the new Solicitud with `status: 'pending'`; a `TimelineEvent { kind: 'action_invoked', label: 'Trigger: fin.crear_factura_borrador' }` is appended (V1 — the actual action invocation through the manifest engine is V2-scoped per Design Decision 9 of this change)
+
+---
+
+### Requirement: Inbox views MUST surface the type discriminator as a badge and the L3 filter row MUST expose a type filter
+
+The Inbox page SHALL render the `kind` (`'solicitud' | 'tarea'`) discriminator of every visible record as a `<Badge>` per the canonical `Solicitud` / `Tarea` labels in **all four** surfaces: list rows, card headers, kanban cards, and the Drawer header area. The L3 filter row SHALL also expose a **kind filter** (separate from the Tipo and Estado filters; native `<select>` is permitted at the L3 row per the existing Inbox convention; `<Segmenter>` is forbidden because the Inbox spec disallows record-set segmentation). The kind filter SHALL expose three options regardless of how many entries of each kind exist in the dataset: `"Todos"`, `"Solicitudes"`, `"Tareas"`. When the filter is `"Todos"` (or unset) the view SHALL render records of both kinds; when set to a specific kind, the view SHALL hide records of the other kind. The kind filter is independent of and AND-merges with the Tipo and Estado filters.
+
+#### Scenario: Kind badge appears in every view
+
+- **GIVEN** a Solicitud with `kind: 'solicitud'` and a Tarea with `kind: 'tarea'` both present in the dataset
+- **WHEN** the Inbox page renders
+- **THEN** the row of the Solicitud surfaces a `<Badge>` labeled `"Solicitud"` (and the row of the Tarea a `<Badge>` labeled `"Tarea"`) in the list view, the cards view, the kanban view, and on the header of the Drawer when opened — four surfaces total
+
+#### Scenario: Kind filter narrows the visible dataset to one kind
+
+- **GIVEN** the L3 filter row with `Kind = "Tareas"` selected
+- **WHEN** `filteredSolicitudes` recomputes
+- **THEN** only records with `kind: 'tarea'` are rendered in the active view; the L2 KPI counters recompute over the narrowed set
+
+#### Scenario: Kind filter "Todos" renders both kinds simultaneously
+
+- **GIVEN** the L3 filter row with `Kind = "Todos"`
+- **WHEN** `filteredSolicitudes` recomputes
+- **THEN** both Solicitudes and Tareas render together; each row carries its own kind badge so the user can disambiguate at a glance
+
+#### Scenario: Kind filter coexists with the Tipo and Estado filters
+
+- **GIVEN** the L3 filter row with `Kind = "Solicitudes"`, `Tipo = "aprobacion_pago"`, `Estado = "pendiente"`
+- **WHEN** `filteredSolicitudes` recomputes
+- **THEN** only records with `kind: 'solicitud' AND type === 'aprobacion_pago' AND state === 'pendiente'` are rendered; all three filters AND-merge
+
+#### Scenario: Hiding the kind badge from any of the four surfaces is a contract violation
+
+- **GIVEN** a PR proposes removing the kind badge from the list view (or any of the other three surfaces)
+- **WHEN** PR review checks the change against this Requirement
+- **THEN** the change is REJECTED — the kind discriminator MUST be visible on all four surfaces simultaneously
 
 ---
 

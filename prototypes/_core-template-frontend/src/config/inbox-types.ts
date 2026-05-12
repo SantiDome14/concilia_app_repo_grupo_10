@@ -29,8 +29,8 @@
 import type { InboxTypeConfig } from '@/types/genericos';
 
 const APROBACION_PAGO: InboxTypeConfig = {
-  type: 'aprobacion_pago',
-  kind: 'solicitud',
+  concept: 'aprobacion_pago',
+  type: 'solicitud',
   label: 'Aprobación de pago',
   target_app: 'CORE',
   target_role: 'FIN_OFFICER',
@@ -93,8 +93,8 @@ const APROBACION_PAGO: InboxTypeConfig = {
 };
 
 const REVISION_LEGAJO: InboxTypeConfig = {
-  type: 'revision_legajo',
-  kind: 'solicitud',
+  concept: 'revision_legajo',
+  type: 'solicitud',
   label: 'Revisión de legajo',
   target_app: 'CORE',
   target_role: 'LEX_OFFICER',
@@ -129,8 +129,8 @@ const REVISION_LEGAJO: InboxTypeConfig = {
 };
 
 const BAJA_USUARIO: InboxTypeConfig = {
-  type: 'baja_usuario',
-  kind: 'tarea',
+  concept: 'baja_usuario',
+  type: 'tarea',
   label: 'Baja de usuario',
   target_app: 'CORE',
   target_role: 'ADMIN_OPS',
@@ -165,8 +165,8 @@ const BAJA_USUARIO: InboxTypeConfig = {
 };
 
 const CAMBIO_LIMITE: InboxTypeConfig = {
-  type: 'cambio_limite',
-  kind: 'solicitud',
+  concept: 'cambio_limite',
+  type: 'solicitud',
   label: 'Cambio de límite',
   target_app: 'CORE',
   target_role: 'FIN_OFFICER',

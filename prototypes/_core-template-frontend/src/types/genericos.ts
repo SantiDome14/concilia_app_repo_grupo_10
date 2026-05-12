@@ -34,6 +34,12 @@
 //      Observability alerts only. The Solicitud model MUST NOT grow an
 //      `execution: manual | programmatic` discriminator — every record
 //      here is implicitly human-action work.
+//
+// Naming convention (2026-05-12 rename):
+//   - `type: InboxType` is the Solicitud-vs-Tarea discriminator.
+//   - `concept: string` is the business classifier (e.g. 'aprobacion_pago').
+//   `InboxKind` was the previous name for `InboxType`; the old `type`
+//   field carried the business classifier and now lives as `concept`.
 // ════════════════════════════════════════════════════════════════════
 
 import type { TimelineEvent, Comment } from './drawer';
@@ -47,7 +53,7 @@ export type { TimelineEvent, Comment } from './drawer';
 // ────────────────────────────────────────────────────────────────────
 
 /** Discriminator between Solicitud (third-party-requested) and Tarea (self-issued). */
-export type InboxKind = 'solicitud' | 'tarea';
+export type InboxType = 'solicitud' | 'tarea';
 
 /** Open string union — defaults are the canonical four; apps MAY override. */
 export type SolicitudState =
@@ -81,9 +87,10 @@ export type TriggeredAction = {
  */
 export type Solicitud<TPayload = unknown> = {
   id: string;
-  type: string;
-  /** Mandatory discriminator; UI renders the matching badge per kind. */
-  kind: InboxKind;
+  /** Business classifier — e.g. 'aprobacion_pago', 'revision_legajo'. */
+  concept: string;
+  /** Mandatory discriminator; UI renders the matching badge per type. */
+  type: InboxType;
   source_app: string;
   source_module: string;
   /** App that owns and processes records of this type. */
@@ -100,7 +107,7 @@ export type Solicitud<TPayload = unknown> = {
   due_at?: number;
   state: SolicitudState;
   severity?: Severity;
-  /** Type-specific structured payload; rendered per the type's payload_schema. */
+  /** Concept-specific structured payload; rendered per the concept's payload_schema. */
   payload: TPayload;
   /** Set on terminal transition; references InboxTypeConfig.closeActions[].id. */
   closure_action?: string;
@@ -156,16 +163,18 @@ export type AutoArchiveConfig = {
 };
 
 /**
- * Type-level configuration of a Solicitud / Tarea. Apps declare a registry
- * keyed by `type` (typically in `src/config/inbox-types.ts`). The Inbox
+ * Concept-level configuration of a Solicitud / Tarea. Apps declare a registry
+ * keyed by `concept` (typically in `src/config/inbox-types.ts`). The Inbox
  * engine reads this registry to: (a) render close-action choices in the
  * `<ClosureModal>`; (b) gate the main "Crear Solicitud / Tarea" CTA;
  * (c) drive notifications and triggers on creation; (d) auto-archive
  * records when the declared condition becomes true.
  */
 export type InboxTypeConfig = {
-  type: string;
-  kind: InboxKind;
+  /** Business classifier — matches `Solicitud.concept`. */
+  concept: string;
+  /** Discriminator — 'solicitud' or 'tarea'. */
+  type: InboxType;
   label: string;
   target_app: string;
   target_role?: string;
@@ -200,7 +209,8 @@ export type InboxTypeConfig = {
  */
 export type RecurringInboxItemDefinition = {
   id: string;
-  type: string;
+  /** Concept of the Solicitud/Tarea this series creates — references InboxTypeConfig.concept. */
+  concept: string;
   label: string;
   target_app: string;
   target_role?: string;
@@ -433,9 +443,9 @@ export function isSolicitud(value: unknown): value is Solicitud {
   const v = value as Record<string, unknown>;
   return (
     typeof v.id === 'string' &&
+    typeof v.concept === 'string' &&
     typeof v.type === 'string' &&
-    typeof v.kind === 'string' &&
-    (v.kind === 'solicitud' || v.kind === 'tarea') &&
+    (v.type === 'solicitud' || v.type === 'tarea') &&
     typeof v.source_app === 'string' &&
     typeof v.target_app === 'string' &&
     typeof v.state === 'string' &&

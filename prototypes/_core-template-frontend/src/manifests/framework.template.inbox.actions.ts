@@ -33,7 +33,7 @@ export const INBOX_MANIFEST: Manifest = {
       icon: 'user',
       target_field: 'assignee',
       show_when: {
-        record_type_in: [
+        record_concept_in: [
           'aprobacion_pago',
           'revision_legajo',
           'baja_usuario',
@@ -80,7 +80,7 @@ export const INBOX_MANIFEST: Manifest = {
       icon: 'play',
       target_field: 'owner',
       show_when: {
-        record_type_in: [
+        record_concept_in: [
           'aprobacion_pago',
           'revision_legajo',
           'baja_usuario',

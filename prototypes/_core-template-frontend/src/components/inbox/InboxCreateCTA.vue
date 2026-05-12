@@ -44,9 +44,9 @@ const visible = computed(() => registryHasCreable.value);
 const enabled = computed(() => creableTypes.value.length > 0);
 
 const label = computed(() => {
-  const kinds = new Set(creableTypes.value.map((t) => t.kind));
-  if (kinds.size === 1) {
-    return kinds.has('tarea') ? 'Crear Tarea' : 'Crear Solicitud';
+  const types = new Set(creableTypes.value.map((t) => t.type));
+  if (types.size === 1) {
+    return types.has('tarea') ? 'Crear Tarea' : 'Crear Solicitud';
   }
   return 'Crear';
 });

@@ -25,7 +25,7 @@ import { INBOX_MANIFEST_KEY } from '@/manifests/framework.template.inbox.actions
 import { INBOX_SOLICITUDES } from '@/mocks/genericos/inbox';
 import { CURRENT_USER, findUser } from '@/mocks/genericos/users';
 import type {
-  InboxKind,
+  InboxType,
   Solicitud,
   SolicitudState,
   TimelineEvent,
@@ -57,12 +57,12 @@ function solicitudOwnerName(s: Solicitud): string {
   return findUser(s.owner)?.name ?? '';
 }
 
-function kindLabel(kind: InboxKind): string {
-  return kind === 'tarea' ? 'Tarea' : 'Solicitud';
+function typeLabel(type: InboxType): string {
+  return type === 'tarea' ? 'Tarea' : 'Solicitud';
 }
 
-function kindVariant(kind: InboxKind): 'info' | 'neutral' {
-  return kind === 'tarea' ? 'neutral' : 'info';
+function typeVariant(type: InboxType): 'info' | 'neutral' {
+  return type === 'tarea' ? 'neutral' : 'info';
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -87,9 +87,9 @@ const inbox = useManifestModule(INBOX_MANIFEST_KEY);
 // ─── Page state ──────────────────────────────────────────────────────
 const view = ref<ViewMode>('list');
 const search = ref('');
-const filterType = ref<string>('');
+const filterConcept = ref<string>('');
 const filterState = ref<string>('');
-const filterKind = ref<'' | InboxKind>('');
+const filterType = ref<'' | InboxType>('');
 
 // ─── Reactive dataset (mock-backed) ──────────────────────────────────
 const solicitudes = ref<Solicitud[]>(
@@ -98,17 +98,17 @@ const solicitudes = ref<Solicitud[]>(
 
 const TERMINAL_STATES: SolicitudState[] = ['completed', 'rejected'];
 
-const ACTIVE_TYPES = computed(() => {
+const ACTIVE_CONCEPTS = computed(() => {
   const set = new Set<string>();
-  for (const s of solicitudes.value) set.add(s.type);
+  for (const s of solicitudes.value) set.add(s.concept);
   return Array.from(set).sort();
 });
 
 const filteredSolicitudes = computed<Solicitud[]>(() => {
   const term = search.value.trim().toLowerCase();
   return solicitudes.value.filter((s) => {
-    if (filterKind.value && s.kind !== filterKind.value) return false;
     if (filterType.value && s.type !== filterType.value) return false;
+    if (filterConcept.value && s.concept !== filterConcept.value) return false;
     if (filterState.value && s.state !== filterState.value) return false;
     if (term) {
       const haystack = `${s.id} ${solicitudTitle(s)} ${solicitudSummary(s)}`.toLowerCase();
@@ -387,23 +387,23 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
       </div>
       <div class="flex-1" />
       <select
-        v-model="filterKind"
-        class="rounded-md border border-b-2 bg-card px-3 py-2 text-xs text-t-2"
-        aria-label="Filtrar por kind"
-        data-testid="filter-kind"
-      >
-        <option value="">Kind · Todos</option>
-        <option value="solicitud">Solicitudes</option>
-        <option value="tarea">Tareas</option>
-      </select>
-      <select
         v-model="filterType"
         class="rounded-md border border-b-2 bg-card px-3 py-2 text-xs text-t-2"
         aria-label="Filtrar por tipo"
         data-testid="filter-type"
       >
         <option value="">Tipo · Todos</option>
-        <option v-for="t in ACTIVE_TYPES" :key="t" :value="t">{{ t }}</option>
+        <option value="solicitud">Solicitudes</option>
+        <option value="tarea">Tareas</option>
+      </select>
+      <select
+        v-model="filterConcept"
+        class="rounded-md border border-b-2 bg-card px-3 py-2 text-xs text-t-2"
+        aria-label="Filtrar por concepto"
+        data-testid="filter-concept"
+      >
+        <option value="">Concepto · Todos</option>
+        <option v-for="c in ACTIVE_CONCEPTS" :key="c" :value="c">{{ c }}</option>
       </select>
       <select
         v-model="filterState"
@@ -436,9 +436,9 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
           <thead>
             <tr class="border-b border-b-2">
               <th class="px-[18px] py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">ID</th>
-              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Kind</th>
-              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Título</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Tipo</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Título</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Concepto</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Origen</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Estado</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">SLA</th>
@@ -458,10 +458,10 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
                 <span class="font-mono text-xs text-t-3">{{ s.id }}</span>
               </td>
               <td class="px-3.5 py-2.5">
-                <Badge :variant="kindVariant(s.kind)">{{ kindLabel(s.kind) }}</Badge>
+                <Badge :variant="typeVariant(s.type)">{{ typeLabel(s.type) }}</Badge>
               </td>
               <td class="px-3.5 py-2.5 text-[13px] font-semibold text-t-2">{{ solicitudTitle(s) }}</td>
-              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ s.type }}</td>
+              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ s.concept }}</td>
               <td class="px-3.5 py-2.5 text-xs text-t-3">{{ s.source_module }}</td>
               <td class="px-3.5 py-2.5">
                 <Badge :variant="statusVariant(s.state)">{{ stateLabel(s.state) }}</Badge>
@@ -510,7 +510,7 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
               <span class="font-mono text-[11px] text-t-4">{{ s.id }}</span>
               <span class="truncate text-sm font-semibold text-t-1">{{ solicitudTitle(s) }}</span>
             </div>
-            <Badge :variant="kindVariant(s.kind)">{{ kindLabel(s.kind) }}</Badge>
+            <Badge :variant="typeVariant(s.type)">{{ typeLabel(s.type) }}</Badge>
             <Badge :variant="statusVariant(s.state)">{{ stateLabel(s.state) }}</Badge>
             <span @click.stop>
               <ManifestActionsMenu
@@ -524,8 +524,8 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
           <template #body>
             <p class="line-clamp-3 text-xs text-t-3">{{ solicitudSummary(s) || '—' }}</p>
             <div class="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[11px]">
-              <span class="text-t-4">Tipo</span>
-              <span class="text-t-2">{{ s.type }}</span>
+              <span class="text-t-4">Concepto</span>
+              <span class="text-t-2">{{ s.concept }}</span>
               <span class="text-t-4">Owner</span>
               <span class="text-t-2">{{ solicitudOwnerName(s) || '—' }}</span>
             </div>
@@ -562,8 +562,8 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
                   <span class="font-mono text-[11px] text-t-4">{{ (record as Solicitud).id }}</span>
                   <span class="truncate text-sm font-semibold text-t-1">{{ solicitudTitle(record as Solicitud) }}</span>
                 </div>
-                <Badge :variant="kindVariant((record as Solicitud).kind)">
-                  {{ kindLabel((record as Solicitud).kind) }}
+                <Badge :variant="typeVariant((record as Solicitud).type)">
+                  {{ typeLabel((record as Solicitud).type) }}
                 </Badge>
                 <span @click.stop>
                   <ManifestActionsMenu
@@ -622,16 +622,16 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
         </h3>
         <div class="grid grid-cols-2 gap-2.5 text-sm">
           <div class="rounded-md border border-b-2 bg-[#111] p-3">
-            <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Kind</div>
+            <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Tipo</div>
             <div>
-              <Badge :variant="kindVariant(drawerSolicitud.kind)">
-                {{ kindLabel(drawerSolicitud.kind) }}
+              <Badge :variant="typeVariant(drawerSolicitud.type)">
+                {{ typeLabel(drawerSolicitud.type) }}
               </Badge>
             </div>
           </div>
           <div class="rounded-md border border-b-2 bg-[#111] p-3">
-            <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Tipo</div>
-            <div class="text-[13px] font-semibold text-t-2">{{ drawerSolicitud.type }}</div>
+            <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Concepto</div>
+            <div class="text-[13px] font-semibold text-t-2">{{ drawerSolicitud.concept }}</div>
           </div>
           <div class="rounded-md border border-b-2 bg-[#111] p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Origen</div>
