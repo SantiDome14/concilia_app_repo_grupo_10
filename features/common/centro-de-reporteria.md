@@ -3,7 +3,7 @@ aplicacion: COMMON
 status: Definida
 owner: Yasmani Rodriguez
 created_at: 2026-05-11
-updated_at: 2026-05-11
+updated_at: 2026-05-12
 req: REQ-59
 discovery: core-modulos-transversales-discovery.md
 productos_afectados: [TRD, OPS, LEX, CLP, FIN]
@@ -316,6 +316,7 @@ Vinculante. Solicitudes incompletas se rechazan.
 | 10 | 2026-05-11 | **Bifurcación por `allows_auto_generation` para "reporte próximo a emitir":** `true` → Alerta `reporte_proximo_emision_auto`; `false` → Tarea `reporte_proximo_emision_manual` al Inbox. Razonamiento: un reporte manual próximo a emitir requiere acción humana específica (la propia generación), no es solo una condición a anunciar |
 | 11 | 2026-05-11 | **`ReportRun.dependencies_unmet[]`** — cuando un reporte con `allows_auto_generation: true` se genera con dependencias no completadas, persiste snapshot de las dependencias pendientes al momento del run. Emite Alerta `reporte_dependencias_incompletas` al consumidor + Tarea `report_dependency_block` al `blocking_app` |
 | 12 | 2026-05-11 | **`ReportDependency.recurring_definition_id?`** — cuando la dependencia es una instancia específica de una serie recurrente del Inbox (REQ-71), se referencia por el ID de la definición. Permite vincular reportería regulatoria con tareas operativas recurrentes (ej: reporte UIF depende de `daily_reconciliation` del día previo) |
+| 13 | 2026-05-12 | **Alineamiento con principio "Wizard of Oz arquitectónico":** el invocador del endpoint de Reportes no decide la ruta de ejecución. El servicio decide internamente si la generación es completamente programática (CRON sin dependencias bloqueantes) o si requiere intervención humana (emite Tareas al Centro de Solicitudes: `report_dependency_block`, `reporte_proximo_emision_manual`). Consistente con el modelo del Centro de Solicitudes (`centro-de-solicitudes.md` §"Principio arquitectónico: capacidades, no rutas") |
 
 ---
 

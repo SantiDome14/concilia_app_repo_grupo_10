@@ -3,7 +3,7 @@ aplicacion: COMMON
 status: Definida
 owner: Yasmani Rodriguez
 created_at: 2026-05-11
-updated_at: 2026-05-11
+updated_at: 2026-05-12
 req: REQ-71
 discovery: core-modulos-transversales-discovery.md
 productos_afectados: [TRD, OPS, LEX, CLP, FIN]
@@ -18,6 +18,30 @@ Centro transversal del backoffice de Ardua donde aterriza **toda Solicitud o Tar
 Reemplaza la dispersión actual (Slack, correo, hilos sueltos, planillas) por un repositorio formal con: estados canónicos, audit trail, asignación, motor de routing por capability, triggers automáticos, CTAs en Drawer, auto-archive, series recurrentes, y notificaciones multi-canal.
 
 **Umbrella:** Centro de Solicitudes. La UI muestra **dos categorías** (Solicitudes / Tareas) diferenciadas por label/badge. **El motor es uno solo.** La diferencia entre `kind: 'solicitud'` y `kind: 'tarea'` es semántica y de presentación; la mecánica (estados, transiciones, `<ClosureModal>`, audit trail, triggers, routing) es idéntica.
+
+---
+
+## Principio arquitectónico: capacidades, no rutas
+
+Un CTA externo (en CLP, Pago Directo, RFQ Gateway, etc.) **invoca una capacidad** del `target_app`, no una ruta de ejecución específica. La capacidad decide internamente cómo se ejecuta:
+
+| Decisión interna de la capacidad | Resultado para el CTA |
+|---|---|
+| Integración directa (sin intervención humana) | Resultado inmediato, no aparece en el Centro |
+| Crear Solicitud/Tarea en el Centro | Resultado eventual; el CTA se suscribe al estado y muestra "en proceso" / "completado" / "rechazado" al usuario externo |
+
+Esto habilita el patrón **"Wizard of Oz arquitectónico"**: un producto puede lanzarse con ejecución 100% humana en el Centro desde día uno y automatizarse progresivamente sin tocar el CTA externo ni la experiencia del usuario. La decisión "Centro sí / Centro no" es de implementación en código (puede variar por monto, cliente, hora, tipo de operación, etc.), no de discovery de producto.
+
+**Ejemplo end-to-end.** El usuario del CLP clickea "Retirar". El CTA invoca la capacidad `ejecutar_retiro` de OPS. OPS decide internamente — según monto, cliente, hora, etc. — si lo procesa vía integración directa o si crea una Solicitud al Centro de OPS para que un analista la ejecute. El usuario del CLP no se entera del path: ve "en proceso" y eventualmente "completado" o "rechazado".
+
+### Scope explícito del Centro
+
+El Centro aterriza exclusivamente Solicitudes/Tareas **que requieren intervención humana del backoffice**. Lo que NO vive en el Centro:
+
+- **Jobs programáticos puros** — sincronización de registros, auditoría, depuración, normalización, cron jobs internos. Son infraestructura técnica que vive en código (Task Definitions de Tecnología, scheduler de Reportes, etc.).
+- **CRON del scheduler de Reportes** — corre en su propia infraestructura; cuando interactúa con humanos lo hace creando Tareas al Centro (`report_dependency_block`, `reporte_proximo_emision_manual`).
+
+**Intersección entre los dos mundos:** un job programático puede declarar **fallback opt-in al Centro**. Cuando el job falla y el fallback está habilitado, el sistema invoca el endpoint del Centro con `source_app: 'system'` y crea una Solicitud/Tarea para escalamiento humano. Si el fallback no está habilitado, el fallo dispara alerta vía Observabilidad sin tocar el Centro.
 
 ---
 
@@ -216,7 +240,7 @@ Estados terminales son inmutables. Una Solicitud/Tarea cerrada no se reabre.
 |---|---|---|---|---|
 | **(a) Manual desde otra app del core** | Usuario en módulo de otra app (ej: CLP / Clientes) | Usuario autenticado | App de origen | Patrón de consumo del endpoint; el módulo tiene su propio formulario |
 | **(b) Manual desde el propio módulo Inbox** | Usuario con `manual_creation_capability` | Usuario autenticado | Inbox del `target_app` | CTA "Crear Solicitud/Tarea" filtrado a tipos con `creable_manualmente: true` |
-| **(c) Automática vía API** | Backend del core o sistema externo | Credencial de sistema | App o sistema invocador | Ej: scheduler de Reportes emite Tarea al `blocking_app` de una dependencia |
+| **(c) Automática vía API** | Backend del core o sistema externo | Credencial de sistema | App o sistema invocador | Ej: scheduler de Reportes emite Tarea al `blocking_app` de una dependencia. También cubre el escalamiento de jobs programáticos del sistema cuando declaran fallback opt-in al Centro (al fallar el job, el sistema invoca el endpoint con `source_app: 'system'`) |
 | **(d) Automática recurrente** | Scheduler del Inbox | `'system'` | `'system'` | Toma `RecurringInboxItemDefinition` con `series_state: 'active'` cuya `next_creation_date` venció |
 
 En todos los casos: validación de `type` en el registry del `target_app`, derivación de `kind`, persistencia con `state: 'pendiente'`, ejecución de `triggers_on_create[]`, disparo de notificaciones (§ Notificaciones).
@@ -409,6 +433,8 @@ El repositorio es base consultable. Reportes típicos vía REQ-59:
 | 6 | 2026-05-11 | **Estados canónicos invariantes** (4 estados). Los labels visibles pueden override vía `state_labels` pero la mecánica nunca cambia |
 | 7 | 2026-05-11 | **`REPORT_DEPENDENCY` ahora se modela como Tarea al Inbox** del `blocking_app` con `auto_archive` (no como Alerta). Resuelve el coupling Reportes ↔ Inbox sin pasar por Alertas |
 | 8 | 2026-05-11 | **Reportes con `allows_auto_generation: false`** que están próximos a emitir generan **Tarea** al Inbox (`reporte_proximo_emision_manual`), no Alerta. Los con `true` generan Alerta al consumidor |
+| 9 | 2026-05-12 | **Principio "Wizard of Oz arquitectónico":** los CTAs externos invocan capacidades, no rutas de ejecución. La capacidad decide internamente si ejecuta de forma directa o crea Solicitud/Tarea en el Centro. Permite lanzar productos con ejecución 100% humana y automatizar progresivamente sin tocar el CTA. La decisión es de implementación en código, no de discovery |
+| 10 | 2026-05-12 | **Scope explícito:** el Centro aterriza solo Solicitudes/Tareas que requieren intervención humana. Jobs programáticos puros (sync, audit, normalización, depuración, cron del sistema) viven en código como infraestructura técnica, fuera del Centro. Un job puede declarar fallback opt-in al Centro: al fallar, invoca el endpoint con `source_app: 'system'` y crea Solicitud/Tarea para escalamiento humano |
 
 ---
 

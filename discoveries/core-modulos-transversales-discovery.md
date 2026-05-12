@@ -4,7 +4,7 @@ features: []
 status: En investigación
 owner: Yasmani Rodriguez
 created_at: 2026-05-06
-updated_at: 2026-05-10
+updated_at: 2026-05-12
 ---
 
 # Modulos transversales del financial-core — Adopcion por app
@@ -448,6 +448,36 @@ Trabajos abiertos heredados (no son enrichment de REQs transversales sino consec
     - Transiciones del Kanban (REQ-69) son acciones `record_mutation` del manifest referenciadas por `action_id` desde el eje; `<ClosureModal>` es el `<ManifestDialog>` con header/copy de cierre.
     - Dashboard (REQ-74) es lectura agregada — NO consume el manifest engine para mutar, solo consume el stream del audit trail y el capability provider. Counters filtrados por capabilities; KPI cards con `requires_capability` se ocultan cuando el usuario no tiene la capability. Alertas categoria `cross_app_panel` viven prioritariamente como cards del Dashboard.
 5. **Trabajos abiertos heredados** — ver §"Pendientes" mas arriba (migracion REQ-52/REQ-33, matriz canonica de capabilities, `target_role` conventions cross-app, relevamiento de adopcion por app, REQs por area consumidores).
+
+---
+
+## Refinamiento del modelo conceptual — Sesion 2026-05-12
+
+Sesion de refinamiento sobre el modelo del Centro de Solicitudes que NO modifica REQs en Jira (los REQs siguen en SENT TO DEV sin cambios), pero formaliza dos principios arquitectonicos que estaban implicitos en el paradigma y agrega claridad de scope. Estos principios aplican transversalmente al modelo del core y se reflejan en `centro-de-solicitudes.md`.
+
+### Principio "Wizard of Oz arquitectonico": capacidades, no rutas
+
+Un CTA externo (en CLP, Pago Directo, RFQ Gateway, etc.) **invoca una capacidad** del `target_app`, no una ruta de ejecucion especifica. La capacidad decide internamente:
+
+- **Integracion directa** — resultado inmediato, no toca el Centro de Solicitudes
+- **Crear Solicitud/Tarea en el Centro** — resultado eventual, el CTA se suscribe al estado y muestra "en proceso" / "completado" / "rechazado" al usuario externo
+
+Esto habilita el patron de Wizard of Oz arquitectonico: lanzar un producto con ejecucion 100% humana en el Centro desde dia uno y automatizar progresivamente sin tocar el CTA externo. La decision "Centro si / Centro no" es de implementacion en codigo (variable por monto, cliente, hora, tipo de operacion, etc.), no de discovery.
+
+Ejemplo: el usuario del CLP clickea "Retirar". El CTA invoca la capacidad `ejecutar_retiro` de OPS. OPS decide internamente — segun parametros — si lo procesa via integracion directa o si crea una Solicitud al Centro de OPS. El usuario del CLP no se entera del path: ve "en proceso" y eventualmente "completado" o "rechazado".
+
+### Scope explicito del Centro de Solicitudes
+
+El Centro aterriza exclusivamente Solicitudes/Tareas **que requieren intervencion humana del backoffice**. Lo que NO vive en el Centro:
+
+- **Jobs programaticos puros** — sincronizacion de registros, auditoria, depuracion, normalizacion, cron jobs internos. Son infraestructura tecnica que vive en codigo (Task Definitions del lado de Tecnologia, scheduler de Reportes).
+- **CRON del scheduler de Reportes** — corre en su propia infraestructura; cuando interactua con humanos lo hace creando Tareas al Centro (`report_dependency_block`, `reporte_proximo_emision_manual`).
+
+Interseccion: un job programatico puede declarar **fallback opt-in al Centro**. Cuando el job falla y el fallback esta habilitado, el sistema invoca el endpoint del Centro con `source_app: 'system'` y crea una Solicitud/Tarea para escalamiento humano. Si el fallback no esta habilitado, el fallo dispara alerta via Observabilidad sin tocar el Centro.
+
+### Implicancia: no se incorpora `execution: manual | programmatic` al modelo del Inbox
+
+Durante la sesion se exploro modelar `execution: manual | programmatic` como dimension de Solicitud/Tarea, distinguiendo wrappers de ejecucion de endpoints (programaticas) de ejecucion 100% humana (manuales). La decision final fue **no incorporar esa dimension** al modelo canonico — los jobs programaticos puros viven fuera del Centro. Las "Tareas" del Centro (`kind: tarea`) son todas de intervencion humana; la diferencia con las "Solicitudes" (`kind: solicitud`) es semantica/de presentacion, no de modo de ejecucion. El modelo canonico de `Solicitud<TPayload>` con 4 estados (`pendiente | en_proceso | completed | rejected`) permanece sin cambios.
 
 ---
 
