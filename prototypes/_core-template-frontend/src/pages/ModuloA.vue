@@ -753,7 +753,7 @@ function onBackdropClick(): void {
       @click.self="closeCreate"
       @keydown.esc="closeCreate"
     >
-      <div class="w-full max-w-md rounded-2xl border border-b-3 bg-[#1A1A1A] shadow-[0_20px_60px_rgba(0,0,0,0.7)]">
+      <div class="w-full max-w-md rounded-2xl border border-b-3 bg-card shadow-[0_20px_60px_rgba(0,0,0,0.7)]">
         <div class="flex items-start justify-between p-5 pb-0">
           <div>
             <div class="text-base font-bold text-t-1">Crear Registro</div>
@@ -780,7 +780,7 @@ function onBackdropClick(): void {
             </label>
             <select
               v-model="createForm.category"
-              class="w-full rounded-md border border-b-3 bg-[#111] px-3 py-2 text-sm text-t-1 outline-none"
+              class="w-full rounded-md border border-b-3 bg-surf px-3 py-2 text-sm text-t-1 outline-none"
             >
               <option value="Tipo 1">Tipo 1</option>
               <option value="Tipo 2">Tipo 2</option>
@@ -799,7 +799,7 @@ function onBackdropClick(): void {
             </label>
             <select
               v-model="createForm.status"
-              class="w-full rounded-md border border-b-3 bg-[#111] px-3 py-2 text-sm text-t-1 outline-none"
+              class="w-full rounded-md border border-b-3 bg-surf px-3 py-2 text-sm text-t-1 outline-none"
             >
               <option value="PENDING">Pending</option>
               <option value="ACTIVE">Active</option>
@@ -824,7 +824,7 @@ function onBackdropClick(): void {
       @click.self="closeDetail"
       @keydown.esc="closeDetail"
     >
-      <div class="w-full max-w-lg rounded-2xl border border-b-3 bg-[#1A1A1A] shadow-[0_20px_60px_rgba(0,0,0,0.7)]">
+      <div class="w-full max-w-lg rounded-2xl border border-b-3 bg-card shadow-[0_20px_60px_rgba(0,0,0,0.7)]">
         <div class="flex items-start justify-between p-5 pb-0">
           <div>
             <div class="text-base font-bold text-t-1">Detalle del Registro</div>
@@ -839,27 +839,27 @@ function onBackdropClick(): void {
           </button>
         </div>
         <div class="grid grid-cols-2 gap-2.5 p-5">
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="rounded-md border border-b-2 bg-surf p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">ID</div>
             <div class="font-mono text-xs text-t-2">{{ detailRecord.id }}</div>
           </div>
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="rounded-md border border-b-2 bg-surf p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Fecha</div>
             <div class="text-[13px] font-semibold text-t-1">{{ detailRecord.date }}</div>
           </div>
-          <div class="col-span-2 rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="col-span-2 rounded-md border border-b-2 bg-surf p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Nombre</div>
             <div class="text-[13px] font-semibold text-t-1">{{ detailRecord.name }}</div>
           </div>
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="rounded-md border border-b-2 bg-surf p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Categoría</div>
             <Badge variant="info">{{ detailRecord.category }}</Badge>
           </div>
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="rounded-md border border-b-2 bg-surf p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Estado</div>
             <Badge :variant="statusVariant(detailRecord.status)">{{ detailRecord.status }}</Badge>
           </div>
-          <div class="col-span-2 rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="col-span-2 rounded-md border border-b-2 bg-surf p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Valor</div>
             <div class="text-[13px] font-semibold text-t-1">{{ formatCurrency(detailRecord.value) }}</div>
           </div>
@@ -881,7 +881,7 @@ function onBackdropClick(): void {
       @click.self="closeEdit"
       @keydown.esc="closeEdit"
     >
-      <div class="w-full max-w-md rounded-2xl border border-b-3 bg-[#1A1A1A] shadow-[0_20px_60px_rgba(0,0,0,0.7)]">
+      <div class="w-full max-w-md rounded-2xl border border-b-3 bg-card shadow-[0_20px_60px_rgba(0,0,0,0.7)]">
         <div class="flex items-start justify-between p-5 pb-0">
           <div>
             <div class="text-base font-bold text-t-1">Editar Registro</div>
