@@ -187,6 +187,79 @@ export const INBOX_MANIFEST: Manifest = {
         toast: 'Solicitud rechazada',
       },
     },
+    // ── Concept-filtered "function_invocation" examples ────────────────
+    // These demo the pattern documented in `core-modulo-genericos`
+    // Requirement: "Inbox manifest MUST surface concept-filtered
+    // actions as Drawer / row CTAs alongside the generic state
+    // actions." Real apps replace the toast with the actual side-
+    // effect (router navigation, opening a different module's create
+    // form, calling an API endpoint, …).
+    {
+      id: 'inbox.ver_cliente',
+      dimension: 'governance',
+      label: 'Ver cliente',
+      description: 'Navega al detalle del cliente referenciado por la Solicitud',
+      icon: 'external-link',
+      show_when: { record_concept_in: ['aprobacion_pago'] },
+      dialog: {
+        title: 'Ver cliente',
+        description: 'Confirmá para abrir el detalle del cliente en el módulo correspondiente.',
+        info_banner: {
+          text: 'Esto abriría /clientes/<id> en una nueva vista. En el template, simulamos con un toast — un app real reemplaza el on_confirm por un router push.',
+          variant: 'info',
+        },
+        fields: [],
+        confirm_label: 'Abrir cliente',
+      },
+      on_confirm: {
+        audit: true,
+        toast: 'Navegación a cliente (simulación)',
+      },
+    },
+    {
+      id: 'inbox.generar_factura',
+      dimension: 'governance',
+      label: 'Generar factura',
+      description: 'Abre el formulario de factura pre-rellenado con datos de la Solicitud',
+      icon: 'file-plus',
+      show_when: { record_concept_in: ['aprobacion_pago'] },
+      dialog: {
+        title: 'Generar factura desde la Solicitud',
+        description: 'Confirmá para abrir el formulario de factura pre-rellenado con monto, moneda y proveedor del payload.',
+        info_banner: {
+          text: 'Esto abriría un <ManifestDialog> del módulo Facturas en modo create con los campos pre-cargados. En el template, simulamos con un toast.',
+          variant: 'info',
+        },
+        fields: [],
+        confirm_label: 'Generar borrador',
+      },
+      on_confirm: {
+        audit: true,
+        toast: 'Factura borrador creada (simulación)',
+      },
+    },
+    {
+      id: 'inbox.escalar_compliance',
+      dimension: 'governance',
+      label: 'Escalar a compliance',
+      description: 'Crea una Solicitud al área de compliance referenciando la actual',
+      icon: 'arrow-up-right',
+      show_when: { record_concept_in: ['revision_legajo'] },
+      dialog: {
+        title: 'Escalar a compliance',
+        description: 'Confirmá para crear una Solicitud paralela al área de compliance que tome esta revisión como contexto.',
+        info_banner: {
+          text: 'Esto invocaría el endpoint del Centro con type=compliance_review y source_app=inbox. En el template, simulamos con un toast.',
+          variant: 'warning',
+        },
+        fields: [],
+        confirm_label: 'Escalar',
+      },
+      on_confirm: {
+        audit: true,
+        toast: 'Escalado a compliance (simulación)',
+      },
+    },
   ],
   kanban_axes: [
     {

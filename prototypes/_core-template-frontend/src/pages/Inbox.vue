@@ -60,6 +60,12 @@ function solicitudAssigneeName(s: Solicitud): string {
   return findUser(s.assignee)?.name ?? '';
 }
 
+/** Uppercase the first character, leave the rest as-is. Idempotent on
+ *  already-cased strings. e.g. 'inbox' → 'Inbox', 'CORE' → 'CORE'. */
+function titleCase(s: string): string {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+}
+
 function typeLabel(type: InboxType): string {
   return type === 'tarea' ? 'Tarea' : 'Solicitud';
 }
@@ -511,7 +517,7 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
               <td class="px-3.5 py-2.5">
                 <Badge variant="neutral">{{ humanizeConcept(s.concept) }}</Badge>
               </td>
-              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ s.source_module }}</td>
+              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ titleCase(s.source_module) }}</td>
               <td class="px-3.5 py-2.5">
                 <Badge :variant="statusVariant(s.state)">{{ stateLabel(s.state) }}</Badge>
               </td>
@@ -521,7 +527,7 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
                   {{ slaChip(s).label }}
                 </Badge>
               </td>
-              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ solicitudAssigneeName(s) || 'Sin asignar' }}</td>
+              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ solicitudAssigneeName(s) || '—' }}</td>
               <td class="px-3.5 py-2.5 text-center" @click.stop>
                 <div class="flex items-center justify-center">
                   <ManifestActionsMenu
@@ -574,7 +580,7 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
                 <Badge variant="neutral">{{ humanizeConcept(s.concept) }}</Badge>
               </span>
               <span class="text-t-4">Asignado a</span>
-              <span class="text-t-2">{{ solicitudAssigneeName(s) || 'Sin asignar' }}</span>
+              <span class="text-t-2">{{ solicitudAssigneeName(s) || '—' }}</span>
             </div>
           </template>
           <template #footer>
@@ -625,7 +631,7 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
                 <p class="line-clamp-2 text-xs text-t-3">{{ solicitudSummary(record as Solicitud) || '—' }}</p>
               </template>
               <template #footer>
-                <span>{{ solicitudAssigneeName(record as Solicitud) || 'Sin asignar' }}</span>
+                <span>{{ solicitudAssigneeName(record as Solicitud) || '—' }}</span>
                 <Badge
                   :variant="slaChip(record as Solicitud).variant"
                   class="inline-flex items-center gap-1"
@@ -690,7 +696,7 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
           <div class="rounded-md border border-b-2 bg-[#111] p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Origen</div>
             <div class="text-[13px] font-semibold text-t-2">
-              {{ drawerSolicitud.source_app }} · {{ drawerSolicitud.source_module }}
+              {{ titleCase(drawerSolicitud.source_app) }} · {{ titleCase(drawerSolicitud.source_module) }}
             </div>
           </div>
           <div class="rounded-md border border-b-2 bg-[#111] p-3">
