@@ -76,7 +76,7 @@ type AlertState    = 'new' | 'resolved' | 'dismissed';
 
 interface Alerta<TPayload = unknown> {
   id: string;
-  type: string;                    // declarado en el registry de la app target
+  concept: string;                 // clasificador de negocio — declarado en el registry de la app target
   severity: AlertSeverity;
   state: AlertState;
   source_app: string;

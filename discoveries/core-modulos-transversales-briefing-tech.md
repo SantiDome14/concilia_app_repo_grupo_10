@@ -209,7 +209,7 @@ type InvocationMode = 'modal_wizard' | 'navigate' | 'background_job' | 'sync_cal
 interface ActionConfig {
   id: string;                              // identificador único dentro de app.module[.recordType]
   label: string;                           // texto visible
-  kind: 'row_action' | 'module_cta';       // dónde se renderiza
+  placement: 'row_action' | 'module_cta';  // dónde se renderiza
   action_type: ActionType;                 // discriminador de mecánica
   group?: string;                          // sub-grupo del nivel 2 (solo en record_mutation)
   capabilities: string[];                  // capabilities que la habilitan
@@ -238,7 +238,7 @@ interface InvokeConfig {
 
 ### Ejemplos del patrón
 
-| Acción | kind | action_type | group | Mecánica |
+| Acción | placement | action_type | group | Mecánica |
 |---|---|---|---|---|
 | "Asignar Banco y Cuenta" (movimiento OPS) | `row_action` | `record_mutation` | `IMPUTACIÓN` | dialog + on_confirm |
 | "Marcar Conciliado" (movimiento OPS) | `row_action` | `record_mutation` | `CONCILIACIÓN` | on_confirm directo |
@@ -334,9 +334,9 @@ Capability efectiva del usuario = unión de capabilities de todos sus grupos.
 | 3 | **El problema actual** | Hoy la lógica de "qué puede hacer cada usuario" vive inline en el frontend de cada app — objetos `can`/`reason`/`tag` dentro de cada vista, helpers ad-hoc por módulo. Tres consecuencias: divergencia inevitable, imposibilidad de cambiar la matriz de capabilities sin tocar UI en N lugares, ausencia de audit trail unificado. |
 | 4 | **El modelo de la relación** | Diagrama: Acción → puede ejecutarse sobre Registro de un cierto Tipo → requiere Capability (heredada vía Grupos) → es `record_mutation` o `function_invocation` → pertenece a `group` (sub-grupo, opcional) → puede abrir Dialog → ejecuta `on_confirm` (mutación) o `invokes` (invocación). |
 | 5 | **El catálogo de manifests** | Cada módulo declara su catálogo en un archivo TypeScript (`manifests/<app>.<module>.actions.ts`) con `key`, `recordType`, `actions[]` (row-level), `module_ctas[]` (header), `kanban_axes[]` (cuando aplica). Los manifests se consumen al boot y forman el catálogo unificado. **Este catálogo es la única fuente de verdad de qué puede hacerse en la plataforma.** |
-| 6 | **`ActionConfig` shape** | Mostrar el shape completo del `ActionConfig` con TypeScript. Highlights: `action_type` como discriminador, `kind` como locator (`row_action` vs `module_cta`), `capabilities[]`, `enable_when` como predicate. |
+| 6 | **`ActionConfig` shape** | Mostrar el shape completo del `ActionConfig` con TypeScript. Highlights: `action_type` como discriminador, `placement` como locator (`row_action` vs `module_cta`), `capabilities[]`, `enable_when` como predicate. |
 | 7 | **`record_mutation` vs `function_invocation`** | Tabla comparativa con ejemplos: mutación completa campos del registro fuente, invocación toma el registro como contexto. Híbridos: `then_invoke` (mutar y después invocar), `on_success` (efecto en registro fuente al retornar ok). |
-| 8 | **Ejemplos del patrón completo** | Tabla densa con 8-10 ejemplos reales del dominio: Asignar Banco y Cuenta, Marcar Conciliado, Generar Factura, Validar whitelist, etc. Columnas: Acción, kind, action_type, group, Mecánica, invocation_mode (cuando aplica). |
+| 8 | **Ejemplos del patrón completo** | Tabla densa con 8-10 ejemplos reales del dominio: Asignar Banco y Cuenta, Marcar Conciliado, Generar Factura, Validar whitelist, etc. Columnas: Acción, placement, action_type, group, Mecánica, invocation_mode (cuando aplica). |
 | 9 | **Universalidad del menú `⋯`** | A partir de este REQ, todo registro de la plataforma en cualquier formato (lista, card, Kanban) tiene el menú `⋯` montado. La presencia es invariante. Lo que varía es qué acciones aparecen habilitadas — resultado de evaluar el manifest contra capabilities + estado del registro. Sin acciones habilitadas → `⋯` aparece deshabilitado con tooltip "Sin acciones disponibles en el estado actual". |
 | 10 | **Agrupación visual del menú — 2 niveles** | Mockup del menú agrupado. Nivel 1: bloques por `action_type` (`ASIGNACIÓN / IMPUTACIÓN` para mutaciones, `CONTEXTUALES` para invocaciones). Nivel 2: sub-grupos funcionales (`IMPUTACIÓN`, `CONCILIACIÓN`, `GOVERNANCE`, `DOCUMENTACIÓN`, `CIERRE`) solo dentro de mutaciones. |
 | 11 | **Iconografía visual** | `✓` (check) para `record_mutation` — captura el patrón de "completar/marcar". `↗` (flecha externa) para `function_invocation` — captura "salir del registro a invocar algo". Override declarable via `ActionConfig.icon`. Acciones destructivas: label en rojo, mismo icono del bloque. |
