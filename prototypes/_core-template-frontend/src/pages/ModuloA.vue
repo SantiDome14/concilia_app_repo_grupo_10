@@ -378,11 +378,11 @@ function onBackdropClick(): void {
         </p>
       </div>
       <div class="flex items-center gap-2">
-        <ViewToggle v-model="view" :views="['list', 'cards', 'kanban']" />
         <Button variant="primary" size="md" @click="openCreate">
           <Plus class="h-3.5 w-3.5" />
           Crear Registro
         </Button>
+        <ViewToggle v-model="view" :views="['list', 'cards', 'kanban']" />
       </div>
     </div>
 

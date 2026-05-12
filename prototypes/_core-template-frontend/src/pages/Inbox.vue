@@ -18,13 +18,14 @@ import {
 } from '@/components/drawer';
 import { KanbanBoard } from '@/components/kanban';
 import { ManifestActionsMenu } from '@/components/manifest';
-import { InboxCreateCTA } from '@/components/inbox';
+import { InboxCreateCTA, TriggeredActionsPanel } from '@/components/inbox';
 import type { KanbanAxis, KanbanState } from '@/types/kanban';
 import { useManifestModule } from '@/composables/useManifestModule';
 import { INBOX_MANIFEST_KEY } from '@/manifests/framework.template.inbox.actions';
 import { INBOX_SOLICITUDES } from '@/mocks/genericos/inbox';
 import { CURRENT_USER, findUser } from '@/mocks/genericos/users';
 import type {
+  InboxKind,
   Solicitud,
   SolicitudState,
   TimelineEvent,
@@ -56,6 +57,14 @@ function solicitudOwnerName(s: Solicitud): string {
   return findUser(s.owner)?.name ?? '';
 }
 
+function kindLabel(kind: InboxKind): string {
+  return kind === 'tarea' ? 'Tarea' : 'Solicitud';
+}
+
+function kindVariant(kind: InboxKind): 'info' | 'neutral' {
+  return kind === 'tarea' ? 'neutral' : 'info';
+}
+
 // ════════════════════════════════════════════════════════════════════
 // Inbox — Solicitudes management surface (L1/L2/L3)
 // ────────────────────────────────────────────────────────────────────
@@ -80,6 +89,7 @@ const view = ref<ViewMode>('list');
 const search = ref('');
 const filterType = ref<string>('');
 const filterState = ref<string>('');
+const filterKind = ref<'' | InboxKind>('');
 
 // ─── Reactive dataset (mock-backed) ──────────────────────────────────
 const solicitudes = ref<Solicitud[]>(
@@ -97,6 +107,7 @@ const ACTIVE_TYPES = computed(() => {
 const filteredSolicitudes = computed<Solicitud[]>(() => {
   const term = search.value.trim().toLowerCase();
   return solicitudes.value.filter((s) => {
+    if (filterKind.value && s.kind !== filterKind.value) return false;
     if (filterType.value && s.type !== filterType.value) return false;
     if (filterState.value && s.state !== filterState.value) return false;
     if (term) {
@@ -365,6 +376,16 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
       </div>
       <div class="flex-1" />
       <select
+        v-model="filterKind"
+        class="rounded-md border border-b-2 bg-card px-3 py-2 text-xs text-t-2"
+        aria-label="Filtrar por kind"
+        data-testid="filter-kind"
+      >
+        <option value="">Kind · Todos</option>
+        <option value="solicitud">Solicitudes</option>
+        <option value="tarea">Tareas</option>
+      </select>
+      <select
         v-model="filterType"
         class="rounded-md border border-b-2 bg-card px-3 py-2 text-xs text-t-2"
         aria-label="Filtrar por tipo"
@@ -404,6 +425,7 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
           <thead>
             <tr class="border-b border-b-2">
               <th class="px-[18px] py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">ID</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Kind</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Título</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Tipo</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Origen</th>
@@ -423,6 +445,9 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
             >
               <td class="px-[18px] py-2.5">
                 <span class="font-mono text-xs text-t-3">{{ s.id }}</span>
+              </td>
+              <td class="px-3.5 py-2.5">
+                <Badge :variant="kindVariant(s.kind)">{{ kindLabel(s.kind) }}</Badge>
               </td>
               <td class="px-3.5 py-2.5 text-[13px] font-semibold text-t-2">{{ solicitudTitle(s) }}</td>
               <td class="px-3.5 py-2.5 text-xs text-t-3">{{ s.type }}</td>
@@ -474,6 +499,7 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
               <span class="font-mono text-[11px] text-t-4">{{ s.id }}</span>
               <span class="truncate text-sm font-semibold text-t-1">{{ solicitudTitle(s) }}</span>
             </div>
+            <Badge :variant="kindVariant(s.kind)">{{ kindLabel(s.kind) }}</Badge>
             <Badge :variant="statusVariant(s.state)">{{ stateLabel(s.state) }}</Badge>
             <span @click.stop>
               <ManifestActionsMenu
@@ -525,6 +551,9 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
                   <span class="font-mono text-[11px] text-t-4">{{ (record as Solicitud).id }}</span>
                   <span class="truncate text-sm font-semibold text-t-1">{{ solicitudTitle(record as Solicitud) }}</span>
                 </div>
+                <Badge :variant="kindVariant((record as Solicitud).kind)">
+                  {{ kindLabel((record as Solicitud).kind) }}
+                </Badge>
                 <span @click.stop>
                   <ManifestActionsMenu
                     :manifest-key="INBOX_MANIFEST_KEY"
@@ -582,6 +611,14 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
         </h3>
         <div class="grid grid-cols-2 gap-2.5 text-sm">
           <div class="rounded-md border border-b-2 bg-[#111] p-3">
+            <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Kind</div>
+            <div>
+              <Badge :variant="kindVariant(drawerSolicitud.kind)">
+                {{ kindLabel(drawerSolicitud.kind) }}
+              </Badge>
+            </div>
+          </div>
+          <div class="rounded-md border border-b-2 bg-[#111] p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Tipo</div>
             <div class="text-[13px] font-semibold text-t-2">{{ drawerSolicitud.type }}</div>
           </div>
@@ -617,6 +654,9 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
           </div>
         </div>
       </div>
+
+      <!-- TRIGGERED ACTIONS panel — rendered only when populated -->
+      <TriggeredActionsPanel :entries="drawerSolicitud.triggered_actions" />
 
       <template #timeline>
         <h3 class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-t-3">Timeline</h3>
