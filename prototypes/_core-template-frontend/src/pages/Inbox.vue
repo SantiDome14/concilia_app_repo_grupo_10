@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { Search } from 'lucide-vue-next';
+import { Clock, Search } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 import { Badge, type BadgeVariants } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,6 @@ import type {
   SolicitudState,
   TimelineEvent,
 } from '@/types/genericos';
-import { cn } from '@/lib/cn';
 
 // ─── Display helpers ─────────────────────────────────────────────────
 // `Solicitud<TPayload>` lifts type-specific text into `payload`; for the
@@ -63,6 +62,32 @@ function typeLabel(type: InboxType): string {
 
 function typeVariant(type: InboxType): 'info' | 'neutral' {
   return type === 'tarea' ? 'neutral' : 'info';
+}
+
+/** snake_case → Title Case. e.g. 'aprobacion_pago' → 'Aprobacion Pago'. */
+function humanizeConcept(c: string): string {
+  if (!c) return '';
+  return c
+    .split('_')
+    .filter((w) => w.length > 0)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
+
+type SlaChip = {
+  variant: BadgeVariants['variant'];
+  label: string;
+  showIcon: boolean;
+};
+
+function slaChip(s: Solicitud): SlaChip {
+  if (s.sla_hours === null || s.sla_hours === undefined) {
+    return { variant: 'neutral', label: '—', showIcon: false };
+  }
+  if (isInSla(s)) {
+    return { variant: 'success', label: `${s.sla_hours}h`, showIcon: true };
+  }
+  return { variant: 'danger', label: 'Vencida', showIcon: true };
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -483,20 +508,18 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
                 <Badge :variant="typeVariant(s.type)">{{ typeLabel(s.type) }}</Badge>
               </td>
               <td class="px-3.5 py-2.5 text-[13px] font-semibold text-t-2">{{ solicitudTitle(s) }}</td>
-              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ s.concept }}</td>
+              <td class="px-3.5 py-2.5">
+                <Badge variant="neutral">{{ humanizeConcept(s.concept) }}</Badge>
+              </td>
               <td class="px-3.5 py-2.5 text-xs text-t-3">{{ s.source_module }}</td>
               <td class="px-3.5 py-2.5">
                 <Badge :variant="statusVariant(s.state)">{{ stateLabel(s.state) }}</Badge>
               </td>
-              <td
-                :class="
-                  cn(
-                    'px-3.5 py-2.5 text-xs',
-                    isInSla(s) ? 'text-t-3' : 'text-danger font-semibold',
-                  )
-                "
-              >
-                {{ s.sla_hours === null ? '—' : isInSla(s) ? `${s.sla_hours}h` : 'Vencida' }}
+              <td class="px-3.5 py-2.5">
+                <Badge :variant="slaChip(s).variant" class="inline-flex items-center gap-1">
+                  <Clock v-if="slaChip(s).showIcon" class="h-3 w-3" />
+                  {{ slaChip(s).label }}
+                </Badge>
               </td>
               <td class="px-3.5 py-2.5 text-xs text-t-3">{{ solicitudOwnerName(s) || '—' }}</td>
               <td class="px-3.5 py-2.5 text-center" @click.stop>
@@ -547,16 +570,19 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
             <p class="line-clamp-3 text-xs text-t-3">{{ solicitudSummary(s) || '—' }}</p>
             <div class="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[11px]">
               <span class="text-t-4">Concepto</span>
-              <span class="text-t-2">{{ s.concept }}</span>
+              <span>
+                <Badge variant="neutral">{{ humanizeConcept(s.concept) }}</Badge>
+              </span>
               <span class="text-t-4">Owner</span>
               <span class="text-t-2">{{ solicitudOwnerName(s) || '—' }}</span>
             </div>
           </template>
           <template #footer>
             <span>{{ s.created_at.slice(0, 10) }}</span>
-            <span :class="isInSla(s) ? 'text-success' : 'text-danger'">
-              {{ s.sla_hours === null ? '' : isInSla(s) ? `SLA ${s.sla_hours}h` : 'SLA vencida' }}
-            </span>
+            <Badge :variant="slaChip(s).variant" class="inline-flex items-center gap-1">
+              <Clock v-if="slaChip(s).showIcon" class="h-3 w-3" />
+              {{ slaChip(s).label }}
+            </Badge>
           </template>
         </CardItem>
       </CardsGrid>
@@ -600,9 +626,13 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
               </template>
               <template #footer>
                 <span>{{ solicitudOwnerName(record as Solicitud) || 'Sin owner' }}</span>
-                <span :class="isInSla(record as Solicitud) ? 'text-success' : 'text-danger'">
-                  {{ (record as Solicitud).sla_hours === null ? '' : isInSla(record as Solicitud) ? `SLA ${(record as Solicitud).sla_hours}h` : 'Vencida' }}
-                </span>
+                <Badge
+                  :variant="slaChip(record as Solicitud).variant"
+                  class="inline-flex items-center gap-1"
+                >
+                  <Clock v-if="slaChip(record as Solicitud).showIcon" class="h-3 w-3" />
+                  {{ slaChip(record as Solicitud).label }}
+                </Badge>
               </template>
             </CardItem>
           </template>
@@ -653,7 +683,9 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
           </div>
           <div class="rounded-md border border-b-2 bg-[#111] p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Concepto</div>
-            <div class="text-[13px] font-semibold text-t-2">{{ drawerSolicitud.concept }}</div>
+            <div>
+              <Badge variant="neutral">{{ humanizeConcept(drawerSolicitud.concept) }}</Badge>
+            </div>
           </div>
           <div class="rounded-md border border-b-2 bg-[#111] p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Origen</div>
@@ -667,8 +699,13 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
           </div>
           <div class="rounded-md border border-b-2 bg-[#111] p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">SLA</div>
-            <div class="text-[13px] font-semibold text-t-2">
-              {{ drawerSolicitud.sla_hours === null ? 'Sin SLA' : `${drawerSolicitud.sla_hours}h` }}
+            <div>
+              <Badge :variant="slaChip(drawerSolicitud).variant" class="inline-flex items-center gap-1">
+                <Clock v-if="slaChip(drawerSolicitud).showIcon" class="h-3 w-3" />
+                {{ slaChip(drawerSolicitud).label === '—'
+                    ? (drawerSolicitud.sla_hours === null ? 'Sin SLA' : '—')
+                    : slaChip(drawerSolicitud).label }}
+              </Badge>
             </div>
           </div>
           <div
