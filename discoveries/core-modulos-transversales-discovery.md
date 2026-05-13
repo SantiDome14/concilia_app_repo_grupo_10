@@ -4,7 +4,7 @@ features: []
 status: En investigación
 owner: Yasmani Rodriguez
 created_at: 2026-05-06
-updated_at: 2026-05-12
+updated_at: 2026-05-13
 ---
 
 # Modulos transversales del financial-core — Adopcion por app
@@ -619,6 +619,175 @@ Ver `features/common/centro-de-solicitudes.md` § Decisiones clave. Resumen:
 2. **El REQ-71 esta desactualizado** respecto al feature. No usarlo como referencia para el modelo conceptual; usar el feature.
 3. **El AM-1017 espejo tambien esta desactualizado.** Cuando se refactore REQ-71, propagar al AM con la nota convencional.
 4. Antes de refactorizar REQ-71, considerar el cleanup transversal de los 6 REQs (sacar filtracion tecnica que entro durante el enrichment del 2026-05-10).
+
+---
+
+## Cleanup transversal + refinamiento del Dashboard — Sesión 2026-05-13
+
+Sesión combinada que ejecuta dos trabajos sobre el mismo set de 6 REQs transversales:
+
+1. **Cleanup de filtración técnica** — sacar de las descriptions los nombres de componentes Vue/React, TypeScript inline, paths del repo, performance budgets en milisegundos y referencias a OpenSpec / specs internas que se habían colado durante el enrichment del 2026-05-10.
+2. **Refactor de modelo conceptual** — aplicar a Inbox, Reportería y Alertas las decisiones del refinamiento del 2026-05-12 (parte 2) que todavía no se habían propagado a los REQs, y resolver el modelo del Dashboard.
+
+Adicionalmente, durante el cleanup del Dashboard se introdujo un refinamiento sustantivo (card de gráfico de evolución del indicador principal del área) que es decisión de producto, no cleanup.
+
+Los 6 REQs (REQ-59, REQ-68, REQ-69, REQ-71, REQ-73, REQ-74) y sus 6 AM espejo (AM-1004, AM-1017, AM-1018, AM-1019, AM-1020, AM-1016) quedan **actualizados en Jira** al cierre del 2026-05-13. Status SENT TO DEV preservado (la sesión no transicionó tickets).
+
+### REQs refactorizados en esta sesión
+
+| REQ | Cambios aplicados |
+|---|---|
+| **REQ-71 INBOX** | (a) Modelo unificado del Centro de Solicitudes con `type: 'request' \| 'task'` × `execution_mode: 'human' \| 'programmatic'`. (b) 5 estados canónicos: `pendiente, en_proceso, completed, rejected, failed` (`failed` solo programmatic con retry manual V1). (c) Inbox como vista filtrada (`execution_mode='human' OR state='failed'`); todo persiste en bbdd para audit. (d) Endpoint público invocable como primitiva común (4 escenarios: scheduler, acción del manifest, retry desde Drawer, retry desde Alerta). (e) `ConsumerTypeAssociation` con `satisfaction_mode: 'generate_new' \| 'verify_existing'` + `verify_window_days?` reemplaza el `REPORT_DEPENDENCY` con `auto_archive` de sesiones previas. (f) Evidencias en Drawer (`manual_check, attachment, system_log`). (g) Tres fechas: `created_at, requested_at, due_at`. (h) Dos vistas top-level: "Mi bandeja" + "Mis enviadas". (i) Naming: prosa en español, modelo en inglés. (j) Cleanup de filtración técnica. |
+| **REQ-59 REPORTES** | Mecanismo unificado consumidor-tipo: dependencias bloqueantes + generación manual unificadas bajo `ConsumerTypeAssociation` con `satisfaction_mode`. Eliminada `ReportDependency` embebida; `ReportDependencySnapshot` → `ConsumerAssociationSnapshot`. Cleanup de filtración técnica. |
+| **REQ-73 ALERTAS** | Principio canónico: **"el tipo pertenece al catálogo del `target_app`, no al emisor"**. Cualquier código del sistema puede disparar la ingesta para un `ALERT_TYPE`; identidad del invocador (`source_app, source_module`) es metadata del audit trail, no ownership. Esto refuerza el Wizard of Oz arquitectónico de la sesión 2026-05-12 parte 1. **Estados simplificados a Nueva / Resuelta / Descartada** (sin categorías `triage/workflow/metric/cross_app_panel` — ver desalineaciones). Cleanup de filtración técnica. |
+| **REQ-68 ACCIONES** | Preservadas las decisiones arquitectónicas de la sesión 2026-05-10 (distinción `record_mutation` vs `function_invocation`, universalidad del menú `⋯`, agrupación visual en 2 niveles, iconografía ✓/↗, Capabilities+Grupos+Panel admin, audit trail unificado + stream de eventos, 7 categorías de `invocation_source`). Cleanup de filtración técnica: removidos `<ManifestActionsMenu>` y similar, TypeScript inline, stack references, performance budgets, sección "Modelo de provisión" (redundante con Fuera de alcance + Espejo en MAIN). |
+| **REQ-69 VISTAS** | Preservadas las decisiones de la sesión 2026-05-10 (3 vistas Lista/Tarjetas/Tablero, ejes redefinibles por usuario, transición drag-drop = acción `record_mutation` del manifest con `invocation_source: 'kanban_drag'`, modal de cierre como wrapper temático del modal de acción, cards no draggables por 2 razones articuladas, cap blando, empty states). Cleanup de filtración técnica: removidos `<KanbanAxis>`, `<KanbanTransition>`, componentes Vue, "L1/L2/L3", "core-modals" de OpenSpec. |
+| **REQ-74 DASHBOARD** | Refactor sustantivo del modelo + cleanup de filtración técnica. Ver § "Dashboard" abajo. |
+
+Cada AM espejo recibió la misma descripción del REQ + **nota convencional al inicio**: "Esta development story es espejo de REQ-XX. Si hay divergencia entre este texto y REQ-XX, prevalece REQ-XX." Summary del AM === summary del REQ.
+
+### Cleanup de filtración técnica — categorías removidas de los 6 REQs
+
+Lo que se sacó (transversal a todos los REQs):
+
+| Categoría | Ejemplos removidos |
+|---|---|
+| Nombres literales de componentes | `<ManifestActionsMenu>`, `<ClosureModal>`, `<KpiCard>`, `<CrossAppPanelCard>`, `<KanbanAxis>` |
+| TypeScript inline | `interface ActionConfig { ... }`, `type AlertCategory = 'triage' \| ...`, `KanbanTransition`, `ReportPermissions` con sintaxis TS |
+| Performance budgets en ms | FMP < 1s, evaluación del predicate < 5ms, cap blando = 200 cards (preservada la noción de "cap blando" sin número) |
+| Stack references | Vue 3, Pinia, `@tanstack/vue-query`, `useTable<T>` |
+| Paths a archivos del repo | `src/manifests/`, `prototypes/fin/...`, `core-template-frontend/` |
+| Referencias a especificaciones internas | OpenSpec, `core-modals`, "L1/L2/L3", "Type A/B" |
+| Sección "Modelo de provisión" | Redundante con "Fuera de alcance V1" + "Espejo en MAIN" |
+
+Lo que se preservó como decisión de producto: discriminadores conceptuales (`record_mutation` vs `function_invocation`, `satisfaction_mode`, etc.), iconografía conceptual (✓, ↗) sin nombrar componentes, prosa con campos nombrados, tablas funcionales.
+
+### Refactor de modelo: Reportería + Inbox con `ConsumerTypeAssociation`
+
+Las dependencias entre Reportería e Inbox quedan unificadas bajo un mismo mecanismo:
+
+- **Una sola entidad** `ConsumerTypeAssociation` con campos: `consumer_ref, consumer_kind, concept, target_app, target_role, default_assignee, lead_time_days, payload_template, satisfaction_mode, verify_window_days?, association_state`.
+- **`satisfaction_mode`** define la semántica de cómo se satisface la asociación:
+  - `'generate_new'` — el consumidor scheduleado dispara la creación de una instancia nueva del tipo en el catálogo del Inbox cuando llega `(due_at - lead_time_days)`. Default cuando la asociación describe una dependencia que se ejecuta específicamente para el consumidor.
+  - `'verify_existing'` — el consumidor scheduleado verifica si existe una instancia completada del tipo dentro de una ventana hacia atrás (`verify_window_days`); si no existe, la asociación se considera no satisfecha. Modela dependencias donde el trabajo ya se hace por otro lado y solo hay que constatarlo.
+- **Generalización**: el mecanismo cubre dependencias de reportes pero también cierres periódicos (`consumer_kind: 'period_close'`), vencimientos regulatorios (`'expiration'`) y otros casos scheduleados (`'other'`). La decisión #7 del feature de Reportería queda revisada: aplica el patrón generalizado, no solo a reportes.
+- **`lead_time_days` vive en la asociación, no en el tipo** — el mismo `concept` (ej: conciliación operativa mensual) puede ser dependencia de N consumidores con tiempos distintos (UIF 5 días, BCRA 3, CNV 7).
+
+Reemplazos respecto al modelo anterior: `ReportDependency` (embebida en Report) → `ConsumerTypeAssociation`. `ReportDependencySnapshot` → `ConsumerAssociationSnapshot`.
+
+### Refactor de Alertas: catálogo del `target_app`
+
+Principio canónico introducido en esta sesión:
+
+> El tipo (`ALERT_TYPE`) pertenece al catálogo del `target_app`, no al emisor.
+
+Cualquier código del sistema puede disparar la ingesta para un `ALERT_TYPE`. La identidad del invocador (`source_app, source_module`) queda como metadata del audit trail, no como ownership del tipo. Esto refuerza el Wizard of Oz arquitectónico de la sesión 2026-05-12 parte 1 al nivel del catálogo de tipos: un mismo tipo puede ser disparado por integraciones directas, jobs programáticos, acciones del manifest, o intervenciones humanas; el motor no distingue.
+
+**Estados simplificados a 3 canónicos**: `Nueva`, `Resuelta`, `Descartada`. Sin sub-categorías del tipo. La diferenciación entre presentaciones distintas de alertas vive a nivel del **app que renderiza** (perfiles de UI), no a nivel del tipo.
+
+### Dashboard: indicador principal + card de gráfico de evolución
+
+REQ-74 recibe el refactor más sustantivo de la sesión. Sobre la base anterior se establece:
+
+**Cuatro cards shared mandatorias** que el Dashboard de cada app entrega siempre:
+
+1. Counter de Alertas activas (estado Nueva del repositorio de Alertas).
+2. Counter de Solicitudes/Tareas activas (`pendiente + en_proceso` del Inbox, filtrado por destinatario).
+3. Counter de Reportes pendientes (próximos a emitir + vencidos + asociaciones consumidor-tipo no satisfechas, filtrado por `permissions.view`).
+4. Feed de Actividades recientes (suscrito al stream del audit trail de REQ-68, real-time, con `activity_template` resuelto, agrupado por día).
+
+Estas cuatro reemplazan al patrón anterior que mezclaba `<KpiCard>` + `<CrossAppPanelCard>` sin counter explícito para Solicitudes/Tareas y sin feed unificado de actividades.
+
+**Indicador principal del área** — cada app puede designar **una** de sus KPI cards del dominio como indicador principal (`is_primary_indicator: true`). Ejemplos:
+
+- TRD: "Volumen procesado del mes"
+- FIN: "Movimientos imputados del período"
+- LEX/Compliance: "KYCs aprobados del mes"
+- OPS: "Operaciones del mes"
+
+La existencia de un indicador principal habilita la quinta card declarable:
+
+**Card de gráfico de evolución del indicador principal** — card shared del core que renderiza la evolución temporal del KPI marcado como indicador principal. Soporta 3 tipos de gráfico declarables por el app:
+
+| Tipo | Cuándo conviene |
+|---|---|
+| Barras | Comparación discreta entre períodos (volumen por mes, operaciones por semana) |
+| Línea | Evolución continua (cotización acumulada, pool disponible diario) |
+| Circular | Composición (volumen procesado por moneda, operaciones por tipo) |
+
+El detalle visual final del componente (paleta, ejes, tooltips, leyendas, animaciones) queda a definir en refinement con Diseño + Tecnología. El contrato a nivel REQ es: `chart_type`, la métrica subyacente (la misma del KPI principal), granularidad temporal y rango temporal default. Si el indicador principal declara `requires_capability` y el usuario no la tiene, ni la KPI card ni el gráfico se renderizan — ambos son condicionales a la misma capability.
+
+**Convención sugerida de composición vertical del grid** (no normativa):
+
+1. Primera sección — counters consolidados + KPI principal del área (última card de la sección).
+2. Segunda sección — card de gráfico de evolución + feed de Actividades recientes.
+3. Secciones siguientes — KPI cards adicionales del dominio + cards opcionales shared (SLA crítico, próximos reportes).
+
+**Cards opcionales shared adicionales** (declarables por cada app): SLA crítico (computa sobre Solicitudes con `sla_hours`), próximos reportes (computa sobre catálogo de Reportería con `permissions.view`), selector de período (aparece top-right cuando el app declara KPIs time-based o card de gráfico).
+
+**Prohibiciones reafirmadas**: sin acciones de mutación o invocación, sin filtros sobre listas, sin sub-tabs, sin toggle de vistas, sin modal de cierre, sin vista de detalle, sin más de 3 counters de módulos genéricos.
+
+### Convenciones operativas establecidas
+
+- **Nota convencional en AM espejos**:
+  > **Nota.** Esta development story es espejo de REQ-XX. Si hay divergencia entre este texto y REQ-XX, prevalece REQ-XX.
+- **Summary del REQ === valor del campo `Requerimiento:` en descripción.** Coincidencia exacta. Automation Jira planeada para enforce esto en el futuro.
+- **Summary del AM espejo === summary del REQ vinculado.**
+- **Convención de naming para los REQs transversales del core**: `[MÓDULO] — Infraestructura Transversal del Core` (ej: "INBOX — Infraestructura Transversal del Core"). Aplica tanto al REQ como al AM espejo.
+- **`editJiraIssue` con `contentFormat: 'markdown'`** funciona bien para escritura, debugging y devolución legible.
+
+### Desalineaciones con sesiones previas
+
+Cosas descritas en sesiones anteriores que **ya no aplican** y conviene ignorar al retomar:
+
+| Sesión origen | Lo que describía | Estado actual |
+|---|---|---|
+| 2026-05-10 (REQ-73) | 4 categorías de Alertas: `triage / workflow / metric / cross_app_panel` con UIs canónicas distintas | **Eliminadas.** REQ-73 actual usa 3 estados canónicos (Nueva, Resuelta, Descartada) y el tipo pertenece al catálogo del `target_app`. La diferenciación de UI por presentación vive a nivel del app que renderiza, no del tipo. |
+| 2026-05-10 (REQ-74) | `<CrossAppPanelCard>` como card especializada que consume alertas categoría `cross_app_panel` | **Eliminada.** Ya no existe la categoría `cross_app_panel` en Alertas (ver fila anterior). Si surge necesidad de Dashboard cross-app, viene como REQ futuro de governance. |
+| 2026-05-10 (REQ-71) | "Triggers automáticos al crear (`triggers_on_create`) + CTAs en el Drawer (`available_actions`)" descritos como mecanismo central | **Subsumidos al modelo nuevo.** Un trigger automático es una acción `function_invocation` del manifest invocada con `invocation_source: 'inbox_trigger'`. Un CTA del Drawer es una acción del manifest invocada con `invocation_source: 'inbox_drawer_cta'`. El modelo unificado del 2026-05-13 los preserva pero como aplicaciones del motor de REQ-68, no como conceptos paralelos del Inbox. |
+| 2026-05-12 parte 2 (decisión #7) | `report_dependency_block` con `auto_archive` (reactivo) | **Revisada y generalizada.** Aplica el patrón `ConsumerTypeAssociation` con `satisfaction_mode` (proactivo), generalizado más allá de reportes. |
+| 2026-05-10 (varios REQs) | Sección "Modelo de provisión — REQ transversal vs REQ por área" | **Removida.** La diferenciación se expresa en "Fuera de alcance V1" + "Espejo en MAIN" sin necesidad de sección dedicada. |
+
+### Pendientes — Actualización del skill `ardua-req-enrichment`
+
+Durante esta sesión se diagnosticaron 6 áreas del skill que no capturaban los aprendizajes del cleanup. Se generó un **prompt completo para actualizar el skill** que cubre:
+
+1. Ampliación de la sección "Foco funcional, no técnico" con 4 categorías nuevas a evitar (componentes literales, TypeScript inline, performance budgets en ms, OpenSpec / specs internas / "L1/L2/L3" / "Type A/B").
+2. Completar el template REQ-1 con secciones canónicas faltantes: **Resumen** al inicio del body + **Dependencias** con sub-sección "Consumidores". Diferenciar metadata entre REQ por aplicación (`Aplicación`) y REQ transversal del core (`Sistema: CORE (transversal)`). **No incluir "Espejo en MAIN" como sección canónica del template** — el AM se crea por automation cuando el REQ pasa a SENT TO DEV; el número AM-XXXX no existe al redactar el REQ inicial.
+3. Documentar convenciones de naming: summary === valor del campo `Requerimiento:`; patrón `[MÓDULO] — Infraestructura Transversal del Core` para transversales; verbos canónicos (Construir, Expandir, Automatizar, Integrar, Migrar) para Variant A (app-scoped) y Variant B (transversal de dominio).
+4. **Tercer modo "Refactorización post-promoción"** para REQs ya en SENT TO DEV. Preserva el status. Propaga al AM espejo. Agrega nota convencional. Alinea summary REQ ↔ AM. Solo en este modo aplica referenciar el AM dentro del REQ (porque ya existe).
+5. Patrones conceptuales del REQ: Modelo conceptual al inicio del Alcance funcional (§1, en prosa + tablas); tablas funcionales en vez de TypeScript; iconografía conceptual permitida (✓, ↗) sin nombrar componentes.
+6. Patrón "Detalle visual diferido a refinement" — cuando el REQ define contrato funcional pero el visual final requiere Diseño.
+
+El prompt está listo para aplicar en una sesión dedicada. Antes de aplicarlo:
+
+- El **modo Refactorización (#4)** probablemente merece un discovery propio antes de meterse al skill como modo formal. Hay preguntas operativas abiertas (cuándo amerita refactorizar vs abrir REQ nuevo, manejo de cambios menores vs estructurales, versionado REQ ↔ AM).
+- El **patrón #5 (Modelo conceptual al inicio del Alcance)** es un cambio sustantivo de estilo — REQs por aplicación (no transversales) podrían no necesitarlo siempre. Vale validarlo como convención antes de hacerlo prescriptivo en el skill.
+
+### Pendientes operativos
+
+- **REQ-54 (LEX — Reportería Regulatoria)** — en SENT TO DEV con el modelo anterior. Sus dependencias UIF ↔ OPS deben declararse como `ConsumerTypeAssociation` con `satisfaction_mode: 'verify_existing'`. Refactor pendiente para una sesión siguiente.
+- **REQ-52 (LEX Alertas) y REQ-33 (TRD Alertas)** — en SENT TO DEV bloqueados por REQ-73. Confirmar que el scope se limita a declarar la configuración del dominio (qué `ALERT_TYPE` declara cada uno, payloads, severidades) y no filtra infraestructura propia.
+- **Cleanup de features locales** — el feature `centro-de-alertas.md` debe actualizarse para reflejar el modelo nuevo (catálogo en `target_app`, estados Nueva/Resuelta/Descartada, sin las 4 categorías). Bloque Git pendiente.
+- **Automation Jira** — implementar enforcement de las dos convenciones de summary: (a) summary del REQ === valor del campo `Requerimiento:` en descripción; (b) summary del AM espejo === summary del REQ vinculado por `is caused by`.
+
+### Cómo retomar en otra sesión
+
+1. **Este discovery es el punto de entrada actualizado al 2026-05-13.** Especialmente § "Refactor de modelo: ConsumerTypeAssociation", § "Refactor de Alertas", § "Dashboard" y § "Desalineaciones con sesiones previas".
+2. **Los 6 REQs transversales (REQ-59, REQ-68, REQ-69, REQ-71, REQ-73, REQ-74) están todos refactorizados y limpios** en Jira. Son la fuente de verdad canónica del modelo conceptual.
+3. **Las sesiones 2026-05-10 y 2026-05-12 (partes 1 y 2)** describen el camino al modelo actual pero contienen elementos que ya no aplican — ver § "Desalineaciones con sesiones previas". Usar este discovery como referencia primaria.
+4. **Convenciones del modelo a tener presentes al retomar** (acumuladas):
+    - `ConsumerTypeAssociation` + `satisfaction_mode` unifica dependencias de Reportería + asociaciones del Inbox.
+    - El tipo de Alerta pertenece al catálogo del `target_app`; el emisor es metadata.
+    - Inbox = vista filtrada del Centro (`execution_mode='human' OR state='failed'`); todo persiste en bbdd.
+    - 5 estados canónicos del Inbox (`failed` solo programmatic, retry manual V1).
+    - Endpoint público invocable como primitiva común de los 4 escenarios de invocación programática.
+    - `record_mutation` vs `function_invocation` (REQ-68) es el discriminador del menú de acciones.
+    - Transición drag-drop del Kanban = acción `record_mutation` del manifest con `invocation_source: 'kanban_drag'` (REQ-69).
+    - Dashboard: 4 cards shared mandatorias + KPI principal del área designable + card de gráfico de evolución con 3 tipos.
+    - Detalle visual de componentes nuevos: diferido a refinement con Diseño + Tecnología.
+5. **Pendientes operativos**: REQ-54, REQ-52, REQ-33, feature `centro-de-alertas.md`, automation Jira de summary.
+6. **Skill `ardua-req-enrichment`**: prompt listo para aplicar en sesión dedicada. Considerar discovery propio para el modo Refactorización antes de meterlo al skill.
 
 ---
 
