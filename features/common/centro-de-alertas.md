@@ -3,7 +3,7 @@ aplicacion: COMMON
 status: Definida
 owner: Yasmani Rodriguez
 created_at: 2026-05-11
-updated_at: 2026-05-12
+updated_at: 2026-05-13
 req: REQ-73
 discovery: core-modulos-transversales-discovery.md
 productos_afectados: [TRD, OPS, LEX, CLP, FIN]
@@ -43,7 +43,7 @@ Una observación humana que requiere ser registrada y trabajada es una Solicitud
 |---|---|
 | Modelo canónico `Alerta<TPayload>` | Definido en `src/types/genericos.ts`, no redefinible localmente |
 | Estados | `new` · `resolved` · `dismissed` (terminales inmutables) |
-| Severidad obligatoria | `critical` / `high` / `medium` / `low`; única dimensión de clasificación |
+| Severidad declarable por tipo | Capacidad opcional en el registry del `ALERT_TYPE`. Valores válidos cuando aplica: `critical` / `high` / `medium` / `low`. Sigue siendo la única dimensión de clasificación cuando el tipo la activa |
 | Vistas | Lista · Cards · Kanban (con Ejes vía REQ-69) |
 | Drawer compartido | Header + body + Timeline + Comments + acciones; shared con Inbox (REQ-71) |
 | ClosureModal | `closeActions` por tipo + comentario obligatorio ≥ 10 chars |
@@ -77,7 +77,7 @@ type AlertState    = 'new' | 'resolved' | 'dismissed';
 interface Alerta<TPayload = unknown> {
   id: string;
   concept: string;                 // clasificador de negocio — declarado en el registry de la app target
-  severity: AlertSeverity;
+  severity?: AlertSeverity;        // opcional — declarable por tipo en el registry
   state: AlertState;
   source_app: string;
   source_module: string;
@@ -95,7 +95,7 @@ interface Alerta<TPayload = unknown> {
 }
 ```
 
-Cada app declara sus `ALERT_TYPE`s en un registry (`AlertTypeConfig`) con: payload del dominio, severidades válidas, `closeActions[]`, política de push a Slack. Mezclar `closeActions` con `terminal_state` inconsistentes es contract violation validable al boot.
+Cada app declara sus `ALERT_TYPE`s en un registry (`AlertTypeConfig`) con: payload del dominio, severidad declarable opcionalmente con sus valores válidos cuando aplica, `closeActions[]`, política de push a Slack. Mezclar `closeActions` con `terminal_state` inconsistentes es contract violation validable al boot.
 
 ### Principio: el tipo pertenece al catálogo del `target_app`, no al emisor
 
@@ -177,6 +177,7 @@ Ambos REQs configuradores (REQ-52 y REQ-33) están desbloqueados al 100% por v1 
 | 6 | ~~2026-05-11~~ → **revisada 2026-05-12** | ~~`REPORT_DEPENDENCY` se modela como Tarea al Inbox del `blocking_app` con `auto_archive`~~. **Revisada:** las dependencias bloqueantes de reportes (y la generación manual de reportes próximos a emitir) se modelan como `ConsumerTypeAssociation` del Centro de Solicitudes con `satisfaction_mode` (`generate_new` o `verify_existing`). No son alertas. El auto-cierre algorítmico de alertas sigue diferido a v2 por razones independientes — el cierre proactivo de Tareas dependientes lo gestiona el Inbox |
 | 7 | 2026-05-11 | **`ALERT_TYPE` `reporte_dependencias_incompletas`**: se dispara cuando un reporte se ejecuta con asociaciones consumidor-tipo no satisfechas (caso `allows_auto_generation: true` que procede a generar pese a dependencias no satisfechas). El disparador es responsabilidad del código que ejecuta el reporte (típicamente el motor de Reportería); el tipo vive en el catálogo del `target_app` consumidor |
 | 8 | 2026-05-12 | **El tipo pertenece al catálogo del `target_app`, no al emisor.** Un `ALERT_TYPE` lo declara quien lo gestiona; cualquier código del sistema que detecte la condición puede invocar la ingesta para dispararlo. La identidad del invocador es metadata del audit trail, no "ownership" del tipo. Refuerza el principio de Wizard of Oz arquitectónico: el invocador no decide la ruta de ejecución, solo declara que se cumplió una condición; el Centro decide el routing, la persistencia y la notificación |
+| 9 | 2026-05-13 | **Severidad pasa de obligatoria a capacidad opcional declarable por tipo.** No todo `ALERT_TYPE` amerita severidad (un `reporte_emitido_automaticamente` informativo no la necesita; un `blacklist_match` sí). Cada tipo declara en su registry si requiere `severity` y, cuando aplica, los valores válidos siguen siendo `critical` / `high` / `medium` / `low`. Refuerza el principio de capacidades opcionales del tipo establecido en la sesión de cleanup técnico del REQ-73 |
 
 ---
 

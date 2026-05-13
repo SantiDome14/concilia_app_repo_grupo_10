@@ -3,7 +3,7 @@ aplicacion: COMMON
 status: Definida
 owner: Yasmani Rodriguez
 created_at: 2026-05-11
-updated_at: 2026-05-12
+updated_at: 2026-05-13
 req: REQ-59
 discovery: core-modulos-transversales-discovery.md
 productos_afectados: [TRD, OPS, LEX, CLP, FIN]
@@ -350,13 +350,14 @@ Vinculante. Solicitudes incompletas se rechazan.
 | 14 | 2026-05-12 | **Modelo unificado de trabajo humano vinculado a reportes:** todo trabajo humano que un reporte requiere — sea de otra área (dependencia bloqueante) o de su propia área (generación manual) — se modela bajo el mismo mecanismo: `ConsumerTypeAssociation` declarada al alta del reporte. Esto elimina la convivencia previa de dos mecanismos (Tarea reactiva con `auto_archive` para dependencias + Tarea reactiva sin auto_archive para próximo a emitir manual) y los unifica en un único patrón proactivo |
 | 15 | 2026-05-12 | **Tipo genérico `generate_report_manually` en el catálogo del Inbox:** un único tipo del catálogo cubre todas las generaciones manuales de reportes, parametrizado por `payload: { report_id, period }`. Evita declarar un tipo del Inbox por cada reporte manual. El cierre de la Tarea se trigerea automáticamente cuando el `ReportRun` asociado completa con `status: 'ok'` |
 | 16 | 2026-05-12 | **`Report.dependencies[]` eliminada del modelo;** las dependencias son entidades del Centro de Solicitudes, consultables vía `ConsumerTypeAssociation` filtrando por `consumer_ref: <report_id>`. `ConsumerAssociationSnapshot` reemplaza a `ReportDependencySnapshot` en `ReportRun.dependencies_unmet[]`. La declaración de asociaciones se hace en el flujo formal de alta del reporte vía la sección `associations[]` de la solicitud |
+| 17 | 2026-05-13 | **REQ-54 (LEX) refactorizado al nuevo paradigma.** Alineación del consumidor LEX al modelo unificado: adopción del servicio transversal (no construcción de módulo específico de LEX), permissions de 4 niveles, `ConsumerTypeAssociation` como mecanismo de dependencias, lista canónica de 5 eventos sistémicos. Las dependencias concretas por reporte (ej: reporte UIF mensual ↔ `daily_reconciliation` de OPS con `verify_existing` + `verify_window_days: 1`) quedan para refinement con Legal + OPS |
 
 ---
 
 ## Frentes abiertos
 
 - **Construcción de v1** — entregable de Tecnología bajo AM-1004 (TO REFINEMENT)
-- **REQ-54 (LEX) — Centro de Reportería Regulatoria y Operativa** — en SENT TO DEV, desbloqueado por REQ-59. Requiere revisión para alinearse con el nuevo modelo de asociaciones (las dependencias UIF↔OPS deberían declararse como asociaciones con `verify_existing`)
+- **REQ-54 (LEX) — Adopción del Centro de Reportería para Legal & Compliance** — en SENT TO DEV, desbloqueado por REQ-59. **Refactor completado el 2026-05-13** — alineado al nuevo paradigma: adopción del servicio transversal, permissions de 4 niveles, `ConsumerTypeAssociation` con `satisfaction_mode`, lista canónica de 5 eventos sistémicos. Detalle por reporte (qué asociaciones declara cada uno) queda para refinement con Legal
 - **REQs por área para OPS, FIN, TRD, CLP** — surgen a demanda; cada uno declara sus asociaciones al alta
 - **Decisiones técnicas con Tecnología:** vinculación reporte↔función, arquitectura del scheduler, almacenamiento y retención por entidad, contrato del endpoint, alta atómica de Report + sus ConsumerTypeAssociations, viabilidad de V2
 
@@ -369,4 +370,4 @@ Vinculante. Solicitudes incompletas se rechazan.
 - Features relacionadas:
   - Centro de Alertas (`centro-de-alertas.md`) — receptor de los `ALERT_TYPE`s puramente informativos que emite este servicio (próximo-emisión-auto, vencido, error-generación, emitido-automáticamente, dependencias-incompletas). Las Tareas humanas ya **no** se canalizan vía Alertas
   - Centro de Solicitudes (`centro-de-solicitudes.md`) — provee la entidad `ConsumerTypeAssociation` y el tipo genérico `generate_report_manually`. Es el mecanismo único de coordinación de trabajo humano vinculado a reportes (dependencias bloqueantes + generaciones manuales)
-- REQ consumidor: REQ-54 (LEX — Centro de Reportería Regulatoria y Operativa) — pendiente revisión para alineamiento con modelo de asociaciones
+- REQ consumidor: REQ-54 (LEX — Adopción del Centro de Reportería para Legal & Compliance) — alineado al modelo unificado en sesión 2026-05-13

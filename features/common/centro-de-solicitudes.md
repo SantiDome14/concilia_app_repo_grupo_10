@@ -3,7 +3,7 @@ aplicacion: COMMON
 status: Definida
 owner: Yasmani Rodriguez
 created_at: 2026-05-11
-updated_at: 2026-05-12
+updated_at: 2026-05-13
 req: REQ-71
 discovery: core-modulos-transversales-discovery.md
 productos_afectados: [TRD, OPS, LEX, CLP, FIN]
@@ -627,7 +627,7 @@ El repositorio es base consultable. Reportes típicos vía REQ-59:
 | 5 | 2026-05-11 | **Creación manual desde el propio Inbox** habilitada por tipo con `creable_manualmente: true` + `manual_creation_capability` |
 | 6 | 2026-05-11 | **Estados canónicos invariantes** — extendidos en sesión 2026-05-12 de cuatro a cinco con el agregado de `failed` |
 | 7 | 2026-05-12 | **REVISADA — La asociación reportes ↔ tipos predefinidos pasa de reactiva a anticipada.** Antes: se generaba una Tarea con `auto_archive` al momento de ejecutar el reporte. Ahora: se modela vía `ConsumerTypeAssociation` con `lead_time_days`, generando la instancia con anticipación al deadline del consumidor. Generalizada: aplica a cualquier consumidor scheduleado (reportes, cierres, vencimientos), no solo reportes |
-| 8 | 2026-05-11 | **Reportes con `allows_auto_generation: false`** próximos a emitir generan Tarea al Inbox (`reporte_proximo_emision_manual`), no Alerta. Los con `true` generan Alerta al consumidor |
+| 8 | ~~2026-05-11~~ → **superseded 2026-05-12** | ~~Reportes con `allows_auto_generation: false` próximos a emitir generan Tarea al Inbox (`reporte_proximo_emision_manual`), no Alerta. Los con `true` generan Alerta al consumidor~~. **Superseded:** el caso `allows_auto_generation: false` se modela proactivamente vía `ConsumerTypeAssociation` con `concept: 'generate_report_manually'` y `satisfaction_mode: 'generate_new'`, no reactivamente al `next_emission_date`. Ver feature de Reportería decisión #10 revisada y #15. El caso `true` se mantiene: la Alerta `reporte_proximo_emision_auto` sigue vigente |
 | 9 | 2026-05-12 | **Principio "Wizard of Oz arquitectónico":** los CTAs externos invocan capacidades, no rutas de ejecución. La capacidad decide internamente si ejecuta de forma directa o crea Solicitud/Tarea en el Centro. Permite lanzar productos con ejecución 100% humana y automatizar progresivamente. La decisión es de implementación en código, no de discovery |
 | 10 | 2026-05-12 | **REVISADA — El modelo SÍ incorpora `execution_mode` como dimensión explícita del registro.** Antes se había decidido no incorporar `execution: manual \| programmatic` al modelo. La nueva decisión incorpora `execution_mode: 'human' \| 'programmatic'` como campo mandatorio del `InboxTypeConfig` (derivado al registro). El Inbox sigue mostrando solo lo que requiere intervención humana, pero ahora el modelo expresa explícitamente la dimensión |
 | 11 | 2026-05-12 | **Cinco estados canónicos** — agregar `failed` al set existente. Aplica solo a tipos con `execution_mode: 'programmatic'`; los `human` no entran a `failed`. `failed` no es terminal en el mismo sentido que `completed`/`rejected`: admite retry |
@@ -640,15 +640,14 @@ El repositorio es base consultable. Reportes típicos vía REQ-59:
 | 18 | 2026-05-12 | **Dos vistas top-level del usuario:** Mi bandeja (lo que tengo que ejecutar) + Mis enviadas (las que yo creé a otros, para seguimiento). Toggle en el módulo Inbox |
 | 19 | 2026-05-12 | **Naming:** prosa en español ("Solicitud" / "Tarea"), campos del modelo en inglés (`type: 'request' \| 'task'`, `execution_mode: 'human' \| 'programmatic'`, `concept` como clasificador de negocio). Resuelve la inconsistencia previa entre REQ y feature |
 | 20 | 2026-05-12 | **Modos de satisfacción de la asociación consumidor-tipo:** `generate_new` (default — el scheduler crea una instancia anticipada cuando se cumple `lead_time_days`) y `verify_existing` (el scheduler verifica al deadline del consumidor que exista al menos una instancia del concept en estado `Completed` dentro de `verify_window_days`). Resuelve el caso de reportes regulatorios que se apoyan en series recurrentes operativas ya existentes — evita generar tareas redundantes |
+| 21 | 2026-05-13 | **REQ-71 refactorizado al nuevo paradigma.** Se aplicó al REQ todo el modelo de matriz `type × execution_mode`, 5 estados canónicos incluyendo `failed`, endpoint público invocable, `ConsumerTypeAssociation` con `satisfaction_mode`, evidencias en panel de detalle, 3 fechas semánticas, 2 vistas top-level. El feature local ya reflejaba el modelo; este refactor cierra la coordinación REQ ↔ feature |
 
 ---
 
 ## Frentes abiertos
 
 - **Construcción de v1** — entregable de Tecnología bajo AM-1017 (TO REFINEMENT)
-- **Refactor de REQ-71** post-cambios de esta sesión — pendiente para reflejar matriz, cinco estados, evidencias, dos vistas, endpoint público, asociaciones consumidor-tipo
 - **REQs por área** para OPS, LEX, FIN, TRD — declaración de tipos (con `execution_mode`), payloads, `closeActions[]` o `endpoint_ref`, series recurrentes, asociaciones consumidor-tipo, formularios manuales. Surgen a demanda
-- **Coordinación REQ-59 ↔ REQ-71** — cambio de modelo: las dependencias de reportes se modelan vía `ConsumerTypeAssociation` con `consumer_kind: 'report'` en lugar del `report_dependency_block` con `auto_archive` reactivo. Ajustar el feature de Reportería en consecuencia
 - **V2** — auto-retry con back-off, workflow multi-paso, bulk operations, asignación a equipo, vinculación automática, UI gestionada de series y asociaciones, asistente IA
 
 ---
