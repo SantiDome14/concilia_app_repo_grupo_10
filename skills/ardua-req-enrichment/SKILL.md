@@ -1,16 +1,6 @@
 ---
 name: ardua-req-enrichment
-description: >
-  Enriquece un requerimiento existente en Jira (proyecto REQ) tomando como base el hilo de Slack
-  vinculado al ticket y la base de conocimiento del proyecto (framework, entities, discoveries,
-  features). Soporta dos modos: Detallado (análisis profundo con challenge al stakeholder) y
-  Express (formateo directo para mover el ticket a Sent to Dev sin análisis profundo, con
-  registro de cuestiones pendientes si aplican). Produce un requerimiento estructurado en el
-  formato REQ-1, listo para ser actualizado en Jira. Activar cuando el usuario diga "enriquecer
-  un requerimiento", "quiero enriquecer el REQ-XX", "mejorar un ticket" o similar. Si el usuario
-  indica explícitamente el modo ("express" o "detallado") en el prompt inicial, usar ese modo
-  directamente. Si el modo no queda claro, preguntarlo al principio. Si el usuario no proporciona
-  el key del requerimiento, solicitarlo antes de continuar.
+description: 'Enriquece un requerimiento existente en Jira (proyecto REQ) tomando como base el hilo de Slack vinculado al ticket y la base de conocimiento del proyecto (framework, entities, discoveries, features). Soporta dos modos: Detallado (análisis profundo con challenge al stakeholder) y Express (formateo directo para mover el ticket a Sent to Dev sin análisis profundo, con registro de cuestiones pendientes si aplican). Produce un requerimiento estructurado en el formato REQ-1, listo para ser actualizado en Jira. Activar cuando el usuario diga "enriquecer un requerimiento", "quiero enriquecer el REQ-XX", "mejorar un ticket" o similar. Si el usuario indica explícitamente el modo ("express" o "detallado") en el prompt inicial, usar ese modo directamente. Si el modo no queda claro, preguntarlo al principio. Si el usuario no proporciona el key del requerimiento, solicitarlo antes de continuar.'
 ---
 
 # Skill: Enriquecimiento de Requerimientos
@@ -25,17 +15,50 @@ Convertir un requerimiento capturado (típicamente por Miles vía Slack) en un r
 
 ---
 
+## Foco funcional, no técnico
+
+Los requerimientos enriquecidos se dirigen a dos audiencias: **stakeholders no técnicos** del negocio (Legal & Compliance, Trading, Operaciones, Comercial, etc.) y el **área de Desarrollo**. La definición técnica es ownership exclusivo de Desarrollo — el área de Producto define **qué** se construye y **por qué**; nunca el **cómo** se implementa.
+
+**Regla operativa:**
+
+- ✅ _"El sistema permite editar el monto y la fecha de fin de un límite existente sin eliminarlo y volverlo a crear."_ — describe la capacidad funcional.
+- ❌ _"El frontend invoca `PATCH /limit/{id}` para actualizar el registro en la tabla `limits`."_ — describe la implementación.
+
+**Esto aplica a TODO lo que produce el skill:**
+
+- La descripción enriquecida del REQ.
+- Los challenges al stakeholder en Slack (Paso 4 modo Detallado).
+- Los comentarios y notas que el skill publique.
+- La sección de "Cuestiones pendientes" en modo Express.
+
+**Qué evitar explícitamente:**
+
+- Nombres de endpoints, métodos HTTP, contratos de API.
+- Modelos de datos, estructuras de tablas, nombres de campos a nivel base de datos.
+- Frameworks, librerías, stacks técnicos.
+- Decisiones de arquitectura (cómo se sincronizan dos sistemas, qué patrón de diseño usar, dónde correr una tarea).
+
+**Excepción acotada:** si una **dependencia arquitectónica conocida** afecta el scope (por ejemplo: "esta capacidad depende de que primero se incorpore el módulo X"), referenciarla a nivel funcional sin entrar en cómo se implementa.
+
+Cuando el knowledge base o el hilo de Slack contengan información técnica, el rol del skill es **traducirla a lenguaje funcional**, no replicarla. Si el stakeholder usa terminología técnica en el hilo, capturar la intención funcional debajo y challengear ambigüedades en términos del comportamiento esperado, no de la implementación.
+
+---
+
 ## Modos de enriquecimiento
 
 ### Detallado (default)
+
 Análisis profundo del requerimiento contra la base de conocimiento y el hilo de Slack. Incluye un challenge explícito al stakeholder con preguntas concretas que deben responderse antes de estructurar el requerimiento. Es el modo correcto cuando:
+
 - Hay ambigüedad de scope que impediría escribir criterios de aceptación claros
 - Existen contradicciones entre el ticket y el knowledge base
 - Hay dependencias arquitectónicas o prerequisitos sin resolver
 - El stakeholder no validó decisiones clave con Producto o Tecnología
 
 ### Express
+
 Formateo directo del requerimiento para tramitarlo inmediatamente a Sent to Dev, sin challenge al stakeholder. Es el modo correcto cuando:
+
 - El stakeholder y el Dev ya conversaron sobre la solución
 - Es un bug o ajuste puntual que no requiere análisis
 - Hay urgencia operativa que prioriza el movimiento del ticket
@@ -44,7 +67,7 @@ Formateo directo del requerimiento para tramitarlo inmediatamente a Sent to Dev,
 
 ### Selección del modo
 
-**Si el usuario indica el modo en el prompt inicial** (ej: *"enriquecé express el REQ-44"*, *"hacé un enriquecimiento detallado del REQ-23"*) → usar directamente ese modo.
+**Si el usuario indica el modo en el prompt inicial** (ej: _"enriquecé express el REQ-44"_, _"hacé un enriquecimiento detallado del REQ-23"_) → usar directamente ese modo.
 
 **Si el modo no queda claro** → al inicio del flujo, usar `ask_user_input`:
 
@@ -60,46 +83,158 @@ ask_user_input(
 
 ---
 
+## Ciclo de vida del requerimiento (tablero REQ ↔ tablero AM)
+
+Un requerimiento existe en **dos tableros de Jira con sincronización automática** entre ellos. Entender este flujo es clave para no confundir lo que el skill puede tocar y lo que no.
+
+### Tableros involucrados
+
+- **PRODUCTS (proyecto REQ)** — tablero del área de Producto. Acá nace el requerimiento (Miles lo captura desde Slack), se enriquece, y se gestiona el ciclo desde la perspectiva del producto.
+- **MAIN (proyecto AM)** — tablero del área de Tecnología. Acá se ejecuta la implementación.
+
+### Estados del tablero PRODUCTS y su ownership
+
+| Estado           | Ownership         | Significado                                                                                              |
+| ---------------- | ----------------- | -------------------------------------------------------------------------------------------------------- |
+| `BACKLOG`        | Producto          | REQ capturado por Miles, sin enriquecer todavía                                                          |
+| `IN ANALYSIS`    | Producto          | Enriquecimiento en proceso (challenges abiertos, validaciones con stakeholder)                           |
+| `IN PROGRESS`    | Producto          | Solo para **tasks internas del área de Producto** (no aplica al flujo estándar de un REQ de stakeholder) |
+| `BLOCKED`        | Producto          | Bloqueado por dependencia externa al área                                                                |
+| `DEPRECATED`     | Producto          | Requerimiento descartado o absorbido por otro                                                            |
+| `SENT TO DEV`    | Espejado desde AM | Se disparó la automation y el espejo en AM fue creado                                                    |
+| `READY FOR DEV`  | Espejado desde AM | Refleja el estado del AM espejo                                                                          |
+| `IN DEVELOPMENT` | Espejado desde AM | Refleja el estado del AM espejo                                                                          |
+| `DONE`           | Espejado desde AM | Refleja el estado del AM espejo                                                                          |
+
+Los cuatro estados de la mitad inferior **no son ownership de Producto** — reflejan literalmente cómo se mueve el ticket espejo en el tablero de Tecnología.
+
+### El momento clave: pasar a `SENT TO DEV`
+
+Cuando el HoP transiciona el REQ a `SENT TO DEV` (manualmente, no lo hace el skill), se dispara una **automation que crea un ticket espejo en el tablero AM**, vinculado al REQ con relación `causes` y heredando la descripción enriquecida. El espejo arranca en `TO REFINEMENT` (primer estado del workflow de AM). Desde ese punto, los estados `SENT TO DEV`, `READY FOR DEV`, `IN DEVELOPMENT` y `DONE` del REQ se mueven según se mueva el AM espejo.
+
+El tablero AM tiene su propio set de estados, más granulares que los cuatro reflejados en el REQ (incluye etapas internas de refinamiento técnico, desarrollo y code review). El skill no necesita conocer ese mapping en detalle — basta con entender que **los cuatro estados sincronizados del REQ son una vista resumida del progreso real en AM**.
+
+### Implicancia directa para el enriquecimiento
+
+La descripción enriquecida que produce este skill **es la base sobre la que Desarrollo va a trabajar** — no es solo documentación de Producto. Esto refuerza tres reglas:
+
+1. **El enriquecimiento debe estar completo antes de transicionar a `SENT TO DEV`.** Después, cualquier ajuste implica intervenir tanto el REQ como el AM espejo, lo cual es operativamente caro.
+2. **El contenido debe ser funcionalmente claro** para que Desarrollo pueda traducirlo a definición técnica sin ambigüedad (ver sección "Foco funcional, no técnico").
+3. **El skill nunca transiciona el ticket.** La transición a `SENT TO DEV` la hace el HoP manualmente después de revisar el enriquecimiento — porque dispara la creación del espejo en AM, que es un evento operativo significativo.
+
+---
+
 ## Base de conocimientos del proyecto
 
-Las fuentes de conocimiento, en orden de lectura, viven todas bajo `/Users/yasmani/atlas-ai-product-management-framework/`. Antes de cargar cada carpeta, listar su contenido con `Filesystem:list_directory` — no asumir qué archivos existen.
+Las fuentes de conocimiento viven en el repositorio `atlas-ai-product-management-framework`, que cada integrante del área de Producto clona en su máquina. La ruta concreta varía por usuario y sistema operativo (macOS, Windows, Linux); se resuelve dinámicamente en el Paso 0c y se referencia en este skill como `<KB_ROOT>`. Antes de cargar cada carpeta, listar su contenido con `Filesystem:list_directory` — no asumir qué archivos existen.
+
+**Requisito de entorno:** este skill depende del Filesystem MCP para leer el repositorio clonado, por lo que solo opera en Claude Desktop.
+
+### El happy path: la triada `discoveries/` → `features/` → `prototypes/`
+
+El framework se organiza alrededor de un flujo conceptual:
+
+> **Investigar → Definir → Prototipar**
+> `discoveries/` → `features/` → `prototypes/`
+
+- `discoveries/` captura **hipótesis bajo investigación**. Cuando una hipótesis madura, sus conclusiones se **propagan** al feature file correspondiente. Es el registro del _proceso de validación_, no del estado actual.
+- `features/` es la **fuente de verdad del estado actual de cada producto** — qué hace hoy, qué módulos tiene, qué decisiones lo sostienen. Una carpeta por aplicación del core (`clp`, `trd`, `lex`, `ops`, `fin`), más `features/common/` para capacidades transversales (cross-product, sin prefijo de aplicación).
+- `prototypes/` contiene **un proyecto frontend autocontenido por producto** — la representación visual y navegable del ideal de producto, usada como herramienta de alineación con stakeholders. No refleja producción; refleja lo acordado.
+
+**Cardinalidades importantes:**
+
+- **Discovery ↔ Features: N-N.** Una hipótesis puede impactar varios features; un feature puede recibir aportes de varios discoveries a lo largo de su vida.
+- **Features ↔ Prototypes: 1-1 a nivel producto.** `features/clp/` ↔ `prototypes/clp/`. Las features individuales (`clp-rfq.md`, `clp-earn.md`) se reflejan como **vistas o módulos dentro del mismo prototipo** del producto, no como prototipos separados.
+
+Esto importa para el enriquecimiento porque cada requerimiento se ancla en algún punto de la triada y obliga a leer el conjunto correcto de archivos: el estado actual (`features/`), las investigaciones abiertas que lo afectan (`discoveries/`), y la referencia visual (`prototypes/`).
 
 ### 1. `framework/` — constraints foundational
-`/Users/yasmani/atlas-ai-product-management-framework/framework/`
 
-Leer **todos** los archivos presentes. Definen el marco legal, operativo, contable, la misión, visión, valores y el roadmap del proyecto. Son constraints de diseño — toda decisión del requerimiento debe validarse contra ellos.
+`<KB_ROOT>/framework/`
+
+Leer **todos** los archivos presentes. Definen el marco legal, operativo, contable, la misión, visión, valores y el roadmap del proyecto. Son constraints de diseño — toda decisión del requerimiento debe validarse contra ellos. La referencia canónica del framework es `project-instructions.md`.
 
 ### 2. `entities/` — catálogo del ecosistema operativo
-`/Users/yasmani/atlas-ai-product-management-framework/entities/`
+
+`<KB_ROOT>/entities/`
 
 Consultar **cuando el requerimiento menciona una entidad** (Haz Pagos, Circuit Pay, Ardua Solutions Corp, Astra Ventures, Binance, Bitso, Bridge, Convera, Brubank, etc.). Leer el archivo `[nombre-entidad].md` correspondiente — describe qué capacidades operativas habilita esa entidad.
 
 Si el requerimiento menciona una entidad y no existe el archivo → flaguearlo al cierre y proponer crearlo.
 
-### 3. `discoveries/` — Living Discovery Documents (estado: En investigación)
-`/Users/yasmani/atlas-ai-product-management-framework/discoveries/`
+### 3. `features/` — fuente de verdad del estado del producto
 
-La carpeta es **flat**: no hay subcarpetas `opened/` ni `closed/`. El estado de cada discovery se declara en el campo `status` del YAML frontmatter (`En investigación`, `Concluida`, `Descartada`).
+`<KB_ROOT>/features/`
 
-Identificar y leer el discovery relevante al requerimiento (filtrar mentalmente por `status: En investigación` para el contexto activo):
-- Aplicación del core: `[aplicacion]-discovery.md` (ej: `trd-discovery.md`, `clp-discovery.md`)
-- Módulo específico dentro de una aplicación: `[aplicacion]-[modulo]-discovery.md` (ej: `trd-proveedores-de-liquidez-discovery.md`, `lex-limites-discovery.md`)
+Carpeta por producto del financial-core (`clp`, `trd`, `lex`, `ops`, `fin`) más `features/common/` para features transversales.
 
-Los discoveries capturan hipótesis bajo validación, preguntas abiertas, decisiones cerradas y blockers activos. Son la fuente de verdad del estado actual del dominio.
+**Estructura interna de cada `features/[aplicacion]/`:**
 
-**Si no existe discovery para la aplicación/módulo del requerimiento — Discovery-First Principle:** proponer crearlo **antes de avanzar** con el enriquecimiento, no al cierre. Informar al usuario:
+- `README.md` — estado global del producto: propósito, módulos, estado actual de cada módulo, decisiones clave, frentes abiertos (con referencia a discoveries), stakeholders. Es la primera puerta de entrada al producto y siempre se lee primero.
+- `[aplicacion]-[modulo-o-feature].md` — especificación consolidada de una feature o módulo específico: contexto, objetivo, alcance funcional, fuera de alcance, criterios de aceptación. **No incluye** modelos de datos, endpoints ni decisiones arquitectónicas (eso vive en el PRD técnico, ownership de Tecnología).
 
-> *"No encontré discovery para [aplicación/módulo]. Como es la fuente de contexto del dominio, tiene sentido crearlo antes de enriquecer el REQ. ¿Arrancamos con un discovery básico y después retomamos el enriquecimiento?"*
+**`features/common/`:** features que cruzan dos o más productos con la misma semántica (notificaciones unificadas, alertas, inbox transversal, sistema de acciones). Los archivos acá **no llevan prefijo de aplicación** (la carpeta ya define el contexto).
 
-### 4. `discoveries/` — discoveries históricos (estado: Concluida / Descartada)
-La misma carpeta `discoveries/`. Consultar los archivos cuyo `status` sea `Concluida` o `Descartada` solo si el requerimiento referencia explícitamente una feature ya consolidada y se necesita entender cómo se llegó a la definición actual.
+**Para el enriquecimiento, leer en este orden:**
 
-### 5. `features/` — specs consolidadas
-`/Users/yasmani/atlas-ai-product-management-framework/features/`
+1. `features/[aplicacion]/README.md` — entender el estado global del producto.
+2. Los `[aplicacion]-[modulo-o-feature].md` que el requerimiento toca directamente.
+3. Si el requerimiento involucra una capacidad transversal (notificaciones, alertas, etc.) → revisar `features/common/[capacidad].md`.
 
-Leer los feature specs relevantes para la aplicación o feature del requerimiento.
+### 4. `discoveries/` — investigación de hipótesis
+
+`<KB_ROOT>/discoveries/`
+
+Carpeta **plana**: todos los discoveries viven directamente bajo `discoveries/`, sin subcarpetas. El estado y alcance de cada discovery se declaran en el **YAML frontmatter** del archivo:
+
+```yaml
+---
+name: [Título descriptivo]
+features: [LEX] # productos afectados; [COMMON] para transversales; [] para infraestructura
+status: En investigación # En investigación | Concluida | Descartada
+owner: [Nombre del PM]
+created_at: YYYY-MM-DD
+updated_at: YYYY-MM-DD
+---
+```
+
+**Para el enriquecimiento:**
+
+- Filtrar los discoveries por el campo `features:` del frontmatter para encontrar los que afectan la aplicación del requerimiento (`[CLP]`, `[LEX, FIN]`, `[COMMON]`, etc.).
+- Priorizar los `status: En investigación` — capturan hipótesis abiertas y blockers activos que pueden impactar el scope del REQ.
+- Leer los `Concluida` o `Descartada` solo si el requerimiento referencia una decisión consolidada y se necesita entender cómo se llegó a ella.
+
+**Naming convention:**
+
+- `[aplicacion]-[topic]-discovery.md` — scoped a un producto/módulo (`clp-earn-discovery.md`, `trd-proveedores-de-liquidez-discovery.md`).
+- `[topic]-discovery.md` — transversal o de infraestructura (`jira-automations-discovery.md`, `observabilidad-discovery.md`).
+
+**Regla crítica de propagación:** cuando una hipótesis se concluye, sus hallazgos relevantes se propagan al feature file correspondiente en `features/`. Un aprendizaje validado que no actualiza `features/` es una fuga.
+
+**Discovery-First Principle:** si el requerimiento implica trabajo de investigación o validación de hipótesis y no existe ningún discovery relacionado, proponer crearlo **antes de avanzar** con el enriquecimiento, no al cierre:
+
+> _"No encontré discovery relacionado con [aplicación/módulo o tema]. Como el requerimiento implica hipótesis a validar, tiene sentido abrir el discovery antes de enriquecer el REQ. ¿Arrancamos con un discovery básico y después retomamos?"_
+
+Este principio **no aplica** a requerimientos que son ajustes puntuales, bugs o cambios sobre features ya consolidadas — solo cuando hay genuino trabajo de investigación pendiente.
+
+### 5. `prototypes/` — representación visual del producto
+
+`<KB_ROOT>/prototypes/`
+
+Carpeta con **un proyecto frontend autocontenido por producto** (`prototypes/clp/`, `prototypes/trd/`, etc.) más un template genérico (`_core-template-frontend/`) que sirve de base para nuevos prototipos. Cada proyecto tiene su `package.json`, `src/`, dependencias declaradas y se puede levantar localmente con `npm install && npm run dev`.
+
+**Punto clave para el enriquecimiento:** las features individuales **no son prototipos separados** — son vistas o módulos dentro del mismo proyecto del producto. La feature `clp-rfq.md` se refleja como una vista o ruta dentro de `prototypes/clp/`, no como una carpeta o archivo aparte.
+
+**Cómo usar `prototypes/` en el enriquecimiento:**
+
+- Leer `<KB_ROOT>/prototypes/[aplicacion]/README.md` cuando existe — documenta el stack, el alcance actual del prototipo, qué hipótesis valida y qué referencias hay a `features/[aplicacion]/`.
+- Identificar si la feature del requerimiento ya tiene representación visual en el prototipo. Si la tiene, referenciarla en el campo `Prototipo` del REQ-1 (ver "Formato de referencia").
+- Si la feature **no** está representada y el requerimiento la consolida, anotarlo como acción posterior — la iteración del prototipo se hace por separado, no es parte del enriquecimiento.
+
+El prototipo refleja **el ideal acordado**, no producción. Se itera junto con `features/[aplicacion]/`: cuando una feature se agrega/cambia en features, se itera el prototipo.
 
 ### 6. Notion — Teamspace de Productos (complementario)
+
 Usar `Notion:notion-search` con términos clave del requerimiento. Teamspace ID: `317e8880-def6-8062-b0e0-000b5da91cd6`. Complementa el knowledge base local cuando la información allí no alcanza.
 
 ---
@@ -110,7 +245,7 @@ El requerimiento enriquecido sigue la estructura de REQ-1, el estándar establec
 
 ```
 **Requerimiento:** [Nombre]
-**Aplicación:** [TRD / OPS / LEX / CLP / COM / FIN]
+**Aplicación:** [TRD / OPS / LEX / CLP / FIN]
 **Módulo:** [Módulo dentro de la aplicación, si aplica — ej: "Proveedores de Liquidez", "Límites", "Earn"]
 **Tipo:** Feature / Bug / Improvement / Spike
 **Prioridad:** Alta / Media / Baja
@@ -167,14 +302,16 @@ Estas quedaron identificadas durante el enriquecimiento pero no se profundizaron
 ---
 
 **Solicitante:** [Nombre — Rol]
-**Prototipo:** [nombre-del-archivo.html] ← solo si ya existe en prototypes/[aplicacion]/
+**Prototipo:** [referencia dentro de prototypes/[aplicacion]/ — ruta interna como /proveedores-de-liquidez, URL desplegada, o nombre del componente/vista] ← solo si la feature ya está representada en prototypes/[aplicacion]/
 ```
 
 **Reglas sobre el campo Aplicación:**
-- Siempre indicar la aplicación del core (TRD, OPS, LEX, CLP, COM, FIN)
+
+- Siempre indicar la aplicación del core (TRD, OPS, LEX, CLP, FIN)
 - Para productos transversales (Prime Desk RFQ, Ardua PnL Report, etc.), usar el nombre del producto en vez de una aplicación del core
 
 **Reglas sobre el campo Módulo:**
+
 - Opcional, solo cuando el requerimiento afecta un módulo específico dentro de una aplicación
 - Si el requerimiento es transversal a toda la aplicación, omitir el campo
 
@@ -188,7 +325,7 @@ Estas quedaron identificadas durante el enriquecimiento pero no se profundizaron
 
 Si el usuario no proporcionó el key del REQ → preguntar:
 
-> *"¿Cuál es el key del requerimiento que querés enriquecer? (ej: REQ-44)"*
+> _"¿Cuál es el key del requerimiento que querés enriquecer? (ej: REQ-44)"_
 
 No continuar hasta tener el key.
 
@@ -198,16 +335,36 @@ Si el usuario indicó el modo explícitamente en el prompt inicial → usar dire
 
 Si el modo no está claro → usar `ask_user_input` (ver sección "Selección del modo" arriba). Esperar la respuesta del usuario antes de continuar.
 
+#### 0c. Resolver `KB_ROOT` (silencioso)
+
+Resolver dinámicamente la ubicación del repositorio `atlas-ai-product-management-framework` en la máquina del usuario. **No comentar este paso en el chat** — se ejecuta por debajo y `KB_ROOT` se utiliza internamente en todos los pasos siguientes.
+
+1. Llamar a `Filesystem:list_allowed_directories`.
+2. Buscar entre las rutas devueltas una cuyo último segmento sea exactamente `atlas-ai-product-management-framework`. Esa ruta es `KB_ROOT`.
+3. Si no aparece directamente:
+   - Probar `Filesystem:search_files` con pattern `atlas-ai-product-management-framework` desde el primer allowed directory.
+   - Si tampoco aparece, recién entonces preguntar al usuario:
+     > _"No encuentro el repo `atlas-ai-product-management-framework` entre los directorios accesibles. ¿Podés pasarme la ruta donde lo tenés clonado, o agregarlo a las allowed directories del Filesystem MCP?"_
+
+**Notas:**
+
+- El nombre del repo es estable entre integrantes (es el default de `git clone`), por lo que el match por nombre de carpeta funciona tanto en macOS, Windows como Linux.
+- Si el Filesystem MCP no está disponible (ej: claude.ai web/mobile), informar al usuario que el skill requiere Claude Desktop y detener el flujo.
+
+A partir de este punto, todas las referencias a `<KB_ROOT>/` en el skill se interpretan como la ruta resuelta.
+
 ---
 
 ### Paso 1 — Leer el ticket en Jira
 
 Usar `Atlassian:getJiraIssue` con:
+
 - `cloudId`: `53eec1f8-a156-4af9-bc3a-d6142b50e0cc`
 - `issueIdOrKey`: el key proporcionado
 - `responseContentFormat`: `markdown`
 
 Extraer:
+
 - `summary` — título del ticket
 - `description` — contenido actual
 - `status` — estado actual en el workflow
@@ -224,10 +381,12 @@ Extraer:
 ### Paso 2A — Con hilo: leer el hilo de Slack completo
 
 Convertir el timestamp del link a `message_ts`:
+
 - Tomar los dígitos después de la `p`: `p1775672338243669`
 - Insertar punto antes de los últimos 6 dígitos: `1775672338.243669`
 
 Usar `Slack:slack_read_thread` con:
+
 - `channel_id`: extraído del link
 - `message_ts`: timestamp formateado
 - `response_format`: `detailed`
@@ -242,7 +401,7 @@ Continuar al **Paso 3**.
 
 Si el ticket no tiene link al hilo, informar al usuario:
 
-> *"Este requerimiento no tiene hilo de Slack vinculado. Voy a usar la base de conocimientos del proyecto como fuente de contexto primaria."*
+> _"Este requerimiento no tiene hilo de Slack vinculado. Voy a usar la base de conocimientos del proyecto como fuente de contexto primaria."_
 
 Los challenges (en modo Detallado) se presentarán directamente en el chat, no en Slack. Al cierre, recomendar al usuario vincular un hilo para futuras iteraciones.
 
@@ -256,20 +415,28 @@ Independientemente del modo o de si hay hilo, cargar la base de conocimiento cor
 
 **Secuencia de lectura:**
 
-1. Listar `/Users/yasmani/atlas-ai-product-management-framework/framework/` y leer **todos** los archivos.
+1. Listar `<KB_ROOT>/framework/` y leer **todos** los archivos (especial atención a `project-instructions.md`, que es la referencia canónica del framework).
 
-2. **Identificar entidades mencionadas** en el summary, description o hilo del requerimiento. Para cada entidad, leer el archivo correspondiente en `/Users/yasmani/atlas-ai-product-management-framework/entities/[nombre-entidad].md`. Si una entidad es mencionada y no existe archivo → registrarlo para flaguear al cierre.
+2. **Identificar entidades mencionadas** en el summary, description o hilo del requerimiento. Para cada entidad, leer el archivo correspondiente en `<KB_ROOT>/entities/[nombre-entidad].md`. Si una entidad es mencionada y no existe archivo → registrarlo para flaguear al cierre.
 
-3. **Identificar la aplicación del core del requerimiento** (TRD, OPS, LEX, CLP, COM, FIN o producto transversal). Si no es evidente del ticket, inferirla de los triggers/keywords en el hilo.
+3. **Identificar la aplicación del core del requerimiento** (TRD, OPS, LEX, CLP, FIN, capacidad transversal en `common/`, o producto transversal de infraestructura). Si no es evidente del ticket, inferirla de los triggers/keywords en el hilo.
 
-4. Listar `/Users/yasmani/atlas-ai-product-management-framework/discoveries/` y leer:
-   - El discovery de la aplicación (`[aplicacion]-discovery.md`)
-   - Si aplica, el discovery del módulo específico (`[aplicacion]-[modulo]-discovery.md`)
-   - **Si no existe ninguno para la aplicación/módulo → aplicar Discovery-First Principle** (ver sección "Base de conocimientos" arriba): proponer crear el discovery antes de avanzar.
+4. **Cargar el estado actual del producto** desde `features/`:
+   - Leer `<KB_ROOT>/features/[aplicacion]/README.md` — estado global del producto, módulos, decisiones, frentes abiertos.
+   - Identificar y leer los `[aplicacion]-[modulo-o-feature].md` que el requerimiento toca directamente.
+   - Si el requerimiento involucra una capacidad transversal (notificaciones, alertas, inbox, etc.) → leer también los archivos relevantes de `<KB_ROOT>/features/common/`.
 
-5. Listar `/Users/yasmani/atlas-ai-product-management-framework/features/` y leer los feature specs relevantes.
+5. **Cargar el contexto de investigación** desde `discoveries/`:
+   - Listar `<KB_ROOT>/discoveries/` y filtrar por el campo `features:` del frontmatter para encontrar los que afectan la aplicación del requerimiento.
+   - Leer los `status: En investigación` relevantes — capturan hipótesis abiertas y blockers activos.
+   - Leer los `Concluida` / `Descartada` solo si el requerimiento referencia una decisión consolidada y se necesita entender cómo se llegó a ella.
+   - **Si el requerimiento implica trabajo de investigación o validación de hipótesis y no existe ningún discovery relacionado → aplicar Discovery-First Principle** (ver sección "Base de conocimientos" arriba): proponer crear el discovery antes de avanzar. **No aplicar** este principio a bugs, ajustes puntuales o cambios sobre features ya consolidadas.
 
-6. Complementar con `Notion:notion-search` si los pasos anteriores no alcanzaron.
+6. **Consultar la representación visual** en `prototypes/`:
+   - Si existe `<KB_ROOT>/prototypes/[aplicacion]/README.md`, leerlo para entender el alcance actual del prototipo y qué vistas/módulos refleja.
+   - Identificar si la feature del requerimiento ya está representada visualmente. Si lo está, capturar la referencia (ruta interna o URL desplegada) para el campo `Prototipo` del REQ-1.
+
+7. Complementar con `Notion:notion-search` si los pasos anteriores no alcanzaron.
 
 ---
 
@@ -280,6 +447,7 @@ Independientemente del modo o de si hay hilo, cargar la base de conocimiento cor
 El challenge es **objetivo y basado en evidencia**. No se challengea por challengear. Nunca asumir nada que no esté documentado.
 
 **Un challenge válido es:**
+
 - Contradicción entre lo que dice el hilo/ticket y lo que dice un context file
 - Elemento de scope definido en el context que está ausente en el ticket
 - Terminología incorrecta u obsoleta según las decisiones documentadas
@@ -289,11 +457,14 @@ El challenge es **objetivo y basado en evidencia**. No se challengea por challen
 - Archivos adjuntos en el hilo no incorporados al contenido del ticket
 
 **Un challenge inválido es:**
+
 - Suposición no documentada ("probablemente también necesitan X")
 - Opinión de diseño sin respaldo en el knowledge base
 - Pregunta retórica sin propósito funcional
+- **Pregunta técnica que invade ownership de Desarrollo** (ej: "¿qué endpoint usamos?", "¿esto se hace en backend o frontend?", "¿con qué framework?"). El stakeholder es no técnico; el challenge se construye siempre en términos funcionales (qué debe pasar, no cómo se implementa). Ver sección "Foco funcional, no técnico".
 
 **Publicación del challenge:**
+
 - **Con hilo de Slack** → publicar en el hilo usando `Slack:slack_send_message` con `thread_ts` del hilo original. Usar el formato limpio definido en la sección "Formato de mensajes a Slack".
 - **Sin hilo** → presentar en el chat con el mismo formato.
 
@@ -319,6 +490,7 @@ Esperar la respuesta del stakeholder en el hilo (o en el chat si no hay hilo).
 Cuando la respuesta llega, clasificar:
 
 **Tipo A — Requiere confirmación del usuario:**
+
 - Ambigüedades de scope no documentadas
 - Decisiones de diseño abiertas
 - Flags sin resolver que afectan el requerimiento
@@ -326,6 +498,7 @@ Cuando la respuesta llega, clasificar:
 → Esperar respuesta antes de continuar al Paso 6.
 
 **Tipo B — Informativos (ya documentados):**
+
 - Correcciones de terminología respaldadas por el context file
 - Scope omitido pero ya definido en el context
 - Dependencias arquitectónicas conocidas
@@ -340,19 +513,21 @@ En modo Express este paso no aplica — saltar directamente al Paso 6.
 
 Producir el requerimiento completo siguiendo la estructura REQ-1 (ver sección "Formato de referencia").
 
+**Principio que atraviesa todo Paso 6:** el contenido es **funcional**, no técnico. Describir qué hace el sistema y por qué, nunca cómo se implementa (ver sección "Foco funcional, no técnico"). El skill **traduce** lo que aparezca técnico en el hilo o en el knowledge base; no lo replica.
+
 **Reglas de contenido:**
 
-- **Aplicación y Módulo:** usar la taxonomía consolidada (aplicaciones del core: TRD / OPS / LEX / CLP / COM / FIN, o producto transversal). Módulo opcional.
+- **Aplicación y Módulo:** usar la taxonomía consolidada (aplicaciones del core: TRD / OPS / LEX / CLP / FIN, o producto transversal). Módulo opcional.
 
-- **Contexto:** Situación actual, problema e impacto operativo. Incluir dependencias arquitectónicas clave y prerequisitos sin resolver.
+- **Contexto:** Situación actual, problema e impacto operativo. Si hay dependencias o prerequisitos sin resolver que afectan el scope, referenciarlos a nivel funcional ("la capacidad depende de que primero se incorpore X"), no técnico.
 
-- **Objetivo:** Bullets que responden *"¿para qué se construye esto?"*. Cada bullet es un resultado esperado. No describe el qué sino el para qué.
+- **Objetivo:** Bullets que responden _"¿para qué se construye esto?"_. Cada bullet es un resultado esperado. No describe el qué sino el para qué.
 
-- **Alcance funcional:** Secciones numeradas con título claro y descripción funcional. Sin datos técnicos, sin endpoints, sin modelos de datos. Nivel: *"el sistema hace X cuando el usuario hace Y"*.
+- **Alcance funcional:** Secciones numeradas con título claro y descripción funcional. **Sin terminología técnica** — sin nombres de endpoints, sin métodos HTTP, sin modelos de datos, sin estructuras de tablas, sin frameworks ni librerías. Nivel: _"el sistema hace X cuando el usuario hace Y"_.
 
 - **Fuera de alcance (v1):** Lo que está explícitamente fuera. Incluir elementos que podrían generar confusión. Separar V1 de roadmap futuro si hay versiones definidas.
 
-- **Criterios de aceptación:** Condiciones observables y verificables. Sin ambigüedad. Formato: *"El sistema [hace X] cuando [condición]"* o *"[Elemento] muestra/permite/impide [comportamiento]"*.
+- **Criterios de aceptación:** Condiciones observables y verificables, expresadas en términos de comportamiento del sistema desde la perspectiva del usuario o del stakeholder. Sin ambigüedad. Formato: _"El sistema [hace X] cuando [condición]"_ o _"[Elemento] muestra/permite/impide [comportamiento]"_. Nunca formular un criterio en términos de implementación (ej: ❌ _"el endpoint responde 200"_; ✅ _"la operación se confirma al usuario"_).
 
 - **Modo de enriquecimiento:** declarar explícitamente Detallado o Express.
 
@@ -360,7 +535,7 @@ Producir el requerimiento completo siguiendo la estructura REQ-1 (ver sección "
 
 - **Solicitante:** Inferido del hilo de Slack (quién envió a Miles) o del ticket si no hay hilo.
 
-- **Prototipo:** Solo incluir si ya existe en `/Users/yasmani/atlas-ai-product-management-framework/prototypes/[aplicacion]/`. Si no existe, omitir el campo.
+- **Prototipo:** Solo incluir si la feature del requerimiento ya está representada visualmente en `<KB_ROOT>/prototypes/[aplicacion]/`. La referencia puede ser una ruta interna del proyecto frontend (ej: `/proveedores-de-liquidez`), una URL desplegada (Vercel/Netlify/GitHub Pages si el prototipo está deployado), o el nombre del componente/vista relevante. Recordar que cada producto tiene **un solo prototipo** que agrupa todas sus features — los features individuales son vistas o módulos dentro del mismo proyecto. Si la feature no está representada todavía, omitir el campo y registrar la iteración del prototipo como acción posterior (fuera del scope del enriquecimiento).
 
 ---
 
@@ -369,10 +544,12 @@ Producir el requerimiento completo siguiendo la estructura REQ-1 (ver sección "
 Mostrar el requerimiento enriquecido al usuario en el chat **antes** de actualizar Jira.
 
 **Modo Detallado:**
-> *"Acá está el requerimiento enriquecido para [KEY]. Revisá el scope y los criterios de aceptación — si confirmás, lo actualizo en Jira y publico el cierre en el hilo de Slack."* (o *"te confirmo el cierre acá"* si no hay hilo)
+
+> _"Acá está el requerimiento enriquecido para [KEY]. Revisá el scope y los criterios de aceptación — si confirmás, lo actualizo en Jira y publico el cierre en el hilo de Slack."_ (o _"te confirmo el cierre acá"_ si no hay hilo)
 
 **Modo Express:**
-> *"Acá está el requerimiento enriquecido en modo Express para [KEY]. [Si hay cuestiones pendientes:] Registré [N] cuestión(es) pendientes de revisión que aparecieron durante el proceso. Si confirmás, lo actualizo en Jira y queda listo para que lo muevas a Sent to Dev."*
+
+> _"Acá está el requerimiento enriquecido en modo Express para [KEY]. [Si hay cuestiones pendientes:] Registré [N] cuestión(es) pendientes de revisión que aparecieron durante el proceso. Si confirmás, lo actualizo en Jira y queda listo para que lo muevas a Sent to Dev."_
 
 Esperar confirmación explícita.
 
@@ -383,7 +560,7 @@ Esperar confirmación explícita.
 **Actualizar Jira:**
 Usar `Atlassian:editJiraIssue` con `contentFormat: adf`. La descripción debe ser un objeto ADF válido (`type: doc`, `version: 1`, content array). No usar `contentFormat: markdown` para descriptions — no persiste de forma confiable.
 
-**IMPORTANTE — no transicionar el ticket.** El skill solo actualiza la descripción. La transición a "Sent to Dev" (u otro estado) la hace el HoP manualmente desde Jira.
+**IMPORTANTE — no transicionar el ticket.** El skill solo actualiza la descripción del REQ. La transición a `SENT TO DEV` (u otro estado) la hace el HoP manualmente desde Jira, **porque ese pase dispara la automation que crea el ticket espejo en el tablero AM** (proyecto de Tecnología) con relación `causes` y heredando la descripción enriquecida. Ver sección "Ciclo de vida del requerimiento (tablero REQ ↔ tablero AM)" para el detalle del flujo.
 
 **Cierre en Slack/chat:**
 
@@ -393,6 +570,7 @@ Usar `Atlassian:editJiraIssue` con `contentFormat: adf`. La descripción debe se
 - **Express sin hilo** → confirmar en chat + recomendar vincular hilo
 
 **Flaguear al cierre** (en cualquier modo):
+
 - Si una entidad fue mencionada y no existía archivo en `entities/` → proponer crearlo
 - Si no existía discovery para la aplicación/módulo (y se continuó igual con permiso del usuario) → proponer crearlo antes de futuras iteraciones
 
@@ -445,6 +623,7 @@ Cuando confirmes C1–CN, estructuro el requerimiento en formato REQ-1 y actuali
 ```
 
 **Reglas de uso:**
+
 - Máximo 2-3 líneas de contexto por challenge
 - Si un challenge tiene sub-opciones (ej: "v1 mínima" vs "v1 completa"), listarlas debajo del `▸`
 - Omitir el bloque `📌 Nota informativa` si no hay información sin confirmar
@@ -500,24 +679,26 @@ Quedaron documentadas en el ticket para revisión posterior:
 
 ## Consideraciones sobre discoveries durante el enriquecimiento
 
-El enriquecimiento **no genera discoveries por default**. Los discoveries son documentos vivos que capturan el estado del dominio — no artefactos que nacen y mueren en una sesión.
+El enriquecimiento **no genera discoveries por default**. Los discoveries capturan el proceso de investigación de hipótesis — no son artefactos que nacen y mueren en una sesión. El estado consolidado del producto vive en `features/`, no en `discoveries/`.
 
 **Dos escenarios posibles durante el enriquecimiento:**
 
-| Escenario | Qué hacer |
-|---|---|
-| La información específica del REQ emerge durante el proceso | Va al ticket de Jira — es lo que ya hace el enriquecimiento |
-| Información que **trasciende el REQ** emerge (decisión arquitectónica, blocker que afecta otras features del módulo, hipótesis nueva sobre el dominio) | Proponer **actualizar un discovery existente**. Si no existe, proponer crearlo (Discovery-First) |
+| Escenario                                                                                                                                                | Qué hacer                                                                                                                                                         |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| La información específica del REQ emerge durante el proceso                                                                                              | Va al ticket de Jira — es lo que ya hace el enriquecimiento                                                                                                       |
+| Información que **trasciende el REQ** emerge (decisión arquitectónica, blocker que afecta otras features del producto, hipótesis nueva sobre el dominio) | Proponer **actualizar un discovery existente** que cubra el dominio (filtrando por `features:` del frontmatter). Si no existe, proponer crearlo (Discovery-First) |
 
-**No se crean discoveries para cerrarlos en la misma sesión.** Si un discovery se crea durante el enriquecimiento, permanece abierto y evoluciona en sesiones futuras, cerrándose naturalmente cuando todas sus hipótesis estén resueltas y derive en una feature spec.
+**No se crean discoveries para cerrarlos en la misma sesión.** Si un discovery se crea durante el enriquecimiento, permanece `En investigación` y evoluciona en sesiones futuras. Cuando madura, sus conclusiones se **propagan a los feature files correspondientes** en `features/[aplicacion]/` (regla crítica del framework: un aprendizaje validado que no actualiza `features/` es una fuga).
 
 ---
 
 ## Lo que este skill NO hace
 
-- No define arquitectura técnica, endpoints ni modelos de datos
+- **No usa terminología técnica** (endpoints, métodos HTTP, modelos de datos, frameworks, librerías, stacks, decisiones arquitectónicas) en ningún output: ni en la descripción enriquecida, ni en challenges, ni en comentarios. La definición técnica es ownership de Desarrollo.
+- **No define cómo se implementa una capacidad** — solo qué hace el sistema y por qué. Ver sección "Foco funcional, no técnico".
 - No toma decisiones de scope sin respaldo en el knowledge base
-- **No transiciona el ticket en Jira** — la transición a Sent to Dev la hace el HoP manualmente
+- **No transiciona el ticket en Jira** — la transición a `SENT TO DEV` la hace el HoP manualmente y dispara la creación del ticket espejo en el tablero AM
+- **No toca el ticket espejo en AM** — el skill opera exclusivamente sobre el REQ del tablero PRODUCTS. El AM lo gestiona Desarrollo
 - No omite la carga del knowledge base (con o sin hilo, en modo Detallado o Express)
 - No actualiza Jira sin confirmación explícita del usuario
 - No asume nada que no esté documentado
@@ -531,22 +712,25 @@ El enriquecimiento **no genera discoveries por default**. Los discoveries son do
 ```
 [Key del REQ + modo (Detallado / Express)]
       ↓
+[Resolver KB_ROOT vía Filesystem:list_allowed_directories — silencioso]
+      ↓
 [Leer ticket en Jira — extraer summary, description, status, link a Slack]
       ↓
 [¿Tiene hilo de Slack?]
    SÍ → Leer hilo completo (Paso 2A)
    NO → Usar knowledge base como fuente primaria (Paso 2B)
       ↓
-[Cargar knowledge base]
+[Cargar knowledge base — triada: estado, investigación, visual]
    • framework/ (todos los archivos)
    • entities/ (por cada entidad mencionada)
-   • discoveries/ (aplicación + módulo)
-   • features/ (relevantes)
+   • features/[aplicacion]/README.md + feature files relevantes (+ common/ si aplica)
+   • discoveries/ (filtrar por features: en frontmatter; priorizar "En investigación")
+   • prototypes/[aplicacion]/README.md (si existe — para referencia visual)
    • Notion (complementario)
       ↓
-[¿Existe discovery para la aplicación/módulo?]
-   NO → Proponer crearlo antes de avanzar (Discovery-First)
-   SÍ → Continuar
+[¿El REQ implica investigación de hipótesis sin discovery existente?]
+   SÍ → Proponer crear discovery antes de avanzar (Discovery-First)
+   NO → Continuar
       ↓
 [Modo?]
    DETALLADO:
@@ -577,4 +761,9 @@ El enriquecimiento **no genera discoveries por default**. Los discoveries son do
 [Flaguear pendientes]
    • Entidades sin archivo en entities/
    • Discoveries faltantes
+      ↓
+[Handoff al HoP]
+   El HoP revisa el enriquecimiento y, cuando confirma, transiciona
+   el REQ a SENT TO DEV → automation crea ticket espejo en AM con
+   relación `causes` y descripción heredada. Skill ya terminó.
 ```
