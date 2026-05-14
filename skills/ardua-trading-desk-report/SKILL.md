@@ -28,7 +28,7 @@ Antes de procesar cualquier dato: leer Notion. Después de procesar: escribir No
 | `templates/reporte_semanal.html` | Solo los viernes |
 | `templates/reporte_mensual.html` | Solo último día hábil del mes |
 | `templates/chat_*.md` | Estructura del resumen ejecutivo en el chat |
-| `templates/README.md` | Spec de placeholders Jinja2 por template |
+| `templates/README.md` | Spec de tokens `[NOMBRE]`, bloques repetibles y constantes JS por template |
 | `validacion_skill.md` | Test rápido contra cierres conocidos si dudás de las fórmulas |
 
 ## Flujo de alto nivel del cierre diario
@@ -65,9 +65,11 @@ Antes de procesar cualquier dato: leer Notion. Después de procesar: escribir No
    └─ PnL no realizado cartera (al precio vivo)
 
 5. GENERAR HTML
-   ├─ Cargar templates/reporte_diario.html
-   ├─ Llenar placeholders Jinja2
-   └─ Guardar en /mnt/user-data/outputs/reporte_mesa_DD-MM-YYYY.html
+   ├─ Cargar templates/reporte_diario.html como string
+   ├─ Reemplazar tokens [NOMBRE] con valores formateados (argentino)
+   ├─ Duplicar bloques repetibles (cartera, ops cliente, eventos, filas tabla)
+   ├─ Inyectar constantes JS (FLAT_ARS_NUM, TC_FIFO_NUM, REV_CLI_ARG_NUM, CARTERA, OPS_CLIENTE_ARS)
+   └─ Guardar en /mnt/user-data/outputs/mesa-dinero-DD-MM-YYYY.html
 
 6. ESCRIBIR NOTION
    ├─ Crear row en Cierres Diarios (todos los KPIs + Eventos del día)
@@ -129,7 +131,7 @@ Estas son las que sistemáticamente dieron problema en cierres pasados (ver Chan
 
 ## Output esperado de cada cierre
 
-1. **HTML** en `/mnt/user-data/outputs/reporte_mesa_DD-MM-YYYY.html` (presentado con `present_files`)
+1. **HTML interactivo** en `/mnt/user-data/outputs/mesa-dinero-DD-MM-YYYY.html` (presentado con `present_files`). El operador lo abre en el navegador, ajusta TC y precios de cartera si quiere recalcular en vivo (expo, M2 y PnL cartera se actualizan con JS), y exporta a PNG con el botón "📸 Exportar PNG" embebido. El PNG es lo que se manda al CEO/directorio por Telegram.
 2. **Resumen ejecutivo en chat** con KPIs, variaciones, alertas, y confirmación de Notion actualizado
 3. Si hubo **operatoria especial** (BTC scalping, EUR pasante grande): análisis detallado SOLO en el chat (NO en HTML)
 4. **Arrastre para el día siguiente** explícito

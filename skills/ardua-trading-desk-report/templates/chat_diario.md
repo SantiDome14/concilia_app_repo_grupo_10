@@ -58,7 +58,7 @@ Estructura del resumen que el SKILL devuelve **en el chat** después de procesar
 
 **Arrastre para el próximo día hábil:** {{ side_expo }} ARS {{ flat_ars_abs | num_arg }} @ TC FIFO {{ tc_fifo }}
 
-📄 HTML del reporte: `/mnt/user-data/outputs/reporte_mesa_{{ fecha_dd-mm-yyyy }}.html`
+📄 HTML del reporte: `/mnt/user-data/outputs/mesa-dinero-{{ fecha_dd-mm-yyyy }}.html` (abrir en navegador → botón "📸 Exportar PNG" para mandar por Telegram)
 ```
 
 ---

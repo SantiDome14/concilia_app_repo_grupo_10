@@ -51,7 +51,7 @@ Estructura del resumen semanal en chat. Se genera los viernes después del cierr
 
 ---
 
-📄 HTML semanal: `/mnt/user-data/outputs/reporte_semanal_{{ archivo_filename }}.html`
+📄 HTML semanal: `/mnt/user-data/outputs/mesa-dinero-semanal-{{ archivo_filename }}.html` (abrir en navegador → botón "📸 Exportar PNG")
 ```
 
 ---

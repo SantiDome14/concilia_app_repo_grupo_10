@@ -1,430 +1,243 @@
-# Templates · Spec de Placeholders Jinja2
+# Templates · Spec de Renderizado
 
-Variables que el SKILL debe inyectar en cada template. Si una variable no tiene valor, **no dejar el placeholder Jinja2 sin renderizar** — pasar string vacío, `0`, `"—"` o lo que corresponda.
+Los tres reportes HTML (diario, semanal, mensual) son **plantillas estáticas con tokens `[NOMBRE]`**. La skill las llena con find-and-replace de strings — no se renderizan con Jinja2 ni con ningún engine de plantillas. El HTML resultante es un archivo standalone que el operador abre en el navegador y exporta a PNG con el botón embebido (`html2canvas`).
+
+Antes había un pipeline Jinja2 con filtros custom. **Ya no.** Si ves `{{ algo }}` en un HTML, es un bug — los tokens son `[ALGO]`.
 
 ---
 
-## Renderizado: cómo se generan los HTML
+## Paradigma de renderizado
+
+### 1. Cargar el HTML como string
 
 ```python
-from jinja2 import Environment, FileSystemLoader
+with open('/path/to/skill/templates/reporte_diario.html') as f:
+    html = f.read()
+```
 
-env = Environment(loader=FileSystemLoader('/path/to/skill/templates'))
-env.filters['num_arg'] = num_arg_filter
-env.filters['num_arg_2dec'] = lambda v: num_arg_filter(v, decimals=2)
-env.filters['num_arg_4dec'] = lambda v: num_arg_filter(v, decimals=4)
+### 2. Reemplazar tokens
 
-template = env.get_template('reporte_diario.html')
-html = template.render(**contexto)
+Hay dos tipos de tokens:
 
-with open('/mnt/user-data/outputs/reporte_mesa_DD-MM-YYYY.html', 'w') as f:
+- **Tokens fijos** en `SCREAMING_CASE`: `[REVENUE_TOTAL]`, `[TC_CIERRE]`, `[FLAT_ARS_NUM]`. Se reemplazan literalmente con el valor formateado.
+- **Guías visuales** en minúscula o frases: `[día anterior]`, `[mes]`, `[año]`, `[DÍA]`, `[Lun DD]`. También se reemplazan, son texto descriptivo (ej. `[día anterior]` → `viernes 09/05`).
+
+```python
+html = html.replace('[REVENUE_TOTAL]', fmt_arg(revenue_total))
+html = html.replace('[TC_CIERRE]', f'{tc_cierre:.2f}')
+html = html.replace('[día anterior]', dia_label)
+# ... etc
+```
+
+Algunos tokens aparecen **dos veces** en el HTML diario (en KPIs y en una sección de detalle). `str.replace` sin `count` los reemplaza todos: eso es lo que querés.
+
+### 3. Bloques repetidos (filas de tabla, posiciones)
+
+Los HTMLs traen una fila/posición de ejemplo como plantilla, con un comentario tipo `<!-- Repetir para cada activo -->` o `<!-- Una fila por cada día -->`. La skill tiene que:
+
+1. Extraer el bloque ejemplo (entre marcadores)
+2. Duplicarlo tantas veces como datos haya
+3. Reemplazar los tokens dentro de cada copia
+4. Pegar el bloque resultante donde estaba el ejemplo
+
+Bloques repetibles por template:
+
+| Template | Bloque | Marca |
+|---|---|---|
+| Diario | Posiciones de cartera | `<div class="pos-row">…</div>` (uno por activo de Cartera Vigente) |
+| Semanal | Filas tabla "Detalle Diario" | `<tr>…</tr>` (una por día Lun–Vie) |
+| Semanal | Eventos destacados | `<div class="evento-item">…</div>` |
+| Semanal | Filas tabla "Comparativa" | `<tr>…</tr>` (2–3 semanas previas + actual) |
+| Mensual | Filas tabla "Detalle Semanal" | `<tr>…</tr>` (una por semana del mes) |
+| Mensual | Eventos destacados | `<div class="evento-item">…</div>` |
+| Mensual | Filas tabla "Comparativa meses" | `<tr>…</tr>` (3–4 meses + actual) |
+| Mensual | Filas tabla "Cartera al cierre" | `<tr>…</tr>` (una por activo) |
+
+### 4. Diario: inyectar constantes JS
+
+El reporte diario tiene un `<script>` con constantes que el JS embebido usa para recalcular en vivo cuando el operador toca el TC o un precio:
+
+```js
+const FLAT_ARS = [FLAT_ARS_NUM];
+const TC_FIFO  = [TC_FIFO_NUM];
+const SIDE     = '[LONG_ARS o SHORT_ARS]';
+const REVENUE_REAL_M1 = [REV_CLI_ARG_NUM];
+
+const CARTERA = [
+  {name:'BTC',   qty: [QTY],   costUsd: [COSTO_USD], costUnitLocal: [COSTO_UNIT_LOCAL], currency: 'USD'},
+  // ... una entrada por activo de Cartera Vigente
+];
+
+const OPS_CLIENTE_ARS = [
+  {"t":"BUY","qty":[QTY],"tc":[TC],"pant":[FX_PANTALLA]},
+  // ... una entrada por op cliente ARS del día
+];
+```
+
+**Reglas para estas inyecciones**:
+
+- Los `[..._NUM]` son **números crudos sin formatear** (`123456.78`, no `123.456,78`). El JS los parsea como `Number`.
+- `FLAT_ARS`: positivo si LONG ARS, negativo si SHORT ARS. Es el flat firmado.
+- `currency` en `CARTERA`: `'USD'` para activos con `Metodo Valuacion = cripto_usd` (qty × precio), `'ARS'` para `bono_ars_tc` u otros (qty × precio / TC_cierre).
+- `costUnitLocal`: costo unitario promedio del activo en la moneda en que el operador ingresa el precio (la misma que `currency`).
+- `OPS_CLIENTE_ARS`: **solo ops cliente ARS** del día (las que entran al FIFO Mesa ARS). NO incluir ops Bitget de cobertura, NO incluir prop, NO incluir FX.
+
+### 5. Guardar a outputs
+
+```python
+filename = f'mesa-dinero-{dd:02d}-{mm:02d}-{yyyy}.html'                          # diario
+filename = f'mesa-dinero-semanal-{ddlun:02d}-{ddvie:02d}-{mm:02d}-{yyyy}.html'  # semanal
+filename = f'mesa-dinero-mensual-{mes_es}-{yyyy}.html'                           # mensual (mes_es: "abril", "mayo", ...)
+
+with open(f'/mnt/user-data/outputs/{filename}', 'w') as f:
     f.write(html)
 ```
 
+El nombre del PNG que descargará el operador desde el navegador queda hardcodeado en el `exportPNG()` del HTML — la skill debe reemplazar también esos placeholders ahí adentro.
+
 ---
 
-## Filtros custom
+## Formato de números (estilo argentino)
 
-### `| num_arg`
-Formato argentino, 0 decimales por defecto.
+`1.234.567,89` — punto como separador de miles, coma como decimal. Helper:
 
 ```python
-def num_arg_filter(value, decimals=0):
-    """1234567.89 → '1.234.568' (decimals=0) o '1.234.567,89' (decimals=2)"""
+def fmt_arg(value, decimals=0):
     if value is None or value == '':
         return '—'
     try:
         num = float(value)
     except (ValueError, TypeError):
         return str(value)
-    formatted = f"{num:,.{decimals}f}"
-    # Swap argentino: . y , intercambiados
-    return formatted.replace(',', 'X').replace('.', ',').replace('X', '.')
+    s = f"{num:,.{decimals}f}"
+    return s.replace(',', 'X').replace('.', ',').replace('X', '.')
 ```
 
-Ejemplos:
-- `num_arg(1234567.89)` → `"1.234.568"`
-- `num_arg(1234567.89, decimals=2)` → `"1.234.567,89"`
-- `num_arg(0.5, decimals=4)` → `"0,5000"`
-- `num_arg(None)` → `"—"`
+Usar `decimals=0` por defecto. `decimals=2` para TC, precios de cartera, expo. `decimals=4` para factor riesgo.
 
-### `| num_arg_2dec` y `| num_arg_4dec`
-Atajos para 2 y 4 decimales respectivamente.
+**Importante**: el formateo argentino es para mostrar (los tokens `[REVENUE_TOTAL]`, `[VOL_TOTAL]`, etc.). Para los `[..._NUM]` del JS embebido — `[FLAT_ARS_NUM]`, `[TC_FIFO_NUM]`, `[REV_CLI_ARG_NUM]` y los `[QTY]`/`[COSTO_USD]`/`[TC]` adentro de `CARTERA` y `OPS_CLIENTE_ARS` — usar números crudos en formato JS (`123456.78`).
 
 ---
 
-## Convenciones de naming
+## Tokens por template
 
-### `_signo`
-Variables que contienen `"+"`, `"−"` (U+2212, no `"-"`) o `""` según el signo del valor.
+### Diario (`reporte_diario.html`)
 
-```python
-def signo_minus(value):
-    """value > 0 → '+', value < 0 → '−', value == 0 → ''"""
-    if value > 0: return '+'
-    if value < 0: return '−'
-    return ''
-```
+**Header**: `[DD]`, `[MM]`, `[YYYY]`, `[DÍA]`, `[mes]`, `[año]`
 
-### `_abs`
-Valor absoluto numérico (sin signo). Combinar con `_signo`.
+**KPIs (sección 2)**: `[REVENUE_TOTAL]`, `[VOLUMEN_TOTAL]`, `[ROI]`, `[X]` (% variación), `[día hábil anterior]`, `[día anterior]`
 
-### `_clase`
-Una de `"green"`, `"red"`, `""` (vacío) según signo. La hoja de estilos pinta el texto.
+**Operaciones del día (sección 3)**: `[VOL_CLI_ARG]`, `[VOL_FX]`, `[VOL_PROP]`, `[VOL_TOTAL]`, `[REV_CLI_ARG]`, `[REV_FX]`, `[REV_PROP]`, `[COSTO_3BPS]`, `[REVENUE_NETO]`
 
-```python
-def clase_pnl(value):
-    if value > 0: return 'green'
-    if value < 0: return 'red'
-    return ''
-```
+**Realizado cartera (sección 4)**: `[REALIZADO_CARTERA]`
 
-### `_arrow`
-`"▲"` o `"▼"` según signo de variación (para los KPIs).
+**Performance (sección 5)**: `[N_TRADES]`, `[N_BUY]`, `[N_SELL]`, `[SIGMA]`, `[TC_MIN]`, `[TC_MAX]`, `[PROV_1]`, `[VOL_PROV_1]`, `[PROV_2]`, `[VOL_PROV_2]`
+
+**Exposición FX (sección 6)**: `[FLAT_ARS]`, `[TC_FIFO]`, `[TC_PROM]`, `[TC_CIERRE]`, `[ARRASTRE_ARS]`, `[ARRASTRE_TC]`, `[LONG ARS / SHORT ARS]` (texto literal a reemplazar por uno de los dos)
+
+**Métricas FIFO (sección 7)**: `[M1]`, `[M1_ABS]`, `[ESCENARIO_PANTALLA]` (M2 se recalcula en JS, no necesita token estático)
+
+**Cartera (sección 8)** — por cada activo en la fila `pos-row` ejemplo:
+- `[TICKER]` y `[ticker]` (este último en lowercase para los `id=` del input — ej. `btcPrice`, `ethPrice`)
+- `[QTY]` (cantidad)
+- `[PRECIO]` (precio actual)
+- `[USD/ARS]` (texto literal: una u otra según `currency`)
+- Y al final: `[COSTO_HISTORICO]`
+
+**Footer**: `[DD/MM/YYYY]`
+
+**Constantes JS**: ver sección 4 arriba.
+
+**Filename PNG dentro del script `exportPNG()`**: reemplazar `[DD]`, `[MM]`, `[YYYY]` (aparece otra vez ahí).
 
 ---
 
-## TEMPLATE: `reporte_diario.html`
+### Semanal (`reporte_semanal.html`)
 
-### Variables del header
+**Header**: `[Lun DD]`, `[Vie DD]`, `[mes]`, `[año]`, `[N]` (días operados)
 
-| Variable | Tipo | Descripción | Ejemplo |
-|---|---|---|---|
-| `fecha_dd_mm_yyyy` | str | Fecha en formato DD-MM-YYYY (filename safe) | `"12-05-2026"` |
-| `dia_label_largo` | str | Nombre completo del día | `"Martes"` |
-| `fecha_dd_de_mes_de_yyyy` | str | Fecha legible | `"12 de mayo de 2026"` |
+**KPIs**: `[REVENUE_TOTAL_SEMANA]`, `[REV_DIA_PROMEDIO]`, `[VOL_TOTAL_SEMANA]`, `[VOL_DIA_PROMEDIO]`, `[ROI_SEMANA]`, `[N_TRADES_TOTAL]`, `[N_BUY]`, `[N_SELL]`
 
-### KPIs principales
+**Tabla Detalle Diario** (fila ejemplo) — duplicar por cada día Lun–Vie y luego una fila total:
+- `Lun [DD/MM]` → reemplazar día y fecha
+- `[REV]`, `[VOL]`, `[ROI]`, `[M1]`, `[M2]`, `[TC]` por día
+- Fila TOTAL: `[REV_TOTAL]`, `[VOL_TOTAL]`, `[ROI_TOTAL]`, `[M1_ACUM]`, `[M2_ACUM]`
 
-| Variable | Tipo | Descripción |
+**Desglose Revenue Semanal**: `[REV_CLI_ARG_SEMANA]`, `[REV_PROP_SEMANA]`, `[REV_FX_SEMANA]`, `[COSTO_3BPS_SEMANA]`, `[REV_TOTAL_SEMANA]`, `[VOL_CLI_ARG_SEMANA]`, `[VOL_FX_SEMANA]`, `[VOL_PROP_SEMANA]`, `[VOL_TOTAL_SEMANA]`
+
+**Performance Semanal**: `[DÍA]`, `[X]` (varios contextos: revenue, ROI, etc.), `[M1_ACUM]`, `[M2_ACUM]`, `[N]`
+
+**Eventos destacados** — duplicar `evento-item` por cada evento: `[Día DD/MM]` + descripción
+
+**Comparativa** (fila ejemplo) — duplicar por cada semana previa (2–3) más fila total con `[Semana actual]`
+
+**Filename PNG dentro del script**: `[DDLun]`, `[DDVie]`, `[MM]`, `[YYYY]`
+
+---
+
+### Mensual (`reporte_mensual.html`)
+
+**Header**: `[Mes]`, `[año]`, `[N]` (días operados)
+
+**KPIs**: `[REVENUE_TOTAL_MES]`, `[REV_DIA_PROMEDIO]`, `[VOL_TOTAL_MES]`, `[VOL_DIA_PROMEDIO]`, `[ROI_MES]`, `[N_TRADES_TOTAL]`, `[N_BUY]`, `[N_SELL]`
+
+**Tabla Detalle Semanal** — duplicar fila por cada semana del mes + fila total: `[REV_TOTAL]`, `[VOL_TOTAL]`, `[ROI]`, `[M1_ACUM]`, `[M2_ACUM]`
+
+**Desglose Revenue Mensual**: `[REV_CLI_ARG_MES]`, `[REV_PROP_MES]`, `[REV_FX_MES]`, `[COSTO_3BPS_MES]`, `[REV_NETO_MES]`, `[TOTAL_MES]`, más los `[X]` de realizado cartera
+
+**Performance del Mes**: `[DÍA DD/MM]`, `[X]`, `[N]`, `[M1_ACUM]`, `[M2_ACUM]`
+
+**Eventos destacados** — duplicar `evento-item` por cada evento
+
+**Comparativa meses** — duplicar fila por cada mes previo (3–4) más fila total `[Mes actual]`
+
+**Cartera al cierre** — duplicar fila por activo: `[TICKER]`, `[QTY]`, `[COSTO_USD]`, `[USD/ARS]` (texto literal según moneda), `[PRECIO]`, `[VALOR_USD]`, más fila TOTAL con `[COSTO_TOTAL]`, `[VALOR_TOTAL]`
+
+**Acumulado YTD (sección 9 opcional)**: incluir solo si el mes actual es marzo o posterior. `[año]`, `[Mes actual]`, `[X]` (varios contextos: revenue YTD, volumen YTD, ROI, mejor/peor mes, etc.)
+
+**Filename PNG dentro del script**: `[mes]`, `[año]`
+
+---
+
+## Convenciones visuales
+
+### Colores (paleta dark, fijos en el CSS)
+
+| Color | Hex | Uso |
 |---|---|---|
-| `revenue_total` | float | Revenue total USD |
-| `volumen_total` | float | Volumen total USD (Cli ARG + FX + Prop) |
-| `roi_pct` | float | ROI en % (ej: `1.137`, no `0.01137`) |
-| `expo_usd` | float | Exposición USD |
-| `pl_si_cierra_signo` | str | `"+"` o `"−"` |
-| `pl_si_cierra_abs` | float | P&L si cierra (valor absoluto) |
-| `dia_anterior_label` | str | Etiqueta día anterior comparado | `"viernes"` o `"lunes"` |
-| `variacion_revenue_pct` | float | `+/-` % vs día anterior |
-| `variacion_revenue_arrow` | str | `"▲"` o `"▼"` |
-| `variacion_revenue_clase` | str | `"green"` o `"red"` |
-| `variacion_volumen_pct`, `_arrow`, `_clase` | — | Mismo patrón |
-| `variacion_roi_pp`, `_arrow`, `_clase` | — | Variación en puntos porcentuales |
+| Verde | `#10b981` | Revenue positivo, PnL positivo, totales en tablas |
+| Rojo | `#ef4444` | Costos, M1 negativo, PnL negativo |
+| Naranja | `#f59e0b` | Brand, exposición, warnings |
+| Texto principal | `#e5e9f0` | Valores |
+| Texto secundario | `#8a94a8` | Labels |
 
-### Sección "Operaciones del día"
+Para tokens que pueden ser positivos o negativos (M1, M2, PnL cartera), la **clase CSS** del `span` la elige la skill: `green` si suma, `red` si resta.
 
-| Variable | Tipo |
-|---|---|
-| `volumen_cli_arg`, `volumen_fx`, `volumen_prop` | float |
-| `revenue_cli_arg`, `revenue_fx`, `revenue_prop` | float |
-| `costo_3bps_abs` | float (positivo) |
-| `revenue_neto` | float |
+### Signos
 
-### Sección "Realizado Cartera"
+- Revenue positivo: `+USD 1.234` (con `+` explícito)
+- Negativo: `−USD 1.234` (usar `−` U+2212, no el guion `-`)
+- Variaciones: `▲` (sube, verde) o `▼` (baja, rojo)
+- Variación 0: omitir el triángulo, mostrar `=`
 
-| Variable | Tipo |
-|---|---|
-| `realizado_cartera_signo` | str |
-| `realizado_cartera_abs` | float |
-| `realizado_cartera_clase` | str (`"green"` o `"red"`) |
+### Strings literales
 
-### Sección "Performance"
-
-| Variable | Tipo |
-|---|---|
-| `trades` | int (solo clientes) |
-| `buy_count`, `sell_count` | int |
-| `sigma` | float (formato `"X,XX"`) |
-| `tc_min`, `tc_max` | float |
-| `prov_1_nombre`, `prov_2_nombre` | str |
-| `prov_1_vol`, `prov_2_vol` | float |
-
-### Sección "Exposición FX"
-
-| Variable | Tipo |
-|---|---|
-| `flat_ars` | float (con signo: + LONG, − SHORT) |
-| `tc_fifo` | float |
-| `tc_promedio_dia` | float |
-| `factor_riesgo` | float (4 decimales típicamente) |
-| `pl_si_cierra_signo`, `_abs`, `_clase` | (ver arriba) |
-| `tc_cierre` | float (input editable) |
-| `arrastre_flat` | float |
-| `arrastre_tc_fifo` | float |
-| `dia_anterior_corto` | str | "lun.", "vie.", etc. |
-| `side_expo` | str | `"LONG_ARS"` o `"SHORT_ARS"` o `"FLAT"` |
-
-### Sección "Métricas FIFO Ideal"
-
-| Variable | Tipo |
-|---|---|
-| `m1_signo`, `m1_abs`, `m1_clase` | (signo / abs / clase) |
-| `m1_card_clase` | str (`"green"` o `"red"`) — tinta del card entero |
-| `suma_escenario_pantalla` | float — Σ pnl escenario @ TC pantalla |
-| `m1_interpretacion_verbo` | str | `"ganó"` o `"perdió"` |
-| `m1_interpretacion_direccion` | str | `"más"` o `"menos"` |
-| `m2_signo`, `m2_abs`, `m2_clase`, `m2_card_clase` | (igual) |
-| `suma_escenario_cierre` | float — Σ pnl escenario @ TC cierre |
-
-### Sección "Cartera"
-
-`cartera` es lista de dicts:
-
-```python
-cartera = [
-    {
-      "ticker": "BTC",
-      "cantidad": 1.065424,
-      "costo_usd": 95900.55,
-      "precio_raw": 80766.50,         # input numérico
-      "precio_display": "80.767",     # display formateado
-      "moneda_precio": "USD",
-      "metodo_valuacion": "cripto_usd",
-      "valor_usd": 86050.32,
-      "pnl_signo": "−",
-      "pnl_usd_abs": 9850.23,
-      "pnl_pct_signo": "−",
-      "pnl_pct_abs": "10,3",          # con coma decimal
-      "pnl_clase": "red"
-    },
-    ...
-]
-```
-
-| Variable adicional | Tipo |
-|---|---|
-| `cartera_valor_total` | float |
-| `cartera_costo` | float |
-| `cartera_pnl_signo`, `_abs`, `_clase`, `_pct_signo`, `_pct_abs` | (igual patrón) |
-| `mejor_activo_ticker` | str |
-| `mejor_activo_pct_signo`, `_abs` | — |
-| `peor_activo_ticker`, `peor_activo_pct_signo`, `_abs` | — |
-
-### Variable JSON para el JS
-
-```python
-suma_escenario_per_op_json = json.dumps([
-    {"qty": 5000, "tc_operado": 1.475, "type": "BUY"},
-    {"qty": 12000, "tc_operado": 1.476, "type": "SELL"},
-    ...
-])
-```
-
-El JS recalcula M2 + expo + P&L al editar TC Cierre, y PnL no realizado al editar cualquier precio.
+- `[LONG ARS / SHORT ARS]` (con espacios y barra) → reemplazar por `LONG ARS` o `SHORT ARS` (uno solo)
+- `[USD/ARS]` (sin espacios) → reemplazar por `USD` o `ARS` según moneda del activo
+- `[+/-X]` → reemplazar por `+USD X` o `−USD X` (signo concreto)
+- `[día anterior]`, `[día hábil anterior]` → label tipo `viernes 09/05` o `jueves 08/05`
 
 ---
 
-## TEMPLATE: `reporte_semanal.html`
+## Validación rápida después de renderizar
 
-### Variables del header
-
-| Variable | Tipo |
-|---|---|
-| `rango_lun_vie` | str | `"5 al 9 de mayo"` |
-| `rango_lun_vie_largo` | str | `"lunes 5 al viernes 9 de mayo"` |
-| `rango_lun_vie_filename` | str | `"05-09-mayo-2026"` |
-| `año` | int |
-| `dias_operados` | int |
-
-### KPIs semanales
-
-| Variable | Tipo |
-|---|---|
-| `revenue_semanal`, `volumen_semanal` | float |
-| `revenue_promedio_dia` | float |
-| `volumen_promedio_dia_m` | str | `"1,6"` (en millones) |
-| `roi_semanal` | float (en %, ej `0.85`) |
-| `trades_total`, `buy_total`, `sell_total` | int |
-
-### Detalle diario (`dias` lista de dicts)
+Antes de mover a outputs, chequear que el HTML no contenga ningún token sin reemplazar:
 
 ```python
-dias = [
-    {
-      "dia_label": "Lun 5",
-      "revenue": 33458,
-      "volumen": 4017900,
-      "roi": "0,83",
-      "m1_signo": "−", "m1_abs": 1727, "m1_clase": "red",
-      "m2_signo": "+", "m2_abs": 22880, "m2_clase": "green",
-      "tc_cierre": 1.475
-    },
-    ...
-]
+import re
+tokens_pendientes = re.findall(r'\[[A-Z_][A-Z0-9_]*\]|\[día[^\]]*\]|\[Lun[^\]]*\]|\[Vie[^\]]*\]|\[mes\]|\[año\]|\[DÍA\]|\[DD/MM/YYYY\]', html)
+if tokens_pendientes:
+    raise ValueError(f"Tokens sin reemplazar: {set(tokens_pendientes)}")
 ```
 
-### Desglose Revenue + Performance + Eventos
-
-| Variable | Tipo |
-|---|---|
-| `revenue_cli_arg`, `revenue_prop`, `revenue_fx`, `costo_3bps_abs`, `revenue_neto` | float |
-| `volumen_cli_arg`, `volumen_fx`, `volumen_prop` | float |
-| `mejor_dia_label`, `peor_dia_label`, `mejor_roi_dia_label`, `peor_roi_dia_label` | str |
-| `mejor_dia_revenue`, `peor_dia_revenue` | float |
-| `mejor_roi_pct`, `peor_roi_pct` | float |
-| `m1_semanal_signo`, `_abs`, `_clase` | (patrón) |
-| `m2_semanal_signo`, `_abs`, `_clase` | (patrón) |
-| `dias_pos_m1`, `dias_pos_m2` | int |
-| `trades_promedio` | float (1 decimal) |
-
-`eventos` es lista de dicts:
-```python
-eventos = [
-    {"dia_label": "Lun 5", "descripcion": "Outliers de TC excluidos del σ"},
-    ...
-]
-```
-
-### Comparativa con semanas previas (`semanas_previas`)
-
-```python
-semanas_previas = [
-    {
-      "rango": "28 abr al 2 may",
-      "dias": 4,
-      "revenue": 89234,
-      "volumen_label": "8,2M",
-      "roi": "1,08",
-      "rev_dia": 22308
-    },
-    ...
-]
-```
-
----
-
-## TEMPLATE: `reporte_mensual.html`
-
-### Variables del header
-
-| Variable | Tipo |
-|---|---|
-| `mes` | str | `"Mayo"` (capitalizado) |
-| `año` | int |
-| `dias_operados`, `trades_total` | int |
-
-### KPIs del mes
-
-| Variable | Tipo |
-|---|---|
-| `revenue_mes`, `volumen_mes`, `revenue_promedio_dia` | float |
-| `roi_mes` | float (en %) |
-| `mes_anterior_label` | str | `"Abr 2026"` |
-| `variacion_revenue_pct`, `_arrow`, `_clase` | — |
-| `variacion_volumen_pct`, `_arrow`, `_clase` | — |
-| `variacion_roi_pp`, `_arrow`, `_clase` | — |
-| `trades_promedio_dia` | float (1 decimal) |
-
-### Desglose Revenue del mes
-
-Mismas variables que diario/semanal: `revenue_cli_arg`, `revenue_prop`, `revenue_fx`, `costo_3bps_abs`, `revenue_neto`, `volumen_cli_arg`, `volumen_fx`, `volumen_prop`, `realizado_cartera_signo`, `realizado_cartera_abs`, `realizado_cartera_clase`, `total_mes`.
-
-### Detalle semanal (`semanas` lista de dicts)
-
-```python
-semanas = [
-    {
-      "label": "S1 (28/04 - 02/05)",
-      "dias": 4,
-      "revenue": 89234,
-      "volumen": 8204512,
-      "roi": "1,08",
-      "rev_dia": 22308,
-      "m1_signo": "+", "m1_abs": 3245, "m1_clase": "green",
-      "m2_signo": "−", "m2_abs": 1230, "m2_clase": "red"
-    },
-    ...
-]
-```
-
-### Highlights
-
-| Variable | Tipo |
-|---|---|
-| `mejor_dia_label`, `peor_dia_label`, `mejor_semana_label`, `max_vol_dia_label`, `mejor_roi_dia_label` | str |
-| `mejor_dia_revenue`, `peor_dia_revenue`, `mejor_semana_revenue`, `max_vol_dia` | float |
-| `mejor_roi_pct` | float |
-| `dias_pos_m1`, `dias_pos_m2` | int |
-
-### Eventos del mes
-
-```python
-eventos = [
-    {"fecha_label": "05/05", "descripcion": "Nuevo activo cartera: S15Y6 (USD 48.630)"},
-    ...
-]
-```
-
-### Comparativa histórica (`meses_previos`)
-
-```python
-meses_previos = [
-    {"label": "Mar 2026", "dias": 21, "revenue": 261503, "volumen": 48886174, "roi": "0,53", "rev_dia": 12453},
-    ...
-]
-```
-
-### Cartera al cierre (`cartera`)
-
-```python
-cartera = [
-    {
-      "ticker": "BTC",
-      "cantidad": 1.065424,
-      "costo_usd": 95900.55,
-      "valor_usd": 86050.32,
-      "pnl_signo": "−", "pnl_usd_abs": 9850.23,
-      "pnl_pct_signo": "−", "pnl_pct_abs": "10,3",
-      "pnl_clase": "red"
-    },
-    ...
-]
-```
-
-| Variable adicional | Tipo |
-|---|---|
-| `cartera_valor`, `cartera_costo` | float |
-| `cartera_pnl_signo`, `_abs`, `_pct_signo`, `_pct_abs` | (patrón) |
-
-### Acumulado YTD (opcional, mostrar si `mostrar_ytd` = True)
-
-| Variable | Tipo |
-|---|---|
-| `mostrar_ytd` | bool |
-| `revenue_ytd`, `volumen_ytd`, `trades_ytd` | float / int |
-| `roi_ytd` | float (en %) |
-| `mejor_mes_label`, `peor_mes_label` | str |
-| `mejor_mes_revenue`, `peor_mes_revenue` | float |
-| `m1_ytd_signo`, `_abs`, `_clase` | (patrón) |
-| `m2_ytd_signo`, `_abs`, `_clase` | (patrón) |
-
-### Filename
-
-| Variable | Tipo |
-|---|---|
-| `archivo_filename` | str | `"mayo-2026"` |
-
----
-
-## Tips de implementación
-
-1. **Generar todas las variables _signo / _abs / _clase juntas** en un helper único:
-
-```python
-def calc_display(value, decimals=0):
-    return {
-        'signo': '+' if value > 0 else ('−' if value < 0 else ''),
-        'abs': abs(value),
-        'clase': 'green' if value > 0 else ('red' if value < 0 else ''),
-    }
-```
-
-2. **Variables que se usan en varios lugares del mismo template** (ej. `tc_cierre`): pasar UNA sola vez al contexto, no duplicar.
-
-3. **No olvidar el JSON para el JS del diario**: `suma_escenario_per_op_json` es el único campo que se serializa como JSON dentro del HTML (`{{ ... | safe }}` no es necesario si ya es un string JSON válido).
-
-4. **El template del diario tiene JavaScript de recálculo en vivo.** No hace falta pre-calcular variantes de M2 a múltiples TC cierres — el JS lo hace al editar el input.
-
-5. **Si una sección no aplica para un día/mes específico** (ej. no hubo eventos, no hubo movimientos cartera), pasar lista vacía. El `{% for %}` no renderizará nada.
-
-6. **Encoding UTF-8 estricto.** El símbolo `−` (U+2212) es distinto del guión `-`. La paleta usa el matemático.
+Si la skill genera un HTML con tokens sin reemplazar, el operador va a ver `[REVENUE_TOTAL]` literal en pantalla. Mejor abortar y avisar antes.

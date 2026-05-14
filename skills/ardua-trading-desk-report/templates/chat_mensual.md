@@ -84,7 +84,7 @@ Estructura del resumen mensual en chat. Se genera el último día hábil de cada
 
 ---
 
-📄 HTML mensual: `/mnt/user-data/outputs/reporte_mensual_{{ archivo_filename }}.html`
+📄 HTML mensual: `/mnt/user-data/outputs/mesa-dinero-mensual-{{ archivo_filename }}.html` (abrir en navegador → botón "📸 Exportar PNG")
 ```
 
 ---
