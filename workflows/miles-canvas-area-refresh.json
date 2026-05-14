@@ -1,0 +1,353 @@
+{
+  "name": "miles-canvas-area-refresh",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "id": "e209d99e-0f22-421e-afe7-cc31eddc1116",
+      "name": "Trigger — 1 hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        16064,
+        10832
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  { \"area\": \"Legal & Compliance\",   \"canvas_id\": \"F0B3HRZ1CLD\" },\n  { \"area\": \"Trading Desk\",         \"canvas_id\": \"F0B3QS12ASY\" },\n  { \"area\": \"Operations\",           \"canvas_id\": \"F0B3M7YP4CS\" },\n  { \"area\": \"Finance & Accounting\", \"canvas_id\": \"F0B3QS32XRS\" },\n  { \"area\": \"Sales & Partnerships\", \"canvas_id\": \"F0B3P3AKCHX\" },\n  { \"area\": \"Management\",           \"canvas_id\": \"F0B3QS4UTFE\" }\n].map(a => ({ json: a }));"
+      },
+      "id": "625cf0ab-6be8-422b-891d-9dfac15c3831",
+      "name": "All Areas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16272,
+        10832
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://arduasolutions.atlassian.net/rest/api/3/search/jql",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ jql: 'project = REQ AND issuetype in (Requirement, Task) AND statusCategory != Done AND status not in (\"DEPRECATED\") AND cf[10170] = \"' + $json.area + '\" ORDER BY created ASC', maxResults: 50, fields: ['key', 'summary', 'status', 'description', 'customfield_10239', 'created', 'issuelinks'], expand: 'changelog' }) }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1
+            }
+          },
+          "response": {
+            "response": {}
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "1f80419d-c251-4c73-8f6f-2eeba295ee73",
+      "name": "Fetch Area REQs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        16480,
+        10832
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "S3p1Xv6Sya0RMRAH",
+          "name": "Atlassian API — Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const getSlackUrl = (desc) => {\n  if (!desc?.content) return null;\n  const walk = (nodes) => {\n    for (const node of (nodes || [])) {\n      for (const mark of (node.marks || []))\n        if (mark.type === 'link' && (mark.attrs?.href || '').includes('slack.com')) return mark.attrs.href;\n      const found = walk(node.content);\n      if (found) return found;\n    }\n    return null;\n  };\n  return walk(desc.content);\n};\n\nconst getBlockedReason = (f) => {\n  if (!f) return '';\n  if (typeof f === 'string') return f.trim();\n  if (Array.isArray(f)) return f.map(x => x.value || x.name || String(x)).join(', ');\n  if (typeof f === 'object') {\n    if (f.content) {\n      const texts = [];\n      const walk = (nodes) => { for (const n of (nodes || [])) { if (n.type === 'text') texts.push(n.text); walk(n.content); } };\n      walk(f.content);\n      return texts.join(' ').trim();\n    }\n    return f.value || f.name || f.text || f.displayName || '';\n  }\n  return String(f);\n};\n\nconst getStatusEnteredAt = (issue) => {\n  const histories = (issue.changelog?.histories || []).slice().sort((a, b) => new Date(b.created) - new Date(a.created));\n  for (const h of histories) {\n    if ((h.items || []).some(item => item.field === 'status')) return h.created;\n  }\n  return issue.fields?.created || null;\n};\n\nconst daysSince = (dateStr) => {\n  if (!dateStr) return null;\n  return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));\n};\n\nconst getAmKey = (issue) => {\n  const links = issue.fields?.issuelinks || [];\n  const amLink = links.find(l => l.outwardIssue?.key?.startsWith('AM-') && l.type?.outward === 'causes');\n  return amLink?.outwardIssue?.key || null;\n};\n\nconst TECH_STATUSES = ['sent to dev', 'ready for dev', 'in development'];\n\nconst cleanIssues = (raw) => (raw || []).map(i => ({\n  key:           i.key || '',\n  summary:       i.fields?.summary || '',\n  statusName:    i.fields?.status?.name || '',\n  slackUrl:      getSlackUrl(i.fields?.description) || '',\n  blockedReason: getBlockedReason(i.fields?.customfield_10239),\n  createdAt:     i.fields?.created || null,\n  amKey:         getAmKey(i),\n  daysInStatus:  (() => {\n    const s = (i.fields?.status?.name || '').toLowerCase();\n    if (TECH_STATUSES.includes(s)) return null;\n    if (s === 'blocked') return daysSince(getStatusEnteredAt(i));\n    return daysSince(i.fields?.created);\n  })()\n}));\n\nconst isCalledByWorkflow = (() => {\n  try { return !!$('When Called by Another Workflow').first()?.json?.area; } catch(e) { return false; }\n})();\n\nif (isCalledByWorkflow) {\n  const caller = $('When Called by Another Workflow').first().json;\n  return [{ json: { area: caller.area || '', canvas_id: caller.canvas_id || '', issues: cleanIssues($input.first().json.issues) } }];\n}\n\nconst fetchAll = $input.all();\nconst areasAll = $('All Areas').all();\nreturn fetchAll.map((fetchItem, i) => {\n  const areaData = areasAll[i]?.json || {};\n  return { json: { area: areaData.area || '', canvas_id: areaData.canvas_id || '', issues: cleanIssues(fetchItem.json.issues) } };\n});"
+      },
+      "id": "7b78a8ba-f350-4166-bed7-a694b66b0ae0",
+      "name": "Resolve Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16720,
+        10832
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst amKeys = [...new Set(items.flatMap(item => item.json.issues || []).map(iss => iss.amKey).filter(Boolean))];\nreturn [{ json: { areas: items.map(i => i.json), amKeys } }];"
+      },
+      "id": "9970630c-32a2-46da-9e7d-0f86bcb5f26e",
+      "name": "Collect AM Keys",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16960,
+        10832
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://arduasolutions.atlassian.net/rest/api/3/search/jql",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ jql: $json.amKeys.length > 0 ? 'project = AM AND issuekey in (\"' + $json.amKeys.join('\",\"') + '\")' : 'issuekey = \"AM-1\" AND issuekey = \"AM-2\"', maxResults: 100, fields: ['key', 'created'] }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "e68b0c02-6bd4-4b47-8870-b8cf3b56be73",
+      "name": "Fetch AM Dates",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        17200,
+        10832
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "S3p1Xv6Sya0RMRAH",
+          "name": "Atlassian API — Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://arduasolutions.atlassian.net/rest/api/3/search/jql",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jql\": \"project = REQ AND issuetype in (Requirement, Task) AND status in (Done, DEPRECATED) AND updated >= -30d ORDER BY updated DESC\",\n  \"maxResults\": 100,\n  \"fields\": [\"key\", \"summary\", \"status\", \"description\", \"created\", \"resolutiondate\", \"customfield_10170\"]\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "66204286-d921-4333-839a-9a6c52fbf620",
+      "name": "Fetch Closed REQs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        17440,
+        10832
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "S3p1Xv6Sya0RMRAH",
+          "name": "Atlassian API — Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const TECH_STATUSES = ['sent to dev', 'ready for dev', 'in development'];\n\nconst daysSince = (dateStr) => {\n  if (!dateStr) return null;\n  return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));\n};\n\nconst daysBetween = (from, to) => {\n  if (!from || !to) return null;\n  return Math.floor((new Date(to).getTime() - new Date(from).getTime()) / (1000 * 60 * 60 * 24));\n};\n\nconst reqNum = (key) => parseInt((key || '').replace(/^REQ-/, ''), 10) || 0;\n\nconst statusLabel = (s) => {\n  const n = (s || '').toLowerCase();\n  if (n === 'blocked')     return ':red_circle: Bloqueado';\n  if (n === 'backlog')     return ':large_purple_circle: En Producto';\n  if (n === 'in analysis') return ':large_purple_circle: En Producto';\n  if (n === 'in progress') return ':large_purple_circle: En Producto';\n  return ':large_blue_circle: En Tecnología';\n};\n\nconst cleanTitle = (s) =>\n  (s || '')\n    .replace(/^\\[Miles\\]\\s*/i, '')\n    .replace(/^\\[[^\\]]*\\]\\s*/g, '')\n    .replace(/^[\\w ,&\\/\\-]+ — /, '')\n    .trim();\n\nconst getSlackUrl = (desc) => {\n  if (!desc?.content) return null;\n  const walk = (nodes) => {\n    for (const node of (nodes || [])) {\n      for (const mark of (node.marks || []))\n        if (mark.type === 'link' && (mark.attrs?.href || '').includes('slack.com')) return mark.attrs.href;\n      const found = walk(node.content);\n      if (found) return found;\n    }\n    return null;\n  };\n  return walk(desc.content);\n};\n\nconst now = new Date().toLocaleString('es-AR', {\n  timeZone: 'America/Argentina/Buenos_Aires',\n  day: '2-digit', month: '2-digit', year: 'numeric',\n  hour: '2-digit', minute: '2-digit'\n});\n\nconst amResponse = $('Fetch AM Dates').first().json;\nconst amDatesMap = {};\nfor (const issue of (amResponse.issues || [])) {\n  amDatesMap[issue.key] = issue.fields?.created || null;\n}\n\nconst closedAll = $('Fetch Closed REQs').first().json.issues || [];\nconst areas = $('Collect AM Keys').first().json.areas;\n\nreturn areas.map(({ area, canvas_id, issues }) => {\n\n  // ── ACTIVOS ──\n  const sorted = [...(issues || [])].sort((a, b) => reqNum(b.key) - reqNum(a.key));\n\n  const activeHeader = '| REQ | Título | Estado | Días en estado | Motivo de bloqueo |\\n|---|---|---|---|---|';\n  const activeRows = sorted.length === 0\n    ? '| — | *Sin requerimientos activos* | — | — | — |'\n    : sorted.map(iss => {\n        const linkCell = iss.slackUrl ? `[${iss.key}](${iss.slackUrl})` : iss.key;\n        const label    = statusLabel(iss.statusName);\n        const s        = (iss.statusName || '').toLowerCase();\n        let days;\n        if (TECH_STATUSES.includes(s)) {\n          const amCreated = iss.amKey ? amDatesMap[iss.amKey] : null;\n          days = daysSince(amCreated || iss.createdAt);\n        } else {\n          days = iss.daysInStatus !== null && iss.daysInStatus !== undefined ? iss.daysInStatus : daysSince(iss.createdAt);\n        }\n        const daysStr = days !== null && days !== undefined ? `${days}d` : '—';\n        const blocked = s === 'blocked' ? (iss.blockedReason || '—') : '—';\n        return `| ${linkCell} | ${cleanTitle(iss.summary)} | ${label} | ${daysStr} | ${blocked} |`;\n      }).join('\\n');\n\n  // ── CERRADOS ──\n  const closedForArea = closedAll\n    .filter(i => {\n      const f = i.fields?.customfield_10170;\n      if (!f) return false;\n      if (typeof f === 'string') return f === area;\n      if (Array.isArray(f)) return f.some(v => (v.value || v.name || v) === area);\n      return (f.value || f.name || '') === area;\n    })\n    .sort((a, b) => reqNum(b.key) - reqNum(a.key));\n\n  const closedHeader = '| REQ | Título | Días que tomó |\\n|---|---|---|';\n  const closedRows = closedForArea.length === 0\n    ? '| — | *Sin requerimientos cerrados en los últimos 30 días* | — |'\n    : closedForArea.map(i => {\n        const slackUrl = getSlackUrl(i.fields?.description) || '';\n        const linkCell = slackUrl ? `[${i.key}](${slackUrl})` : i.key;\n        const duration = daysBetween(i.fields?.created, i.fields?.resolutiondate);\n        const daysStr  = duration !== null ? `${duration}d` : '—';\n        return `| ${linkCell} | ${cleanTitle(i.fields?.summary || '')} | ${daysStr} |`;\n      }).join('\\n');\n\n  const fullMarkdown =\n    `**Requerimientos activos**\\n\\n${activeHeader}\\n${activeRows}\\n\\n**Requerimientos cerrados en los últimos 30 días**\\n\\n${closedHeader}\\n${closedRows}\\n\\n> *Última actualización: ${now} (ART)*`;\n\n  return { json: { canvas_id, area, fullMarkdown } };\n});"
+      },
+      "id": "bda527fa-b72a-48c7-befe-8aebe83fa7f1",
+      "name": "Build Canvas Markdown",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        17680,
+        10832
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return {\n  json: {\n    canvas_id: $json.canvas_id,\n    area: $json.area,\n    changes: [{\n      operation: 'replace',\n      document_content: { type: 'markdown', markdown: $json.fullMarkdown }\n    }]\n  }\n};"
+      },
+      "id": "6e927557-7273-41a4-a7ba-729e863fa124",
+      "name": "Build Replace Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        17920,
+        10832
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/canvases.edit",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ canvas_id: $json.canvas_id, changes: $json.changes }) }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1
+            }
+          },
+          "response": {
+            "response": {}
+          }
+        }
+      },
+      "id": "39094597-aa3b-41c1-a0d1-0eae054fc9e3",
+      "name": "Replace Canvas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        18160,
+        10832
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MX2QZHGzOYBtt41s",
+          "name": "Slack Bot Token — Miles"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger — 1 hour": {
+      "main": [
+        [
+          {
+            "node": "All Areas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "All Areas": {
+      "main": [
+        [
+          {
+            "node": "Fetch Area REQs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Area REQs": {
+      "main": [
+        [
+          {
+            "node": "Resolve Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Input": {
+      "main": [
+        [
+          {
+            "node": "Collect AM Keys",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect AM Keys": {
+      "main": [
+        [
+          {
+            "node": "Fetch AM Dates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch AM Dates": {
+      "main": [
+        [
+          {
+            "node": "Fetch Closed REQs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Closed REQs": {
+      "main": [
+        [
+          {
+            "node": "Build Canvas Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Canvas Markdown": {
+      "main": [
+        [
+          {
+            "node": "Build Replace Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Replace Payload": {
+      "main": [
+        [
+          {
+            "node": "Replace Canvas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "7cc681d0-eaf8-40a4-8c47-d0500d02b2fa",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "95944be45d5aa5e5565d656a14e718ed8b92e30102ad1bd3fcad4cf1b1c2f383"
+  },
+  "id": "Vd7rBC41kLTb7NvK",
+  "tags": []
+}
