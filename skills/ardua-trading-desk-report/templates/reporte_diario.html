@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Mesa de Dinero · {{ fecha_dd_mm_yyyy }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --card: #0d1117;
+    --border: #1c2128;
+    --text-main: #e5e9f0;
+    --text-sec: #8a94a8;
+    --green: #10b981;
+    --red: #ef4444;
+    --orange: #f59e0b;
+    --brand: #f59e0b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text-main);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 13px;
+    line-height: 1.45;
+    padding: 30px 20px;
+    min-height: 100vh;
+  }
+  .controls {
+    max-width: 720px;
+    margin: 0 auto 16px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .controls label { font-size: 12px; color: var(--text-sec); }
+  .controls input[type="number"] {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    padding: 4px 8px;
+    border-radius: 4px;
+    width: 90px;
+    font-family: inherit;
+  }
+  .controls button {
+    background: var(--brand);
+    color: #000;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .controls button:hover { opacity: 0.9; }
+  .report-card {
+    max-width: 720px;
+    margin: 0 auto;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 28px 32px;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .brand-tag {
+    color: var(--brand);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .title { font-size: 22px; font-weight: 700; color: var(--text-main); margin-bottom: 2px; }
+  .subtitle { font-size: 12px; color: var(--text-sec); }
+  .fecha-tag { font-size: 12px; color: var(--text-sec); text-align: right; }
+  .section { margin-bottom: 22px; }
+  .section-title {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-sec);
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .kpi {
+    padding: 10px 0;
+  }
+  .kpi-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-sec);
+    margin-bottom: 4px;
+  }
+  .kpi-value { font-size: 16px; font-weight: 700; color: var(--text-main); }
+  .kpi-value.green { color: var(--green); }
+  .kpi-value.red { color: var(--red); }
+  .kpi-value.orange { color: var(--orange); }
+  .kpi-prefix { font-size: 11px; font-weight: 500; color: var(--text-sec); margin-right: 2px; }
+  .kpi-sub { font-size: 10px; color: var(--text-sec); margin-top: 3px; }
+  .kpi-sub.green { color: var(--green); }
+  .kpi-sub.red { color: var(--red); }
+  .kpi-sub.orange { color: var(--orange); }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 6px 0;
+    font-size: 12px;
+    border-bottom: 1px dashed rgba(255,255,255,0.04);
+  }
+  .row:last-child { border-bottom: none; }
+  .row .label { color: var(--text-sec); }
+  .row .value { color: var(--text-main); font-weight: 600; }
+  .row .value.green { color: var(--green); }
+  .row .value.red { color: var(--red); }
+  .row .value.orange { color: var(--orange); }
+  .row.total .label { color: var(--text-main); font-weight: 600; }
+  .row.total .value { color: var(--green); font-size: 13px; }
+  .input-precio {
+    background: transparent;
+    border: 1px solid transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 600;
+    text-align: right;
+    width: 80px;
+    padding: 2px 4px;
+    border-radius: 3px;
+    -moz-appearance: textfield;
+  }
+  .input-precio::-webkit-outer-spin-button,
+  .input-precio::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .input-precio:hover { border-color: var(--border); }
+  .input-precio:focus { outline: none; border-color: var(--brand); }
+  .fifo-card {
+    padding: 12px 14px;
+    background: rgba(245, 158, 11, 0.04);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    border-radius: 6px;
+    margin-top: 10px;
+  }
+  .fifo-card .row { border-bottom: none; padding: 3px 0; }
+  .fifo-card-title {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 8px;
+  }
+  .fifo-card.red {
+    background: rgba(239, 68, 68, 0.04);
+    border-color: rgba(239, 68, 68, 0.2);
+  }
+  .fifo-card.red .fifo-card-title { color: var(--red); }
+  .fifo-card.green {
+    background: rgba(16, 185, 129, 0.04);
+    border-color: rgba(16, 185, 129, 0.2);
+  }
+  .fifo-card.green .fifo-card-title { color: var(--green); }
+  .fifo-detail { font-size: 11px; color: var(--text-sec); line-height: 1.5; margin-top: 6px; }
+  .cartera-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    align-items: center;
+    padding: 8px 0;
+    font-size: 12px;
+    border-bottom: 1px dashed rgba(255,255,255,0.04);
+  }
+  .cartera-row:last-child { border-bottom: none; }
+  .cartera-asset { font-weight: 600; color: var(--text-main); }
+  .cartera-asset-sub { font-size: 10px; color: var(--text-sec); margin-top: 2px; }
+  .cartera-precio { color: var(--text-main); font-weight: 600; }
+  .cartera-precio-unit { font-size: 10px; color: var(--text-sec); margin-left: 3px; }
+  .cartera-pnl { color: var(--text-main); font-weight: 600; }
+  .cartera-pnl.green { color: var(--green); }
+  .cartera-pnl.red { color: var(--red); }
+  .cartera-pnl-pct { font-size: 10px; margin-left: 6px; }
+  .right-align { text-align: right; }
+  .footer {
+    margin-top: 28px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--text-sec);
+  }
+  @media print { .controls { display: none; } body { padding: 0; } }
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <label>TC Cierre: <input type="number" id="tc-cierre" value="{{ tc_cierre }}" step="0.01"></label>
+  {% for activo in cartera %}
+  <label>{{ activo.ticker }}: <input type="number" id="precio-{{ activo.ticker|lower }}" value="{{ activo.precio_raw }}" step="0.0001" data-metodo="{{ activo.metodo_valuacion }}"></label>
+  {% endfor %}
+  <button onclick="exportarPNG()">Exportar PNG</button>
+</div>
+
+<div class="report-card" id="report-card">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <div class="brand-tag">ARDUA SOLUTIONS · MESA DE DINERO</div>
+      <div class="title">Trading Desk Daily Report</div>
+    </div>
+    <div class="fecha-tag">{{ dia_label_largo }} {{ fecha_dd_de_mes_de_yyyy }}</div>
+  </div>
+
+  <!-- KPI ROW -->
+  <div class="section">
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="kpi-label">Total Revenue del día</div>
+        <div class="kpi-value green"><span class="kpi-prefix">USD</span><span id="kpi-revenue">{{ revenue_total | num_arg }}</span></div>
+        <div class="kpi-sub {{ variacion_revenue_clase }}">{{ variacion_revenue_arrow }} {{ variacion_revenue_pct }}% vs {{ dia_anterior_label }}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Volumen Total</div>
+        <div class="kpi-value"><span class="kpi-prefix">USD</span><span id="kpi-volumen">{{ volumen_total | num_arg }}</span></div>
+        <div class="kpi-sub {{ variacion_volumen_clase }}">{{ variacion_volumen_arrow }} {{ variacion_volumen_pct }}% vs {{ dia_anterior_label }}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">ROI del día</div>
+        <div class="kpi-value" id="kpi-roi">{{ roi_pct }}%</div>
+        <div class="kpi-sub {{ variacion_roi_clase }}">{{ variacion_roi_arrow }} {{ variacion_roi_pp }}pp vs {{ dia_anterior_label }}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Exposición Total</div>
+        <div class="kpi-value orange"><span class="kpi-prefix">USD</span><span id="kpi-expo">{{ expo_usd | num_arg }}</span></div>
+        <div class="kpi-sub orange">P&L<span id="kpi-pl-sign">{{ pl_si_cierra_signo }}</span>USD <span id="kpi-pl">{{ pl_si_cierra_abs | num_arg }}</span> si cierra</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPERACIONES DEL DÍA -->
+  <div class="section">
+    <div class="section-title">Operaciones del día</div>
+    <div class="two-col">
+      <div>
+        <div class="row"><span class="label">Volumen clientes ARG</span><span class="value">USD {{ volumen_cli_arg | num_arg }}</span></div>
+        <div class="row"><span class="label">Volumen FX Otros</span><span class="value">USD {{ volumen_fx | num_arg }}</span></div>
+        <div class="row"><span class="label">Volumen Prop Trading</span><span class="value">USD {{ volumen_prop | num_arg }}</span></div>
+        <div class="row total"><span class="label">Volumen total</span><span class="value">USD {{ volumen_total | num_arg }}</span></div>
+      </div>
+      <div>
+        <div class="row"><span class="label">Revenue clientes ARG</span><span class="value">USD {{ revenue_cli_arg | num_arg }}</span></div>
+        <div class="row"><span class="label">Revenue FX Otros</span><span class="value">USD {{ revenue_fx | num_arg }}</span></div>
+        <div class="row"><span class="label">Revenue Prop Trading</span><span class="value green">+USD {{ revenue_prop | num_arg }}</span></div>
+        <div class="row"><span class="label">Costo proveedores (3bps)</span><span class="value red">−USD {{ costo_3bps_abs | num_arg }}</span></div>
+        <div class="row total"><span class="label">Revenue mesa neto</span><span class="value">USD {{ revenue_neto | num_arg }}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REALIZADO CARTERA -->
+  <div class="section">
+    <div class="section-title">Realizado · Cartera Inversión</div>
+    <div class="row total"><span class="label">Revenue cartera de inversión</span><span class="value {{ realizado_cartera_clase }}">USD {{ realizado_cartera_signo }}{{ realizado_cartera_abs | num_arg }}</span></div>
+  </div>
+
+  <!-- PERFORMANCE -->
+  <div class="section">
+    <div class="section-title">Performance</div>
+    <div class="two-col">
+      <div>
+        <div class="row"><span class="label">Cantidad de trades</span><span class="value">{{ trades }}</span></div>
+        <div class="row"><span class="label">BUY / SELL</span><span class="value">{{ buy_count }} / {{ sell_count }}</span></div>
+        <div class="row"><span class="label">Volatilidad TC (σ)</span><span class="value">{{ sigma }}</span></div>
+        <div class="row"><span class="label">Rango TC</span><span class="value">{{ tc_min }} — {{ tc_max }}</span></div>
+      </div>
+      <div>
+        <div class="row"><span class="label">Proveedor #1</span><span class="value">{{ prov_1_nombre }}</span></div>
+        <div class="row"><span class="label">Volumen #1</span><span class="value">USD {{ prov_1_vol | num_arg }}</span></div>
+        <div class="row"><span class="label">Proveedor #2</span><span class="value">{{ prov_2_nombre }}</span></div>
+        <div class="row"><span class="label">Volumen #2</span><span class="value">USD {{ prov_2_vol | num_arg }}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXPOSICIÓN FX -->
+  <div class="section">
+    <div class="section-title">Exposición FX</div>
+    <div class="two-col">
+      <div>
+        <div class="row"><span class="label">Flat neto ARS</span><span class="value orange">ARS {{ flat_ars | num_arg }}</span></div>
+        <div class="row"><span class="label">Expo fiat / TC cierre</span><span class="value">USD <span id="expo-fiat">{{ expo_usd | num_arg_2dec }}</span></span></div>
+        <div class="row"><span class="label">TC FIFO de la expo</span><span class="value">{{ tc_fifo }}</span></div>
+        <div class="row"><span class="label">TC promedio del día</span><span class="value">{{ tc_promedio_dia }}</span></div>
+        <div class="row"><span class="label">Factor riesgo (1 ARS/USD)</span><span class="value"><span id="factor-riesgo">{{ factor_riesgo }}</span> / cada ARS</span></div>
+        <div class="row total"><span class="label">P&L si cerrás ahora</span><span class="value {{ pl_si_cierra_clase }}"><span id="pl-text">{{ pl_si_cierra_signo }}</span>USD <span id="pl-monto">{{ pl_si_cierra_abs | num_arg_2dec }}</span></span></div>
+      </div>
+      <div>
+        <div class="row"><span class="label">TC cierre</span><span class="value"><span id="tc-cierre-display">{{ tc_cierre }}</span></span></div>
+        <div class="row"><span class="label">TC entrada fiat (FIFO)</span><span class="value">−{{ tc_fifo | num_arg }},00</span></div>
+        <div class="row"><span class="label">Arrastre del {{ dia_anterior_corto }}</span><span class="value">ARS {{ arrastre_flat | num_arg }} @ {{ arrastre_tc_fifo | num_arg }}</span></div>
+        <div class="row"><span class="label">Side</span><span class="value">{{ side_expo }}</span></div>
+        <div class="row total"><span class="label">Exposición total</span><span class="value">USD <span id="expo-total">{{ expo_usd | num_arg_2dec }}</span></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MÉTRICAS FIFO IDEAL -->
+  <div class="section">
+    <div class="section-title">Métricas FIFO Ideal</div>
+    <div class="two-col">
+      <div class="fifo-card {{ m1_card_clase }}">
+        <div class="fifo-card-title">M1 · Influencia de la mesa</div>
+        <div class="row"><span class="label">M1</span><span class="value {{ m1_clase }}">{{ m1_signo }}USD {{ m1_abs | num_arg }}</span></div>
+        <div class="fifo-detail">
+          Revenue Cli ARG: USD {{ revenue_cli_arg | num_arg }}<br>
+          Σ TC pantalla: USD {{ suma_escenario_pantalla | num_arg }}<br>
+          Si cada cliente se calzaba @ TC pantalla:<br>
+          La mesa {{ m1_interpretacion_verbo }} USD {{ m1_abs | num_arg }} {{ m1_interpretacion_direccion }} que el spread pantalla
+        </div>
+      </div>
+      <div class="fifo-card {{ m2_card_clase }}">
+        <div class="fifo-card-title">M2 · vs Cierre al TC</div>
+        <div class="row"><span class="label">M2 al TC <span id="m2-tc">{{ tc_cierre }}</span></span><span class="value {{ m2_clase }}"><span id="m2-signo">{{ m2_signo }}</span>USD <span id="m2-valor">{{ m2_abs | num_arg_2dec }}</span></span></div>
+        <div class="fifo-detail">
+          Revenue Cli ARG: USD {{ revenue_cli_arg | num_arg }}<br>
+          Si cada cliente se calzaba @ TC cierre (<span id="m2-tc-2">{{ tc_cierre }}</span>): USD <span id="suma-escenario-cierre">{{ suma_escenario_cierre | num_arg }}</span><br>
+          Ganancia/pérdida ficticia por dinámica del día.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PNL NO REALIZADO -->
+  <div class="section">
+    <div class="section-title">PNL no realizado — Cartera Inversión</div>
+    <div class="two-col">
+      <div>
+        {% for activo in cartera %}
+        <div class="cartera-row">
+          <div>
+            <div class="cartera-asset">{{ activo.ticker }}</div>
+            <div class="cartera-asset-sub">{{ activo.cantidad | num_arg_4dec }} u.</div>
+          </div>
+          <div class="cartera-precio">
+            <span id="precio-display-{{ activo.ticker|lower }}">{{ activo.precio_display }}</span>
+            <span class="cartera-precio-unit">{{ activo.moneda_precio }}</span>
+          </div>
+          <div class="cartera-pnl {{ activo.pnl_clase }}">
+            <span id="pnl-{{ activo.ticker|lower }}">{{ activo.pnl_signo }}USD {{ activo.pnl_usd_abs | num_arg }}</span>
+            <span class="cartera-pnl-pct">{{ activo.pnl_pct_signo }}{{ activo.pnl_pct_abs }} %</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <div>
+        <div class="row"><span class="label">Valor actual cartera</span><span class="value">USD <span id="cartera-valor">{{ cartera_valor_total | num_arg }}</span></span></div>
+        <div class="row"><span class="label">Costo histórico</span><span class="value">USD {{ cartera_costo | num_arg }}</span></div>
+        <div class="row total"><span class="label">PnL no realizado</span><span class="value {{ cartera_pnl_clase }}"><span id="cartera-pnl-signo">{{ cartera_pnl_signo }}</span>USD <span id="cartera-pnl">{{ cartera_pnl_abs | num_arg }}</span> (<span id="cartera-pnl-pct">{{ cartera_pnl_pct_signo }}{{ cartera_pnl_pct_abs }}</span> %)</span></div>
+        <div class="row"><span class="label">Mejor posición</span><span class="value green">{{ mejor_activo_ticker }} {{ mejor_activo_pct_signo }}{{ mejor_activo_pct_abs }}%</span></div>
+        <div class="row"><span class="label">Peor posición</span><span class="value red">{{ peor_activo_ticker }} {{ peor_activo_pct_signo }}{{ peor_activo_pct_abs }}%</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <span>Ardua Solutions S.A. · Mesa de Dinero · Reporte Diario · {{ fecha_dd_mm_yyyy }}</span>
+    <span>No constituye asesoramiento financiero · Uso interno</span>
+  </div>
+</div>
+
+<script>
+// Datos iniciales calculados en Python e inyectados como JSON
+const REPORT_DATA = {
+  // Constantes del cierre (no editables)
+  flat_ars: {{ flat_ars }},
+  tc_fifo: {{ tc_fifo }},
+  revenue_cli_arg: {{ revenue_cli_arg }},
+  suma_escenario_per_op: {{ suma_escenario_per_op_json }},  // lista de {qty, tc_operado, type} para recalcular M2 vs TC cierre
+  cartera: [
+    {% for activo in cartera %}
+    {
+      ticker: "{{ activo.ticker }}",
+      cantidad: {{ activo.cantidad }},
+      costo_usd: {{ activo.costo_usd }},
+      metodo: "{{ activo.metodo_valuacion }}",
+      moneda_precio: "{{ activo.moneda_precio }}"
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+};
+
+function formatARG(num, decimals = 0) {
+  return new Intl.NumberFormat('es-AR', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  }).format(num);
+}
+
+function calcExpoYPL() {
+  const tcCierre = parseFloat(document.getElementById('tc-cierre').value) || 0;
+  if (tcCierre === 0) return;
+
+  const flatAbs = Math.abs(REPORT_DATA.flat_ars);
+  const expoUSD = flatAbs / REPORT_DATA.tc_fifo;
+  const factorRiesgo = flatAbs / (tcCierre * tcCierre);
+  const plSiCierra = REPORT_DATA.flat_ars * (1/tcCierre - 1/REPORT_DATA.tc_fifo);
+
+  document.getElementById('kpi-expo').textContent = formatARG(expoUSD);
+  document.getElementById('expo-fiat').textContent = formatARG(expoUSD, 2);
+  document.getElementById('expo-total').textContent = formatARG(expoUSD, 2);
+  document.getElementById('factor-riesgo').textContent = factorRiesgo.toFixed(4);
+  document.getElementById('tc-cierre-display').textContent = tcCierre.toFixed(2);
+
+  const plAbs = Math.abs(plSiCierra);
+  const plSign = plSiCierra >= 0 ? '+' : '−';
+  document.getElementById('pl-text').textContent = plSign;
+  document.getElementById('pl-monto').textContent = formatARG(plAbs, 2);
+  document.getElementById('kpi-pl-sign').textContent = plSign;
+  document.getElementById('kpi-pl').textContent = formatARG(plAbs);
+
+  // M2 recálculo
+  let sumaEscenario = 0;
+  REPORT_DATA.suma_escenario_per_op.forEach(op => {
+    if (op.type === 'BUY') {
+      sumaEscenario += op.qty * (tcCierre - op.tc_operado) / tcCierre;
+    } else {
+      sumaEscenario += op.qty * (op.tc_operado - tcCierre) / tcCierre;
+    }
+  });
+  const m2 = REPORT_DATA.revenue_cli_arg - sumaEscenario;
+  const m2Abs = Math.abs(m2);
+  const m2Sign = m2 >= 0 ? '+' : '−';
+  document.getElementById('m2-signo').textContent = m2Sign;
+  document.getElementById('m2-valor').textContent = formatARG(m2Abs, 2);
+  document.getElementById('m2-tc').textContent = tcCierre.toFixed(2);
+  document.getElementById('m2-tc-2').textContent = tcCierre.toFixed(2);
+  document.getElementById('suma-escenario-cierre').textContent = formatARG(sumaEscenario);
+}
+
+function calcCartera() {
+  const tcCierre = parseFloat(document.getElementById('tc-cierre').value) || 0;
+  let valorTotal = 0;
+  let costoTotal = 0;
+  let mejorPct = -Infinity;
+  let mejorTicker = '';
+  let peorPct = Infinity;
+  let peorTicker = '';
+
+  REPORT_DATA.cartera.forEach(activo => {
+    const inputEl = document.getElementById('precio-' + activo.ticker.toLowerCase());
+    if (!inputEl) return;
+    const precio = parseFloat(inputEl.value) || 0;
+    let valorUSD = 0;
+
+    if (activo.metodo === 'cripto_usd' || activo.metodo === 'accion_usd' || activo.metodo === 'fci_usd') {
+      valorUSD = activo.cantidad * precio;
+    } else if (activo.metodo === 'bono_ars_tc' || activo.metodo === 'cedear_ars_tc') {
+      valorUSD = (activo.cantidad * precio) / tcCierre;
+    }
+
+    const pnlUSD = valorUSD - activo.costo_usd;
+    const pnlPct = activo.costo_usd > 0 ? (pnlUSD / activo.costo_usd) * 100 : 0;
+    const pnlAbs = Math.abs(pnlUSD);
+    const pnlSign = pnlUSD >= 0 ? '+' : '−';
+
+    const displayPrice = (activo.metodo.startsWith('cripto') || activo.metodo.endsWith('usd')) ?
+      formatARG(precio, 0) : formatARG(precio, 0);
+    const dispEl = document.getElementById('precio-display-' + activo.ticker.toLowerCase());
+    if (dispEl) dispEl.textContent = displayPrice;
+
+    const pnlEl = document.getElementById('pnl-' + activo.ticker.toLowerCase());
+    if (pnlEl) pnlEl.textContent = pnlSign + 'USD ' + formatARG(pnlAbs);
+
+    valorTotal += valorUSD;
+    costoTotal += activo.costo_usd;
+
+    if (pnlPct > mejorPct) { mejorPct = pnlPct; mejorTicker = activo.ticker; }
+    if (pnlPct < peorPct) { peorPct = pnlPct; peorTicker = activo.ticker; }
+  });
+
+  const pnlTotal = valorTotal - costoTotal;
+  const pnlPctTotal = costoTotal > 0 ? (pnlTotal / costoTotal) * 100 : 0;
+  const pnlTotalAbs = Math.abs(pnlTotal);
+  const signoTotal = pnlTotal >= 0 ? '+' : '−';
+
+  document.getElementById('cartera-valor').textContent = formatARG(valorTotal);
+  document.getElementById('cartera-pnl-signo').textContent = signoTotal;
+  document.getElementById('cartera-pnl').textContent = formatARG(pnlTotalAbs);
+  document.getElementById('cartera-pnl-pct').textContent = (pnlPctTotal >= 0 ? '+' : '−') + Math.abs(pnlPctTotal).toFixed(1);
+}
+
+function recalc() {
+  calcExpoYPL();
+  calcCartera();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('input[type="number"]').forEach(input => {
+    input.addEventListener('input', recalc);
+  });
+});
+
+function exportarPNG() {
+  const card = document.getElementById('report-card');
+  html2canvas(card, { scale: 2, backgroundColor: '#0d1117' }).then(canvas => {
+    const link = document.createElement('a');
+    link.download = 'mesa-dinero-{{ fecha_dd_mm_yyyy }}.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+}
+</script>
+
+</body>
+</html>
