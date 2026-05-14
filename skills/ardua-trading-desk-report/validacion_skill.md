@@ -154,7 +154,7 @@ Total flat al final del día: SHORT_ARS 1.880.000 ARS @ TC FIFO 1.480.
 7. **Confundir Volumen Clientes con Volumen Cli ARG**: el KPI principal consolida TODO (Cli ARG + FX + Prop).
 8. **No restar 3bps al Revenue mesa neto**.
 9. **Calcular M1/M2 sobre Revenue Total** en vez de Revenue Cli ARG real.
-10. **Generar HTML con `{{ variable }}` sin renderizar** porque la variable no estaba en el contexto.
+10. **Generar HTML con tokens `[NOMBRE]` sin reemplazar**: el operador ve `[REVENUE_TOTAL]` literal en pantalla. Validar el HTML con regex antes de presentarlo (ver `templates/README.md`).
 
 ---
 

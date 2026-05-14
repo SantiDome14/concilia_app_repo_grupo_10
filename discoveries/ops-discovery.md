@@ -4,7 +4,7 @@ features: [OPS]
 status: En investigación
 owner: Yasmani Rodriguez
 created_at: 2026-04-30
-updated_at: 2026-04-27
+updated_at: 2026-05-14
 ---
 
 # Módulo de Ops — Session Context
@@ -129,6 +129,8 @@ Los criterios de esta decisión **no están documentados formalmente** y deberí
 | **Pendiente de asignación** | Movimiento llegado a una cuenta Pool sin cliente identificado — requiere asignación manual por Ops                                                   |
 | **Whitelist**               | Lista de cuentas de destino habilitadas para un cliente — prerequisito para ejecutar un withdrawal                                                   |
 | **Ledger interno**          | Registro propio de Ardua de todos los movimientos — fuente de conciliación contra plataformas externas                                               |
+| **Docket**                  | Legajo del cliente en una entidad del grupo, gestionado desde LEX. Codificación: prefijo de la entidad + 6 dígitos (ej. `AS005516`, `HAZ000295`). El Docket de Ardua Solutions Corp es el ancla operativa para imputación. Ver §17                                       |
+| **Cuenta Operativa del Cliente** | Construcción contable interna asociada a un Docket AS, una por moneda. Identifica a quién pertenece el saldo, no dónde está el dinero físicamente. Ver §17 y `features/ops/ops-cuentas-operativas-del-cliente.md`                                              |
 
 ---
 
@@ -327,6 +329,8 @@ Cada cuenta puede llevar configurada una **cuenta contable** asociada. Esta capa
 
 El **catálogo completo de tipos de cuenta** está pendiente de validación con Operaciones y Finanzas (§13).
 
+**Nota — alcance del catálogo.** Las Cuentas Operativas del Cliente NO forman parte de este catálogo. Viven en el modelo de Clientes, asociadas al Docket de Ardua Solutions Corp de cada cliente. Ver §17 y `features/ops/ops-cuentas-operativas-del-cliente.md`.
+
 ---
 
 ## 11. Roles del Sistema
@@ -368,6 +372,8 @@ El **catálogo completo de tipos de cuenta** está pendiente de validación con 
 | ¿Existen Comandas para otros tipos además de retiros?     | Define si el patrón se extiende a otros flujos                                 | Media     | Abierto                               |
 | APIs disponibles en Bridge y Convera                      | Define si la ingesta puede automatizarse o sigue siendo manual                 | Media     | Abierto                               |
 | Formalización del estándar de UI del core en `framework/` | Hoy el estándar vive implícito en prototipos; conviene un doc de design system | Media     | Abierto                               |
+| Superficie de gestión de Cuentas Operativas del Cliente   | Habilita el alta/edición/baja del catálogo que consume el modal de "Asignar Cliente" del REQ-42. Hoy se asume que el catálogo existe, pero no está definido quién, desde dónde ni bajo qué reglas se gestiona | Alta      | Abierto — ver §17.6                   |
+| Coexistencia operativa de Subcuenta bancaria real (PSP/CVU) y Cuenta Operativa | Define cómo se concilian los saldos cuando un mismo cliente tiene ambas representaciones | Media     | Abierto — ver §17.6                   |
 
 ---
 
@@ -395,6 +401,7 @@ El **catálogo completo de tipos de cuenta** está pendiente de validación con 
 | 2026-03-16     | Versión inicial — modelo conceptual completo, dos esquemas, Bandejas/Comandas, taxonomía base                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | 2026-04-21     | Integración del documento de Drive "Discovery del Módulo de Operaciones": premisa fundacional formalizada, sección Cuentas Pool vs Subcuentas, taxonomía ampliada con nomenclaturas externas (Coinag / exchanges), estándar de UI del core, módulo Bancos/Cuentas documentado (creado en abril), relación con otros módulos, gaps actualizados. Archivo duplicado `OPS_Session_Context.md` eliminado en la misma fecha                                                                                                                                                                                                                                                                                                                        |
 | **2026-04-27** | **Nueva §16 OPS-Inbox como primer canónico de Inbox del financial-core. Prompt completo en disco (`prototypes/ops/ops-inbox-PROMPT.md` v1) con vista Kanban + Lista, drag & drop híbrido, drawer + timeline, modal de cierre con radio buttons por tipo, dataset de 13 Solicitudes en 8 tipos cubriendo el dominio OPS — especialmente solicitudes desde CLP (withdrawals, swaps, RFQs) ante la próxima habilitación del flujo en el Client Portal. Pendiente ejecutar el prompt y validar con OPS officers; cuando esté maduro, se promueve a canónico oficial. Próximos pasos actualizados (§14) con: ejecución del prompt, sesión de elicitación, generación de `ops-inbox-discovery.md`, tramitación del REQ Inbox transversal en Jira.** |
+| **2026-05-14** | **Nueva §17 Investigación — Modelo de Cliente, Docket y Cuenta Operativa. Cierra investigación abierta durante refinamiento de REQ-42 / AM-972 sobre la distinción entre Subcuenta bancaria real (PSP/CVU) y Cuenta Operativa del Cliente (construcción contable interna). Modelo confirmado propaga a `features/ops/ops-cuentas-operativas-del-cliente.md` (nuevo). Ajustes en §4 (vocabulario: Docket, Cuenta Operativa), §10.3 (nota sobre alcance del catálogo Bancos/Cuentas), §13 (nuevos gaps: superficie de gestión de Cuentas Operativas y coexistencia con Subcuenta bancaria real).** |
 
 ---
 
@@ -462,3 +469,48 @@ El prototipo OPS-Inbox materializa este flujo end-to-end como herramienta de eli
 4. **Generar `ops-inbox-discovery.md`** con el feedback recolectado (modelo de datos refinado, tipos de Solicitudes ajustados, capacidades a activar/desactivar).
 5. **Tramitar REQ Inbox transversal en Jira** (ver framework §13). OPS-Inbox queda como caso de implementación base de la infra transversal.
 6. **Promover OPS-Inbox a canónico oficial** del financial-core: actualizar el placeholder del template clonable (`prototypes/_core-template-frontend/_core-template-frontend.html`) reemplazándolo por un skeleton funcional derivado de OPS-Inbox, replicar capacidades en los demás prototipos de apps.
+
+---
+
+## 17. Investigación — Modelo de Cliente, Docket y Cuenta Operativa (mayo 2026)
+
+### 17.1 Origen
+
+Durante el refinamiento de REQ-42 / AM-972 (imputación bidireccional de movimientos en OPS) surgió que el modelo de imputación del Lado Cliente, en su versión previa, mezclaba dos conceptos distintos: "sub-cuentas del cliente dentro de estructuras de Ardua" con la realidad contable interna de Ardua. Se abrió investigación para clarificar el modelo real.
+
+### 17.2 Hipótesis planteadas
+
+- **H1.** Las cuentas del cliente bajo el paraguas de Ardua son sub-cuentas bancarias en las estructuras externas (CVU bajo CBU Pool, sub-cuentas bajo Wallet Pool, comitentes bajo cuentas en ALyCs).
+- **H2.** Cada cliente jurídico tiene una representación contable interna en Ardua que no es una cuenta bancaria.
+- **H3.** Los Dockets que LEX genera son la unidad operativa de imputación.
+- **H4.** La imputación se hace contra una entidad específica del grupo según el flujo (no siempre la misma).
+
+### 17.3 Validación
+
+| Hipótesis | Resultado | Fuente |
+|---|---|---|
+| H1 | **Descartada parcialmente.** Existe el caso PSP/CVU (Subcuenta bancaria real), pero no es la regla general. La mayoría de los flujos no tienen "sub-cuenta del cliente" en la estructura externa. | Validación con Operaciones |
+| H2 | **Confirmada.** El concepto es la "Cuenta Operativa del Cliente": construcción contable interna, no cuenta bancaria. Analogía con encaje bancario. | Validación con Operaciones, Belén Gallo (Finance) |
+| H3 | **Confirmada con matiz.** El Docket de Ardua Solutions Corp es el ancla operativa. Los Dockets de otras entidades (HAZ, CIR, Astra) existen a nivel legal/fiscal pero no se usan para imputación. | Validación con Operaciones |
+| H4 | **Descartada.** La imputación se realiza siempre contra el Docket AS, independientemente del flujo o la entidad del Lado Ardua. | Validación con Operaciones |
+
+### 17.4 Conclusión y propagación
+
+El modelo confirmado se propaga al feature `features/ops/ops-cuentas-operativas-del-cliente.md` (nuevo) que queda como fuente de verdad del modelo conceptual. Los features de imputación de OPS (ver §17.5) consumen ese modelo.
+
+### 17.5 Features derivados de la investigación
+
+A partir del modelo conceptual y de los criterios definidos en REQ-42 / AM-972, los features candidatos a aterrizar en `features/ops/` son:
+
+- `features/ops/ops-cuentas-operativas-del-cliente.md` — modelo conceptual del cliente, docket y cuenta operativa (nuevo, drenaje directo de esta investigación).
+- `features/ops/ops-crear-deposito-sin-cliente.md` — registro de DEPOSIT con Lado Ardua completo y Lado Cliente vacío.
+- `features/ops/ops-crear-withdrawal-sin-banco.md` — registro de WITHDRAWAL con Lado Cliente completo y Lado Ardua vacío.
+- `features/ops/ops-asignar-banco-y-cuenta-withdrawals.md` — modal de Asignar Banco y Cuenta con selectores en cascada Sociedad → Banco/Estructura → Cuenta.
+- `features/ops/ops-asignar-cliente-a-deposits.md` — modal de Asignar Cliente con typeahead + Cuenta Operativa obligatoria.
+- `features/ops/ops-modulo-bancos-y-cuentas.md` — catálogo CRUD de Cuentas de Ardua.
+
+### 17.6 Frentes que quedan abiertos
+
+- **Superficie de gestión de Cuentas Operativas del Cliente.** Funcionalidad necesaria pero todavía no diseñada: quién, desde qué módulo y bajo qué reglas da de alta, edita o desactiva Cuentas Operativas para un Docket. Hipótesis actual: Operaciones es el dueño funcional (LEX crea Dockets, OPS asigna Cuentas Operativas), pero el módulo concreto, el flujo de alta (manual vs auto-provisión al operar una nueva moneda), las validaciones y los permisos están sin definir. Bloqueante para cualquier flujo end-to-end real: hoy el modal de "Asignar Cliente" del REQ-42 consume un catálogo que asumimos existe, pero la gestión de ese catálogo es trabajo aparte. Drenará a feature aparte cuando se aborde.
+- **Coexistencia operativa de Subcuenta bancaria real (PSP/CVU) y Cuenta Operativa para un mismo cliente.** Si un cliente tiene CVU bajo CBU Pool de Coinag y al mismo tiempo tiene Cuenta Operativa en ARS, cómo se relacionan los dos identificadores y cómo se reconcilian los saldos. Sin definir.
+- **Plan de migración de movimientos preexistentes al modelo bidireccional.** Cómo se completa la imputación de movimientos históricos que no tienen Lado Ardua o Lado Cliente bajo el modelo nuevo. Pendiente de coordinación con FIN.

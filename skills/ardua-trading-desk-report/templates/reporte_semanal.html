@@ -2,347 +2,279 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Mesa de Dinero · Semanal {{ rango_lun_vie_filename }}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Template · Trading Desk Weekly Report</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
-  :root {
-    --bg: #0a0e14;
-    --card: #0d1117;
-    --border: #1c2128;
-    --text-main: #e5e9f0;
-    --text-sec: #8a94a8;
-    --green: #10b981;
-    --red: #ef4444;
-    --orange: #f59e0b;
-    --brand: #f59e0b;
-  }
+  /* ============================================================
+     TEMPLATE DEL REPORTE SEMANAL - MESA DE DINERO
+     ============================================================
+     Se genera los viernes después del cierre diario.
+     7 secciones fijas (NO incluye "Posición vigente").
+     Filename PNG: mesa-dinero-semanal-DD-DD-MM-YYYY.png
+     ============================================================ */
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--bg);
-    color: var(--text-main);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size: 13px;
-    line-height: 1.45;
-    padding: 30px 20px;
-    min-height: 100vh;
-  }
-  .controls {
-    max-width: 720px;
-    margin: 0 auto 16px;
-    text-align: right;
-  }
-  .controls button {
-    background: var(--brand);
-    color: #000;
-    border: none;
-    padding: 6px 14px;
-    border-radius: 4px;
-    font-weight: 600;
-    font-size: 12px;
-    cursor: pointer;
-    font-family: inherit;
-  }
-  .report-card {
-    max-width: 720px;
-    margin: 0 auto;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 28px 32px;
-  }
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 24px;
-  }
-  .brand-tag {
-    color: var(--brand);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    margin-bottom: 6px;
-  }
-  .title { font-size: 22px; font-weight: 700; margin-bottom: 2px; }
-  .subtitle { font-size: 12px; color: var(--text-sec); }
-  .dias-tag { font-size: 12px; color: var(--text-sec); }
-  .section { margin-bottom: 22px; }
-  .section-title {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    color: var(--text-sec);
-    margin-bottom: 12px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--border);
-  }
-  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-  .kpi { padding: 10px 0; }
-  .kpi-label {
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--text-sec);
-    margin-bottom: 4px;
-  }
-  .kpi-value { font-size: 16px; font-weight: 700; }
-  .kpi-value.green { color: var(--green); }
-  .kpi-prefix { font-size: 11px; font-weight: 500; color: var(--text-sec); margin-right: 2px; }
-  .kpi-sub { font-size: 10px; color: var(--text-sec); margin-top: 3px; }
-  table.detalle {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-  }
-  table.detalle th, table.detalle td {
-    padding: 7px 4px;
-    border-bottom: 1px dashed rgba(255,255,255,0.06);
-    text-align: left;
-  }
-  table.detalle th:not(:first-child),
-  table.detalle td:not(:first-child) { text-align: right; }
-  table.detalle th {
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--text-sec);
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border);
-  }
-  table.detalle td.green { color: var(--green); }
-  table.detalle td.red { color: var(--red); }
-  table.detalle tr.total td {
-    font-weight: 700;
-    color: var(--green);
-    border-bottom: none;
-    border-top: 1px solid var(--border);
-    padding-top: 10px;
-  }
-  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-  .row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    padding: 6px 0;
-    font-size: 12px;
-    border-bottom: 1px dashed rgba(255,255,255,0.04);
-  }
+  body { background: #0a0e14; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #e5e9f0; padding: 24px; min-height: 100vh; }
+  .container { max-width: 720px; margin: 0 auto; }
+  .controls { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .btn { background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; }
+  .btn:hover { background: #2563eb; }
+  .report { background: #0d1117; border: 1px solid #1f2937; border-radius: 8px; overflow: hidden; }
+
+  /* HEADER */
+  .header { padding: 20px 24px 16px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #1f2937; }
+  .header-left .brand { font-size: 10px; letter-spacing: 2px; color: #f59e0b; font-weight: 700; margin-bottom: 4px; }
+  .header-left .title { font-size: 20px; font-weight: 700; color: #e5e9f0; }
+  .header-left .subtitle { font-size: 12px; color: #8a94a8; margin-top: 2px; }
+  .header-right { font-size: 11px; color: #8a94a8; text-align: right; }
+
+  /* KPIs */
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); padding: 16px 24px; gap: 16px; border-bottom: 1px solid #1f2937; }
+  .kpi-label { font-size: 9px; color: #8a94a8; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; margin-bottom: 6px; }
+  .kpi-value { font-size: 18px; font-weight: 700; color: #e5e9f0; }
+  .kpi-value .unit { font-size: 11px; color: #8a94a8; font-weight: 500; margin-right: 4px; }
+  .kpi-green { color: #10b981; }
+  .kpi-orange { color: #f59e0b; }
+  .kpi-red { color: #ef4444; }
+  .kpi-delta { font-size: 10px; color: #8a94a8; margin-top: 3px; }
+
+  /* SECCIONES */
+  .section { border-bottom: 1px solid #1f2937; }
+  .section-title { padding: 10px 24px; font-size: 10px; color: #8a94a8; letter-spacing: 1px; text-transform: uppercase; font-weight: 600; background: #0a0e14; }
+  .section-content { padding: 12px 24px 16px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 32px; }
+  .row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; border-bottom: 1px dashed #1a2028; }
   .row:last-child { border-bottom: none; }
-  .row .label { color: var(--text-sec); }
-  .row .value { color: var(--text-main); font-weight: 600; }
-  .row .value.green { color: var(--green); }
-  .row .value.red { color: var(--red); }
-  .row.total .label { color: var(--text-main); font-weight: 600; }
-  .row.total .value { color: var(--green); font-size: 13px; }
-  .eventos-item {
-    padding: 6px 0;
-    font-size: 12px;
-    border-bottom: 1px dashed rgba(255,255,255,0.04);
-  }
-  .eventos-item:last-child { border-bottom: none; }
-  .eventos-dia {
-    color: var(--orange);
-    font-weight: 600;
-    margin-right: 8px;
-  }
-  .footer {
-    margin-top: 28px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    font-size: 10px;
-    color: var(--text-sec);
-  }
-  @media print { .controls { display: none; } body { padding: 0; } }
+  .row.total { font-weight: 700; padding-top: 7px; margin-top: 4px; border-top: 1px solid #2a3441; border-bottom: none; }
+  .row-label { color: #8a94a8; }
+  .row-value { color: #e5e9f0; font-variant-numeric: tabular-nums; font-weight: 500; }
+  .row-value.green { color: #10b981; }
+  .row-value.orange { color: #f59e0b; }
+  .row-value.red { color: #ef4444; }
+
+  /* TABLA DETALLE DIARIO / COMPARATIVA */
+  .table-section { padding: 12px 24px 16px; }
+  .week-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .week-table th { background: rgba(245, 158, 11, 0.06); color: #f59e0b; font-size: 9px; letter-spacing: 0.5px; text-transform: uppercase; font-weight: 700; padding: 8px 6px; text-align: right; border-bottom: 1px solid #2a3441; }
+  .week-table th:first-child { text-align: left; }
+  .week-table td { padding: 7px 6px; text-align: right; font-variant-numeric: tabular-nums; border-bottom: 1px dashed #1a2028; color: #e5e9f0; }
+  .week-table td:first-child { text-align: left; font-weight: 600; }
+  .week-table tr:last-child td { border-bottom: none; }
+  .week-table tr.total-row { background: rgba(16, 185, 129, 0.05); }
+  .week-table tr.total-row td { font-weight: 700; padding-top: 9px; padding-bottom: 9px; border-top: 1px solid #2a3441; color: #10b981; }
+
+  /* EVENTOS DESTACADOS */
+  .eventos { padding: 12px 24px 16px; font-size: 11px; color: #8a94a8; line-height: 1.65; }
+  .evento-item { margin-bottom: 8px; }
+  .evento-dia { color: #f59e0b; font-weight: 600; }
+
+  /* FOOTER */
+  .footer { padding: 10px 24px; display: flex; justify-content: space-between; font-size: 10px; color: #6b7280; }
 </style>
 </head>
 <body>
-
-<div class="controls">
-  <button onclick="exportarPNG()">Exportar PNG</button>
-</div>
-
-<div class="report-card" id="report-card">
-
-  <div class="header">
-    <div>
-      <div class="brand-tag">ARDUA SOLUTIONS · MESA DE DINERO</div>
-      <div class="title">Trading Desk Weekly Report</div>
-      <div class="subtitle">Semana del {{ rango_lun_vie_largo }} de {{ año }}</div>
-    </div>
-    <div class="dias-tag">{{ dias_operados }} días operados</div>
+<div class="container">
+  <!-- CONTROLS (no se exporta al PNG) -->
+  <div class="controls">
+    <button class="btn" onclick="exportPNG()">📸 Exportar PNG</button>
   </div>
 
-  <!-- KPI ROW -->
-  <div class="section">
+  <div class="report" id="report">
+
+    <!-- SECCIÓN 1: HEADER -->
+    <div class="header">
+      <div class="header-left">
+        <div class="brand">ARDUA SOLUTIONS · MESA DE DINERO</div>
+        <div class="title">Trading Desk Weekly Report</div>
+        <div class="subtitle">Semana del [Lun DD] al [Vie DD] de [mes] de [año]</div>
+      </div>
+      <div class="header-right">[N] días operados</div>
+    </div>
+
+    <!-- SECCIÓN 2: KPIs (4 columnas) -->
     <div class="kpi-row">
       <div class="kpi">
         <div class="kpi-label">Revenue Semanal</div>
-        <div class="kpi-value green"><span class="kpi-prefix">USD</span>{{ revenue_semanal | num_arg }}</div>
-        <div class="kpi-sub">USD {{ revenue_promedio_dia | num_arg }} / día promedio</div>
+        <div class="kpi-value kpi-green"><span class="unit">USD</span>[REVENUE_TOTAL_SEMANA]</div>
+        <div class="kpi-delta">USD [REV_DIA_PROMEDIO] / día promedio</div>
       </div>
       <div class="kpi">
         <div class="kpi-label">Volumen Semanal</div>
-        <div class="kpi-value"><span class="kpi-prefix">USD</span>{{ volumen_semanal | num_arg }}</div>
-        <div class="kpi-sub">USD {{ volumen_promedio_dia_m }}M / día promedio</div>
+        <div class="kpi-value"><span class="unit">USD</span>[VOL_TOTAL_SEMANA]</div>
+        <div class="kpi-delta">USD [VOL_DIA_PROMEDIO]M / día promedio</div>
       </div>
       <div class="kpi">
         <div class="kpi-label">ROI Semanal</div>
-        <div class="kpi-value">{{ roi_semanal }}%</div>
-        <div class="kpi-sub">Sobre vol. clientes total</div>
+        <div class="kpi-value">[ROI_SEMANA]%</div>
+        <div class="kpi-delta">Sobre vol. clientes total</div>
       </div>
       <div class="kpi">
         <div class="kpi-label">Trades Clientes</div>
-        <div class="kpi-value">{{ trades_total }}</div>
-        <div class="kpi-sub">{{ buy_total }} BUY / {{ sell_total }} SELL</div>
+        <div class="kpi-value">[N_TRADES_TOTAL]</div>
+        <div class="kpi-delta">[N_BUY] BUY / [N_SELL] SELL</div>
       </div>
     </div>
-  </div>
 
-  <!-- DETALLE DIARIO -->
-  <div class="section">
-    <div class="section-title">Detalle diario</div>
-    <table class="detalle">
-      <thead>
-        <tr>
-          <th>Día</th>
-          <th>Revenue</th>
-          <th>Volumen</th>
-          <th>ROI</th>
-          <th>M1</th>
-          <th>M2</th>
-          <th>TC Cierre</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for d in dias %}
-        <tr>
-          <td>{{ d.dia_label }}</td>
-          <td>USD {{ d.revenue | num_arg }}</td>
-          <td>USD {{ d.volumen | num_arg }}</td>
-          <td>{{ d.roi }} %</td>
-          <td class="{{ d.m1_clase }}">{{ d.m1_signo }}{{ d.m1_abs | num_arg }}</td>
-          <td class="{{ d.m2_clase }}">{{ d.m2_signo }}{{ d.m2_abs | num_arg }}</td>
-          <td>{{ d.tc_cierre }}</td>
-        </tr>
-        {% endfor %}
-        <tr class="total">
-          <td>TOTAL</td>
-          <td>USD {{ revenue_semanal | num_arg }}</td>
-          <td>USD {{ volumen_semanal | num_arg }}</td>
-          <td>{{ roi_semanal }} %</td>
-          <td>{{ m1_semanal_signo }}{{ m1_semanal_abs | num_arg }}</td>
-          <td>{{ m2_semanal_signo }}{{ m2_semanal_abs | num_arg }}</td>
-          <td>—</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- DESGLOSE REVENUE -->
-  <div class="section">
-    <div class="section-title">Desglose Revenue Semanal</div>
-    <div class="two-col">
-      <div>
-        <div class="row"><span class="label">Revenue Cli ARG</span><span class="value">USD {{ revenue_cli_arg | num_arg }}</span></div>
-        <div class="row"><span class="label">Revenue Prop Trading</span><span class="value green">+USD {{ revenue_prop | num_arg }}</span></div>
-        <div class="row"><span class="label">Revenue FX Otros</span><span class="value">USD {{ revenue_fx | num_arg }}</span></div>
-        <div class="row"><span class="label">Costo 3bps proveedores</span><span class="value red">−USD {{ costo_3bps_abs | num_arg }}</span></div>
-        <div class="row total"><span class="label">Revenue mesa neto</span><span class="value">USD {{ revenue_neto | num_arg }}</span></div>
-      </div>
-      <div>
-        <div class="row"><span class="label">Volumen Cli ARG</span><span class="value">USD {{ volumen_cli_arg | num_arg }}</span></div>
-        <div class="row"><span class="label">Volumen FX Otros</span><span class="value">USD {{ volumen_fx | num_arg }}</span></div>
-        <div class="row"><span class="label">Volumen Prop Trading</span><span class="value">USD {{ volumen_prop | num_arg }}</span></div>
-        <div class="row total"><span class="label">Volumen total</span><span class="value">USD {{ volumen_semanal | num_arg }}</span></div>
+    <!-- SECCIÓN 3: DETALLE DIARIO (tabla) -->
+    <div class="section">
+      <div class="section-title">Detalle Diario</div>
+      <div class="table-section">
+        <table class="week-table">
+          <thead>
+            <tr>
+              <th>Día</th>
+              <th>Revenue</th>
+              <th>Volumen</th>
+              <th>ROI</th>
+              <th>M1</th>
+              <th>M2</th>
+              <th>TC Cierre</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Una fila por cada día de la semana (Lun a Vie) -->
+            <tr>
+              <td>Lun [DD/MM]</td>
+              <td>USD [REV]</td>
+              <td>USD [VOL]</td>
+              <td>[ROI]%</td>
+              <td style="color:#ef4444">−[M1]</td>
+              <td style="color:#10b981">+[M2]</td>
+              <td>[TC]</td>
+            </tr>
+            <!-- ... resto de los días -->
+            <tr class="total-row">
+              <td>TOTAL</td>
+              <td>USD [REV_TOTAL]</td>
+              <td>USD [VOL_TOTAL]</td>
+              <td>[ROI_TOTAL]%</td>
+              <td>[M1_ACUM]</td>
+              <td>[M2_ACUM]</td>
+              <td>—</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
-  </div>
 
-  <!-- PERFORMANCE SEMANAL -->
-  <div class="section">
-    <div class="section-title">Performance Semanal</div>
-    <div class="two-col">
-      <div>
-        <div class="row"><span class="label">Mejor día (revenue)</span><span class="value green">{{ mejor_dia_label }} · USD {{ mejor_dia_revenue | num_arg }}</span></div>
-        <div class="row"><span class="label">Peor día (revenue)</span><span class="value">{{ peor_dia_label }} · USD {{ peor_dia_revenue | num_arg }}</span></div>
-        <div class="row"><span class="label">Mejor día (ROI)</span><span class="value green">{{ mejor_roi_dia_label }} · {{ mejor_roi_pct }} %</span></div>
-        <div class="row"><span class="label">Peor día (ROI)</span><span class="value">{{ peor_roi_dia_label }} · {{ peor_roi_pct }} %</span></div>
-      </div>
-      <div>
-        <div class="row"><span class="label">M1 acumulado</span><span class="value {{ m1_semanal_clase }}">{{ m1_semanal_signo }}USD {{ m1_semanal_abs | num_arg }}</span></div>
-        <div class="row"><span class="label">M2 acumulado</span><span class="value {{ m2_semanal_clase }}">{{ m2_semanal_signo }}USD {{ m2_semanal_abs | num_arg }}</span></div>
-        <div class="row"><span class="label">Días positivos M1 / M2</span><span class="value">{{ dias_pos_m1 }} / {{ dias_pos_m2 }} de {{ dias_operados }}</span></div>
-        <div class="row"><span class="label">Trades / día promedio</span><span class="value">{{ trades_promedio }}</span></div>
+    <!-- SECCIÓN 4: DESGLOSE REVENUE SEMANAL -->
+    <div class="section">
+      <div class="section-title">Desglose Revenue Semanal</div>
+      <div class="section-content">
+        <div>
+          <div class="row"><span class="row-label">Revenue Cli ARG</span><span class="row-value">USD [REV_CLI_ARG_SEMANA]</span></div>
+          <div class="row"><span class="row-label">Revenue Prop Trading</span><span class="row-value green">+USD [REV_PROP_SEMANA]</span></div>
+          <div class="row"><span class="row-label">Revenue FX Otros (EUR/PEN)</span><span class="row-value">USD [REV_FX_SEMANA]</span></div>
+          <div class="row"><span class="row-label">Costo 3bps proveedores</span><span class="row-value red">−USD [COSTO_3BPS_SEMANA]</span></div>
+          <div class="row total"><span class="row-label">Revenue mesa neto</span><span class="row-value green">USD [REV_TOTAL_SEMANA]</span></div>
+        </div>
+        <div>
+          <div class="row"><span class="row-label">Volumen Cli ARG</span><span class="row-value">USD [VOL_CLI_ARG_SEMANA]</span></div>
+          <div class="row"><span class="row-label">Volumen FX Otros</span><span class="row-value">USD [VOL_FX_SEMANA]</span></div>
+          <div class="row"><span class="row-label">Volumen Prop Trading</span><span class="row-value">USD [VOL_PROP_SEMANA]</span></div>
+          <div class="row total"><span class="row-label">Volumen total</span><span class="row-value">USD [VOL_TOTAL_SEMANA]</span></div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- EVENTOS -->
-  <div class="section">
-    <div class="section-title">Eventos destacados de la semana</div>
-    {% for evento in eventos %}
-    <div class="eventos-item"><span class="eventos-dia">{{ evento.dia_label }}</span>{{ evento.descripcion }}</div>
-    {% endfor %}
-  </div>
+    <!-- SECCIÓN 5: PERFORMANCE SEMANAL -->
+    <div class="section">
+      <div class="section-title">Performance Semanal</div>
+      <div class="section-content">
+        <div>
+          <div class="row"><span class="row-label">Mejor día (revenue)</span><span class="row-value green">[DÍA] · USD [X]</span></div>
+          <div class="row"><span class="row-label">Peor día (revenue)</span><span class="row-value">[DÍA] · USD [X]</span></div>
+          <div class="row"><span class="row-label">Mejor día (ROI)</span><span class="row-value green">[DÍA] · [X]%</span></div>
+          <div class="row"><span class="row-label">Peor día (ROI)</span><span class="row-value">[DÍA] · [X]%</span></div>
+        </div>
+        <div>
+          <div class="row"><span class="row-label">M1 acumulado</span><span class="row-value red">−USD [M1_ACUM]</span></div>
+          <div class="row"><span class="row-label">M2 acumulado</span><span class="row-value">[+/-]USD [M2_ACUM]</span></div>
+          <div class="row"><span class="row-label">Días positivos M1 / M2</span><span class="row-value">[N] / [N] de [N]</span></div>
+          <div class="row"><span class="row-label">Trades / día promedio</span><span class="row-value">[N]</span></div>
+        </div>
+      </div>
+    </div>
 
-  <!-- COMPARATIVA -->
-  <div class="section">
-    <div class="section-title">Comparativa con semanas previas</div>
-    <table class="detalle">
-      <thead>
-        <tr><th>Semana</th><th>Días</th><th>Revenue</th><th>Volumen</th><th>ROI</th><th>Rev/día</th></tr>
-      </thead>
-      <tbody>
-        {% for s in semanas_previas %}
-        <tr>
-          <td>{{ s.rango }}</td>
-          <td>{{ s.dias }}</td>
-          <td>USD {{ s.revenue | num_arg }}</td>
-          <td>USD {{ s.volumen_label }}</td>
-          <td>{{ s.roi }} %</td>
-          <td>USD {{ s.rev_dia | num_arg }}</td>
-        </tr>
-        {% endfor %}
-        <tr class="total">
-          <td>{{ rango_lun_vie }}</td>
-          <td>{{ dias_operados }}</td>
-          <td>USD {{ revenue_semanal | num_arg }}</td>
-          <td>USD {{ volumen_semanal | num_arg }}</td>
-          <td>{{ roi_semanal }} %</td>
-          <td>USD {{ revenue_promedio_dia | num_arg }}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+    <!-- SECCIÓN 6: EVENTOS DESTACADOS -->
+    <div class="section">
+      <div class="section-title">Eventos destacados de la semana</div>
+      <div class="eventos">
+        <div class="evento-item">
+          <span class="evento-dia">[Día DD/MM]</span> · [Evento destacado del día]
+        </div>
+        <div class="evento-item">
+          <span class="evento-dia">[Día DD/MM]</span> · [Evento destacado del día]
+        </div>
+        <!-- Repetir según corresponda. Ejemplos:
+             - Día con mayor volumen
+             - Operatoria especial (BTC con scalping, EUR pasante grande)
+             - Movimientos de cartera (compras, ventas)
+             - Proveedores nuevos
+             - Mejor día en M1
+             - Outliers extremos (si son muy relevantes)
+        -->
+      </div>
+    </div>
 
-  <div class="footer">
-    <span>Ardua Solutions S.A. · Mesa de Dinero · Reporte Semanal</span>
-    <span>No constituye asesoramiento financiero · Uso interno</span>
+    <!-- SECCIÓN 7: COMPARATIVA CON SEMANAS PREVIAS -->
+    <div class="section">
+      <div class="section-title">Comparativa con semanas previas</div>
+      <div class="table-section">
+        <table class="week-table">
+          <thead>
+            <tr>
+              <th>Semana</th>
+              <th>Días</th>
+              <th>Revenue</th>
+              <th>Volumen</th>
+              <th>ROI</th>
+              <th>Rev/día</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>[DD-DD/MM]</td>
+              <td>[N]</td>
+              <td>USD [X]</td>
+              <td>USD [X]</td>
+              <td>[X]%</td>
+              <td>USD [X]</td>
+            </tr>
+            <!-- Mostrar 2-3 semanas previas -->
+            <tr class="total-row">
+              <td>[Semana actual]</td>
+              <td>[N]</td>
+              <td>USD [REV_TOTAL]</td>
+              <td>USD [VOL_TOTAL]</td>
+              <td>[ROI]%</td>
+              <td>USD [REV_DIA]</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ⚠️ NO INCLUIR sección "Cierre semanal · Posición vigente" -->
+    <!-- (regla del equipo: el arrastre vive en Notion, no en el reporte semanal) -->
+
+    <!-- FOOTER -->
+    <div class="footer">
+      <div>Ardua Solutions S.A. · Mesa de Dinero · Reporte Semanal</div>
+      <div>No constituye asesoramiento financiero · Uso interno</div>
+    </div>
   </div>
 </div>
 
 <script>
-function exportarPNG() {
-  const card = document.getElementById('report-card');
-  html2canvas(card, { scale: 2, backgroundColor: '#0d1117' }).then(canvas => {
+function exportPNG() {
+  const el = document.getElementById('report');
+  html2canvas(el, {backgroundColor: '#0a0e14', scale: 2}).then(canvas => {
     const link = document.createElement('a');
-    link.download = 'mesa-dinero-semanal-{{ rango_lun_vie_filename }}.png';
+    link.download = 'mesa-dinero-semanal-[DDLun]-[DDVie]-[MM]-[YYYY].png';
     link.href = canvas.toDataURL('image/png');
     link.click();
   });
 }
 </script>
-
 </body>
 </html>
