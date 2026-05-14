@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Template · Trading Desk Daily Report</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  /* ============================================================
+     TEMPLATE DEL REPORTE DIARIO - MESA DE DINERO
+     ============================================================
+     - Tema oscuro, max-width 720px, font Inter
+     - 9 secciones fijas
+     - Inputs editables: TC Cierre + precios cartera
+     - Recálculo en vivo en JS
+     - Botón Exportar PNG (html2canvas scale 2)
+     - Filename PNG: mesa-dinero-DD-MM-YYYY.png
+
+     PALETA DE COLORES
+     - Background: #0a0e14 (body), #0d1117 (report card)
+     - Verde (positivo): #10b981
+     - Rojo (negativo): #ef4444
+     - Naranja (warning/expo): #f59e0b
+     - Texto principal: #e5e9f0
+     - Texto secundario: #8a94a8
+     - Brand: #f59e0b
+     ============================================================ */
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0e14; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #e5e9f0; padding: 24px; min-height: 100vh; }
+  .container { max-width: 720px; margin: 0 auto; }
+  .controls { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .controls label { font-size: 11px; color: #8a94a8; text-transform: uppercase; letter-spacing: 0.5px; }
+  .controls input { background: #161b24; border: 1px solid #2a3441; color: #e5e9f0; padding: 6px 10px; border-radius: 4px; font-size: 13px; font-family: inherit; width: 90px; }
+  .controls input:focus { outline: none; border-color: #3b82f6; }
+  .btn { background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; }
+  .btn:hover { background: #2563eb; }
+  .btn-secondary { background: #374151; }
+  .btn-secondary:hover { background: #4b5563; }
+  .report { background: #0d1117; border: 1px solid #1f2937; border-radius: 8px; overflow: hidden; }
+
+  /* HEADER */
+  .header { padding: 20px 24px 16px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #1f2937; }
+  .header-left .brand { font-size: 10px; letter-spacing: 2px; color: #f59e0b; font-weight: 700; margin-bottom: 4px; }
+  .header-left .title { font-size: 20px; font-weight: 700; color: #e5e9f0; }
+  .header-right { font-size: 11px; color: #8a94a8; text-align: right; }
+
+  /* KPIs (4 columnas) */
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); padding: 16px 24px; gap: 16px; border-bottom: 1px solid #1f2937; }
+  .kpi-label { font-size: 9px; color: #8a94a8; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; margin-bottom: 6px; }
+  .kpi-value { font-size: 18px; font-weight: 700; color: #e5e9f0; }
+  .kpi-value .unit { font-size: 11px; color: #8a94a8; font-weight: 500; margin-right: 4px; }
+  .kpi-green { color: #10b981; }
+  .kpi-orange { color: #f59e0b; }
+  .kpi-red { color: #ef4444; }
+  .kpi-delta { font-size: 10px; color: #8a94a8; margin-top: 3px; }
+  .delta-up { color: #10b981; }
+  .delta-down { color: #ef4444; }
+
+  /* SECCIONES */
+  .section { border-bottom: 1px solid #1f2937; }
+  .section-title { padding: 10px 24px; font-size: 10px; color: #8a94a8; letter-spacing: 1px; text-transform: uppercase; font-weight: 600; background: #0a0e14; }
+  .section-content { padding: 12px 24px 16px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 32px; }
+  .row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; border-bottom: 1px dashed #1a2028; }
+  .row:last-child { border-bottom: none; }
+  .row.total { font-weight: 700; padding-top: 7px; margin-top: 4px; border-top: 1px solid #2a3441; border-bottom: none; }
+  .row-label { color: #8a94a8; }
+  .row-value { color: #e5e9f0; font-variant-numeric: tabular-nums; font-weight: 500; }
+  .row-value.green { color: #10b981; }
+  .row-value.orange { color: #f59e0b; }
+  .row-value.red { color: #ef4444; }
+
+  /* INPUTS EDITABLES INLINE */
+  .row-value.editable-wrap { display: inline-flex; align-items: center; gap: 4px; }
+  .row-value input.inline {
+    background: transparent; border: 1px solid transparent; color: inherit;
+    padding: 1px 5px; border-radius: 3px; font-size: 12px; font-family: inherit;
+    font-variant-numeric: tabular-nums; text-align: right; width: 75px; font-weight: 500;
+    -moz-appearance: textfield; appearance: textfield;
+  }
+  .row-value input.inline::-webkit-outer-spin-button, .row-value input.inline::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .row-value input.inline:hover { background: rgba(59, 130, 246, 0.06); border-color: #2a3441; }
+  .row-value input.inline:focus { outline: none; border-color: #3b82f6; background: rgba(59, 130, 246, 0.12); }
+
+  /* FOOTER */
+  .footer { padding: 10px 24px; display: flex; justify-content: space-between; font-size: 10px; color: #6b7280; }
+  .medal { color: #f59e0b; }
+
+  /* CARTERA - posiciones de inversión */
+  .cartera-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 32px; padding: 12px 24px 16px; }
+  .cartera-left { display: flex; flex-direction: column; gap: 2px; }
+  .pos-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px dashed #1a2028; }
+  .pos-row:last-child { border-bottom: none; }
+  .pos-main { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .pos-ticker { font-size: 13px; font-weight: 700; color: #e5e9f0; letter-spacing: 0.3px; }
+  .pos-qty { font-size: 10px; color: #6b7280; font-variant-numeric: tabular-nums; }
+  .pos-price { display: flex; align-items: baseline; gap: 3px; font-size: 13px; font-weight: 500; color: #e5e9f0; font-variant-numeric: tabular-nums; justify-content: flex-end; min-width: 120px; }
+  .pos-price-input {
+    background: transparent; border: 1px solid transparent; color: #e5e9f0;
+    padding: 1px 4px; border-radius: 3px; font-size: 13px; font-family: inherit;
+    font-variant-numeric: tabular-nums; text-align: right; font-weight: 500; width: 78px;
+    -moz-appearance: textfield; appearance: textfield;
+  }
+  .pos-price-input::-webkit-outer-spin-button, .pos-price-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .pos-price-input:hover { background: rgba(59, 130, 246, 0.08); border-color: #2a3441; }
+  .pos-price-input:focus { outline: none; border-color: #3b82f6; background: rgba(59, 130, 246, 0.12); }
+  .pos-ccy { font-size: 10px; color: #6b7280; font-weight: 600; letter-spacing: 0.5px; min-width: 26px; }
+  .pos-pnl { text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 600; min-width: 100px; line-height: 1.3; color: #e5e9f0; }
+  .pos-pnl.green { color: #10b981; }
+  .pos-pnl.red { color: #ef4444; }
+  .pos-pnl .pnl-pct { display: block; font-size: 10px; font-weight: 500; opacity: 0.85; }
+  .cartera-right { display: flex; flex-direction: column; }
+  .cartera-right .row { padding: 5px 0; font-size: 12px; border-bottom: 1px dashed #1a2028; }
+  .cartera-right .row:last-child { border-bottom: none; }
+
+  /* METRIC CARDS - M1/M2 */
+  .fifo-metrics { padding: 12px 24px 16px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 32px; }
+  .metric-card { background: rgba(59, 130, 246, 0.04); border: 1px solid #1f2937; border-radius: 6px; padding: 10px 12px; }
+  .metric-card-title { font-size: 9px; color: #8a94a8; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; margin-bottom: 6px; }
+  .metric-card-main { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; margin-bottom: 4px; }
+  .metric-card-sub { font-size: 10px; color: #8a94a8; line-height: 1.4; }
+  .metric-card-sub .val { color: #e5e9f0; font-weight: 500; }
+  .metric-card-sub .val.red { color: #ef4444; }
+  .metric-card-sub .val.green { color: #10b981; }
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- CONTROLS (fuera del reporte, no se exporta al PNG) -->
+  <div class="controls">
+    <label>TC Cierre:</label>
+    <input type="number" id="tcCierre" value="[TC_CIERRE]" step="0.01">
+    <button class="btn btn-secondary" onclick="toggleCartera()">Mostrar/Ocultar Cartera</button>
+    <button class="btn" onclick="exportPNG()">📸 Exportar PNG</button>
+  </div>
+
+  <div class="report" id="report">
+
+    <!-- SECCIÓN 1: HEADER -->
+    <div class="header">
+      <div class="header-left">
+        <div class="brand">ARDUA SOLUTIONS · MESA DE DINERO</div>
+        <div class="title">Trading Desk Daily Report</div>
+      </div>
+      <div class="header-right">[DÍA] [DD] de [mes] de [año]</div>
+    </div>
+
+    <!-- SECCIÓN 2: KPI ROW (4 columnas) -->
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="kpi-label">Total Revenue del día</div>
+        <div class="kpi-value kpi-green"><span class="unit">USD</span>[REVENUE_TOTAL]</div>
+        <div class="kpi-delta delta-up">▲ [X]% vs [día hábil anterior]</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Volumen Total</div>
+        <div class="kpi-value"><span class="unit">USD</span>[VOLUMEN_TOTAL]</div>
+        <div class="kpi-delta delta-up">▲ [X]% vs [día anterior]</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">ROI del día</div>
+        <div class="kpi-value">[ROI]%</div>
+        <div class="kpi-delta delta-up">▲ [X]pp vs [día anterior]</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Exposición Total</div>
+        <div class="kpi-value kpi-orange"><span class="unit">USD</span><span id="kpiExpoUsd">—</span></div>
+        <div class="kpi-delta" id="kpiExpoPnl">P&L <span id="kpiExpoPnlVal">—</span> si cierra</div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 3: OPERACIONES DEL DÍA -->
+    <div class="section">
+      <div class="section-title">Operaciones del día</div>
+      <div class="section-content">
+        <div>
+          <div class="row"><span class="row-label">Volumen clientes ARG</span><span class="row-value">USD [VOL_CLI_ARG]</span></div>
+          <div class="row"><span class="row-label">Volumen FX Otros</span><span class="row-value">USD [VOL_FX]</span></div>
+          <div class="row"><span class="row-label">Volumen Prop Trading</span><span class="row-value">USD [VOL_PROP]</span></div>
+          <div class="row total"><span class="row-label">Volumen total</span><span class="row-value green">USD [VOL_TOTAL]</span></div>
+        </div>
+        <div>
+          <div class="row"><span class="row-label">Revenue clientes ARG</span><span class="row-value">USD [REV_CLI_ARG]</span></div>
+          <div class="row"><span class="row-label">Revenue FX Otros</span><span class="row-value">USD [REV_FX]</span></div>
+          <div class="row"><span class="row-label">Revenue Prop Trading</span><span class="row-value green">+USD [REV_PROP]</span></div>
+          <div class="row"><span class="row-label">Costo proveedores (3bps)</span><span class="row-value red">−USD [COSTO_3BPS]</span></div>
+          <div class="row total"><span class="row-label">Revenue mesa neto</span><span class="row-value green">USD [REVENUE_NETO]</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 4: REALIZADO CARTERA INVERSIÓN -->
+    <div class="section">
+      <div class="section-title">Realizado · Cartera Inversión</div>
+      <div class="section-content">
+        <div>
+          <div class="row total" style="margin: 0; padding-top: 0; border-top: none;">
+            <span class="row-label">Revenue cartera de inversión</span>
+            <span class="row-value">USD [REALIZADO_CARTERA]</span>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 5: PERFORMANCE -->
+    <div class="section">
+      <div class="section-title">Performance</div>
+      <div class="section-content">
+        <div>
+          <div class="row"><span class="row-label">Cantidad de trades</span><span class="row-value">[N_TRADES]</span></div>
+          <div class="row"><span class="row-label">BUY / SELL</span><span class="row-value">[N_BUY] / [N_SELL]</span></div>
+          <div class="row"><span class="row-label">Volatilidad TC (σ)</span><span class="row-value">[SIGMA] ARS</span></div>
+          <div class="row"><span class="row-label">Rango TC</span><span class="row-value">[TC_MIN] — [TC_MAX]</span></div>
+        </div>
+        <div>
+          <div class="row"><span class="row-label"><span class="medal">🥇</span> Proveedor #1</span><span class="row-value">[PROV_1]</span></div>
+          <div class="row"><span class="row-label">Volumen #1</span><span class="row-value">USD [VOL_PROV_1]</span></div>
+          <div class="row"><span class="row-label">Proveedor #2</span><span class="row-value">[PROV_2]</span></div>
+          <div class="row"><span class="row-label">Volumen #2</span><span class="row-value">USD [VOL_PROV_2]</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 6: EXPOSICIÓN FX -->
+    <div class="section">
+      <div class="section-title">Exposición FX</div>
+      <div class="section-content">
+        <div>
+          <div class="row"><span class="row-label">Flat neto ARS</span><span class="row-value orange">ARS [FLAT_ARS]</span></div>
+          <div class="row"><span class="row-label">Expo fiat / TC cierre</span><span class="row-value orange"><span id="expoFiat">—</span></span></div>
+          <div class="row"><span class="row-label">TC FIFO de la expo</span><span class="row-value">[TC_FIFO]</span></div>
+          <div class="row"><span class="row-label">TC promedio del día</span><span class="row-value">[TC_PROM]</span></div>
+          <div class="row"><span class="row-label">Factor riesgo (1 ARS/USD)</span><span class="row-value"><span id="factorRiesgo">—</span> / cada ARS</span></div>
+          <div class="row"><span class="row-label">P&L si cerrás ahora</span><span class="row-value" id="pnlSiCierra">—</span></div>
+        </div>
+        <div>
+          <div class="row"><span class="row-label">TC cierre</span>
+            <span class="row-value editable-wrap">
+              <input type="number" class="inline" id="tcCierreInline" value="[TC_CIERRE]" step="0.01" oninput="syncTc(this.value)">
+            </span>
+          </div>
+          <div class="row"><span class="row-label">TC entrada fiat (FIFO)</span><span class="row-value">~[TC_FIFO]</span></div>
+          <div class="row"><span class="row-label">Arrastre del [día anterior]</span><span class="row-value">ARS [ARRASTRE_ARS] @ [ARRASTRE_TC]</span></div>
+          <div class="row"><span class="row-label">Side</span><span class="row-value">[LONG ARS / SHORT ARS]</span></div>
+          <div class="row total"><span class="row-label">Exposición total</span><span class="row-value orange"><span id="expoTotal">—</span></span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 7: MÉTRICAS FIFO IDEAL (M1 + M2) -->
+    <div class="section">
+      <div class="section-title">Métricas FIFO Ideal</div>
+      <div class="fifo-metrics">
+        <div class="metric-card">
+          <div class="metric-card-title">M1 · Influencia de la Mesa</div>
+          <div class="metric-card-main kpi-red">−USD [M1]</div>
+          <div class="metric-card-sub">
+            Revenue Cli ARG: <span class="val">USD [REV_CLI_ARG]</span><br>
+            Si cada cliente se calzaba @ TC pantalla: <span class="val">USD [ESCENARIO_PANTALLA]</span><br>
+            La mesa ganó <span class="val red">USD [M1_ABS] menos/más</span> que el spread pantalla.
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-card-title">M2 · vs Cierre al TC</div>
+          <div class="metric-card-main" id="m2Main">—</div>
+          <div class="metric-card-sub">
+            Revenue Cli ARG: <span class="val">USD [REV_CLI_ARG]</span><br>
+            Si cada cliente se calzaba @ TC cierre (<span id="m2TcCierre">—</span>): <span class="val" id="m2Total">—</span><br>
+            Ganancia/pérdida ficticia por dinámica del día.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 8: PNL NO REALIZADO - CARTERA INVERSIÓN -->
+    <div class="section" id="carteraSection">
+      <div class="section-title">PNL no realizado — Cartera inversión</div>
+      <div class="cartera-grid">
+        <div class="cartera-left">
+          <!-- Una fila por cada activo de la cartera -->
+          <div class="pos-row">
+            <div class="pos-main">
+              <span class="pos-ticker">[TICKER]</span>
+              <span class="pos-qty">[QTY] u.</span>
+            </div>
+            <div class="pos-price">
+              <input type="number" class="inline pos-price-input" id="[ticker]Price" value="[PRECIO]" step="1">
+              <span class="pos-ccy">[USD/ARS]</span>
+            </div>
+            <div class="pos-pnl" id="[ticker]Pnl">—</div>
+          </div>
+          <!-- Repetir para cada activo (BTC, ETH, AAVE, S15Y6, etc.) -->
+        </div>
+        <div class="cartera-right">
+          <div class="row"><span class="row-label">Valor actual cartera</span><span class="row-value" id="carteraValor">—</span></div>
+          <div class="row"><span class="row-label">Costo histórico</span><span class="row-value">USD [COSTO_HISTORICO]</span></div>
+          <div class="row total"><span class="row-label">PnL no realizado</span><span class="row-value" id="pnlNoReal">—</span></div>
+          <div class="row"><span class="row-label">Mejor posición</span><span class="row-value" id="mejorPos">—</span></div>
+          <div class="row"><span class="row-label">Peor posición</span><span class="row-value" id="peorPos">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 9: FOOTER -->
+    <div class="footer">
+      <div>Ardua Solutions S.A. · Mesa de Dinero · [DD/MM/YYYY]</div>
+      <div>No constituye asesoramiento financiero · Uso interno</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CONSTANTES DEL DÍA - reemplazar al generar cada reporte
+   ============================================================ */
+const FLAT_ARS = [FLAT_ARS_NUM];        // positivo si LONG_ARS, negativo si SHORT_ARS
+const TC_FIFO  = [TC_FIFO_NUM];         // TC promedio ponderado del pool residual
+const SIDE     = '[LONG_ARS o SHORT_ARS]';
+const REVENUE_REAL_M1 = [REV_CLI_ARG_NUM];  // Revenue Cli ARG real (FIFO clientes, sin prop, sin 3bps, sin FX)
+
+// Cartera de inversión - se carga desde la database Cartera Vigente de Notion
+// currency: 'USD' (BTC, ETH, AAVE) → valor = qty × precio
+// currency: 'ARS' (S15Y6, CEDEARs) → valor = qty × precio / TC_cierre
+const CARTERA = [
+  {name:'BTC',   qty: [QTY],   costUsd: [COSTO_USD], costUnitLocal: [COSTO_UNIT_LOCAL], currency: 'USD'},
+  {name:'ETH',   qty: [QTY],   costUsd: [COSTO_USD], costUnitLocal: [COSTO_UNIT_LOCAL], currency: 'USD'},
+  {name:'AAVE',  qty: [QTY],   costUsd: [COSTO_USD], costUnitLocal: [COSTO_UNIT_LOCAL], currency: 'USD'},
+  {name:'S15Y6', qty: [QTY],   costUsd: [COSTO_USD], costUnitLocal: [COSTO_UNIT_LOCAL], currency: 'ARS'},
+];
+
+// Ops cliente ARS del día - para calcular M2 dinámicamente
+// t: 'BUY' o 'SELL', qty: monto cripto, tc: TC operado, pant: TC pantalla
+const OPS_CLIENTE_ARS = [
+  {"t":"BUY","qty":[QTY],"tc":[TC],"pant":[FX_PANTALLA]},
+  // ... una entrada por op cliente ARS del día
+];
+
+/* ============================================================
+   LÓGICA (no tocar entre reportes)
+   ============================================================ */
+
+function escenarioPnl(ops, tcFn) {
+  let total = 0;
+  ops.forEach(r => {
+    const tcEsc = tcFn(r);
+    if (r.t === 'BUY') total += r.qty * (tcEsc - r.tc) / tcEsc;
+    else total += r.qty * (r.tc - tcEsc) / r.tc;
+  });
+  return total;
+}
+
+function fmtNum(n, dec=0) {
+  if (isNaN(n) || !isFinite(n)) return '—';
+  return new Intl.NumberFormat('es-AR', {minimumFractionDigits: dec, maximumFractionDigits: dec}).format(n);
+}
+function fmtUSD(n, dec=0) {
+  if (isNaN(n) || !isFinite(n)) return '—';
+  const signo = n < 0 ? '-' : (n > 0 ? '+' : '');
+  return signo + 'USD ' + fmtNum(Math.abs(n), dec);
+}
+function parseNum(el) {
+  if (!el) return 0;
+  if (typeof el.valueAsNumber === 'number' && !isNaN(el.valueAsNumber)) return el.valueAsNumber;
+  const raw = (el.value || '').toString().trim();
+  if (!raw) return 0;
+  let cleaned;
+  if (raw.includes(',') && raw.includes('.')) cleaned = raw.replace(/,/g, '');
+  else if (raw.includes(',')) cleaned = raw.replace(/,/g, '.');
+  else cleaned = raw;
+  const v = parseFloat(cleaned);
+  return isNaN(v) ? 0 : v;
+}
+
+function recalc() {
+  const tcCie = parseNum(document.getElementById('tcCierre'));
+  document.getElementById('tcCierreInline').value = tcCie;
+
+  // Exposición
+  const expoUsdMomento = Math.abs(FLAT_ARS) / tcCie;
+  const expoUsdFifo = Math.abs(FLAT_ARS) / TC_FIFO;
+  const pnl = FLAT_ARS * (1/tcCie - 1/TC_FIFO);
+  const factor = Math.abs(FLAT_ARS) / (tcCie * tcCie);
+
+  document.getElementById('expoTotal').textContent = 'USD ' + fmtNum(expoUsdFifo, 2);
+  document.getElementById('expoFiat').textContent = 'USD ' + fmtNum(expoUsdMomento, 2);
+  document.getElementById('kpiExpoUsd').textContent = fmtNum(expoUsdFifo, 0);
+  document.getElementById('factorRiesgo').textContent = 'USD ' + fmtNum(factor, 4);
+
+  const pnlStr = fmtUSD(pnl, 2);
+  const pnlClass = pnl >= 0 ? 'green' : 'red';
+  const pnlSi = document.getElementById('pnlSiCierra');
+  pnlSi.textContent = pnlStr;
+  pnlSi.className = 'row-value ' + pnlClass;
+  document.getElementById('kpiExpoPnlVal').textContent = pnlStr;
+  document.getElementById('kpiExpoPnl').innerHTML = 'P&L <span style="color:' + (pnl >= 0 ? '#10b981' : '#ef4444') + '">' + pnlStr + '</span> si cierra';
+
+  // M2 dinámico (recalcula al cambiar TC Cierre)
+  const m2Escenario = escenarioPnl(OPS_CLIENTE_ARS, () => tcCie);
+  const m2Diff = REVENUE_REAL_M1 - m2Escenario;
+  const m2Main = document.getElementById('m2Main');
+  m2Main.textContent = fmtUSD(m2Diff, 2);
+  m2Main.className = 'metric-card-main ' + (m2Diff >= 0 ? 'kpi-green' : 'kpi-red');
+  document.getElementById('m2TcCierre').textContent = fmtNum(tcCie, 2);
+  document.getElementById('m2Total').textContent = 'USD ' + fmtNum(m2Escenario, 2);
+
+  recalcCartera();
+}
+
+function recalcCartera() {
+  const tcCie = parseNum(document.getElementById('tcCierre'));
+  const priceIds = {BTC:'btcPrice', ETH:'ethPrice', AAVE:'aavePrice', S15Y6:'s15y6Price'};
+  const pnlIds   = {BTC:'btcPnl',   ETH:'ethPnl',   AAVE:'aavePnl',   S15Y6:'s15y6Pnl'};
+  let totalVal = 0, totalCost = 0;
+  const pnls = [];
+
+  CARTERA.forEach(p => {
+    const precio = parseNum(document.getElementById(priceIds[p.name]));
+    let valorUsd = 0;
+    if (p.currency === 'USD') valorUsd = p.qty * precio;
+    else if (tcCie > 0) valorUsd = (p.qty * precio) / tcCie;
+
+    const pnlUsd = valorUsd - p.costUsd;
+    const pctLocal = p.costUnitLocal > 0 ? ((precio - p.costUnitLocal) / p.costUnitLocal * 100) : 0;
+
+    const el = document.getElementById(pnlIds[p.name]);
+    if (precio > 0 && valorUsd > 0) {
+      totalVal += valorUsd; totalCost += p.costUsd;
+      const sign = pnlUsd >= 0 ? '+' : '-';
+      const pctSign = pctLocal >= 0 ? '+' : '';
+      el.innerHTML = sign + 'USD ' + fmtNum(Math.abs(pnlUsd), 0) +
+                     '<span class="pnl-pct">' + pctSign + pctLocal.toFixed(2) + '%</span>';
+      el.className = 'pos-pnl ' + (pnlUsd >= 0 ? 'green' : 'red');
+      pnls.push({name: p.name, pnlUsd, pctLocal, pctUsd: (pnlUsd/p.costUsd*100)});
+    } else { el.textContent = '—'; el.className = 'pos-pnl'; }
+  });
+
+  document.getElementById('carteraValor').textContent = totalVal > 0 ? 'USD ' + fmtNum(totalVal, 0) : '—';
+  const pnlEl = document.getElementById('pnlNoReal');
+  if (totalVal > 0 && totalCost > 0) {
+    const pnlTotal = totalVal - totalCost;
+    const pct = (pnlTotal / totalCost * 100);
+    const sign = pnlTotal >= 0 ? '+' : '-';
+    pnlEl.textContent = sign + 'USD ' + fmtNum(Math.abs(pnlTotal), 0) + ' (' + (pnlTotal>=0?'+':'') + pct.toFixed(1) + '%)';
+    pnlEl.className = 'row-value ' + (pnlTotal >= 0 ? 'green' : 'red');
+  } else { pnlEl.textContent = '—'; pnlEl.className = 'row-value'; }
+
+  const mejorEl = document.getElementById('mejorPos');
+  const peorEl = document.getElementById('peorPos');
+  if (pnls.length > 0) {
+    const mejor = pnls.reduce((a,b) => b.pctUsd > a.pctUsd ? b : a);
+    const peor  = pnls.reduce((a,b) => b.pctUsd < a.pctUsd ? b : a);
+    mejorEl.textContent = mejor.name + ' ' + (mejor.pctUsd>=0?'+':'') + mejor.pctUsd.toFixed(1) + '%';
+    mejorEl.className = 'row-value ' + (mejor.pctUsd >= 0 ? 'green' : 'red');
+    peorEl.textContent = peor.name + ' ' + (peor.pctUsd>=0?'+':'') + peor.pctUsd.toFixed(1) + '%';
+    peorEl.className = 'row-value ' + (peor.pctUsd >= 0 ? 'green' : 'red');
+  } else { mejorEl.textContent = '—'; peorEl.textContent = '—'; mejorEl.className = 'row-value'; peorEl.className = 'row-value'; }
+}
+
+function syncTc(val) { document.getElementById('tcCierre').value = val; recalc(); }
+
+['tcCierre','btcPrice','ethPrice','aavePrice','s15y6Price'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) { el.addEventListener('input', recalc); el.addEventListener('change', recalc); el.addEventListener('blur', recalc); }
+});
+
+function toggleCartera() {
+  const s = document.getElementById('carteraSection');
+  s.style.display = s.style.display === 'none' ? '' : 'none';
+}
+
+function exportPNG() {
+  const el = document.getElementById('report');
+  html2canvas(el, {backgroundColor: '#0a0e14', scale: 2}).then(canvas => {
+    const link = document.createElement('a');
+    link.download = 'mesa-dinero-[DD]-[MM]-[YYYY].png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+}
+
+recalc();
+</script>
+</body>
+</html>
