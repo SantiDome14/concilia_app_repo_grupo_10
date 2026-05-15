@@ -1,0 +1,52 @@
+{
+  "name": "ardua-docs",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Ardua API Documentation — public portal at docs.arduasolutions.com",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "run-p type-check \"build-only {@}\" --",
+    "build-only": "vite build",
+    "preview": "vite preview",
+    "type-check": "vue-tsc --build",
+    "lint": "eslint . --fix",
+    "format": "prettier --write src/"
+  },
+  "dependencies": {
+    "@fontsource/inter": "^5.1.0",
+    "@fontsource/jetbrains-mono": "^5.1.0",
+    "@fontsource/poppins": "^5.1.0",
+    "@vueuse/core": "^13.9.0",
+    "axios": "^1.7.9",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-vue-next": "^0.525.0",
+    "reka-ui": "^2.9.7",
+    "shiki": "^1.24.0",
+    "tailwind-merge": "^3.3.1",
+    "vue": "^3.5.17",
+    "vue-router": "^4.5.1",
+    "vue-sonner": "^2.0.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.11",
+    "@types/node": "^22.10.0",
+    "@vitejs/plugin-vue": "^6.0.0",
+    "@vue/eslint-config-prettier": "^10.2.0",
+    "@vue/eslint-config-typescript": "^14.2.0",
+    "@vue/tsconfig": "^0.7.0",
+    "eslint": "^9.18.0",
+    "eslint-plugin-vue": "^10.0.0",
+    "npm-run-all2": "^7.0.2",
+    "prettier": "^3.4.2",
+    "prettier-plugin-tailwindcss": "^0.6.11",
+    "tailwindcss": "^4.1.11",
+    "typescript": "~5.7.2",
+    "vite": "^7.0.0",
+    "vue-tsc": "^2.2.0"
+  }
+}

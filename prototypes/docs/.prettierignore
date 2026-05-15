@@ -1,0 +1,14 @@
+dist
+dist-ssr
+coverage
+node_modules
+package-lock.json
+*.min.js
+*.min.css
+
+# OpenSpec artifacts are formatted by the openspec CLI and validator.
+# Prettier's markdown normalizer can rewrite things (tables, quotes, escape chars)
+# in ways the openspec validator rejects — keep prettier away from them.
+openspec/
+.claude/
+.cursor/
