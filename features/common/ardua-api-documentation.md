@@ -100,15 +100,15 @@ Cuando se incorpore un segundo universo (probablemente Changelog), se activa el 
 
 | Token | Hex | Uso |
 |---|---|---|
-| `--bg-base` | `#0A0A12` | Fondo de la página (dark mode default) |
-| `--bg-surface` | `#11113A` (navy Ardua) | Header, cards, sidebar panels |
-| `--bg-elevated` | `#1A1A2E` | Code blocks, callouts, panel derecho |
+| `--bg-base` | `#0A0A0A` | Fondo de la página (dark mode default) |
+| `--bg-surface` | `#0A0A0A` | Topbar, sidebar — sin diferenciación tonal del base |
+| `--bg-elevated` | `#141414` | Code blocks, callouts, panel derecho, inputs |
 | `--text-primary` | `#FFFFFF` | Títulos, texto principal |
 | `--text-secondary` | `#A0A0B8` | Subtítulos, descripciones, prosa secundaria |
 | `--text-muted` | `#6E6E85` | Captions, footnotes |
-| `--accent-violet` | `#7326F1` | Inline code, highlights, item activo del sidebar, links |
+| `--accent-violet` | `#7326F1` | Inline code, highlights, item activo del sidebar, links, botón "Try it" |
 | `--accent-lime` | `#CFF80A` | Badge `v1.0.0`, status "All systems operational" |
-| `--accent-violet-soft` | `#7326F1` 15% alpha | Background de item activo del sidebar |
+| `--accent-violet-soft` | `#7326F1` 15% alpha | Background de item activo del sidebar, fondo de inline code |
 | `--method-get` | `#10B981` | Badge GET — verde |
 | `--method-post` | `#3B82F6` | Badge POST — azul |
 | `--method-put` | `#F59E0B` | Badge PUT — amarillo |
@@ -117,8 +117,10 @@ Cuando se incorpore un segundo universo (probablemente Changelog), se activa el 
 | `--status-200` | `#10B981` | Badge response 2xx |
 | `--status-400` | `#F59E0B` | Badge response 4xx |
 | `--status-500` | `#EF4444` | Badge response 5xx |
-| `--border-subtle` | `#262638` | Bordes de cards, code blocks, separadores |
-| `--border-emphasis` | `#3D3D5C` | Bordes destacados, focus rings |
+| `--border-subtle` | `#1F1F1F` | Bordes de cards, code blocks, separadores |
+| `--border-emphasis` | `#2A2A2A` | Bordes destacados, focus rings |
+
+> **Nota sobre paleta de superficies.** Versiones previas del spec describían `--bg-surface` como navy `#11113A`. La validación visual con el POC actual (`d3rh5lht5hc3iw.cloudfront.net`) confirmó que tanto el topbar como el sidebar usan negro puro `#0A0A0A`, sin diferenciación tonal contra `--bg-base`. Los acentos navy del branding Ardua corporativo se preservan en otros productos del grupo; en `docs.arduasolutions.com` la jerarquía se establece sólo con `--accent-violet`, `--accent-lime` y los bordes sutiles.
 
 Las tokens viven como CSS variables en `:root` o en un archivo dedicado de Tailwind config (`tailwind.config.ts` con extensiones de tema). Light mode se planifica para v2 — todos los componentes deben referenciar variables, no hex hardcoded.
 
@@ -338,7 +340,7 @@ respuesta:
 
 ## ¿Preguntas?
 
-Escribinos a **tech@arduasolutions.com** — respondemos el mismo día hábil.
+Escribinos a **product@arduasolutions.com** — respondemos el mismo día hábil.
 ```
 
 **Panel derecho:** vacío con leyenda "No hay código de ejemplo para esta sección".
@@ -383,7 +385,7 @@ openssl rsa -in private.pem -pubout -out public.pem
 
 ### 2. Envianos tu clave pública
 
-Mandá el archivo `public.pem` a **tech@arduasolutions.com** con el
+Mandá el archivo `public.pem` a **product@arduasolutions.com** con el
 nombre de tu empresa. En menos de 48 horas te respondemos con tu
 `API_KEY` encriptada.
 
@@ -400,11 +402,11 @@ en tus llamadas a la API.
 [Callout warning]
 El equipo de Ardua **nunca** te va a pedir tu clave privada. Si alguien
 lo hace, no la compartas y avisanos de inmediato a
-**tech@arduasolutions.com**.
+**product@arduasolutions.com**.
 
 ## ¿Dudas?
 
-Escribinos a **tech@arduasolutions.com** — respondemos el mismo día hábil.
+Escribinos a **product@arduasolutions.com** — respondemos el mismo día hábil.
 ```
 
 **Panel derecho:** vacío con leyenda "No hay código de ejemplo para esta sección" (los snippets ya están inline en la columna central porque son los pasos).
@@ -501,7 +503,7 @@ Antes de introducir un cambio breaking, comunicamos el plan con un
 mínimo de **90 días de anticipación** a través de:
 
 - Notificación directa a los integradores activos vía
-  `tech@arduasolutions.com`.
+  `product@arduasolutions.com`.
 - Entrada en el [Changelog](/changelog) marcada con etiqueta
   `[BREAKING]`.
 
@@ -514,7 +516,7 @@ URL del changelog correspondiente.
 
 ## ¿Preguntas?
 
-Escribinos a **tech@arduasolutions.com**.
+Escribinos a **product@arduasolutions.com**.
 ```
 
 **Panel derecho:** vacío.
