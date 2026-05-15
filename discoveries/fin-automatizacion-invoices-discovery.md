@@ -4,7 +4,7 @@ features: [FIN]
 status: Concluida
 owner: Santino Domeniconi
 created_at: 2026-05-14
-updated_at: 2026-05-14
+updated_at: 2026-05-15
 ---
 
 # Automatización de envío de invoices a Pagos (FIN · Tesorería)
@@ -50,6 +50,18 @@ Cuatro puntos quedaron sin resolver en el requerimiento original capturado por M
 
 Todas las preguntas fueron respondidas. El requerimiento fue enriquecido en modo Detallado y actualizado en Jira como REQ-64.
 
-**Prerrequisito identificado:** la columna "Último envío a Slack" debe existir en las tres bases de Notion antes de que Tech active la automatización. Responsabilidad de Finanzas.
+**Prerrequisito identificado:** la columna "Último envío a Slack" debe existir en las tres bases de Notion antes de activar la automatización. El acceso al workspace de Finanzas en Notion es habilitado por Mati (CTO). La creación de la columna está a cargo del equipo de Producto.
 
 **Propagación a features:** cuando REQ-64 pase a desarrollo y se consolide, actualizar `features/fin/` con el estado del módulo de Tesorería y el flujo de comunicación con Operaciones. Al momento de crear este discovery, `features/fin/` no existe — su creación es una deuda abierta del área de Producto.
+
+## Avances de implementación (2026-05-15)
+
+**Canal de Pagos confirmado.** Gonzalo Melli confirmó que el canal se llama `#pagos` con ID `C09T2RWMTK9`.
+
+**Workflow n8n construido.** Se construyó el workflow completo `fin-invoices-a-pagos` con 21 nodos. Cubre el ciclo completo: polling de las 3 bases cada 1 minuto, descarga del Invoice desde Notion, envío al canal con mensaje formateado por entidad, actualización del timestamp en Notion y notificación por DM al analista en caso de fallo.
+
+**Pendientes para activación:**
+- Acceso al workspace de Finanzas en Notion (pendiente habilitación por Mati, CTO)
+- IDs de las tres bases de datos en Notion (Transferencias Ardua, Maldens, Astra Ventures)
+- Nombres exactos de las columnas en cada base para verificar coincidencia con el workflow
+- Creación de la columna "Último envío a Slack" (tipo Fecha) en las tres bases — a cargo de Producto una vez habilitado el acceso
