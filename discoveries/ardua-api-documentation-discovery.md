@@ -91,8 +91,9 @@ explícito de disclaimer reutilizable.
 | **Alcance de contenido v1** | Estructura general (Introduction, Authentication, Errors & Rate Limits) + una sola API documentada: RFP (1 endpoint: `GET /prices/{pair}`). |
 | **Arquitectura de navegación** | Preparada para tabs (Get Started / API Reference / Changelog, à la Bridge) pero con **un único tab activo en v1**; el nav de tabs no se renderiza si solo hay uno. Permite crecer sin redesign. |
 | **Branding** | Navy `#11113A`, violet `#7326F1`, lime `#CFF80A`, black `#000000`. Tipografía Poppins / Inter. Dark mode default (preservar el look del POC actual). |
-| **Ubicación del repo** | A definir con Santiago: repo nuevo dedicado (probable) o subcarpeta del monorepo del RFQ/RFP. La decisión técnica final no bloquea el prototipo, que vive en `prototypes/ardua-api-documentation/` de este framework. |
+| **Ubicación del repo** | A definir con Santiago: repo nuevo dedicado (probable) o subcarpeta del monorepo del RFQ/RFP. La decisión técnica final no bloquea el prototipo, que vive en `prototypes/docs/` de este framework. |
 | **Naming del producto en docs** | "Ardua API Documentation" para el portal. Cada API documentada lleva su nombre propio en el sidebar (RFP, RFQ cuando esté, etc.). |
+| **Naming del folder del prototipo** | `prototypes/docs/` (no `prototypes/ardua-api-documentation/`). Alineado con el dominio público `docs.arduasolutions.com` y con la convención de la industria (la mayoría de proyectos de docs usan `docs/` como root). |
 
 ## Arquitectura de navegación target
 
@@ -183,7 +184,7 @@ El feature spec captura este patrón como componente reutilizable.
    con el detalle accionable (paleta exacta, jerarquía visual, comportamiento
    de cada componente, patrones de página, copy de las páginas conceptuales).
 2. **Prototipo** — copiar `_core-template-frontend` a
-   `prototypes/ardua-api-documentation/` y aplicar el spec. Implementación
+   `prototypes/docs/` y aplicar el spec. Implementación
    delegada a Claude Code vía prompt; iteración por sesión.
 3. **Validación legal** — pasar el wording final por Camila antes de
    deploy a producción.

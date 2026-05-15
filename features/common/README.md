@@ -70,7 +70,7 @@ A diferencia de las carpetas de productos del financial-core, **COMMON no tiene 
 
 Si una feature transversal lo amerita, puede crearse un prototipo de referencia en `prototypes/common/[capacidad]/` que muestre el comportamiento aislado, pero no es obligatorio.
 
-**Excepción `ardua-api-documentation`:** al ser un producto público independiente y no una capacidad cross-product del backoffice, tiene prototipo propio en `prototypes/ardua-api-documentation/`. Es la única feature de `common/` con prototipo dedicado en v1.
+**Excepción `ardua-api-documentation`:** al ser un producto público independiente y no una capacidad cross-product del backoffice, tiene prototipo propio en `prototypes/docs/`. Es la única feature de `common/` con prototipo dedicado en v1.
 
 ---
 

@@ -682,7 +682,7 @@ Antes de publicar cualquier página nueva:
 ### Estructura del proyecto sugerida
 
 ```
-prototypes/ardua-api-documentation/
+prototypes/docs/
 ├── package.json
 ├── vite.config.ts
 ├── tailwind.config.ts
