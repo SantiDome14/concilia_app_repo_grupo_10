@@ -1,53 +1,17 @@
-// ════════════════════════════════════════════════════════════════════
-// App entry
-// ────────────────────────────────────────────────────────────────────
-// Plugin wiring order matters:
-//   1. Pinia         — stores must be ready before anything that uses them
-//   2. Router        — needs to be registered so route guards run
-//   3. Auth0         — router guards depend on Auth0 state
-//   4. Vue Query     — server-state cache
-//   5. i18n (opt-in) — gated by VITE_FEATURE_I18N
-//   6. LD (opt-in)   — gated by VITE_FEATURE_LAUNCHDARKLY
-// ════════════════════════════════════════════════════════════════════
-
 import { createApp } from 'vue';
 import App from './App.vue';
+import router from './router';
 
-import { setupPinia } from './plugins/pinia';
-import { setupRouter } from './router';
-import { setupAuth0 } from './plugins/auth0';
-import { setupQuery } from './plugins/query';
-import { setupManifests } from './plugins/manifests';
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/poppins/600.css';
+import '@fontsource/poppins/700.css';
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/500.css';
 
 import './styles/globals.css';
 
-// ─── Bootstrap ──────────────────────────────────────────────────────
-async function bootstrap() {
-  const app = createApp(App);
-
-  setupPinia(app);
-  setupManifests();
-  setupRouter(app);
-  setupAuth0(app);
-  setupQuery(app);
-
-  // ─── Opt-in plugins ───────────────────────────────────────────────
-  // Activated by setting VITE_FEATURE_* env vars to "true".
-  // Both are dynamic imports so they don't bloat the bundle when disabled.
-  if (import.meta.env.VITE_FEATURE_I18N === 'true') {
-    const { setupI18n } = await import('./i18n');
-    setupI18n(app);
-  }
-
-  if (import.meta.env.VITE_FEATURE_LAUNCHDARKLY === 'true') {
-    const { setupLaunchDarkly } = await import('./plugins/launchdarkly');
-    setupLaunchDarkly(app);
-  }
-
-  app.mount('#app');
-}
-
-bootstrap().catch((error) => {
-   
-  console.error('[bootstrap] Failed to start app:', error);
-});
+const app = createApp(App);
+app.use(router);
+app.mount('#app');

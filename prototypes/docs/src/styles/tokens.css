@@ -1,0 +1,62 @@
+/* ══════════════════════════════════════════════════════════════════
+   Design tokens — Ardua API Documentation
+   ──────────────────────────────────────────────────────────────────
+   Literal HEX values mirror the feature spec at
+   features/common/ardua-api-documentation.md → §Sistema de diseño.
+   All components MUST reference these variables — never hardcode hex.
+   ══════════════════════════════════════════════════════════════════ */
+
+:root {
+  color-scheme: dark;
+
+  /* ─── Surfaces ─────────────────────────────────────────────── */
+  --bg-base: #0a0a0a;
+  --bg-surface: #0a0a0a;
+  --bg-elevated: #141414;
+
+  /* ─── Text ramp ────────────────────────────────────────────── */
+  --text-primary: #ffffff;
+  --text-secondary: #a0a0b8;
+  --text-muted: #6e6e85;
+
+  /* ─── Accents ──────────────────────────────────────────────── */
+  --accent-violet: #7326f1;
+  --accent-violet-soft: rgba(115, 38, 241, 0.15);
+  --accent-violet-soft-strong: rgba(115, 38, 241, 0.25);
+  --accent-lime: #cff80a;
+
+  /* ─── HTTP methods ─────────────────────────────────────────── */
+  --method-get: #10b981;
+  --method-post: #3b82f6;
+  --method-put: #f59e0b;
+  --method-patch: #8b5cf6;
+  --method-delete: #ef4444;
+
+  /* ─── HTTP status badges ───────────────────────────────────── */
+  --status-200: #10b981;
+  --status-400: #f59e0b;
+  --status-500: #ef4444;
+
+  /* ─── Borders ──────────────────────────────────────────────── */
+  --border-subtle: #1f1f1f;
+  --border-emphasis: #2a2a2a;
+
+  /* ─── Typography ───────────────────────────────────────────── */
+  --font-body:
+    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display:
+    'Poppins', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:
+    'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Courier New', monospace;
+
+  /* ─── Radii ────────────────────────────────────────────────── */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-pill: 9999px;
+
+  /* ─── Layout ───────────────────────────────────────────────── */
+  --layout-topbar-h: 56px;
+  --layout-sidebar-w: 280px;
+  --layout-content-max: 720px;
+  --layout-rightpanel-w: 480px;
+}

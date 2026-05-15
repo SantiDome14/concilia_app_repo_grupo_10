@@ -1,157 +1,44 @@
 /* ══════════════════════════════════════════════════════════════════
-   Global styles — Ardua Design System
+   Global styles — Ardua API Documentation
    ──────────────────────────────────────────────────────────────────
-   Tailwind 4 directives + design tokens as CSS variables.
-   Change --brand to re-theme the entire app.
-   Tokens are consumed by:
-     - Tailwind theme extensions (bg-brand, text-surf, etc.)
-     - shadcn-vue primitives (Button, Badge, Dialog, ...)
-     - Any custom component via `hsl(var(--token))`
+   Tailwind 4 + dark-mode-only tokens + base element styles.
    ══════════════════════════════════════════════════════════════════ */
 
 @import 'tailwindcss';
+@import './tokens.css';
 
-/* ────────────────────────────────────────────────────────────────
-   Theme — maps CSS variables to Tailwind color utilities.
-   ──────────────────────────────────────────────────────────────── */
+/* Web fonts (loaded via @fontsource packages in main.ts) */
+
 @theme {
-  /* Brand — change ONE variable to re-theme the app */
-  --color-brand: hsl(var(--brand));
-  --color-brand-bg: hsl(var(--brand) / 0.08);
+  --color-bg-base: var(--bg-base);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-elevated: var(--bg-elevated);
 
-  /* Semantic surfaces */
-  --color-bg: hsl(var(--bg));
-  --color-surf: hsl(var(--surf));
-  --color-card: hsl(var(--card));
-  --color-card-2: hsl(var(--card-2));
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
 
-  /* Borders */
-  --color-b-1: hsl(var(--b-1));
-  --color-b-2: hsl(var(--b-2));
-  --color-b-3: hsl(var(--b-3));
-  --color-b-4: hsl(var(--b-4));
+  --color-accent-violet: var(--accent-violet);
+  --color-accent-lime: var(--accent-lime);
 
-  /* Text */
-  --color-t-1: hsl(var(--t-1));
-  --color-t-2: hsl(var(--t-2));
-  --color-t-3: hsl(var(--t-3));
-  --color-t-4: hsl(var(--t-4));
+  --color-method-get: var(--method-get);
+  --color-method-post: var(--method-post);
+  --color-method-put: var(--method-put);
+  --color-method-patch: var(--method-patch);
+  --color-method-delete: var(--method-delete);
 
-  /* Status */
-  --color-success: hsl(var(--success));
-  --color-success-bg: hsl(var(--success) / 0.08);
-  --color-warning: hsl(var(--warning));
-  --color-warning-bg: hsl(var(--warning) / 0.09);
-  --color-danger: hsl(var(--danger));
-  --color-danger-bg: hsl(var(--danger) / 0.08);
-  --color-info: hsl(var(--info));
-  --color-info-bg: hsl(var(--info) / 0.09);
+  --color-status-200: var(--status-200);
+  --color-status-400: var(--status-400);
+  --color-status-500: var(--status-500);
 
-  /* Typography */
-  --font-sans:
-    'DM Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
-  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Courier New', monospace;
+  --color-border-subtle: var(--border-subtle);
+  --color-border-emphasis: var(--border-emphasis);
 
-  /* Radius */
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
-  --radius-xl: 14px;
-
-  /* Animation */
-  --animate-in: enter 150ms ease-out;
-  --animate-out: exit 150ms ease-in;
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
 }
 
-/* ────────────────────────────────────────────────────────────────
-   Design tokens — dark theme (default).
-   ──────────────────────────────────────────────────────────────── */
-:root {
-  /* Tell the browser to render native form controls (inputs, selects,
-     scrollbars, autofill backgrounds) using the dark user-agent
-     stylesheet. Overridden by `:root.light` below. Without this, native
-     <input> backgrounds can leak through the bg-card-2 utility under
-     some prefers-color-scheme combinations. */
-  color-scheme: dark;
-
-  /* Brand — change this to re-theme (HSL triple: H S% L%)
-     OPS red:    0 84% 60%
-     TRD blue:   217 91% 60%
-     FIN green:  142 71% 45%
-     CLP purple: 258 90% 74%
-     COM amber:  38 92% 50%
-     LEX teal:   172 66% 50% */
-  --brand: 0 84% 60%;
-
-  /* Surfaces */
-  --bg: 0 0% 4%;          /* #0A0A0A */
-  --surf: 0 0% 7%;        /* #111111 */
-  --card: 0 0% 9%;        /* #181818 */
-  --card-2: 0 0% 12%;     /* #1E1E1E */
-
-  /* Borders (progressively lighter) */
-  --b-1: 0 0% 12%;        /* #1E1E1E */
-  --b-2: 0 0% 15%;        /* #272727 */
-  --b-3: 0 0% 20%;        /* #333333 */
-  --b-4: 0 0% 27%;        /* #444444 */
-
-  /* Text (progressively dimmer) */
-  --t-1: 0 0% 94%;        /* #F0F0F0 */
-  --t-2: 0 0% 75%;        /* #C0C0C0 */
-  --t-3: 0 0% 53%;        /* #888888 */
-  --t-4: 0 0% 29%;        /* #4A4A4A */
-
-  /* Status */
-  --success: 142 71% 45%;
-  --warning: 38 92% 50%;
-  --danger: 0 84% 60%;
-  --info: 217 91% 60%;
-
-  /* Chart series — 8 perceptually distinct hues. Apps may override for
-     brand alignment. Series are auto-assigned in declaration order
-     (chart-1 → first series, chart-2 → second, etc.). */
-  --chart-1: var(--brand);
-  --chart-2: 217 91% 60%;   /* blue   #2563EB */
-  --chart-3: 142 71% 45%;   /* green  #16A34A */
-  --chart-4: 38 92% 50%;    /* amber  #F59E0B */
-  --chart-5: 258 90% 74%;   /* purple #C084FC */
-  --chart-6: 172 66% 50%;   /* teal   #2DD4BF */
-  --chart-7: 340 75% 55%;   /* pink   #E11D48 */
-  --chart-8: 197 71% 73%;   /* sky    #93C5FD */
-}
-
-/* ────────────────────────────────────────────────────────────────
-   Light theme — opt-in via <html class="light">
-   Selected via the Settings · Apariencia toggle (system / light / dark)
-   wired in `src/stores/preferences.ts`. Surfaces invert from the dark
-   ladder and the text ramp swaps to dark-on-light. Brand + status
-   colors keep their HSL — they read correctly on both backgrounds.
-   ──────────────────────────────────────────────────────────────── */
-:root.light {
-  /* Swap to light user-agent styles for native form controls, matching
-     the inverted surface ladder below. */
-  color-scheme: light;
-
-  --bg: 0 0% 100%;
-  --surf: 0 0% 98%;
-  --card: 0 0% 96%;
-  --card-2: 0 0% 92%;
-
-  --b-1: 0 0% 90%;
-  --b-2: 0 0% 84%;
-  --b-3: 0 0% 75%;
-  --b-4: 0 0% 60%;
-
-  --t-1: 0 0% 10%;
-  --t-2: 0 0% 25%;
-  --t-3: 0 0% 45%;
-  --t-4: 0 0% 60%;
-}
-
-/* ────────────────────────────────────────────────────────────────
-   Base element styles
-   ──────────────────────────────────────────────────────────────── */
 @layer base {
   *,
   *::before,
@@ -161,55 +48,101 @@
 
   html,
   body {
-    background: hsl(var(--bg));
-    color: hsl(var(--t-1));
-    font-family: var(--font-sans);
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-family: var(--font-body);
     font-size: 14px;
+    line-height: 1.6;
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   #app {
     min-height: 100vh;
   }
 
-  /* Subtle scrollbars */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+    color: var(--text-primary);
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  p {
+    color: var(--text-secondary);
+  }
+
+  code,
+  pre {
+    font-family: var(--font-mono);
+  }
+
+  a {
+    color: var(--accent-violet);
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+
   ::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
+    width: 6px;
+    height: 6px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: hsl(var(--b-3));
+    background: var(--border-emphasis);
     border-radius: 3px;
   }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-violet);
+  }
 
-  /* Disable default focus ring — components define their own via ring-brand */
   :focus {
     outline: none;
   }
+  :focus-visible {
+    outline: 2px solid var(--accent-violet);
+    outline-offset: 2px;
+  }
 }
 
-/* ────────────────────────────────────────────────────────────────
-   Animations (used by reka-ui primitives)
-   ──────────────────────────────────────────────────────────────── */
-@keyframes enter {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Prose styling for documentation content */
+.prose-doc {
+  color: var(--text-secondary);
 }
-@keyframes exit {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
+.prose-doc > p {
+  margin: 16px 0;
+  line-height: 1.7;
+}
+.prose-doc > p:first-child {
+  margin-top: 0;
+}
+.prose-doc strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.prose-doc code:not(pre code) {
+  background: var(--accent-violet-soft);
+  color: var(--accent-violet);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius-sm);
+}
+.prose-doc ul,
+.prose-doc ol {
+  margin: 12px 0;
+  padding-left: 24px;
+}
+.prose-doc li {
+  margin: 6px 0;
 }

@@ -14,9 +14,5 @@
     "esModuleInterop": true,
     "isolatedModules": true
   },
-  "include": [
-    "vite.config.*",
-    "vitest.config.*",
-    "eslint.config.*"
-  ]
+  "include": ["vite.config.*", "eslint.config.*"]
 }

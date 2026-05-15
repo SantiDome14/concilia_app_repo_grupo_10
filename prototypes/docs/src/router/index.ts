@@ -1,50 +1,58 @@
-import { createRouter, createWebHistory, type Router } from 'vue-router';
-import type { App } from 'vue';
-import type { Auth0VueClient } from '@auth0/auth0-vue';
-import { routes } from './routes';
-import { createAuthGuard, createCapabilitiesGuard } from './guards';
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 
-// ════════════════════════════════════════════════════════════════════
-// Router setup
-// ────────────────────────────────────────────────────────────────────
-// Guards are attached via a closure over the Auth0 instance — a clean
-// alternative to the router.setAuth0() hack that core-app and core-lex
-// implement today.
-// ════════════════════════════════════════════════════════════════════
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/',
+    name: 'introduction',
+    component: () => import('@/pages/IntroductionPage.vue'),
+    meta: { title: 'Introduction' },
+  },
+  {
+    path: '/authentication',
+    name: 'authentication',
+    component: () => import('@/pages/AuthenticationPage.vue'),
+    meta: { title: 'Authentication' },
+  },
+  {
+    path: '/errors',
+    name: 'errors',
+    component: () => import('@/pages/ErrorsPage.vue'),
+    meta: { title: 'Errors & rate limits' },
+  },
+  {
+    path: '/versioning',
+    name: 'versioning',
+    component: () => import('@/pages/VersioningPage.vue'),
+    meta: { title: 'Versioning' },
+  },
+  {
+    path: '/api/market-data/get-prices',
+    name: 'get-prices',
+    component: () => import('@/pages/api/market-data/GetPricesPage.vue'),
+    meta: { title: 'GET /prices/{pair}' },
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'not-found',
+    component: () => import('@/pages/NotFoundPage.vue'),
+    meta: { title: 'Not Found' },
+  },
+];
 
-let router: Router | null = null;
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+  scrollBehavior(to, _from, savedPosition) {
+    if (savedPosition) return savedPosition;
+    if (to.hash) return { el: to.hash, behavior: 'smooth' };
+    return { top: 0 };
+  },
+});
 
-export function setupRouter(app: App): void {
-  router = createRouter({
-    history: createWebHistory(),
-    routes,
-    scrollBehavior(_to, _from, savedPosition) {
-      if (savedPosition) return savedPosition;
-      return { top: 0 };
-    },
-  });
+router.afterEach((to) => {
+  const baseTitle = 'Ardua API Documentation';
+  const pageTitle = to.meta?.title as string | undefined;
+  document.title = pageTitle ? `${pageTitle} · ${baseTitle}` : baseTitle;
+});
 
-  // Guards are wired AFTER Auth0 setup completes. We use a deferred
-  // approach: check app._context.config.globalProperties.$auth0 each
-  // time the guard runs, so it picks up Auth0 as soon as it's registered.
-  router.beforeEach(async (to, from) => {
-    const auth0 = app.config.globalProperties.$auth0 as Auth0VueClient | undefined;
-    const authGuard = createAuthGuard(auth0 ?? null);
-    const capsGuard = createCapabilitiesGuard(auth0 ?? null);
-
-    const authResult = await authGuard.call(undefined, to, from, () => {});
-    if (authResult !== true && authResult !== undefined) return authResult;
-
-    const capsResult = await capsGuard.call(undefined, to, from, () => {});
-    if (capsResult !== true && capsResult !== undefined) return capsResult;
-
-    return true;
-  });
-
-  app.use(router);
-}
-
-export function getRouter(): Router {
-  if (!router) throw new Error('[router] Not initialized — call setupRouter first');
-  return router;
-}
+export default router;
