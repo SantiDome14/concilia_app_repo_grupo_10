@@ -70,7 +70,7 @@ This app does NOT ship its own contracts — it is a **consumer** of the 13 capa
 - **Pages follow the L1/L2/L3 pattern** from `core-layout` (page header, KPI cards, section + data surface). L2 is optional, L1 and L3 are required.
 - **Three-level control framework.** L1 hosts segmentation (sub-tabs via `<Segmenter>`) + view toggle + Main CTA. L3 hosts search + granular filters. L2 KPIs are computed over the active segment + active filters. Period is a filter with UI privileges, not a separate conceptual category.
 - **Module views.** Each module declares the views it supports via `views: ('list' | 'cards' | 'kanban')[]`. `<ViewToggle>` renders only declared views; the toggle is hidden when only one view is declared. Tablero is state-driven (N columns = N declared module states); declaring `'kanban'` without a state machine is rejected at dev-time and removed from the toggle.
-- **Tables:** `useTable` for client-side data, `@tanstack/vue-query` for server-side. Hand-rolled pagination is forbidden.
+- **Tables:** `useTable` for client-side data, `@tanstack/vue-query` for server-side. Hand-rolled pagination state in page components is forbidden. The pagination footer MUST be rendered through `<TablePagination>` from `@/components/data-display` — page-rolled inline footers (Prev/Next buttons, custom page-size selectors) are rejected at review (see `core-data-tables` spec).
 - **Per-row actions:** shared `ActionsMenu.vue` portal component. Inline `<td>` dropdowns are forbidden.
 - **Actions are declared via the manifest engine** (`core-actions-manifest`). Hand-coded action arrays in pages are forbidden. Manifests are JSON-strict objects keyed by `app.module[.recordType]`. Pure-logic engine (types, predicate evaluator, capabilities, resolver, validator, imputation): `src/lib/manifest/`. Vue UI layer (deferred): `src/components/manifest/`.
 - **Modals:** three canonical types (Create, Detail, Edit) plus the destructive Confirmation dialog. Detail transitions to Edit via the `Editar` button.
@@ -285,11 +285,12 @@ Every meaningful change in this repository flows through OpenSpec. The four comm
 - **`src/components/layout/`** — `AppShell`, `Sidebar`, `Topbar`. Structural components only.
 - **`src/components/ui/`** — Primitives (`Button`, `Input`, `Badge`). Each primitive uses `cva` for variants.
 - **`src/components/feedback/`** — `EmptyState`, `Skeleton`, `ActionsMenu`. Cross-cutting feedback components.
+- **`src/components/data-display/`** — `TablePagination` plus chart primitives. `<TablePagination>` is the canonical client-side pagination surface paired with `useTable<T>()` (per `core-data-tables`).
 - **`src/pages/`** — Route-level page components. Every page follows L1/L2/L3.
 - **`src/composables/`** — Pure composition logic. No Vue component rendering.
 - **`src/plugins/`** — Setup functions for platform plugins (Pinia, Query, Auth0, LaunchDarkly).
 - **`src/lib/manifest/`** — Pure-logic actions-manifest engine (no Vue, no DOM). Public API in `src/lib/manifest/index.ts`.
-- **`src/components/manifest/`** (deferred) — `<ManifestDialog>`, `<ManifestField>`, `<ManifestModuleCTAs>`, `<ManifestBatchCTA>`. Wire the engine to the UI.
+- **`src/components/manifest/`** (deferred) — `<ManifestDialog>`, `<ManifestField>`, `<ManifestModuleCTAs>`, `<ManifestBatchCTA>`. Wire the engine to the UI. `ModuleCTA` declares an optional `variant?: 'primary' | 'secondary'` (default `'primary'`) that maps to the `<Button>` variant prop — use `'secondary'` for CTAs that are visually subordinated to a sibling primary (per `core-actions-manifest` spec).
 - **Never inline a dropdown menu in a `<td>` cell.** Use the shared `ActionsMenu.vue` portal.
 - **Never render more than 3 CTAs in a page header** (per `core-layout`). More actions belong in the row actions menu or in a future bulk-action bar.
 

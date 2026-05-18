@@ -21,6 +21,8 @@ import {
   PARTNERS,
   BANCOS_EXCHANGES,
 } from '@/mocks/fin/contrapartes';
+import { CUENTAS_OPERATIVAS_CLIENTE } from '@/mocks/fin/cuentas_operativas_cliente';
+import { useDisponibilidadesCatalogStore } from '@/stores/disponibilidadesCatalog';
 
 export function setupCatalogs(): void {
   // framework.sociedades — no filter; lists every group entity.
@@ -87,4 +89,49 @@ export function setupCatalogs(): void {
   registerCatalog('framework.bancos_exchanges', () =>
     BANCOS_EXCHANGES.map((b) => ({ value: b.id, label: b.nombre })),
   );
+
+  // ─── fin-disponibilidades catalogues (REQ-50) ─────────────────────
+  // These three resolvers read from the `disponibilidadesCatalog`
+  // Pinia store so newly-created records (via Crear nueva Cuenta /
+  // Crear nuevo Banco/Estructura CTAs) appear in dropdowns immediately.
+
+  // fin.bancos_cuentas — FIN-lens view of the Cuentas catalogue.
+  // Filter: sociedad_id (string). When unfiltered, returns the full
+  // active catalogue. Each entry's label combines banco + tipo_cuenta
+  // + moneda + número for unambiguous picking.
+  registerCatalog('fin.bancos_cuentas', (filter) => {
+    const store = useDisponibilidadesCatalogStore();
+    const active = store.cuentas.filter((c) => c.estado === 'Activa');
+    const filtered =
+      typeof filter === 'string' && filter !== ''
+        ? active.filter((c) => c.sociedad_id === filter)
+        : active;
+    return filtered.map((c) => ({
+      value: c.id,
+      label: `${c.banco} · ${c.tipo_cuenta} · ${c.moneda} · ${c.numero}`,
+    }));
+  });
+
+  // fin.estructuras_bancos — global Estructuras registry (no filter).
+  // Decision 1 of `extend-fin-disponibilidades-bancos-cuentas-crud`:
+  // Estructuras are global; every Estructura is available to every
+  // Sociedad.
+  registerCatalog('fin.estructuras_bancos', () => {
+    const store = useDisponibilidadesCatalogStore();
+    return store.estructuras.map((e) => ({
+      value: e.nombre,
+      label: `${e.nombre} · ${e.tipo_estructura}`,
+    }));
+  });
+
+  // fin.cuentas_operativas_cliente — filtered by cliente_id. Returns
+  // every active Cuenta Operativa of the chosen client across all
+  // monedas (the carga manual dialog narrows by moneda at the page
+  // level in a future change).
+  registerCatalog('fin.cuentas_operativas_cliente', (filter) => {
+    if (typeof filter !== 'string' || filter === '') return [];
+    return CUENTAS_OPERATIVAS_CLIENTE.filter(
+      (c) => c.cliente_id === filter && c.estado === 'Activa',
+    ).map((c) => ({ value: c.id, label: c.label }));
+  });
 }

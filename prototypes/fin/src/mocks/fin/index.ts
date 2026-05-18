@@ -17,4 +17,5 @@ export * from './quotes';
 export * from './sociedades';
 export * from './cuentas';
 export * from './bancos_cuentas';
+export * from './estructuras_bancos';
 export * from './cuentas_operativas_cliente';

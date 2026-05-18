@@ -306,6 +306,19 @@ export interface CuentaBanco extends CuentaBancaria {
 }
 
 /**
+ * `estructura_banco` record — entries in the registry of Bancos /
+ * Estructuras (Banco / Exchange / Custodio / etc.) consumed by the
+ * Crear Estructura Secondary CTA and the `banco` lookup of the Crear
+ * Cuenta dialog. Per REQ-50 + Decision 1 of
+ * `extend-fin-disponibilidades-bancos-cuentas-crud`.
+ */
+export interface EstructuraBanco {
+  id: string;
+  nombre: string;
+  tipo_estructura: EstructuraTipo;
+}
+
+/**
  * Cuenta Operativa del Cliente (REQ-42 §6). Internal accounting
  * construction representing the balance attributed to a client under
  * the Docket de Ardua Solutions Corp. The id format is

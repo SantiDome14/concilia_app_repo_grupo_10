@@ -313,6 +313,11 @@ export type ModuleCTA = {
   dimension?: Dimension;
   description?: string;
   icon?: string;
+  /** Visual prominence in the page-header actions slot. Defaults to
+   *  `'primary'` when unspecified. `'secondary'` renders the CTA with
+   *  the secondary <Button> appearance (visually subordinated to a
+   *  sibling primary). See `core-actions-manifest` spec. */
+  variant?: 'primary' | 'secondary';
   /** When set, the engine looks up a registered creator and the resulting
    *  record is logged with `created_record_type` in the audit entry. */
   creates_record_concept?: string;

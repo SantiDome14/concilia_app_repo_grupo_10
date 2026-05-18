@@ -72,6 +72,7 @@ export const FIN_DISPONIBILIDADES_BANCOS_CUENTAS_MANIFEST: Manifest = {
         'Da de alta una nueva cuenta en el catálogo compartido de Bancos / Cuentas.',
       icon: 'plus',
       is_module_cta: true,
+      variant: 'primary',
       creates_record_type: 'cuenta_banco',
       capabilities: {
         required_role_any_of: ['fin.disponibilidades.bancos_cuentas.crear'],
@@ -92,9 +93,11 @@ export const FIN_DISPONIBILIDADES_BANCOS_CUENTAS_MANIFEST: Manifest = {
           {
             id: 'banco',
             label: 'Banco / Estructura',
-            type: 'text',
+            type: 'lookup',
+            catalog: 'fin.estructuras_bancos',
             required: true,
-            placeholder: 'Ej. COINAG, BIND, BITGO...',
+            placeholder: 'Elegí Banco / Estructura...',
+            hint: 'Si no encontrás la estructura, creala primero con la acción "Crear nuevo Banco/Estructura".',
           },
           {
             id: 'tipo_estructura',
@@ -170,6 +173,60 @@ export const FIN_DISPONIBILIDADES_BANCOS_CUENTAS_MANIFEST: Manifest = {
         ],
         audit: true,
         toast: 'Cuenta creada en el catálogo',
+      },
+    },
+    // ─── Secondary CTA · Crear nuevo Banco/Estructura ───────────────
+    // Per REQ-50 + the user-asked secondary surface on Bancos/Cuentas.
+    // Variant 'secondary' is visually subordinated to the primary
+    // Crear nueva Cuenta. The new Estructura immediately appears in
+    // the `banco` lookup of the next Crear nueva Cuenta dialog.
+    {
+      id: 'fin.disponibilidades.bancos_cuentas.crear_estructura',
+      dimension: 'governance',
+      label: 'Crear nuevo Banco/Estructura',
+      description:
+        'Da de alta una nueva entidad (Banco, Exchange, ALyC, Custodio, PSP, Proveedor) en el registro de Estructuras. Las Estructuras son globales — cualquier Sociedad puede abrir cuentas en una Estructura existente.',
+      icon: 'building',
+      is_module_cta: true,
+      variant: 'secondary',
+      creates_record_type: 'estructura_banco',
+      capabilities: {
+        required_role_any_of: ['fin.disponibilidades.bancos_cuentas.crear'],
+      },
+      dialog: {
+        title: 'Crear nuevo Banco/Estructura',
+        description:
+          'El registro queda disponible para abrir cuentas desde cualquier Sociedad. Esta acción solo crea la entidad — la primera cuenta concreta se da de alta después con "Crear nueva Cuenta".',
+        fields: [
+          {
+            id: 'nombre',
+            label: 'Nombre',
+            type: 'text',
+            required: true,
+            placeholder: 'Ej. Lemon Cash, Banco Itaú, BBVA...',
+          },
+          {
+            id: 'tipo_estructura',
+            label: 'Tipo de estructura',
+            type: 'select',
+            required: true,
+            options: [
+              { value: 'Banco', label: 'Banco' },
+              { value: 'Banco digital', label: 'Banco digital' },
+              { value: 'ALyC', label: 'ALyC' },
+              { value: 'Exchange', label: 'Exchange' },
+              { value: 'Custodio', label: 'Custodio' },
+              { value: 'PSP', label: 'PSP' },
+              { value: 'Proveedor', label: 'Proveedor' },
+            ],
+          },
+        ],
+        confirm_label: 'Crear estructura',
+      },
+      on_confirm: {
+        update_fields: ['nombre', 'tipo_estructura'],
+        audit: true,
+        toast: 'Banco / Estructura creado',
       },
     },
   ],
