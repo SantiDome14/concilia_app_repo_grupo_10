@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { RouterView } from 'vue-router';
+import { RouterView, useRoute } from 'vue-router';
 import { Toaster } from 'vue-sonner';
 import { storeToRefs } from 'pinia';
 import AppShell from '@/components/layout/AppShell.vue';
@@ -14,11 +14,23 @@ const prefs = usePreferencesStore();
 const { resolvedAppearance } = storeToRefs(prefs);
 
 const settings = useSettingsDialog();
+
+// Force a clean unmount/remount of the routed component on every
+// route-NAME change. Without this key, Vue Router reuses the same
+// <component> instance when transitioning between routes and any
+// stale teleport / portal / pending watcher in the outgoing page can
+// "leak" and visually persist over the new page. Keying on
+// `route.name` (NOT `route.fullPath`) avoids unnecessary remounts
+// when only the query string changes within the same page (filters /
+// pagination / tabs all live in `route.query`).
+const route = useRoute();
 </script>
 
 <template>
   <AppShell>
-    <RouterView />
+    <RouterView v-slot="{ Component }">
+      <component :is="Component" :key="String(route.name ?? route.path)" />
+    </RouterView>
   </AppShell>
   <!-- Single shared dialog instance per Requirement 9 (core-actions-manifest). -->
   <ManifestDialog />
