@@ -65,15 +65,20 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, layout: 'shell', breadcrumb: 'Reportes' },
   },
   // ─── Back Office ───────────────────────────────────────────────────
+  // Ventas: SOON placeholder. The cotizaciones/quotes record type and
+  // its manifest (`fin.cotizaciones`) remain registered in code so the
+  // future Ventas redesign can adopt them without re-implementing the
+  // contracts. UI is deferred.
   {
     path: ROUTE_PATHS.VENTAS,
     name: ROUTE_NAMES.VENTAS,
-    component: () => import('@/pages/Ventas.vue'),
+    component: () => import('@/pages/ModuloSoon.vue'),
     meta: {
       requiresAuth: true,
       layout: 'shell',
       breadcrumb: 'Ventas',
       block: 'Back Office',
+      soon: true,
     },
   },
   {
@@ -150,13 +155,13 @@ export const routes: RouteRecordRaw[] = [
     },
   },
   {
-    path: ROUTE_PATHS.MONEDAS,
-    name: ROUTE_NAMES.MONEDAS,
+    path: ROUTE_PATHS.TIPO_CAMBIO,
+    name: ROUTE_NAMES.TIPO_CAMBIO,
     component: () => import('@/pages/ModuloSoon.vue'),
     meta: {
       requiresAuth: true,
       layout: 'shell',
-      breadcrumb: 'Monedas',
+      breadcrumb: 'Tipo de Cambio',
       block: 'Tesorería',
       soon: true,
     },

@@ -67,7 +67,7 @@ const blocks: NavBlock[] = [
   {
     label: 'Back Office',
     items: [
-      { to: ROUTE_PATHS.VENTAS, name: ROUTE_NAMES.VENTAS, label: 'Ventas', icon: Receipt },
+      { to: ROUTE_PATHS.VENTAS, name: ROUTE_NAMES.VENTAS, label: 'Ventas', icon: Receipt, soon: true },
       { to: ROUTE_PATHS.COMPRAS, name: ROUTE_NAMES.COMPRAS, label: 'Compras', icon: ShoppingCart, soon: true },
     ],
   },
@@ -79,15 +79,15 @@ const blocks: NavBlock[] = [
       { to: ROUTE_PATHS.PAGOS, name: ROUTE_NAMES.PAGOS, label: 'Pagos', icon: CreditCard, soon: true },
       { to: ROUTE_PATHS.DEUDAS_PRESTAMOS, name: ROUTE_NAMES.DEUDAS_PRESTAMOS, label: 'Deudas / Préstamos', icon: Landmark, soon: true },
       { to: ROUTE_PATHS.INVERSIONES, name: ROUTE_NAMES.INVERSIONES, label: 'Inversiones', icon: TrendingUp, soon: true },
-      { to: ROUTE_PATHS.MONEDAS, name: ROUTE_NAMES.MONEDAS, label: 'Monedas', icon: Coins, soon: true },
+      { to: ROUTE_PATHS.TIPO_CAMBIO, name: ROUTE_NAMES.TIPO_CAMBIO, label: 'Tipo de Cambio', icon: Coins, soon: true },
     ],
   },
   {
     label: 'Contabilidad',
     items: [
+      { to: ROUTE_PATHS.LIBRO_DIARIO, name: ROUTE_NAMES.LIBRO_DIARIO, label: 'Libro Diario', icon: BookOpen, soon: true },
       { to: ROUTE_PATHS.PLAN_CUENTAS, name: ROUTE_NAMES.PLAN_CUENTAS, label: 'Plan de Cuentas', icon: ListTree, soon: true },
       { to: ROUTE_PATHS.PARAMETRIZACIONES, name: ROUTE_NAMES.PARAMETRIZACIONES, label: 'Parametrizaciones', icon: SlidersHorizontal, soon: true },
-      { to: ROUTE_PATHS.LIBRO_DIARIO, name: ROUTE_NAMES.LIBRO_DIARIO, label: 'Libro Diario', icon: BookOpen, soon: true },
     ],
   },
 ];

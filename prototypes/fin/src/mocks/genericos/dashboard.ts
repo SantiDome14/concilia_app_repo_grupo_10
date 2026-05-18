@@ -21,7 +21,7 @@ export const DASHBOARD_KPIS: DashboardKpi[] = [
     label: 'Movimientos pendientes',
     value: 7,
     trend: 'down',
-    href: '/movimientos',
+    href: '/disponibilidades?tab=movimientos',
     hint: 'sin imputación FIN',
   },
   {
@@ -29,15 +29,15 @@ export const DASHBOARD_KPIS: DashboardKpi[] = [
     label: 'Quotes por facturar',
     value: 5,
     trend: 'flat',
-    href: '/cotizaciones',
-    hint: 'ejecutados pendientes',
+    href: '/ventas',
+    hint: 'ejecutados pendientes (Ventas — SOON)',
   },
   {
     id: 'retiros-en-cola',
     label: 'Retiros en cola',
     value: 5,
     trend: 'up',
-    href: '/tesoreria',
+    href: '/disponibilidades',
     hint: 'esperando asignación',
   },
 ];

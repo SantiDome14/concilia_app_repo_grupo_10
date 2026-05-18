@@ -24,7 +24,7 @@ export const ROUTE_PATHS = {
   PAGOS: '/pagos',
   DEUDAS_PRESTAMOS: '/deudas-prestamos',
   INVERSIONES: '/inversiones',
-  MONEDAS: '/monedas',
+  TIPO_CAMBIO: '/tipo-cambio',
   // ─── Contabilidad ────────────────────────────────────────────────
   PLAN_CUENTAS: '/plan-cuentas',
   PARAMETRIZACIONES: '/parametrizaciones',
@@ -45,7 +45,7 @@ export const ROUTE_NAMES = {
   PAGOS: 'pagos',
   DEUDAS_PRESTAMOS: 'deudas-prestamos',
   INVERSIONES: 'inversiones',
-  MONEDAS: 'monedas',
+  TIPO_CAMBIO: 'tipo-cambio',
   PLAN_CUENTAS: 'plan-cuentas',
   PARAMETRIZACIONES: 'parametrizaciones',
   LIBRO_DIARIO: 'libro-diario',
