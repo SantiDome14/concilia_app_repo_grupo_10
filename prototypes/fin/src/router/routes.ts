@@ -66,24 +66,13 @@ export const routes: RouteRecordRaw[] = [
   },
   // ─── Back Office ───────────────────────────────────────────────────
   {
-    path: ROUTE_PATHS.MOVIMIENTOS,
-    name: ROUTE_NAMES.MOVIMIENTOS,
-    component: () => import('@/pages/Movimientos.vue'),
+    path: ROUTE_PATHS.VENTAS,
+    name: ROUTE_NAMES.VENTAS,
+    component: () => import('@/pages/Ventas.vue'),
     meta: {
       requiresAuth: true,
       layout: 'shell',
-      breadcrumb: 'Movimientos',
-      block: 'Back Office',
-    },
-  },
-  {
-    path: ROUTE_PATHS.COTIZACIONES,
-    name: ROUTE_NAMES.COTIZACIONES,
-    component: () => import('@/pages/Cotizaciones.vue'),
-    meta: {
-      requiresAuth: true,
-      layout: 'shell',
-      breadcrumb: 'Cotizaciones',
+      breadcrumb: 'Ventas',
       block: 'Back Office',
     },
   },
@@ -101,14 +90,15 @@ export const routes: RouteRecordRaw[] = [
   },
   // ─── Tesorería ─────────────────────────────────────────────────────
   {
-    path: ROUTE_PATHS.TESORERIA,
-    name: ROUTE_NAMES.TESORERIA,
-    component: () => import('@/pages/Tesoreria.vue'),
+    path: ROUTE_PATHS.DISPONIBILIDADES,
+    name: ROUTE_NAMES.DISPONIBILIDADES,
+    component: () => import('@/pages/Disponibilidades.vue'),
     meta: {
       requiresAuth: true,
       layout: 'shell',
       breadcrumb: 'Disponibilidades',
       block: 'Tesorería',
+      capabilities: ['fin.disponibilidades.ver'],
     },
   },
   {

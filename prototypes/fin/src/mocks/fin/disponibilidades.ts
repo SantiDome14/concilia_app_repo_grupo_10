@@ -1,35 +1,76 @@
 // ════════════════════════════════════════════════════════════════════
-// Mock Disponibilidades — seed data for the Tesorería surface
+// Mock Disponibilidades — Posición tree + KPIs (REQ-50 §3)
 // ────────────────────────────────────────────────────────────────────
-// Mirrors the legacy fin-prototype.html constants:
-//   POS_TREE (line 3689)  — Posición jerárquica por sociedad
-//   TES_MOVS (line 3868)  — Ledger movements
-//   COLA     (line 3891)  — Retiros pendientes de asignación
+// Per REQ-50 (`add-fin-disponibilidades`), the Posición sub-tab renders
+// a hierarchical tree Sociedad → Cuenta with consolidated saldos and
+// Propio / Cliente segmentation. The Movimientos and Cola legacy mocks
+// (`TES_MOVS`, `COLA`) are removed; the new Movimientos sub-tab
+// consumes the canonical `Movimiento[]` from `./movimientos.ts`.
+//
+// In v1 the tree is a static mock with plausible saldos consistent with
+// the canonical CUENTAS catalogue. The contract "movimientos in
+// pendiente_de_supervision do NOT impact saldos" (REQ-50 §3.3 + §6.2)
+// is verified at the spec level and will hold once the backend wires
+// the real aggregation. Mock-time derivation from `MOVIMIENTOS` is
+// deferred until the real backend lands.
 // ════════════════════════════════════════════════════════════════════
 
-import type {
-  Moneda,
-  MovimientoLedger,
-  RetiroEnCola,
-  SociedadPos,
-} from '@/types/fin';
+import type { Moneda, SociedadPos } from '@/types/fin';
 
 // ────────────────────────────────────────────────────────────────────
-// Sociedades + cuentas (Posición)
+// Posición tree (Sociedad → Cuenta with Propio / Cliente segmentation)
 // ────────────────────────────────────────────────────────────────────
 
-export const POS_TREE: SociedadPos[] = [
+export const POSICION_TREE: SociedadPos[] = [
   {
     id: 'hp',
     name: 'Haz Pagos',
     sub: 'PSP · Argentina · ARS',
     open: true,
     totals: [{ lbl: 'ARS', val: '1.017.930.500' }],
+    total_propio: '350.420.500',
+    total_cliente: '667.510.000',
     cuentas: [
-      { icon: 'bank', name: 'CBU Coinag',       det: '2850590940093...', saldo: '845.230.500', dr: '12.4B', cr: '11.5B', neta: '845.230.500', moneda: 'ARS' },
-      { icon: 'bank', name: 'CVU Cliente Pool', det: 'Pool de CVUs',     saldo: '142.500.000', dr: '8.2B',  cr: '8.0B',  neta: '142.500.000', moneda: 'ARS' },
-      { icon: 'bank', name: 'Cuenta Brubank',   det: 'cuenta x4521',     saldo: '8.200.000',   dr: '42M',   cr: '34M',   neta: '8.200.000',   moneda: 'ARS' },
-      { icon: 'bank', name: 'Cuenta Galicia',   det: 'cuenta x7733',     saldo: '22.000.000',  dr: '58M',   cr: '36M',   neta: '22.000.000',  moneda: 'ARS' },
+      {
+        icon: 'bank',
+        id: 'cu-hp-coinag-1',
+        name: 'COINAG · ARS · Cta 10.049',
+        det: 'CBU principal · Banco Coinag',
+        saldo: '845.230.500',
+        saldo_propio: '244.770.000',
+        saldo_cliente: '600.460.500',
+        moneda: 'ARS',
+      },
+      {
+        icon: 'bank',
+        id: 'cu-hp-coinag-cvu',
+        name: 'COINAG · CVU Cliente Pool',
+        det: 'Pool de CVUs',
+        saldo: '142.500.000',
+        saldo_propio: '75.500.000',
+        saldo_cliente: '67.000.000',
+        moneda: 'ARS',
+      },
+      {
+        icon: 'bank',
+        id: 'cu-hp-brubank-1',
+        name: 'BRUBANK · ARS · Cta 2504679505001',
+        det: 'cuenta x4521',
+        saldo: '8.200.000',
+        saldo_propio: '8.200.000',
+        saldo_cliente: '0',
+        moneda: 'ARS',
+      },
+      {
+        icon: 'bank',
+        id: 'cu-hp-bind-1',
+        name: 'BIND · ARS · Cta 4403443/1',
+        det: 'cuenta principal',
+        saldo: '22.000.000',
+        saldo_propio: '22.000.000',
+        saldo_cliente: '0',
+        moneda: 'ARS',
+      },
     ],
   },
   {
@@ -41,10 +82,39 @@ export const POS_TREE: SociedadPos[] = [
       { lbl: 'USDC', val: '3.200.000' },
       { lbl: 'USDT', val: '1.780.000' },
     ],
+    total_propio: '1.480.000',
+    total_cliente: '3.500.000',
     cuentas: [
-      { icon: 'wallet', name: 'Pool BitGo USDC', det: 'wallet 0xABC...', saldo: '3.200.000', dr: '18.4M', cr: '15.2M', neta: '3.200.000', moneda: 'USDC' },
-      { icon: 'wallet', name: 'Pool BitGo USDT', det: 'wallet 0xDEF...', saldo: '1.500.000', dr: '9.1M',  cr: '7.6M',  neta: '1.500.000', moneda: 'USDT' },
-      { icon: 'wallet', name: 'Pool Bitso USDT', det: 'wallet 0x789...', saldo: '280.000',   dr: '1.4M',  cr: '1.1M',  neta: '280.000',   moneda: 'USDT' },
+      {
+        icon: 'wallet',
+        id: 'cu-cp-bitgo-2',
+        name: 'BITGO · USD',
+        det: 'wallet 0xBG...A8C2',
+        saldo: '3.200.000',
+        saldo_propio: '1.200.000',
+        saldo_cliente: '2.000.000',
+        moneda: 'USDC',
+      },
+      {
+        icon: 'wallet',
+        id: 'cu-cp-bitgo-1',
+        name: 'BITGO · ARS',
+        det: 'wallet 0xBG...USDT (USDT custodia)',
+        saldo: '1.500.000',
+        saldo_propio: '280.000',
+        saldo_cliente: '1.220.000',
+        moneda: 'USDT',
+      },
+      {
+        icon: 'wallet',
+        id: 'cu-cp-bitso-1',
+        name: 'BITSO · ARS',
+        det: 'wallet 0x789... (USDT)',
+        saldo: '280.000',
+        saldo_propio: '0',
+        saldo_cliente: '280.000',
+        moneda: 'USDT',
+      },
     ],
   },
   {
@@ -57,16 +127,53 @@ export const POS_TREE: SociedadPos[] = [
       { lbl: 'CAD', val: '1.200.000' },
       { lbl: 'USDC', val: '1.000.000' },
     ],
+    total_propio: '9.430.000',
+    total_cliente: '4.220.000',
     cuentas: [
-      { icon: 'bank',   name: 'Bridge USD',           det: 'cuenta xx-9821', saldo: '8.450.000', dr: '42.1M', cr: '33.6M', neta: '8.450.000', moneda: 'USD' },
-      { icon: 'bank',   name: 'Convera USD',          det: 'cuenta xx-3344', saldo: '3.000.000', dr: '9.4M',  cr: '6.4M',  neta: '3.000.000', moneda: 'USD' },
-      { icon: 'bank',   name: 'BMO CAD',              det: 'account xx-1122',saldo: '1.200.000', dr: '2.8M',  cr: '1.6M',  neta: '1.200.000', moneda: 'CAD' },
-      { icon: 'wallet', name: 'Coinbase USDC',        det: 'wallet 0xCBA...',saldo: '980.000',   dr: '4.2M',  cr: '3.2M',  neta: '980.000',   moneda: 'USDC' },
-      { icon: 'wallet', name: 'Cuenta Operativa USDC',det: 'wallet 0xOPS...',saldo: '20.000',    dr: '80K',   cr: '60K',   neta: '20.000',    moneda: 'USDC' },
+      {
+        icon: 'bank',
+        id: 'cu-asc-bridge-1',
+        name: 'BRIDGE · USD · Cta BR-7733',
+        det: 'cuenta xx-9821',
+        saldo: '8.450.000',
+        saldo_propio: '6.450.000',
+        saldo_cliente: '2.000.000',
+        moneda: 'USD',
+      },
+      {
+        icon: 'bank',
+        id: 'cu-asc-convera-1',
+        name: 'CONVERA · USD · Cta CV-1188',
+        det: 'cuenta xx-3344',
+        saldo: '3.000.000',
+        saldo_propio: '1.800.000',
+        saldo_cliente: '1.200.000',
+        moneda: 'USD',
+      },
+      {
+        icon: 'bank',
+        id: 'cu-asc-bmo-1',
+        name: 'BMO · CAD · Cta BM-2200',
+        det: 'account xx-1122',
+        saldo: '1.200.000',
+        saldo_propio: '180.000',
+        saldo_cliente: '1.020.000',
+        moneda: 'CAD',
+      },
+      {
+        icon: 'wallet',
+        id: 'cu-asc-coinbase-usdc',
+        name: 'Coinbase · USDC',
+        det: 'wallet 0xCBA...',
+        saldo: '1.000.000',
+        saldo_propio: '1.000.000',
+        saldo_cliente: '0',
+        moneda: 'USDC',
+      },
     ],
   },
   {
-    id: 'astra',
+    id: 'av',
     name: 'Astra Ventures',
     sub: 'VASP · Polonia · EUR/USDC',
     open: false,
@@ -74,91 +181,63 @@ export const POS_TREE: SociedadPos[] = [
       { lbl: 'EUR', val: '1.820.000' },
       { lbl: 'USDC', val: '580.000' },
     ],
+    total_propio: '1.420.000',
+    total_cliente: '980.000',
     cuentas: [
-      { icon: 'bank',   name: 'Bind EUR',                 det: 'cuenta xx-5566', saldo: '1.820.000', dr: '4.2M', cr: '2.4M', neta: '1.820.000', moneda: 'EUR' },
-      { icon: 'wallet', name: 'Pool BitGo USDC (Astra)',  det: 'wallet 0xAST...',saldo: '580.000',   dr: '2.1M', cr: '1.5M', neta: '580.000',   moneda: 'USDC' },
+      {
+        icon: 'bank',
+        id: 'cu-av-bind-1',
+        name: 'BIND · EUR · Cta BD-5566',
+        det: 'cuenta xx-5566',
+        saldo: '1.820.000',
+        saldo_propio: '1.180.000',
+        saldo_cliente: '640.000',
+        moneda: 'EUR',
+      },
+      {
+        icon: 'wallet',
+        id: 'cu-av-bitgo-1',
+        name: 'BITGO · USDC (Astra)',
+        det: 'wallet 0xAST...',
+        saldo: '580.000',
+        saldo_propio: '240.000',
+        saldo_cliente: '340.000',
+        moneda: 'USDC',
+      },
     ],
   },
 ];
 
 /** Sociedades catalog flattened for the filter dropdown. */
-export const SOCIEDADES_CATALOG = POS_TREE.map((s) => ({
+export const SOCIEDADES_CATALOG = POSICION_TREE.map((s) => ({
   value: s.id,
   label: s.name,
 }));
 
-/** Distinct currencies present in the tree, used for the moneda filter. */
+/** Distinct currencies present in the tree. */
 export const MONEDAS_CATALOG: Moneda[] = Array.from(
-  new Set(POS_TREE.flatMap((s) => s.cuentas.map((c) => c.moneda))),
+  new Set(POSICION_TREE.flatMap((s) => s.cuentas.map((c) => c.moneda))),
 ).sort();
 
 // ────────────────────────────────────────────────────────────────────
-// Posición KPIs (top of the tab)
+// Posición KPIs (L2 of the Posición sub-tab — REQ-50 §3.2)
 // ────────────────────────────────────────────────────────────────────
 
 export interface PosicionKpis {
+  /** USD-equivalent consolidated position across all sociedades. */
   posicionConsolidada: string;
-  liquidezDisponible: string;
-  comprometido: string;
-  cuentasActivas: number;
+  /** USD-equivalent Propio total. */
+  totalPropio: string;
+  /** USD-equivalent Cliente total. */
+  totalCliente: string;
   sociedadesActivas: number;
+  cuentasActivas: number;
 }
 
 export const POSICION_KPIS: PosicionKpis = {
   posicionConsolidada: 'USD 28.4M',
-  liquidezDisponible: 'USD 24.1M',
-  comprometido: 'USD 4.3M',
-  cuentasActivas: POS_TREE.reduce((acc, s) => acc + s.cuentas.length, 0),
-  sociedadesActivas: POS_TREE.length,
+  totalPropio: 'USD 14.6M',
+  totalCliente: 'USD 13.8M',
+  sociedadesActivas: POSICION_TREE.length,
+  cuentasActivas: POSICION_TREE.reduce((acc, s) => acc + s.cuentas.length, 0),
 };
-
-// ────────────────────────────────────────────────────────────────────
-// Ledger movements (Tab "Movimientos")
-// ────────────────────────────────────────────────────────────────────
-
-export const TES_MOVS: MovimientoLedger[] = [
-  { id: 'TM-58420', fecha: '2026-04-24 18:42', tipo: 'COLLECTOR_IN',  cuenta: 'CBU Coinag',       monto: '+ 18.500.000', moneda: 'ARS',  origen: 'OPS',   estado: 'CONF' },
-  { id: 'TM-58419', fecha: '2026-04-24 17:55', tipo: 'WITHDRAWAL',    cuenta: 'Pool BitGo USDC',  monto: '- 250.000',    moneda: 'USDC', origen: 'OPS',   estado: 'CONF' },
-  { id: 'TM-58418', fecha: '2026-04-24 16:30', tipo: 'DEPOSIT',       cuenta: 'Bridge USD',       monto: '+ 180.000',    moneda: 'USD',  origen: 'OPS',   estado: 'CONF' },
-  { id: 'TM-58417', fecha: '2026-04-24 14:20', tipo: 'WITHDRAWAL',    cuenta: 'Pool BitGo USDT',  monto: '- 95.000',     moneda: 'USDT', origen: 'OPS',   estado: 'COLA' },
-  { id: 'TM-58416', fecha: '2026-04-24 13:08', tipo: 'ADDITION',      cuenta: 'Bridge USD',       monto: '+ 25.000',     moneda: 'USD',  origen: 'MAN',   estado: 'PEND' },
-  { id: 'TM-58415', fecha: '2026-04-24 11:45', tipo: 'SWAP_OUT',      cuenta: 'Pool BitGo USDT',  monto: '- 420.000',    moneda: 'USDT', origen: 'OPS',   estado: 'CONF' },
-  { id: 'TM-58414', fecha: '2026-04-24 11:45', tipo: 'SWAP_IN',       cuenta: 'Pool BitGo USDC',  monto: '+ 419.580',    moneda: 'USDC', origen: 'OPS',   estado: 'CONF' },
-  { id: 'TM-58413', fecha: '2026-04-24 10:12', tipo: 'FEE',           cuenta: 'CBU Coinag',       monto: '- 12.500',     moneda: 'ARS',  origen: 'OPS',   estado: 'CONF' },
-  { id: 'TM-58412', fecha: '2026-04-24 09:30', tipo: 'TRANSFER_IN',   cuenta: 'Convera USD',      monto: '+ 250.000',    moneda: 'USD',  origen: 'OPS',   estado: 'CONF' },
-  { id: 'TM-58411', fecha: '2026-04-24 09:30', tipo: 'TRANSFER_OUT',  cuenta: 'Bridge USD',       monto: '- 250.000',    moneda: 'USD',  origen: 'OPS',   estado: 'CONF' },
-  { id: 'TM-58410', fecha: '2026-04-23 19:08', tipo: 'COLLECTOR_OUT', cuenta: 'CBU Coinag',       monto: '- 9.200.000',  moneda: 'ARS',  origen: 'OPS',   estado: 'CONF' },
-  { id: 'TM-58409', fecha: '2026-04-23 17:22', tipo: 'FEE',           cuenta: 'CBU Coinag',       monto: '- 450.000',    moneda: 'ARS',  origen: 'MANOK', estado: 'CONF' },
-  { id: 'TM-58408', fecha: '2026-04-23 15:40', tipo: 'DEPOSIT',       cuenta: 'Bind EUR',         monto: '+ 95.000',     moneda: 'EUR',  origen: 'OPS',   estado: 'CONF' },
-  { id: 'TM-58407', fecha: '2026-04-23 12:18', tipo: 'TAX',           cuenta: 'CVU Cliente Pool', monto: '- 145.000',    moneda: 'ARS',  origen: 'OPS',   estado: 'CONF' },
-  { id: 'TM-58406', fecha: '2026-04-23 11:00', tipo: 'WITHDRAWAL',    cuenta: 'Cuenta Brubank',   monto: '- 4.200.000',  moneda: 'ARS',  origen: 'OPS',   estado: 'CONF' },
-];
-
-export interface MovimientosKpis {
-  movimientosHoy: number;
-  volumenIngresado: string;
-  volumenEgresado: string;
-  enCola: number;
-}
-
-export const MOVIMIENTOS_KPIS: MovimientosKpis = {
-  movimientosHoy: 124,
-  volumenIngresado: 'USD 1.2M',
-  volumenEgresado: 'USD 980K',
-  enCola: 8,
-};
-
-// ────────────────────────────────────────────────────────────────────
-// Cola de Asignación (Tab "Cola de Asignación")
-// ────────────────────────────────────────────────────────────────────
-
-export const COLA: RetiroEnCola[] = [
-  { id: 'M-2026-12815', fecha: '2026-04-24 14:20', cliente: 'Inversiones Norte',    monto: '95.000',  moneda: 'USDT', tiempo: '4 hs 22 min', cuenta_id: null, asignacion_note: null },
-  { id: 'M-2026-12818', fecha: '2026-04-24 16:05', cliente: 'Capital Plus',         monto: '180.000', moneda: 'USDC', tiempo: '2 hs 37 min', cuenta_id: null, asignacion_note: null },
-  { id: 'M-2026-12820', fecha: '2026-04-24 17:12', cliente: 'ACME Corp',            monto: '42.000',  moneda: 'USD',  tiempo: '1 hs 30 min', cuenta_id: null, asignacion_note: null },
-  { id: 'M-2026-12822', fecha: '2026-04-24 17:48', cliente: 'Tecno SA',             monto: '120.000', moneda: 'USDC', tiempo: '54 min',      cuenta_id: null, asignacion_note: null },
-  { id: 'M-2026-12823', fecha: '2026-04-24 18:01', cliente: 'Mendoza Trading',      monto: '68.000',  moneda: 'USDT', tiempo: '41 min',      cuenta_id: null, asignacion_note: null },
-  { id: 'M-2026-12824', fecha: '2026-04-24 18:08', cliente: 'Patagonia FX',         monto: '25.000',  moneda: 'USD',  tiempo: '34 min',      cuenta_id: null, asignacion_note: null },
-  { id: 'M-2026-12825', fecha: '2026-04-24 18:18', cliente: 'Andes Capital',        monto: '310.000', moneda: 'USDC', tiempo: '24 min',      cuenta_id: null, asignacion_note: null },
-  { id: 'M-2026-12826', fecha: '2026-04-24 18:32', cliente: 'Costa Atlántica SRL',  monto: '52.000',  moneda: 'USDT', tiempo: '10 min',      cuenta_id: null, asignacion_note: null },
-];

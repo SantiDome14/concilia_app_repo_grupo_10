@@ -17,9 +17,8 @@ function makeRouter() {
       { path: ROUTE_PATHS.INBOX, name: 'inbox', component: { template: '<div />' } },
       { path: ROUTE_PATHS.ALERTAS, name: 'alertas', component: { template: '<div />' } },
       { path: ROUTE_PATHS.REPORTES, name: 'reportes', component: { template: '<div />' } },
-      { path: ROUTE_PATHS.MOVIMIENTOS, component: { template: '<div />' } },
-      { path: ROUTE_PATHS.COTIZACIONES, component: { template: '<div />' } },
-      { path: ROUTE_PATHS.TESORERIA, component: { template: '<div />' } },
+      { path: ROUTE_PATHS.VENTAS, component: { template: '<div />' } },
+      { path: ROUTE_PATHS.DISPONIBILIDADES, component: { template: '<div />' } },
     ],
   });
 }
@@ -63,14 +62,18 @@ describe('Dashboard page · FIN', () => {
     }
   });
 
-  it('clicking the Movimientos KPI navigates to /movimientos', async () => {
+  it('clicking the Movimientos KPI navigates to Disponibilidades with movimientos sub-tab', async () => {
     const { wrapper, router } = await mountDashboard();
     await wrapper.find('[data-testid="kpi-mov-pendientes"]').trigger('click');
     await flushPromises();
-    expect(router.currentRoute.value.path).toBe(ROUTE_PATHS.MOVIMIENTOS);
+    // Post-REQ-50: top-level Movimientos is eliminated; the KPI links to
+    // /disponibilidades?tab=movimientos so the operator lands in the
+    // Movimientos sub-tab of Disponibilidades.
+    expect(router.currentRoute.value.path).toBe(ROUTE_PATHS.DISPONIBILIDADES);
+    expect(router.currentRoute.value.query.tab).toBe('movimientos');
   });
 
-  it('renders Posición por sociedad with a card per sociedad in POS_TREE', async () => {
+  it('renders Posición por sociedad with a card per sociedad in POSICION_TREE', async () => {
     const { wrapper } = await mountDashboard();
     const panel = wrapper.find('[data-testid="dashboard-posicion-sociedad"]');
     expect(panel.exists()).toBe(true);

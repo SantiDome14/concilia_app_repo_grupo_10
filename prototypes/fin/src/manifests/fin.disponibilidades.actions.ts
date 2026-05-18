@@ -1,20 +1,24 @@
 // ════════════════════════════════════════════════════════════════════
-// Manifest · FIN.Tesorería (module-scope CTA)
+// Manifest · FIN.Disponibilidades (module-scope CTA)
 // ────────────────────────────────────────────────────────────────────
-// Module-scoped manifest: declares the page-header CTA "Cargar
-// movimiento manual" — creates a `carga_manual_solicitud` that is
-// routed to the Inbox for double-approval (loader ≠ approver).
-// No row-level actions live here; row actions on the cola tab live
-// in `fin.tesoreria.cola_asignacion.actions`.
+// Module-scoped manifest declared per REQ-50 (`add-fin-disponibilidades`).
+// Hosts the contextual Main CTA "Cargar movimiento manual" rendered
+// when the active sub-tab is `Posición` or `Movimientos`. The Bancos /
+// Cuentas sub-tab declares its own CTA ("Crear nueva Cuenta") in its
+// own manifest `fin.disponibilidades.bancos_cuentas.actions.ts`.
+//
+// Active-sub-tab dispatch happens at the page level (Disponibilidades.vue
+// renders <ManifestModuleCTAs> bound to the active sub-tab's manifest
+// key per Decision documented in design.md of `add-fin-disponibilidades`).
 // ════════════════════════════════════════════════════════════════════
 
 import type { Manifest } from '@/types/manifest';
 
-export const FIN_TESORERIA_MANIFEST_KEY = 'fin.tesoreria' as const;
+export const FIN_DISPONIBILIDADES_MANIFEST_KEY = 'fin.disponibilidades' as const;
 
-export const FIN_TESORERIA_MANIFEST: Manifest = {
+export const FIN_DISPONIBILIDADES_MANIFEST: Manifest = {
   app: 'fin',
-  module: 'tesoreria',
+  module: 'disponibilidades',
   record_type: null,
   scope: 'module',
   schema_version: '1',
@@ -23,20 +27,24 @@ export const FIN_TESORERIA_MANIFEST: Manifest = {
 
   module_ctas: [
     {
-      id: 'fin.tesoreria.governance.cargar_movimiento_manual',
+      id: 'fin.disponibilidades.movimientos.cargar_manual',
       dimension: 'governance',
       label: 'Cargar movimiento manual',
-      description: 'Da de alta un movimiento manual que entra a workflow de aprobación.',
+      description:
+        'Cargá un movimiento manual (gasto administrativo, fee, ajuste, etc.). Si tu rol requiere supervisión, el movimiento queda pendiente hasta que otro usuario lo confirme.',
       icon: 'plus',
       is_module_cta: true,
-      creates_record_type: 'carga_manual_solicitud',
+      creates_record_type: 'movimiento',
       capabilities: {
-        required_role_any_of: ['OPS_OFFICER', 'ADMIN_OPS', 'ADMIN_FIN', 'ADMIN'],
+        required_role_any_of: [
+          'fin.disponibilidades.movimientos.cargar_directo',
+          'fin.disponibilidades.movimientos.cargar_con_supervision',
+        ],
       },
       dialog: {
         title: 'Cargar movimiento manual',
         description:
-          'La solicitud entra al Inbox para aprobación de un usuario distinto al que la cargó (regla de doble firma).',
+          'El movimiento se persiste en el ledger. Si tu capability es `cargar_con_supervision`, queda en pendiente_de_supervision y no impacta saldos hasta que un supervisor distinto lo confirme.',
         fields: [
           {
             id: 'sociedad_id',
@@ -50,10 +58,10 @@ export const FIN_TESORERIA_MANIFEST: Manifest = {
             id: 'cuenta_id',
             label: 'Cuenta',
             type: 'lookup',
-            catalog: 'ops.catalogo_cuentas',
+            catalog: 'fin.bancos_cuentas',
             required: true,
             catalog_filter: { field: 'sociedad_id', from_form: 'sociedad_id' },
-            placeholder: 'Elegí cuenta...',
+            placeholder: 'Elegí cuenta (filtrada por sociedad y moneda)...',
           },
           {
             id: 'tipo',
@@ -61,14 +69,18 @@ export const FIN_TESORERIA_MANIFEST: Manifest = {
             type: 'select',
             required: true,
             options: [
-              { value: 'DEPOSIT', label: 'DEPOSIT (depósito de cliente)' },
-              { value: 'WITHDRAWAL', label: 'WITHDRAWAL (retiro de cliente)' },
-              { value: 'FEE', label: 'FEE (comisión bancaria)' },
-              { value: 'TAX', label: 'TAX (impuesto retenido)' },
+              { value: 'DEPOSIT', label: 'DEPOSIT (depósito)' },
+              { value: 'WITHDRAWAL', label: 'WITHDRAWAL (retiro)' },
+              { value: 'FEE', label: 'FEE (comisión)' },
+              { value: 'TAX', label: 'TAX (impuesto)' },
               { value: 'REBATE', label: 'REBATE (rebate de partner)' },
               { value: 'ADDITION', label: 'ADDITION (ajuste interno)' },
-              { value: 'TRANSFER_OUT', label: 'TRANSFER_OUT (transferencia salida)' },
-              { value: 'TRANSFER_IN', label: 'TRANSFER_IN (transferencia entrada)' },
+              { value: 'TRANSFER_OUT', label: 'TRANSFER_OUT' },
+              { value: 'TRANSFER_IN', label: 'TRANSFER_IN' },
+              { value: 'SWAP_OUT', label: 'SWAP_OUT' },
+              { value: 'SWAP_IN', label: 'SWAP_IN' },
+              { value: 'COLLECTOR_IN', label: 'COLLECTOR_IN' },
+              { value: 'COLLECTOR_OUT', label: 'COLLECTOR_OUT' },
             ],
           },
           { id: 'fecha', label: 'Fecha del movimiento', type: 'date', required: true },
@@ -90,14 +102,18 @@ export const FIN_TESORERIA_MANIFEST: Manifest = {
               { value: 'USD', label: 'USD' },
               { value: 'USDT', label: 'USDT' },
               { value: 'USDC', label: 'USDC' },
+              { value: 'EUR', label: 'EUR' },
+              { value: 'CAD', label: 'CAD' },
             ],
           },
           {
-            id: 'contraparte',
-            label: 'Contraparte (cliente / proveedor / partner / banco)',
-            type: 'text',
+            id: 'cliente_id',
+            label: 'Cliente (opcional al crear)',
+            type: 'lookup',
+            catalog: 'clp.clientes',
             required: false,
-            placeholder: 'Nombre de la contraparte...',
+            placeholder: 'Buscá cliente o seleccioná AS00000 para Cuenta de Cliente de Ardua',
+            hint: 'Si no aplica un cliente externo, usá la Cuenta de Cliente de Ardua (AS00000).',
           },
           {
             id: 'motivo',
@@ -105,7 +121,7 @@ export const FIN_TESORERIA_MANIFEST: Manifest = {
             type: 'textarea',
             required: true,
             max_length: 500,
-            placeholder: 'Justificación de la carga manual...',
+            placeholder: 'Justificación de la carga manual (mínimo 10 caracteres)...',
           },
           {
             id: 'referencia',
@@ -115,7 +131,7 @@ export const FIN_TESORERIA_MANIFEST: Manifest = {
             placeholder: 'Hash on-chain, número de comprobante, etc.',
           },
         ],
-        confirm_label: 'Enviar para aprobación',
+        confirm_label: 'Cargar movimiento',
       },
       on_confirm: {
         update_fields: [
@@ -125,12 +141,12 @@ export const FIN_TESORERIA_MANIFEST: Manifest = {
           'fecha',
           'monto',
           'moneda',
-          'contraparte',
+          'cliente_id',
           'motivo',
           'referencia',
         ],
         audit: true,
-        toast: 'Carga enviada al Inbox para aprobación',
+        toast: 'Movimiento cargado',
       },
     },
   ],

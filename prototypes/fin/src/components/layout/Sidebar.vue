@@ -6,8 +6,7 @@ import {
   Inbox as InboxIcon,
   BellRing,
   FileText,
-  ArrowDownUp,
-  ClipboardCheck,
+  Receipt,
   ShoppingCart,
   Wallet,
   Banknote,
@@ -68,15 +67,14 @@ const blocks: NavBlock[] = [
   {
     label: 'Back Office',
     items: [
-      { to: ROUTE_PATHS.MOVIMIENTOS, name: ROUTE_NAMES.MOVIMIENTOS, label: 'Movimientos', icon: ArrowDownUp },
-      { to: ROUTE_PATHS.COTIZACIONES, name: ROUTE_NAMES.COTIZACIONES, label: 'Cotizaciones', icon: ClipboardCheck },
+      { to: ROUTE_PATHS.VENTAS, name: ROUTE_NAMES.VENTAS, label: 'Ventas', icon: Receipt },
       { to: ROUTE_PATHS.COMPRAS, name: ROUTE_NAMES.COMPRAS, label: 'Compras', icon: ShoppingCart, soon: true },
     ],
   },
   {
     label: 'Tesorería',
     items: [
-      { to: ROUTE_PATHS.TESORERIA, name: ROUTE_NAMES.TESORERIA, label: 'Disponibilidades', icon: Wallet },
+      { to: ROUTE_PATHS.DISPONIBILIDADES, name: ROUTE_NAMES.DISPONIBILIDADES, label: 'Disponibilidades', icon: Wallet },
       { to: ROUTE_PATHS.COBROS, name: ROUTE_NAMES.COBROS, label: 'Cobros', icon: Banknote, soon: true },
       { to: ROUTE_PATHS.PAGOS, name: ROUTE_NAMES.PAGOS, label: 'Pagos', icon: CreditCard, soon: true },
       { to: ROUTE_PATHS.DEUDAS_PRESTAMOS, name: ROUTE_NAMES.DEUDAS_PRESTAMOS, label: 'Deudas / Préstamos', icon: Landmark, soon: true },

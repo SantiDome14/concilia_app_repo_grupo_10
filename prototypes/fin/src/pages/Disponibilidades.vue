@@ -1,0 +1,989 @@
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { ChevronRight, ChevronDown, Wallet, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-vue-next';
+import { Badge } from '@/components/ui/badge';
+import {
+  Segmenter,
+  ViewToggle,
+  CardsGrid,
+  CardItem,
+  type ViewMode,
+} from '@/components/views';
+import type { SegmentOption } from '@/components/views/Segmenter.vue';
+import { KanbanBoard } from '@/components/kanban';
+import EmptyState from '@/components/feedback/EmptyState.vue';
+import { ManifestActionsMenu, ManifestModuleCTAs } from '@/components/manifest';
+import { useManifestModule } from '@/composables/useManifestModule';
+import {
+  FIN_DISPONIBILIDADES_MANIFEST_KEY,
+} from '@/manifests/fin.disponibilidades.actions';
+import {
+  FIN_DISPONIBILIDADES_BANCOS_CUENTAS_MANIFEST_KEY,
+} from '@/manifests/fin.disponibilidades.bancos_cuentas.actions';
+import {
+  FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST_KEY,
+} from '@/manifests/fin.disponibilidades.movimientos.actions';
+import {
+  POSICION_TREE,
+  POSICION_KPIS,
+} from '@/mocks/fin/disponibilidades';
+import {
+  CATALOGO_CUENTAS,
+  BANCOS_CUENTAS_KPIS,
+} from '@/mocks/fin/bancos_cuentas';
+import {
+  MOVIMIENTOS,
+  MOVIMIENTOS_KPIS,
+} from '@/mocks/fin/movimientos';
+import type { Movimiento } from '@/types/fin';
+import type { KanbanAxis } from '@/types/kanban';
+
+// ════════════════════════════════════════════════════════════════════
+// FIN.Disponibilidades — REQ-50
+// ────────────────────────────────────────────────────────────────────
+// Type B page with three sub-tabs in fixed order Posición / Bancos-Cuentas /
+// Movimientos. Default Posición. Contextual Main CTA per active sub-tab
+// (Decision 1 of design.md). Drill-down from Posición.Cuenta to
+// Movimientos with `cuenta_id` filter pre-applied.
+//
+// Movimientos sub-tab supports three views (REQ-50 §5.3):
+//   - Lista (default) — flat table over the ledger with pagination
+//   - Tarjetas — CardsGrid
+//   - Tablero — KanbanBoard with 6 selectable axes (REQ-50 §5.4)
+//
+// Bancos / Cuentas sub-tab table also paginates.
+//
+// URL sync (Refinement E): active sub-tab → `route.query.tab`,
+// drill-down → `route.query.cuenta_id`, kanban axis → `route.query.axis`.
+// ════════════════════════════════════════════════════════════════════
+
+const movimientosMod = useManifestModule(FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST_KEY);
+useManifestModule(FIN_DISPONIBILIDADES_MANIFEST_KEY);
+useManifestModule(FIN_DISPONIBILIDADES_BANCOS_CUENTAS_MANIFEST_KEY);
+
+type SubTab = 'posicion' | 'bancos_cuentas' | 'movimientos';
+type AxisId =
+  | 'estado_operativo'
+  | 'estado_imputacion_ardua'
+  | 'estado_imputacion_cliente'
+  | 'estado_de_supervision'
+  | 'tipo'
+  | 'sociedad';
+
+const route = useRoute();
+const router = useRouter();
+
+// ─── Sub-tab state synced with route.query.tab ───────────────────────
+function parseSubTab(value: unknown): SubTab {
+  if (value === 'bancos_cuentas' || value === 'movimientos') return value;
+  return 'posicion';
+}
+
+const subTab = ref<SubTab>(parseSubTab(route.query.tab));
+
+watch(
+  () => route.query.tab,
+  (val) => {
+    subTab.value = parseSubTab(val);
+  },
+);
+
+function setSubTab(next: SubTab): void {
+  if (next === subTab.value) return;
+  subTab.value = next;
+  router.replace({
+    query: { ...route.query, tab: next === 'posicion' ? undefined : next },
+  });
+}
+
+// ─── Drill-down state — cuenta_id pre-filter from route.query ────────
+const drillCuentaId = computed<string | null>(() => {
+  const id = route.query.cuenta_id;
+  return typeof id === 'string' ? id : null;
+});
+
+function drillDownToMovimientos(cuentaId: string): void {
+  router.push({
+    query: { ...route.query, tab: 'movimientos', cuenta_id: cuentaId },
+  });
+}
+
+function clearDrillFilter(): void {
+  const { cuenta_id: _ignored, ...rest } = route.query;
+  void _ignored;
+  router.replace({ query: rest });
+}
+
+// ─── Segmenter options ───────────────────────────────────────────────
+const segmentOptions = computed<SegmentOption<SubTab>[]>(() => [
+  { value: 'posicion', label: 'Posición', count: POSICION_TREE.length },
+  {
+    value: 'bancos_cuentas',
+    label: 'Bancos / Cuentas',
+    count: CATALOGO_CUENTAS.length,
+  },
+  {
+    value: 'movimientos',
+    label: 'Movimientos',
+    count: MOVIMIENTOS.length,
+  },
+]);
+
+// ─── Contextual Main CTA (Decision 1) ────────────────────────────────
+const activeModuleManifestKey = computed(() =>
+  subTab.value === 'bancos_cuentas'
+    ? FIN_DISPONIBILIDADES_BANCOS_CUENTAS_MANIFEST_KEY
+    : FIN_DISPONIBILIDADES_MANIFEST_KEY,
+);
+
+// ─── Posición state ──────────────────────────────────────────────────
+const expandedSociedades = ref<Record<string, boolean>>(
+  Object.fromEntries(POSICION_TREE.map((s) => [s.id, s.open])),
+);
+
+function toggleSociedad(id: string): void {
+  expandedSociedades.value[id] = !expandedSociedades.value[id];
+}
+
+// ─── Movimientos · projected records for views with derived axes ─────
+type MovimientoProjected = Movimiento & {
+  _imp_ardua: 'sin_asignar' | 'asignado';
+  _imp_cliente: 'sin_asignar' | 'asignado';
+  _sociedad: string;
+};
+
+const filteredMovimientos = computed<MovimientoProjected[]>(() => {
+  const id = drillCuentaId.value;
+  const source = id ? MOVIMIENTOS.filter((m) => m.fin.cuenta_id === id) : MOVIMIENTOS;
+  return source.map((m) => ({
+    ...m,
+    _imp_ardua: m.fin.cuenta_id ? 'asignado' : 'sin_asignar',
+    _imp_cliente: m.fin.cliente_id ? 'asignado' : 'sin_asignar',
+    _sociedad: m.fin.sociedad_id ?? 'sin_asignar',
+  }));
+});
+
+// ─── Movimientos · view (Lista / Tarjetas / Tablero) — REQ-50 §5.3 ──
+const view = ref<ViewMode>('list');
+
+// ─── Pagination state (Bancos/Cuentas + Movimientos list views) ─────
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+const pageSize = ref<number>(25);
+
+const pageBancosCuentas = ref(1);
+const pageMovimientos = ref(1);
+
+// ─── Movimientos · Kanban axes (REQ-50 §5.4) ─────────────────────────
+const MOVIMIENTOS_KANBAN_AXES: Record<AxisId, KanbanAxis> = {
+  estado_operativo: {
+    axis_id: 'estado_operativo',
+    label: 'Estado operativo',
+    description: 'Pending / Processing / Completed — gobernado por OPS',
+    state_field: 'status',
+    states: [
+      { id: 'PENDING', label: 'Pending', order: 1 },
+      { id: 'PROCESSING', label: 'Processing', order: 2 },
+      { id: 'COMPLETED', label: 'Completed', order: 3, terminal: true },
+      { id: 'FAILED', label: 'Failed', order: 4, terminal: true },
+    ],
+    transitions: [],
+    read_only: true,
+  },
+  estado_imputacion_ardua: {
+    axis_id: 'estado_imputacion_ardua',
+    label: 'Estado imputación Lado Ardua',
+    description: 'Drag para abrir el dialog de Asignar Banco y Cuenta',
+    state_field: '_imp_ardua',
+    states: [
+      { id: 'sin_asignar', label: 'Sin asignar', order: 1 },
+      { id: 'asignado', label: 'Asignado', order: 2 },
+    ],
+    transitions: [{ from: 'sin_asignar', to: 'asignado', mode: 'modal' }],
+  },
+  estado_imputacion_cliente: {
+    axis_id: 'estado_imputacion_cliente',
+    label: 'Estado imputación Lado Cliente',
+    description: 'Drag para abrir el dialog de Asignar Cliente',
+    state_field: '_imp_cliente',
+    states: [
+      { id: 'sin_asignar', label: 'Sin asignar', order: 1 },
+      { id: 'asignado', label: 'Asignado', order: 2 },
+    ],
+    transitions: [{ from: 'sin_asignar', to: 'asignado', mode: 'modal' }],
+  },
+  estado_de_supervision: {
+    axis_id: 'estado_de_supervision',
+    label: 'Estado de supervisión',
+    description:
+      'Solo movimientos manuales. Drag a Confirmar/Rechazar abre el dialog del manifest.',
+    state_field: 'estado_de_supervision',
+    states: [
+      { id: 'pendiente_de_supervision', label: 'Pendiente', order: 1 },
+      { id: 'confirmado', label: 'Confirmado', order: 2, terminal: true },
+      { id: 'rechazado', label: 'Rechazado', order: 3, terminal: true },
+    ],
+    transitions: [
+      { from: 'pendiente_de_supervision', to: 'confirmado', mode: 'modal' },
+      { from: 'pendiente_de_supervision', to: 'rechazado', mode: 'modal' },
+    ],
+  },
+  tipo: {
+    axis_id: 'tipo',
+    label: 'Tipo de movimiento',
+    state_field: 'tipo',
+    states: [
+      { id: 'DEPOSIT', label: 'DEPOSIT', order: 1 },
+      { id: 'WITHDRAWAL', label: 'WITHDRAWAL', order: 2 },
+      { id: 'COLLECTOR_IN', label: 'COLLECTOR_IN', order: 3 },
+      { id: 'COLLECTOR_OUT', label: 'COLLECTOR_OUT', order: 4 },
+      { id: 'SWAP_IN', label: 'SWAP_IN', order: 5 },
+      { id: 'SWAP_OUT', label: 'SWAP_OUT', order: 6 },
+      { id: 'TRANSFER_IN', label: 'TRANSFER_IN', order: 7 },
+      { id: 'TRANSFER_OUT', label: 'TRANSFER_OUT', order: 8 },
+      { id: 'FEE', label: 'FEE', order: 9 },
+      { id: 'TAX', label: 'TAX', order: 10 },
+      { id: 'REBATE', label: 'REBATE', order: 11 },
+      { id: 'ADDITION', label: 'ADDITION', order: 12 },
+    ],
+    transitions: [],
+    read_only: true,
+  },
+  sociedad: {
+    axis_id: 'sociedad',
+    label: 'Sociedad',
+    state_field: '_sociedad',
+    states: [
+      { id: 'hp', label: 'Haz Pagos', order: 1 },
+      { id: 'cp', label: 'Circuit Pay', order: 2 },
+      { id: 'asc', label: 'Ardua Solutions Corp', order: 3 },
+      { id: 'av', label: 'Astra Ventures', order: 4 },
+      { id: 'sin_asignar', label: 'Sin asignar', order: 5 },
+    ],
+    transitions: [],
+    read_only: true,
+  },
+};
+
+function parseAxis(value: unknown): AxisId {
+  if (
+    value === 'estado_imputacion_ardua' ||
+    value === 'estado_imputacion_cliente' ||
+    value === 'estado_de_supervision' ||
+    value === 'tipo' ||
+    value === 'sociedad'
+  ) {
+    return value;
+  }
+  return 'estado_operativo';
+}
+
+const activeAxisId = ref<AxisId>(parseAxis(route.query.axis));
+
+watch(
+  () => route.query.axis,
+  (val) => {
+    activeAxisId.value = parseAxis(val);
+  },
+);
+
+function setActiveAxis(next: AxisId): void {
+  activeAxisId.value = next;
+  router.replace({
+    query: {
+      ...route.query,
+      axis: next === 'estado_operativo' ? undefined : next,
+    },
+  });
+}
+
+const activeAxis = computed<KanbanAxis>(
+  () => MOVIMIENTOS_KANBAN_AXES[activeAxisId.value],
+);
+
+// ─── Kanban transition handler — dispatches to manifest actions ──────
+function handleKanbanTransition(payload: {
+  recordId: string;
+  fromState: string;
+  toState: string;
+  mode: string;
+}): void {
+  if (payload.mode !== 'modal') return;
+  const record = MOVIMIENTOS.find((m) => m.id === payload.recordId);
+  if (!record) return;
+  if (activeAxisId.value === 'estado_imputacion_ardua') {
+    movimientosMod.openDialog(
+      'fin.disponibilidades.movimientos.imputar_ardua.asignar',
+      record as unknown as Record<string, unknown>,
+    );
+  } else if (activeAxisId.value === 'estado_imputacion_cliente') {
+    movimientosMod.openDialog(
+      'fin.disponibilidades.movimientos.imputar_cliente.asignar',
+      record as unknown as Record<string, unknown>,
+    );
+  } else if (activeAxisId.value === 'estado_de_supervision') {
+    const actionId =
+      payload.toState === 'rechazado'
+        ? 'fin.disponibilidades.movimientos.supervisar.rechazar'
+        : 'fin.disponibilidades.movimientos.supervisar.confirmar';
+    movimientosMod.openDialog(
+      actionId,
+      record as unknown as Record<string, unknown>,
+    );
+  }
+}
+
+// ─── Bancos / Cuentas filter + pagination ────────────────────────────
+const configFilter = ref<'all' | 'configured' | 'not_configured'>('all');
+
+const filteredCuentas = computed(() => {
+  if (configFilter.value === 'all') return CATALOGO_CUENTAS;
+  if (configFilter.value === 'configured') {
+    return CATALOGO_CUENTAS.filter((c) => c.cuenta_contable !== null);
+  }
+  return CATALOGO_CUENTAS.filter((c) => c.cuenta_contable === null);
+});
+
+watch([filteredCuentas, pageSize], () => {
+  pageBancosCuentas.value = 1;
+});
+
+const totalPagesBancosCuentas = computed(() =>
+  Math.max(1, Math.ceil(filteredCuentas.value.length / pageSize.value)),
+);
+
+const pagedCuentas = computed(() => {
+  const start = (pageBancosCuentas.value - 1) * pageSize.value;
+  return filteredCuentas.value.slice(start, start + pageSize.value);
+});
+
+function goBancosCuentasPage(delta: number): void {
+  const next = pageBancosCuentas.value + delta;
+  if (next < 1 || next > totalPagesBancosCuentas.value) return;
+  pageBancosCuentas.value = next;
+}
+
+// ─── Movimientos pagination ──────────────────────────────────────────
+watch([filteredMovimientos, pageSize], () => {
+  pageMovimientos.value = 1;
+});
+
+const totalPagesMovimientos = computed(() =>
+  Math.max(1, Math.ceil(filteredMovimientos.value.length / pageSize.value)),
+);
+
+const pagedMovimientos = computed(() => {
+  const start = (pageMovimientos.value - 1) * pageSize.value;
+  return filteredMovimientos.value.slice(start, start + pageSize.value);
+});
+
+function goMovimientosPage(delta: number): void {
+  const next = pageMovimientos.value + delta;
+  if (next < 1 || next > totalPagesMovimientos.value) return;
+  pageMovimientos.value = next;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────
+function supervisionBadgeVariant(
+  estado: Movimiento['estado_de_supervision'],
+): 'success' | 'warning' | 'danger' | 'neutral' {
+  switch (estado) {
+    case 'confirmado':
+      return 'success';
+    case 'pendiente_de_supervision':
+      return 'warning';
+    case 'rechazado':
+      return 'danger';
+    default:
+      return 'neutral';
+  }
+}
+</script>
+
+<template>
+  <div class="flex flex-col gap-5 px-[22px] py-5" data-testid="disponibilidades-page">
+    <!-- L1 · Page header -->
+    <header class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h1 class="text-[22px] font-extrabold tracking-tight text-t-1">Disponibilidades</h1>
+        <p class="mt-1 text-xs text-t-3">
+          ¿Dónde está el dinero? Posición de fondos por Sociedad → Banco → Cuenta, ledger global de
+          movimientos y catálogo de cuentas con lente Finanzas.
+        </p>
+      </div>
+      <div class="flex items-center gap-3" data-testid="disponibilidades-main-cta">
+        <ViewToggle
+          v-if="subTab === 'movimientos'"
+          v-model="view"
+          :views="['list', 'cards', 'kanban']"
+          data-testid="movimientos-view-toggle"
+        />
+        <ManifestModuleCTAs :manifest-key="activeModuleManifestKey" />
+      </div>
+    </header>
+
+    <!-- L1 · Segmenter -->
+    <Segmenter
+      :model-value="subTab"
+      :options="segmentOptions"
+      aria-label="Seleccionar sub-tab"
+      data-testid="disponibilidades-segmenter"
+      @update:model-value="setSubTab"
+    />
+
+    <!-- ─── SUB-TAB · POSICIÓN ─────────────────────────────────────── -->
+    <template v-if="subTab === 'posicion'">
+      <section
+        class="grid grid-cols-2 gap-3 lg:grid-cols-5"
+        data-testid="posicion-kpis"
+      >
+        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">
+            Posición consolidada
+          </div>
+          <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">
+            {{ POSICION_KPIS.posicionConsolidada }}
+          </div>
+          <div class="mt-1.5 text-[11px] text-t-4">USD equivalente</div>
+        </div>
+        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Total Propio</div>
+          <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">{{ POSICION_KPIS.totalPropio }}</div>
+        </div>
+        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Total Cliente</div>
+          <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">{{ POSICION_KPIS.totalCliente }}</div>
+        </div>
+        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Sociedades activas</div>
+          <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">{{ POSICION_KPIS.sociedadesActivas }}</div>
+        </div>
+        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Cuentas activas</div>
+          <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">{{ POSICION_KPIS.cuentasActivas }}</div>
+        </div>
+      </section>
+
+      <section class="space-y-2" data-testid="posicion-tree">
+        <div
+          v-for="soc in POSICION_TREE"
+          :key="soc.id"
+          class="overflow-hidden rounded-[10px] border border-b-2 bg-card-2"
+        >
+          <button
+            type="button"
+            class="flex w-full items-center gap-3 px-[18px] py-3 text-left"
+            @click="toggleSociedad(soc.id)"
+          >
+            <component
+              :is="expandedSociedades[soc.id] ? ChevronDown : ChevronRight"
+              class="h-4 w-4 text-t-3"
+            />
+            <div class="flex-1">
+              <div class="text-sm font-bold text-t-1">{{ soc.name }}</div>
+              <div class="text-[11px] text-t-4">{{ soc.sub }}</div>
+            </div>
+            <div class="flex items-center gap-2">
+              <Badge variant="neutral" class="font-mono text-[10px]">Propio {{ soc.total_propio }}</Badge>
+              <Badge variant="info" class="font-mono text-[10px]">Cliente {{ soc.total_cliente }}</Badge>
+              <Badge v-for="t in soc.totals" :key="t.lbl" variant="neutral" class="font-mono">
+                {{ t.lbl }} {{ t.val }}
+              </Badge>
+            </div>
+          </button>
+          <div v-if="expandedSociedades[soc.id]" class="border-t border-b-1">
+            <table class="w-full border-collapse">
+              <thead>
+                <tr class="border-b border-b-1">
+                  <th class="px-[18px] py-2 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Cuenta</th>
+                  <th class="px-3.5 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Detalle</th>
+                  <th class="px-3.5 py-2 text-right text-[10px] font-bold uppercase tracking-wider text-t-3">Saldo total</th>
+                  <th class="px-3.5 py-2 text-right text-[10px] font-bold uppercase tracking-wider text-t-3">Propio</th>
+                  <th class="px-3.5 py-2 text-right text-[10px] font-bold uppercase tracking-wider text-t-3">Cliente</th>
+                  <th class="px-3.5 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Moneda</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="cu in soc.cuentas"
+                  :key="cu.id"
+                  class="cursor-pointer border-b border-b-1 transition-colors last:border-b-0 hover:bg-white/[0.04]"
+                  :data-testid="`posicion-row-${cu.id}`"
+                  @click="drillDownToMovimientos(cu.id)"
+                >
+                  <td class="px-[18px] py-2 text-xs text-t-2">
+                    <div class="flex items-center gap-2">
+                      <Wallet class="h-3.5 w-3.5 text-t-4" />
+                      <span class="font-semibold">{{ cu.name }}</span>
+                    </div>
+                  </td>
+                  <td class="px-3.5 py-2 text-xs text-t-4">{{ cu.det }}</td>
+                  <td class="px-3.5 py-2 text-right text-xs font-mono text-t-2">{{ cu.saldo }}</td>
+                  <td class="px-3.5 py-2 text-right text-xs font-mono text-t-3">{{ cu.saldo_propio }}</td>
+                  <td class="px-3.5 py-2 text-right text-xs font-mono text-info">{{ cu.saldo_cliente }}</td>
+                  <td class="px-3.5 py-2 text-xs text-t-3">{{ cu.moneda }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </template>
+
+    <!-- ─── SUB-TAB · BANCOS / CUENTAS ─────────────────────────────── -->
+    <template v-else-if="subTab === 'bancos_cuentas'">
+      <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" data-testid="bancos-cuentas-kpis">
+        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Estructuras totales</div>
+          <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">{{ BANCOS_CUENTAS_KPIS.estructurasTotales }}</div>
+        </div>
+        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Cuentas activas</div>
+          <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">{{ BANCOS_CUENTAS_KPIS.cuentasActivas }}</div>
+        </div>
+        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Con configuración contable</div>
+          <div class="text-2xl font-extrabold leading-none tracking-tight text-success">{{ BANCOS_CUENTAS_KPIS.cuentasConfiguradas }}</div>
+        </div>
+        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Sin configurar</div>
+          <div class="text-2xl font-extrabold leading-none tracking-tight text-warning">{{ BANCOS_CUENTAS_KPIS.cuentasSinConfigurar }}</div>
+        </div>
+      </section>
+
+      <section class="flex flex-wrap items-center gap-3" data-testid="bancos-cuentas-filters">
+        <label class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-t-3">
+          Configuración contable
+          <select
+            v-model="configFilter"
+            class="rounded-md border border-b-1 bg-card-2 px-2 py-1 text-xs text-t-2"
+            data-testid="bancos-cuentas-filter-config"
+          >
+            <option value="all">Todas</option>
+            <option value="configured">Configurada</option>
+            <option value="not_configured">Sin configurar</option>
+          </select>
+        </label>
+        <div class="flex-1" />
+        <label class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-t-3">
+          Por página
+          <select
+            v-model.number="pageSize"
+            class="rounded-md border border-b-1 bg-card-2 px-2 py-1 text-xs text-t-2"
+            data-testid="bancos-cuentas-page-size"
+          >
+            <option v-for="size in PAGE_SIZE_OPTIONS" :key="size" :value="size">{{ size }}</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="overflow-hidden rounded-[10px] border border-b-2 bg-card-2" data-testid="bancos-cuentas-table">
+        <table class="w-full border-collapse">
+          <thead>
+            <tr class="border-b border-b-2">
+              <th class="px-[18px] py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Sociedad</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Banco / Estructura</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Tipo estructura</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Tipo cuenta</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Moneda</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Nro. / Address</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Estado</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Cuenta contable</th>
+              <th class="px-3.5 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-t-3">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="cu in pagedCuentas"
+              :key="cu.id"
+              class="border-b border-b-1 last:border-b-0 hover:bg-white/[0.02]"
+              :data-testid="`bancos-cuentas-row-${cu.id}`"
+            >
+              <td class="px-[18px] py-2.5 text-xs text-t-2">{{ cu.sociedad_id }}</td>
+              <td class="px-3.5 py-2.5 text-xs text-t-2 font-semibold">{{ cu.banco }}</td>
+              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ cu.tipo_estructura }}</td>
+              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ cu.tipo_cuenta }}</td>
+              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ cu.moneda }}</td>
+              <td class="px-3.5 py-2.5 text-xs font-mono text-t-3">{{ cu.numero }}</td>
+              <td class="px-3.5 py-2.5">
+                <Badge :variant="cu.estado === 'Activa' ? 'success' : 'neutral'">{{ cu.estado }}</Badge>
+              </td>
+              <td class="px-3.5 py-2.5">
+                <Badge v-if="cu.cuenta_contable === null" variant="warning" class="text-[10px]">Sin configurar</Badge>
+                <span v-else class="text-xs text-t-3">{{ cu.cuenta_contable }}</span>
+              </td>
+              <td class="px-3.5 py-2.5 text-center" @click.stop>
+                <div class="flex items-center justify-center">
+                  <ManifestActionsMenu
+                    :manifest-key="FIN_DISPONIBILIDADES_BANCOS_CUENTAS_MANIFEST_KEY"
+                    :record="cu as unknown as Record<string, unknown>"
+                    variant="table"
+                    :data-testid="`bancos-cuentas-row-${cu.id}-actions`"
+                  />
+                </div>
+              </td>
+            </tr>
+            <tr v-if="pagedCuentas.length === 0">
+              <td colspan="9" class="px-[18px] py-6 text-center text-xs text-t-4">
+                Sin cuentas que coincidan con los filtros.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <!-- Pagination footer -->
+        <div
+          class="flex items-center justify-between border-t border-b-1 bg-card px-4 py-2 text-[11px] text-t-3"
+          data-testid="bancos-cuentas-pagination"
+        >
+          <span>
+            Página {{ pageBancosCuentas }} de {{ totalPagesBancosCuentas }} ·
+            {{ filteredCuentas.length }} cuentas en total
+          </span>
+          <div class="flex items-center gap-1">
+            <button
+              type="button"
+              class="flex h-7 w-7 items-center justify-center rounded-md border border-b-1 text-t-3 transition-colors hover:bg-card-2 disabled:cursor-not-allowed disabled:opacity-30"
+              :disabled="pageBancosCuentas <= 1"
+              data-testid="bancos-cuentas-page-prev"
+              @click="goBancosCuentasPage(-1)"
+            >
+              <ChevronLeft class="h-3 w-3" />
+            </button>
+            <button
+              type="button"
+              class="flex h-7 w-7 items-center justify-center rounded-md border border-b-1 text-t-3 transition-colors hover:bg-card-2 disabled:cursor-not-allowed disabled:opacity-30"
+              :disabled="pageBancosCuentas >= totalPagesBancosCuentas"
+              data-testid="bancos-cuentas-page-next"
+              @click="goBancosCuentasPage(1)"
+            >
+              <ChevronRightIcon class="h-3 w-3" />
+            </button>
+          </div>
+        </div>
+      </section>
+    </template>
+
+    <!-- ─── SUB-TAB · MOVIMIENTOS ──────────────────────────────────── -->
+    <template v-else>
+      <section class="grid grid-cols-2 gap-3 lg:grid-cols-5" data-testid="movimientos-kpis">
+        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Movimientos del día</div>
+          <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">{{ MOVIMIENTOS_KPIS.movimientosDelDia }}</div>
+        </div>
+        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Volumen ingresado</div>
+          <div class="text-2xl font-extrabold leading-none tracking-tight text-success">{{ MOVIMIENTOS_KPIS.volumenIngresado }}</div>
+        </div>
+        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Volumen egresado</div>
+          <div class="text-2xl font-extrabold leading-none tracking-tight text-danger">{{ MOVIMIENTOS_KPIS.volumenEgresado }}</div>
+        </div>
+        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Pendientes de imputación</div>
+          <div
+            class="text-2xl font-extrabold leading-none tracking-tight"
+            :class="MOVIMIENTOS_KPIS.pendientesDeImputacion > 0 ? 'text-warning' : 'text-t-1'"
+          >
+            {{ MOVIMIENTOS_KPIS.pendientesDeImputacion }}
+          </div>
+        </div>
+        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Pendientes de supervisión</div>
+          <div
+            class="text-2xl font-extrabold leading-none tracking-tight"
+            :class="MOVIMIENTOS_KPIS.pendientesDeSupervision > 0 ? 'text-warning' : 'text-t-1'"
+          >
+            {{ MOVIMIENTOS_KPIS.pendientesDeSupervision }}
+          </div>
+        </div>
+      </section>
+
+      <section
+        v-if="drillCuentaId !== null"
+        class="flex items-center justify-between rounded-md border border-b-1 bg-card-2 px-4 py-2 text-xs text-t-3"
+        data-testid="movimientos-drill-banner"
+      >
+        <span>
+          Filtrado por <span class="font-mono text-t-2">cuenta_id = {{ drillCuentaId }}</span>
+          desde drill-down de Posición.
+        </span>
+        <button
+          type="button"
+          class="text-[11px] font-bold uppercase tracking-wider text-info hover:text-info/80"
+          @click="clearDrillFilter"
+        >
+          Limpiar filtro
+        </button>
+      </section>
+
+      <!-- Axis selector + page size (only on relevant views) -->
+      <section
+        v-if="view === 'kanban' || view === 'list'"
+        class="flex flex-wrap items-center gap-3"
+        data-testid="movimientos-toolbar"
+      >
+        <label
+          v-if="view === 'kanban'"
+          class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-t-3"
+          data-testid="movimientos-axis-selector"
+        >
+          Eje del Tablero
+          <select
+            :value="activeAxisId"
+            class="rounded-md border border-b-1 bg-card-2 px-2 py-1 text-xs text-t-2"
+            data-testid="movimientos-axis-select"
+            @change="setActiveAxis(($event.target as HTMLSelectElement).value as AxisId)"
+          >
+            <option value="estado_operativo">Estado operativo</option>
+            <option value="estado_imputacion_ardua">Estado imputación Lado Ardua</option>
+            <option value="estado_imputacion_cliente">Estado imputación Lado Cliente</option>
+            <option value="estado_de_supervision">Estado de supervisión</option>
+            <option value="tipo">Tipo de movimiento</option>
+            <option value="sociedad">Sociedad</option>
+          </select>
+        </label>
+        <span v-if="view === 'kanban' && activeAxis.description" class="text-[11px] text-t-4">
+          {{ activeAxis.description }}
+        </span>
+        <div class="flex-1" />
+        <label
+          v-if="view === 'list'"
+          class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-t-3"
+        >
+          Por página
+          <select
+            v-model.number="pageSize"
+            class="rounded-md border border-b-1 bg-card-2 px-2 py-1 text-xs text-t-2"
+            data-testid="movimientos-page-size"
+          >
+            <option v-for="size in PAGE_SIZE_OPTIONS" :key="size" :value="size">{{ size }}</option>
+          </select>
+        </label>
+      </section>
+
+      <!-- LIST view -->
+      <section
+        v-if="view === 'list'"
+        class="overflow-hidden rounded-[10px] border border-b-2 bg-card-2"
+        data-testid="movimientos-table"
+      >
+        <table class="w-full border-collapse">
+          <thead>
+            <tr class="border-b border-b-2">
+              <th class="px-[18px] py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">ID</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Fecha</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Tipo</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Cuenta</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Cliente</th>
+              <th class="px-3.5 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-t-3">Monto</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Origen</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Estado op.</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Supervisión</th>
+              <th class="px-3.5 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-t-3">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="m in pagedMovimientos"
+              :key="m.id"
+              class="border-b border-b-1 last:border-b-0 hover:bg-white/[0.02]"
+              :data-testid="`movimientos-row-${m.id}`"
+            >
+              <td class="px-[18px] py-2.5 font-mono text-xs text-t-3">{{ m.id }}</td>
+              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ m.fecha }}</td>
+              <td class="px-3.5 py-2.5 text-xs text-t-2">{{ m.tipo }}</td>
+              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ m.fin.cuenta_id ?? '—' }}</td>
+              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ m.fin.cliente_id ?? '—' }}</td>
+              <td class="px-3.5 py-2.5 text-right text-xs font-mono text-t-2">{{ m.monto }}</td>
+              <td class="px-3.5 py-2.5">
+                <Badge
+                  :variant="m.origen === 'OPS' ? 'info' : m.origen === 'TRD' ? 'neutral' : 'warning'"
+                  class="text-[10px]"
+                >
+                  {{ m.origen }}
+                </Badge>
+              </td>
+              <td class="px-3.5 py-2.5">
+                <Badge
+                  :variant="m.status === 'COMPLETED' ? 'success' : m.status === 'PENDING' ? 'warning' : 'danger'"
+                  class="text-[10px]"
+                >
+                  {{ m.status }}
+                </Badge>
+              </td>
+              <td class="px-3.5 py-2.5">
+                <Badge
+                  v-if="m.estado_de_supervision !== 'no_aplica'"
+                  :variant="supervisionBadgeVariant(m.estado_de_supervision)"
+                  class="text-[10px]"
+                >
+                  {{ m.estado_de_supervision }}
+                </Badge>
+                <span v-else class="text-[11px] text-t-4">—</span>
+              </td>
+              <td class="px-3.5 py-2.5 text-center" @click.stop>
+                <div class="flex items-center justify-center">
+                  <ManifestActionsMenu
+                    :manifest-key="FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST_KEY"
+                    :record="m as unknown as Record<string, unknown>"
+                    variant="table"
+                    :data-testid="`movimientos-row-${m.id}-actions`"
+                  />
+                </div>
+              </td>
+            </tr>
+            <tr v-if="pagedMovimientos.length === 0">
+              <td colspan="10">
+                <EmptyState
+                  title="Sin movimientos"
+                  description="No hay movimientos que coincidan con los filtros aplicados."
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div
+          class="flex items-center justify-between border-t border-b-1 bg-card px-4 py-2 text-[11px] text-t-3"
+          data-testid="movimientos-pagination"
+        >
+          <span>
+            Página {{ pageMovimientos }} de {{ totalPagesMovimientos }} ·
+            {{ filteredMovimientos.length }} movimientos en total
+          </span>
+          <div class="flex items-center gap-1">
+            <button
+              type="button"
+              class="flex h-7 w-7 items-center justify-center rounded-md border border-b-1 text-t-3 transition-colors hover:bg-card-2 disabled:cursor-not-allowed disabled:opacity-30"
+              :disabled="pageMovimientos <= 1"
+              data-testid="movimientos-page-prev"
+              @click="goMovimientosPage(-1)"
+            >
+              <ChevronLeft class="h-3 w-3" />
+            </button>
+            <button
+              type="button"
+              class="flex h-7 w-7 items-center justify-center rounded-md border border-b-1 text-t-3 transition-colors hover:bg-card-2 disabled:cursor-not-allowed disabled:opacity-30"
+              :disabled="pageMovimientos >= totalPagesMovimientos"
+              data-testid="movimientos-page-next"
+              @click="goMovimientosPage(1)"
+            >
+              <ChevronRightIcon class="h-3 w-3" />
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- CARDS view -->
+      <CardsGrid v-else-if="view === 'cards'" data-testid="movimientos-cards">
+        <CardItem
+          v-for="m in filteredMovimientos"
+          :key="m.id"
+          :record="m as unknown as Record<string, unknown>"
+          :data-testid="`movimientos-card-${m.id}`"
+        >
+          <template #header>
+            <div class="flex min-w-0 flex-1 items-center gap-2">
+              <span class="font-mono text-[11px] text-t-4">{{ m.id }}</span>
+              <span class="truncate text-sm font-semibold text-t-1">{{ m.tipo }}</span>
+            </div>
+            <Badge
+              :variant="m.origen === 'OPS' ? 'info' : m.origen === 'TRD' ? 'neutral' : 'warning'"
+              class="text-[10px]"
+            >
+              {{ m.origen }}
+            </Badge>
+            <span @click.stop>
+              <ManifestActionsMenu
+                :manifest-key="FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST_KEY"
+                :record="m as unknown as Record<string, unknown>"
+                variant="card"
+              />
+            </span>
+          </template>
+          <template #body>
+            <div class="space-y-1 text-xs text-t-3">
+              <div class="font-mono text-sm text-t-2">{{ m.monto }} {{ m.moneda }}</div>
+              <div>Cuenta: {{ m.fin.cuenta_id ?? 'Sin asignar' }}</div>
+              <div>Cliente: {{ m.fin.cliente_id ?? 'Sin asignar' }}</div>
+            </div>
+          </template>
+          <template #footer>
+            <span>{{ m.fecha }}</span>
+            <Badge
+              v-if="m.estado_de_supervision !== 'no_aplica'"
+              :variant="supervisionBadgeVariant(m.estado_de_supervision)"
+            >
+              {{ m.estado_de_supervision }}
+            </Badge>
+          </template>
+        </CardItem>
+      </CardsGrid>
+
+      <!-- KANBAN view -->
+      <div v-else class="min-h-[480px]" data-testid="movimientos-kanban-wrapper">
+        <KanbanBoard
+          :axis="activeAxis"
+          :records="filteredMovimientos as unknown as Record<string, unknown>[] as never"
+          title="Movimientos"
+          @transition="handleKanbanTransition"
+        >
+          <template #card="{ record }">
+            <CardItem :record="record">
+              <template #header>
+                <div class="flex min-w-0 flex-1 items-center gap-2">
+                  <span class="font-mono text-[11px] text-t-4">
+                    {{ (record as unknown as Movimiento).id }}
+                  </span>
+                  <span class="truncate text-sm font-semibold text-t-1">
+                    {{ (record as unknown as Movimiento).tipo }}
+                  </span>
+                </div>
+                <Badge
+                  :variant="
+                    (record as unknown as Movimiento).origen === 'OPS'
+                      ? 'info'
+                      : (record as unknown as Movimiento).origen === 'TRD'
+                      ? 'neutral'
+                      : 'warning'
+                  "
+                  class="text-[10px]"
+                >
+                  {{ (record as unknown as Movimiento).origen }}
+                </Badge>
+                <span @click.stop>
+                  <ManifestActionsMenu
+                    :manifest-key="FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST_KEY"
+                    :record="record"
+                    variant="card"
+                  />
+                </span>
+              </template>
+              <template #body>
+                <div class="space-y-1 text-xs text-t-3">
+                  <div class="font-mono text-sm text-t-2">
+                    {{ (record as unknown as Movimiento).monto }}
+                    {{ (record as unknown as Movimiento).moneda }}
+                  </div>
+                  <div>{{ (record as unknown as Movimiento).fecha }}</div>
+                </div>
+              </template>
+              <template #footer>
+                <Badge
+                  v-if="(record as unknown as Movimiento).estado_de_supervision !== 'no_aplica'"
+                  :variant="
+                    supervisionBadgeVariant(
+                      (record as unknown as Movimiento).estado_de_supervision,
+                    )
+                  "
+                >
+                  {{ (record as unknown as Movimiento).estado_de_supervision }}
+                </Badge>
+                <span v-else>—</span>
+              </template>
+            </CardItem>
+          </template>
+        </KanbanBoard>
+      </div>
+    </template>
+  </div>
+</template>

@@ -18,10 +18,18 @@ import { useAuthStore } from '@/stores/auth';
 // composite-dialog flow are exercisable without a live Auth0 tenant.
 // ════════════════════════════════════════════════════════════════════
 
-/** Roles granted to the dev fallback user — covers every capability
- * gate declared by FIN's manifests (Movimientos, Cotizaciones,
- * Tesorería). When wiring real Auth0, the IdP claim drives this list. */
+/** Capabilities granted to the dev fallback user. Includes the wildcard
+ * `'*'` (per MIGRATION-PLAYBOOK §"Pattern 9 — Capability gating"), the
+ * legacy role names kept for fixtures, plus the eight fine-grained
+ * capabilities introduced by REQ-50 (`add-fin-disponibilidades`).
+ *
+ * In production, the IdP claim drives this list and the wildcard is
+ * never granted. */
 const DEV_FALLBACK_CAPABILITIES = [
+  // Wildcard — grants every gate in dev so operators never need to
+  // update this seed when a new fine-grained capability lands.
+  '*',
+  // Legacy named roles preserved for fixtures that inspect them.
   'ADMIN',
   'ADMIN_FIN',
   'ADMIN_OPS',
@@ -30,6 +38,15 @@ const DEV_FALLBACK_CAPABILITIES = [
   'FINANCE',
   'OPS_OFFICER',
   'TRADER',
+  // FIN — Disponibilidades capabilities (REQ-50 §9).
+  'fin.disponibilidades.ver',
+  'fin.disponibilidades.bancos_cuentas.crear',
+  'fin.disponibilidades.bancos_cuentas.configurar_contable',
+  'fin.disponibilidades.movimientos.imputar_ardua',
+  'fin.disponibilidades.movimientos.imputar_cliente',
+  'fin.disponibilidades.movimientos.cargar_directo',
+  'fin.disponibilidades.movimientos.cargar_con_supervision',
+  'fin.disponibilidades.movimientos.supervisar_carga',
 ];
 
 export function setupAuth0(app: App): void {

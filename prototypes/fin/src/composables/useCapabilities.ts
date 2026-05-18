@@ -9,25 +9,36 @@ import { useAuthStore } from '@/stores/auth';
 // depends on TWO rules:
 //   1. User capabilities (this composable)
 //   2. Intrinsic record characteristics (domain-specific, per feature)
+//
+// Wildcard rule (MIGRATION-PLAYBOOK Pattern 9): holding `'*'` grants
+// every capability gate. The dev fallback seed includes `'*'` so the
+// operator sees every CTA without anyone having to remember to update
+// the seed when a new fine-grained capability lands. In production the
+// IdP claim drives the list and `'*'` is never granted.
 // ════════════════════════════════════════════════════════════════════
+
+const WILDCARD = '*';
 
 export function useCapabilities() {
   const store = useAuthStore();
 
   const all = computed(() => store.capabilities);
 
-  /** True if the user has the given capability. */
+  /** True if the user has the given capability (or the wildcard). */
   function can(capability: string): boolean {
+    if (store.capabilities.includes(WILDCARD)) return true;
     return store.capabilities.includes(capability);
   }
 
-  /** True if the user has at least one of the given capabilities. */
+  /** True if the user has at least one of the given capabilities (or the wildcard). */
   function canAny(capabilities: string[]): boolean {
+    if (store.capabilities.includes(WILDCARD)) return true;
     return capabilities.some((c) => store.capabilities.includes(c));
   }
 
-  /** True if the user has all of the given capabilities. */
+  /** True if the user has all of the given capabilities (or the wildcard). */
   function canAll(capabilities: string[]): boolean {
+    if (store.capabilities.includes(WILDCARD)) return true;
     return capabilities.every((c) => store.capabilities.includes(c));
   }
 

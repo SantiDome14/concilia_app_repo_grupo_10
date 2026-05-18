@@ -2,21 +2,21 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ManifestError, type Manifest } from '@/types/manifest';
 import { validateManifest } from './validateManifest';
 import {
-  FIN_MOVIMIENTOS_MANIFEST,
-  FIN_MOVIMIENTOS_MANIFEST_KEY,
-} from '@/manifests/fin.movimientos.actions';
+  FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST,
+  FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST_KEY,
+} from '@/manifests/fin.disponibilidades.movimientos.actions';
 import {
   FIN_COTIZACIONES_MANIFEST,
   FIN_COTIZACIONES_MANIFEST_KEY,
 } from '@/manifests/fin.cotizaciones.actions';
 import {
-  FIN_TESORERIA_MANIFEST,
-  FIN_TESORERIA_MANIFEST_KEY,
-} from '@/manifests/fin.tesoreria.actions';
+  FIN_DISPONIBILIDADES_MANIFEST,
+  FIN_DISPONIBILIDADES_MANIFEST_KEY,
+} from '@/manifests/fin.disponibilidades.actions';
 import {
-  FIN_TESORERIA_COLA_ASIGNACION_MANIFEST,
-  FIN_TESORERIA_COLA_ASIGNACION_MANIFEST_KEY,
-} from '@/manifests/fin.tesoreria.cola_asignacion.actions';
+  FIN_DISPONIBILIDADES_BANCOS_CUENTAS_MANIFEST,
+  FIN_DISPONIBILIDADES_BANCOS_CUENTAS_MANIFEST_KEY,
+} from '@/manifests/fin.disponibilidades.bancos_cuentas.actions';
 
 const minimalManifest = (): Manifest => ({
   app: 'demo',
@@ -48,13 +48,13 @@ describe('validateManifest', () => {
       expect(result.warnings).toHaveLength(0);
     });
 
-    it('accepts the FIN.Movimientos manifest with zero warnings', () => {
-      // FIN.Movimientos is the largest and most predicate-heavy manifest
-      // in core-fin (9 actions, 12 record types, kanban axis). It is the
-      // best stress test for the validator.
+    it('accepts the FIN.Disponibilidades.Movimientos manifest with zero warnings', () => {
+      // FIN.Disponibilidades.Movimientos is the largest predicate-heavy
+      // manifest in core-fin (6 actions, 6 kanban axes, NOSTRO_OR_MANUAL
+      // composite predicate). Best stress test for the validator.
       const result = validateManifest(
-        FIN_MOVIMIENTOS_MANIFEST,
-        FIN_MOVIMIENTOS_MANIFEST_KEY,
+        FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST,
+        FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST_KEY,
       );
       expect(result.warnings).toEqual([]);
       expect(result.ok).toBe(true);
@@ -69,19 +69,19 @@ describe('validateManifest', () => {
       expect(result.ok).toBe(true);
     });
 
-    it('accepts the FIN.Tesorería module-scope manifest with zero warnings', () => {
+    it('accepts the FIN.Disponibilidades module-scope manifest with zero warnings', () => {
       const result = validateManifest(
-        FIN_TESORERIA_MANIFEST,
-        FIN_TESORERIA_MANIFEST_KEY,
+        FIN_DISPONIBILIDADES_MANIFEST,
+        FIN_DISPONIBILIDADES_MANIFEST_KEY,
       );
       expect(result.warnings).toEqual([]);
       expect(result.ok).toBe(true);
     });
 
-    it('accepts the FIN.Tesorería · Cola de Asignación manifest with zero warnings', () => {
+    it('accepts the FIN.Disponibilidades · Bancos / Cuentas manifest with zero warnings', () => {
       const result = validateManifest(
-        FIN_TESORERIA_COLA_ASIGNACION_MANIFEST,
-        FIN_TESORERIA_COLA_ASIGNACION_MANIFEST_KEY,
+        FIN_DISPONIBILIDADES_BANCOS_CUENTAS_MANIFEST,
+        FIN_DISPONIBILIDADES_BANCOS_CUENTAS_MANIFEST_KEY,
       );
       expect(result.warnings).toEqual([]);
       expect(result.ok).toBe(true);

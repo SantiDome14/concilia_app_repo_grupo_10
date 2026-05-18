@@ -4,19 +4,24 @@
 // Two layers coexist here:
 //
 //   1. **Manifest record types** — the typed record shapes the action
-//      manifests (`fin.operaciones.movimientos`, `fin.cotizaciones`,
-//      `fin.tesoreria.cola_asignacion`) read and write through the
-//      pure-logic engine in `src/lib/manifest/`. The engine resolves
+//      manifests (`fin.disponibilidades.movimientos`, `fin.cotizaciones`,
+//      `fin.disponibilidades.bancos_cuentas`) read and write through
+//      the pure-logic engine in `src/lib/manifest/`. The engine resolves
 //      dotted field paths against a NESTED `fin` namespace
 //      (e.g. `fin.sociedad_id` → `record.fin.sociedad_id`).
 //
-//   2. **Disponibilidades view types** — pre-formatted display shapes
-//      (`MovimientoLedger`, `RetiroEnCola`, `SociedadPos`) used by the
-//      Tesorería page's posición / movimientos / cola tabs. These
-//      mirror the legacy `prototypes/fin-old/fin-prototype.html`
-//      `POS_TREE` / `TES_MOVS` / `COLA` datasets and ship pre-formatted
-//      strings (e.g. `monto: "+ 18.500.000"`); apps SHALL replace them
-//      with real backend contracts during integration.
+//   2. **Disponibilidades view types** — display shapes the page
+//      consumes for the Posición tree (`SociedadPos`, `CuentaPos`) and
+//      the legacy Movimientos ledger display (`MovimientoLedger`). The
+//      canonical record is `Movimiento`; display shapes are derivable
+//      surfaces.
+//
+// Per REQ-50 (`add-fin-disponibilidades`):
+//   - `Movimiento.origen` is now top-level with values `'OPS' | 'TRD' | 'Manual'`.
+//   - `Movimiento.requires_supervision`, `supervised_by`, `supervised_at`,
+//     `estado_de_supervision` are top-level fields for manual loads.
+//   - `RetiroCola` and the Cola sub-tab are eliminated; the queue
+//     surfaces as the Sub-tab Movimientos with `enable_when` predicates.
 // ════════════════════════════════════════════════════════════════════
 
 // ────────────────────────────────────────────────────────────────────
@@ -43,17 +48,36 @@ export type MovimientoTipo =
   | 'REBATE'
   | 'ADDITION';
 
-/** Origin of a recorded movement (operations vs. manual flow). */
-export type MovimientoOrigen = 'OPS' | 'MAN' | 'MANOK';
+/**
+ * Origin of a recorded movement (REQ-50 §5.1).
+ *   - `'OPS'` — events from `core-ops-backend` (vostro movements).
+ *   - `'TRD'` — events from `core-trd-backend` (roadmap; not v1.0).
+ *   - `'Manual'` — manual loads from FIN.Disponibilidades.
+ */
+export type MovimientoOrigen = 'OPS' | 'TRD' | 'Manual';
 
-/** Display state of a movement in the Tesorería ledger view. */
+/** Display state of a movement in the Tesorería ledger view (display-only). */
 export type MovimientoEstado = 'CONF' | 'COLA' | 'PEND';
 
 /** Imputación lifecycle for a `movimiento`, written by the engine. */
 export type ImputacionState = 'PEND' | 'PARC' | 'IMP';
 
-/** Conciliación lifecycle for a `movimiento`. */
+/** Conciliación lifecycle (legacy — not in REQ-50 v1, retained for archived fields). */
 export type ConciliacionState = 'PEND' | 'CONC' | 'DIFF';
+
+/**
+ * Supervision state for manual movements (REQ-50 §6.3). Orthogonal to
+ * the operational state inherited from REQ-42.
+ *   - `'no_aplica'` — origen is OPS or TRD; supervision is not relevant.
+ *   - `'pendiente_de_supervision'` — manual load awaiting confirmation.
+ *   - `'confirmado'` — confirmed by a supervisor (≠ creator). Impacts saldos.
+ *   - `'rechazado'` — rejected by a supervisor. Never impacts saldos.
+ */
+export type EstadoDeSupervision =
+  | 'no_aplica'
+  | 'pendiente_de_supervision'
+  | 'confirmado'
+  | 'rechazado';
 
 /** Documentación lifecycle for a `quote` (Cotizaciones kanban axis). */
 export type FacturaState = 'pendiente' | 'facturada' | 'no-req';
@@ -66,6 +90,29 @@ export type QuoteStatus =
   | 'settled'
   | 'cancelled';
 
+/** Estado of an account in the Bancos/Cuentas catalogue (REQ-42 §8.1). */
+export type CuentaEstado = 'Activa' | 'Inactiva';
+
+/** Tipo de estructura del catálogo (REQ-42 §8.1). */
+export type EstructuraTipo =
+  | 'Banco'
+  | 'Banco digital'
+  | 'ALyC'
+  | 'Exchange'
+  | 'Custodio'
+  | 'PSP'
+  | 'Proveedor';
+
+/** Tipo de cuenta del catálogo (REQ-42 §8.1). */
+export type CuentaTipo =
+  | 'Wallet Pool'
+  | 'CBU'
+  | 'CVU'
+  | 'Cuenta Corriente'
+  | 'Exchange Account'
+  | 'Custodia'
+  | 'Comitente';
+
 // ────────────────────────────────────────────────────────────────────
 // Manifest record types
 // ────────────────────────────────────────────────────────────────────
@@ -73,26 +120,34 @@ export type QuoteStatus =
 /**
  * FIN namespace nested inside a `movimiento` record. The manifest's
  * predicates and dialog field ids resolve against this object via
- * dot-paths (e.g. `fin.sociedad_id`, `fin.intercompany_at`).
+ * dot-paths (e.g. `fin.sociedad_id`, `fin.cliente_id`).
+ *
+ * The `imput`, `conc`, and `intercompany_*` fields are retained for
+ * backwards-compatibility with the archived `migrate-fin-prototype`
+ * change, but are NOT part of the REQ-50 v1 surface and are not
+ * referenced by the new manifests `fin.disponibilidades.movimientos` or
+ * `fin.disponibilidades.bancos_cuentas`.
  */
 export interface MovimientoFin {
   imput?: ImputacionState | null;
   sociedad_id?: string | null;
   cuenta_id?: string | null;
   cliente_id?: string | null;
+  /** Cuenta Operativa del Cliente (REQ-42 §6). */
+  cuenta_operativa_cliente_id?: string | null;
   cliente_imputation_note?: string | null;
-  proveedor_id?: string | null;
-  partner_id?: string | null;
-  banco_id?: string | null;
-  cuenta_contable_id?: string | null;
   /** Transfer flow — reference to the destination account (TRANSFER_OUT). */
   cuenta_destino_id?: string | null;
   /** Transfer flow — reference to the origin account (TRANSFER_IN). */
   cuenta_origen_id?: string | null;
+  // Legacy fields preserved for archived migration compatibility.
+  proveedor_id?: string | null;
+  partner_id?: string | null;
+  banco_id?: string | null;
+  cuenta_contable_id?: string | null;
   intercompany?: boolean | null;
   intercompany_counterparty_sociedad_id?: string | null;
   intercompany_note?: string | null;
-  /** ISO timestamp set by the engine on `set_fields: { fin.intercompany_at: $now }`. */
   intercompany_at?: string | null;
   conc?: ConciliacionState | null;
   conc_note?: string | null;
@@ -100,21 +155,20 @@ export interface MovimientoFin {
 }
 
 /**
- * `movimiento` record consumed by the `fin.movimientos` manifest. The
- * manifest engine reads `tipo` as the canonical record-type
- * discriminator (see `readRecordType` in
- * `src/lib/manifest/evalPredicate.ts`), so this field MUST stay named
- * `tipo` for predicates like `record_type_in: ['DEPOSIT']` to resolve.
+ * `movimiento` record consumed by the `fin.disponibilidades.movimientos`
+ * manifest. Per REQ-50, five top-level fields drive the supervision
+ * flow and the lens / origin discriminators:
+ *   - `origen` — OPS / TRD / Manual (REQ-50 §5.1).
+ *   - `requires_supervision`, `supervised_by`, `supervised_at`,
+ *     `estado_de_supervision` — local supervision flags (REQ-50 §6).
+ *   - `created_by` — the user that created the manual load, used by
+ *     the `Confirmar carga manual` predicate (creator ≠ supervisor).
  *
  * Two namespaces are nested at runtime:
  *   - `ops.*` — read-only OPS-native data (rail, account, counterparty,
- *     partner, provider) preserved for traceability against the source
- *     module.
+ *     partner, provider) preserved for traceability against the source.
  *   - `fin.*` — FIN-managed fields the imputation actions read and
- *     write through dot-paths (e.g. `fin.sociedad_id`, `fin.conc`).
- *
- * `status` is the OPS operational flag (`COMPLETED` / `PENDING` /
- * `FAILED`) — predicates may read it but FIN does not own it.
+ *     write through dot-paths (e.g. `fin.sociedad_id`, `fin.cliente_id`).
  */
 export interface Movimiento {
   id: string;
@@ -124,6 +178,18 @@ export interface Movimiento {
   monto: string;
   moneda: Moneda;
   status: 'COMPLETED' | 'PENDING' | 'FAILED';
+  /** Origin of the movement — drives manifest predicates (REQ-50 §5.1). */
+  origen: MovimientoOrigen;
+  /** True when the movement is a manual load awaiting confirmation (REQ-50 §6.2). */
+  requires_supervision: boolean;
+  /** Supervisor user id, set on `Confirmar carga manual` (REQ-50 §6.2). */
+  supervised_by: string | null;
+  /** Supervision timestamp (ISO), set on `Confirmar carga manual` (REQ-50 §6.2). */
+  supervised_at: string | null;
+  /** Supervision state — orthogonal to `status` (REQ-50 §6.3). */
+  estado_de_supervision: EstadoDeSupervision;
+  /** Creator user id — used by the `created_by !== current_user` predicate. */
+  created_by: string | null;
   ops: MovimientoOps;
   fin: MovimientoFin;
 }
@@ -155,8 +221,7 @@ export interface QuoteFin {
 }
 
 /**
- * `quote` record consumed by the `fin.cotizaciones` manifest. The
- * trading-side `status` discriminates which actions are available.
+ * `quote` record consumed by the `fin.cotizaciones` manifest.
  */
 export interface Quote {
   id: string;
@@ -172,27 +237,11 @@ export interface Quote {
 }
 
 /**
- * `retiro_cola` record consumed by the `fin.tesoreria.cola_asignacion`
- * manifest. `cuenta_id === null` keeps the row in the queue; assigning
- * an account moves it out of the queue and into the ledger.
- */
-export interface RetiroCola {
-  id: string;
-  fecha: string;
-  cliente: string;
-  cliente_id: string;
-  monto: number;
-  moneda: Moneda;
-  /** ISO timestamp the row entered the queue (drives the time-in-queue chip). */
-  enqueued_at: string;
-  cuenta_id: string | null;
-  asignacion_note: string | null;
-}
-
-/**
- * `carga_manual_solicitud` payload created by the `fin.tesoreria`
- * module CTA "Cargar movimiento manual". Routed to the Inbox for
- * dual-approval (loader ≠ approver).
+ * `carga_manual_solicitud` payload created by the
+ * `fin.disponibilidades.movimientos.cargar_*` action. Per REQ-50 §6.5,
+ * the dialog accepts the fields below; on confirm, the engine creates
+ * a `Movimiento` record with `requires_supervision` derived from the
+ * creator's capability.
  */
 export interface CargaManualSolicitud {
   sociedad_id: string;
@@ -201,7 +250,9 @@ export interface CargaManualSolicitud {
   fecha: string;
   monto: number;
   moneda: Moneda;
-  contraparte: string | null;
+  cuenta_destino_id: string | null;
+  cliente_id: string | null;
+  cuenta_operativa_cliente_id: string | null;
   motivo: string;
   referencia: string | null;
 }
@@ -235,33 +286,72 @@ export interface CuentaBancaria {
   label_short: string;
 }
 
-// ────────────────────────────────────────────────────────────────────
-// Disponibilidades — display shapes (Tesorería page)
-// ────────────────────────────────────────────────────────────────────
-
-/** Single account row inside a Sociedad. Numeric fields are
- *  pre-formatted strings (the prototype renders display-ready values
- *  straight from the seed data). */
-export interface CuentaPos {
-  icon: CuentaIcon;
-  name: string;
-  /** Detail line under the name (e.g. CBU, wallet hash). */
-  det: string;
-  /** Pre-formatted balance, no currency symbol. */
-  saldo: string;
-  /** Debit accumulated. */
-  dr: string;
-  /** Credit accumulated. */
-  cr: string;
-  /** Net position. */
-  neta: string;
-  moneda: Moneda;
+/**
+ * `cuenta_banco` record consumed by the
+ * `fin.disponibilidades.bancos_cuentas` manifest. Extends the canonical
+ * `CuentaBancaria` with the REQ-50 §4 fields the FIN lens cares about:
+ *   - `tipo_estructura` and `tipo_cuenta` per REQ-42 §8.1.
+ *   - `estado` per REQ-42 (Activa / Inactiva).
+ *   - `cuenta_contable` — the FIN-specific accounting metadata
+ *     (REQ-50 §4.5). `null` means "Sin configurar".
+ *   - `cuenta_padre_id` — parent account when the cuenta is a sub-account.
+ */
+export interface CuentaBanco extends CuentaBancaria {
+  tipo_estructura: EstructuraTipo;
+  tipo_cuenta: CuentaTipo;
+  estado: CuentaEstado;
+  /** Accounting metadata (free-form text in v1; future selector). `null` = Sin configurar. */
+  cuenta_contable: string | null;
+  cuenta_padre_id?: string | null;
 }
+
+/**
+ * Cuenta Operativa del Cliente (REQ-42 §6). Internal accounting
+ * construction representing the balance attributed to a client under
+ * the Docket de Ardua Solutions Corp. The id format is
+ * `<docket-digits><moneda><suffix>` (e.g. `005516EURC739`).
+ *
+ * The synthetic `AS00000` record (Cuenta de Cliente de Ardua) is the
+ * placeholder for nostros and manual non-operative movements that need
+ * symmetric bidirectional imputation without an external client
+ * (REQ-50 §5.7).
+ */
+export interface CuentaOperativaCliente {
+  id: string;
+  cliente_id: string;
+  moneda: Moneda;
+  estado: CuentaEstado;
+  /** Label shown in the typeahead's secondary line. */
+  label: string;
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Disponibilidades — Posición tree shapes
+// ────────────────────────────────────────────────────────────────────
 
 /** Sociedad totals chip — one per currency held. */
 export interface SociedadTotal {
   lbl: Moneda;
   val: string;
+}
+
+/** Single account row inside a Sociedad. Numeric fields are
+ *  pre-formatted strings (display-ready values straight from the
+ *  seed data). */
+export interface CuentaPos {
+  icon: CuentaIcon;
+  /** Account id from the catalogue (used by drill-down `cuenta_id`). */
+  id: string;
+  name: string;
+  /** Detail line under the name (e.g. CBU, wallet hash). */
+  det: string;
+  /** Pre-formatted balance, no currency symbol. */
+  saldo: string;
+  /** Saldo Propio (the part of the saldo attributable to Ardua's own funds). */
+  saldo_propio: string;
+  /** Saldo Cliente (the part attributable to client funds via Cuentas Operativas). */
+  saldo_cliente: string;
+  moneda: Moneda;
 }
 
 export interface SociedadPos {
@@ -271,37 +361,35 @@ export interface SociedadPos {
   sub: string;
   open: boolean;
   totals: SociedadTotal[];
+  /** Aggregate saldo propio of every cuenta in this sociedad. */
+  total_propio: string;
+  /** Aggregate saldo cliente of every cuenta in this sociedad. */
+  total_cliente: string;
   cuentas: CuentaPos[];
 }
 
+/**
+ * Generic Posición node — Sociedad or Cuenta — used by the tree
+ * renderer. Each level exposes saldo total + Propio / Cliente
+ * distribution (REQ-50 §3.2).
+ */
+export type PosicionNode =
+  | ({ kind: 'sociedad' } & SociedadPos)
+  | ({ kind: 'cuenta'; sociedad_id: string } & CuentaPos);
+
+/**
+ * Display shape for the legacy Movimientos ledger table (a flat view
+ * over `Movimiento[]`). The new Movimientos sub-tab consumes
+ * `Movimiento[]` directly through the manifest engine; this shape is
+ * retained for unit tests that exercise the legacy display.
+ */
 export interface MovimientoLedger {
   id: string;
-  /** Display string already formatted (date + time). */
   fecha: string;
   tipo: MovimientoTipo;
   cuenta: string;
-  /** Pre-formatted amount with sign (e.g. "+ 18.500.000"). */
   monto: string;
   moneda: Moneda;
   origen: MovimientoOrigen;
   estado: MovimientoEstado;
-}
-
-/**
- * Pre-existing display shape for the legacy `COLA` mock dataset in
- * `src/mocks/fin/disponibilidades.ts`. New code MUST consume the
- * canonical `RetiroCola` record above; this alias keeps the legacy
- * mock seed compiling without forcing a same-PR rewrite.
- */
-export interface RetiroEnCola {
-  id: string;
-  fecha: string;
-  cliente: string;
-  /** Pre-formatted display amount. */
-  monto: string;
-  moneda: Moneda;
-  /** Time-in-queue display string (e.g. "4 hs 22 min"). */
-  tiempo: string;
-  cuenta_id: string | null;
-  asignacion_note: string | null;
 }

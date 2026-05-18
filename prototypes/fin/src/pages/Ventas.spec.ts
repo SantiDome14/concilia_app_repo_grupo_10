@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { setActivePinia, createPinia } from 'pinia';
 import { createRouter, createMemoryHistory } from 'vue-router';
-import Cotizaciones from './Cotizaciones.vue';
+import Ventas from './Ventas.vue';
 import { ROUTE_PATHS } from '@/config/routes';
 import { useManifestRegistryStore } from '@/stores/manifestRegistry';
 import {
@@ -18,7 +18,7 @@ function makeRouter() {
   return createRouter({
     history: createMemoryHistory(),
     routes: [
-      { path: ROUTE_PATHS.COTIZACIONES, component: { template: '<div />' } },
+      { path: ROUTE_PATHS.VENTAS, component: { template: '<div />' } },
     ],
   });
 }
@@ -30,14 +30,14 @@ async function mountPage() {
     FIN_COTIZACIONES_MANIFEST,
   );
   const router = makeRouter();
-  router.push(ROUTE_PATHS.COTIZACIONES);
+  router.push(ROUTE_PATHS.VENTAS);
   await router.isReady();
-  return mount(Cotizaciones, {
+  return mount(Ventas, {
     global: { plugins: [router] },
   });
 }
 
-describe('Cotizaciones page', () => {
+describe('Ventas page (post-rename from Cotizaciones; internal record type stays `quote`)', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
   });

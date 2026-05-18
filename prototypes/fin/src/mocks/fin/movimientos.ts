@@ -1,25 +1,33 @@
 // ════════════════════════════════════════════════════════════════════
-// Mock dataset · `movimiento` records (FIN.Movimientos)
+// Mock dataset · `movimiento` records (FIN.Disponibilidades.Movimientos)
 // ────────────────────────────────────────────────────────────────────
-// Mirrors the legacy `MOVS` constant in `prototypes/fin-old/fin-prototype.html`
-// (line 3800) but rewritten so the manifest engine's predicates resolve:
-//   - `tipo` is the canonical record-type discriminator
-//   - `fin.sociedad_id`, `fin.cuenta_id`, etc. carry CATALOG IDS (null
-//     when the corresponding imputation is pending) — the prototype's
-//     label-only fields (`fin.sociedad: 'Haz Pagos'`) are NOT what the
-//     engine reads
-//   - `ops.*` preserves OPS-native traceability as read-only metadata
+// Per REQ-50 (`add-fin-disponibilidades`):
+//   - `origen` is top-level: 'OPS' | 'TRD' | 'Manual'.
+//   - Manual loads expose `requires_supervision`, `supervised_by`,
+//     `supervised_at`, `estado_de_supervision` for the supervision flow.
+//   - `created_by` identifies the creator (used by the supervisor ≠
+//     creator predicate of `Confirmar carga manual`).
 //
 // Coverage:
-//   - 18 records spanning every MovimientoTipo declared by the manifest
-//   - imputation states: 7 PEND, 4 PARC, 7 IMP
-//   - conciliacion states: PEND / CONC / DIFF
+//   - 22 records spanning every MovimientoTipo declared by the manifest.
+//   - origen mix: OPS (dominant), TRD (1 TAX), Manual (5 covering all
+//     four supervision states).
+//   - Supervision states represented: pendiente_de_supervision (×2),
+//     confirmado (×2), rechazado (×1), no_aplica (rest).
+//   - For the supervisor flow: manuals authored by `dev-yasmani-2` are
+//     supervisable by `dev-yasmani` (dev seed) per the
+//     `created_by !== current_user` predicate.
 // ════════════════════════════════════════════════════════════════════
 
 import type { Movimiento } from '@/types/fin';
 
+const SYSTEM_OPS = 'system-ops';
+const SYSTEM_TRD = 'system-trd';
+const USER_1 = 'dev-yasmani';
+const USER_2 = 'dev-yasmani-2';
+
 export const MOVIMIENTOS: Movimiento[] = [
-  // ─── PEND · cliente sin asignar (depósito ARS de ACME) ──────────────
+  // ─── OPS · COLLECTOR_IN ARS, cliente pendiente ──────────────────────
   {
     id: 'M-2026-12842',
     tipo: 'COLLECTOR_IN',
@@ -27,6 +35,12 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '+ ARS 18.500.000',
     moneda: 'ARS',
     status: 'COMPLETED',
+    origen: 'OPS',
+    requires_supervision: false,
+    supervised_by: null,
+    supervised_at: null,
+    estado_de_supervision: 'no_aplica',
+    created_by: SYSTEM_OPS,
     ops: {
       rail: 'CBU Coinag',
       account: '0170-4521',
@@ -40,10 +54,9 @@ export const MOVIMIENTOS: Movimiento[] = [
       sociedad_id: null,
       cuenta_id: null,
       cliente_id: null,
-      conc: 'PEND',
     },
   },
-  // ─── IMP · withdrawal USDC totalmente imputado ─────────────────────
+  // ─── OPS · WITHDRAWAL USDC imputado ─────────────────────────────────
   {
     id: 'M-2026-12841',
     tipo: 'WITHDRAWAL',
@@ -51,6 +64,12 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '- USDC 250.000',
     moneda: 'USDC',
     status: 'COMPLETED',
+    origen: 'OPS',
+    requires_supervision: false,
+    supervised_by: null,
+    supervised_at: null,
+    estado_de_supervision: 'no_aplica',
+    created_by: SYSTEM_OPS,
     ops: {
       rail: 'Pool BitGo USDC',
       account: '0xBG...A8C2',
@@ -64,11 +83,11 @@ export const MOVIMIENTOS: Movimiento[] = [
       sociedad_id: 'cp',
       cuenta_id: 'cu-cp-bitgo-usdc',
       cliente_id: 'cli-inversiones-norte',
+      cuenta_operativa_cliente_id: '005518USDC001',
       cliente_imputation_note: 'Withdrawal validado contra solicitud CLP',
-      conc: 'CONC',
     },
   },
-  // ─── IMP · depósito USD imputado a Tecno SA ────────────────────────
+  // ─── OPS · DEPOSIT USD imputado a Tecno SA ──────────────────────────
   {
     id: 'M-2026-12840',
     tipo: 'DEPOSIT',
@@ -76,6 +95,12 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '+ USD 180.000',
     moneda: 'USD',
     status: 'COMPLETED',
+    origen: 'OPS',
+    requires_supervision: false,
+    supervised_by: null,
+    supervised_at: null,
+    estado_de_supervision: 'no_aplica',
+    created_by: SYSTEM_OPS,
     ops: {
       rail: 'Bridge USD',
       account: 'BR-7733',
@@ -89,10 +114,10 @@ export const MOVIMIENTOS: Movimiento[] = [
       sociedad_id: 'asc',
       cuenta_id: 'cu-asc-bridge',
       cliente_id: 'cli-tecno-sa',
-      conc: 'PEND',
+      cuenta_operativa_cliente_id: '005517USD001',
     },
   },
-  // ─── PEND · FEE sin proveedor asignado, conciliación con DIFF ───────
+  // ─── OPS · FEE ARS sin imputar (vostro de partner Coinag) ───────────
   {
     id: 'M-2026-12839',
     tipo: 'FEE',
@@ -100,6 +125,12 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '- ARS 12.500',
     moneda: 'ARS',
     status: 'COMPLETED',
+    origen: 'OPS',
+    requires_supervision: false,
+    supervised_by: null,
+    supervised_at: null,
+    estado_de_supervision: 'no_aplica',
+    created_by: SYSTEM_OPS,
     ops: {
       rail: 'CBU Coinag',
       account: '0170-4521',
@@ -112,11 +143,9 @@ export const MOVIMIENTOS: Movimiento[] = [
       imput: 'PEND',
       sociedad_id: null,
       cuenta_id: null,
-      proveedor_id: null,
-      conc: 'DIFF',
     },
   },
-  // ─── IMP · SWAP_OUT USDT, swap interno ─────────────────────────────
+  // ─── OPS · SWAP_OUT USDT ────────────────────────────────────────────
   {
     id: 'M-2026-12838',
     tipo: 'SWAP_OUT',
@@ -124,6 +153,12 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '- USDT 420.000',
     moneda: 'USDT',
     status: 'COMPLETED',
+    origen: 'OPS',
+    requires_supervision: false,
+    supervised_by: null,
+    supervised_at: null,
+    estado_de_supervision: 'no_aplica',
+    created_by: SYSTEM_OPS,
     ops: {
       rail: 'Pool BitGo USDT',
       account: '0xBG...USDT',
@@ -137,10 +172,9 @@ export const MOVIMIENTOS: Movimiento[] = [
       sociedad_id: 'cp',
       cuenta_id: 'cu-cp-bitgo-usdt',
       cliente_id: 'cli-inversiones-norte',
-      conc: 'CONC',
     },
   },
-  // ─── IMP · SWAP_IN USDC, contra-pata del swap interno ───────────────
+  // ─── OPS · SWAP_IN USDC ─────────────────────────────────────────────
   {
     id: 'M-2026-12837',
     tipo: 'SWAP_IN',
@@ -148,6 +182,12 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '+ USDC 419.580',
     moneda: 'USDC',
     status: 'COMPLETED',
+    origen: 'OPS',
+    requires_supervision: false,
+    supervised_by: null,
+    supervised_at: null,
+    estado_de_supervision: 'no_aplica',
+    created_by: SYSTEM_OPS,
     ops: {
       rail: 'Pool BitGo USDC',
       account: '0xBG...A8C2',
@@ -161,10 +201,9 @@ export const MOVIMIENTOS: Movimiento[] = [
       sociedad_id: 'cp',
       cuenta_id: 'cu-cp-bitgo-usdc',
       cliente_id: 'cli-inversiones-norte',
-      conc: 'CONC',
     },
   },
-  // ─── PARC · TRANSFER_IN, falta cuenta_origen_id (es la pata IN) ────
+  // ─── OPS · TRANSFER_IN USD ──────────────────────────────────────────
   {
     id: 'M-2026-12836',
     tipo: 'TRANSFER_IN',
@@ -172,6 +211,12 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '+ USD 250.000',
     moneda: 'USD',
     status: 'COMPLETED',
+    origen: 'OPS',
+    requires_supervision: false,
+    supervised_by: null,
+    supervised_at: null,
+    estado_de_supervision: 'no_aplica',
+    created_by: SYSTEM_OPS,
     ops: {
       rail: 'Convera USD',
       account: 'CV-1188',
@@ -185,10 +230,9 @@ export const MOVIMIENTOS: Movimiento[] = [
       sociedad_id: 'asc',
       cuenta_id: 'cu-asc-convera',
       cuenta_origen_id: null,
-      conc: 'PEND',
     },
   },
-  // ─── PARC · TRANSFER_OUT, falta cuenta_destino_id ──────────────────
+  // ─── OPS · TRANSFER_OUT USD ─────────────────────────────────────────
   {
     id: 'M-2026-12835',
     tipo: 'TRANSFER_OUT',
@@ -196,6 +240,12 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '- USD 250.000',
     moneda: 'USD',
     status: 'COMPLETED',
+    origen: 'OPS',
+    requires_supervision: false,
+    supervised_by: null,
+    supervised_at: null,
+    estado_de_supervision: 'no_aplica',
+    created_by: SYSTEM_OPS,
     ops: {
       rail: 'Bridge USD',
       account: 'BR-7733',
@@ -209,10 +259,9 @@ export const MOVIMIENTOS: Movimiento[] = [
       sociedad_id: 'asc',
       cuenta_id: 'cu-asc-bridge',
       cuenta_destino_id: null,
-      conc: 'PEND',
     },
   },
-  // ─── IMP · COLLECTOR_OUT con todo asignado ──────────────────────────
+  // ─── OPS · COLLECTOR_OUT ARS imputado ───────────────────────────────
   {
     id: 'M-2026-12834',
     tipo: 'COLLECTOR_OUT',
@@ -220,6 +269,12 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '- ARS 9.200.000',
     moneda: 'ARS',
     status: 'COMPLETED',
+    origen: 'OPS',
+    requires_supervision: false,
+    supervised_by: null,
+    supervised_at: null,
+    estado_de_supervision: 'no_aplica',
+    created_by: SYSTEM_OPS,
     ops: {
       rail: 'CBU Coinag',
       account: '0170-4521',
@@ -233,10 +288,10 @@ export const MOVIMIENTOS: Movimiento[] = [
       sociedad_id: 'hp',
       cuenta_id: 'cu-hp-coinag-cbu',
       cliente_id: 'cli-tecno-sa',
-      conc: 'CONC',
+      cuenta_operativa_cliente_id: '005517USD001',
     },
   },
-  // ─── PEND · DEPOSIT EUR PENDING en banca ──────────────────────────
+  // ─── OPS · DEPOSIT EUR PENDING ──────────────────────────────────────
   {
     id: 'M-2026-12833',
     tipo: 'DEPOSIT',
@@ -244,6 +299,12 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '+ EUR 95.000',
     moneda: 'EUR',
     status: 'PENDING',
+    origen: 'OPS',
+    requires_supervision: false,
+    supervised_by: null,
+    supervised_at: null,
+    estado_de_supervision: 'no_aplica',
+    created_by: SYSTEM_OPS,
     ops: {
       rail: 'Bind EUR',
       account: 'BD-5566',
@@ -257,10 +318,9 @@ export const MOVIMIENTOS: Movimiento[] = [
       sociedad_id: null,
       cuenta_id: null,
       cliente_id: null,
-      conc: 'PEND',
     },
   },
-  // ─── PEND · TAX a AFIP, requiere banco_id ──────────────────────────
+  // ─── TRD · TAX a AFIP ───────────────────────────────────────────────
   {
     id: 'M-2026-12832',
     tipo: 'TAX',
@@ -268,6 +328,12 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '- ARS 145.000',
     moneda: 'ARS',
     status: 'COMPLETED',
+    origen: 'TRD',
+    requires_supervision: false,
+    supervised_by: null,
+    supervised_at: null,
+    estado_de_supervision: 'no_aplica',
+    created_by: SYSTEM_TRD,
     ops: {
       rail: 'CVU Cliente Pool',
       account: 'CV-9999',
@@ -280,11 +346,9 @@ export const MOVIMIENTOS: Movimiento[] = [
       imput: 'PEND',
       sociedad_id: null,
       cuenta_id: null,
-      banco_id: null,
-      conc: 'PEND',
     },
   },
-  // ─── PEND · REBATE BitGo, requiere partner_id ──────────────────────
+  // ─── Manual · REBATE BitGo · confirmado ─────────────────────────────
   {
     id: 'M-2026-12831',
     tipo: 'REBATE',
@@ -292,6 +356,12 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '+ USDC 1.200',
     moneda: 'USDC',
     status: 'COMPLETED',
+    origen: 'Manual',
+    requires_supervision: true,
+    supervised_by: USER_2,
+    supervised_at: '2026-04-22T15:30:00Z',
+    estado_de_supervision: 'confirmado',
+    created_by: USER_1,
     ops: {
       rail: 'Pool BitGo USDC',
       account: '0xBG...A8C2',
@@ -301,14 +371,14 @@ export const MOVIMIENTOS: Movimiento[] = [
       provider: 'BitGo',
     },
     fin: {
-      imput: 'PEND',
-      sociedad_id: null,
-      cuenta_id: null,
-      partner_id: null,
-      conc: 'PEND',
+      imput: 'IMP',
+      sociedad_id: 'cp',
+      cuenta_id: 'cu-cp-bitgo-usdc',
+      cliente_id: 'AS00000',
+      cuenta_operativa_cliente_id: 'AS00000USDC001',
     },
   },
-  // ─── IMP · ADDITION manual (carga manual aprobada) ─────────────────
+  // ─── Manual · ADDITION USD · confirmado por U2 ──────────────────────
   {
     id: 'M-2026-12830',
     tipo: 'ADDITION',
@@ -316,6 +386,12 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '+ USD 50.000',
     moneda: 'USD',
     status: 'COMPLETED',
+    origen: 'Manual',
+    requires_supervision: true,
+    supervised_by: USER_2,
+    supervised_at: '2026-04-22T12:00:00Z',
+    estado_de_supervision: 'confirmado',
+    created_by: USER_1,
     ops: {
       rail: 'Bridge USD',
       account: 'BR-7733',
@@ -328,10 +404,11 @@ export const MOVIMIENTOS: Movimiento[] = [
       imput: 'IMP',
       sociedad_id: 'asc',
       cuenta_id: 'cu-asc-bridge',
-      conc: 'CONC',
+      cliente_id: 'AS00000',
+      cuenta_operativa_cliente_id: 'AS00000USD001',
     },
   },
-  // ─── PEND · COLLECTOR_IN USDC para Astra ────────────────────────────
+  // ─── OPS · COLLECTOR_IN USDC para Astra ─────────────────────────────
   {
     id: 'M-2026-12829',
     tipo: 'COLLECTOR_IN',
@@ -339,6 +416,12 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '+ USDC 130.000',
     moneda: 'USDC',
     status: 'COMPLETED',
+    origen: 'OPS',
+    requires_supervision: false,
+    supervised_by: null,
+    supervised_at: null,
+    estado_de_supervision: 'no_aplica',
+    created_by: SYSTEM_OPS,
     ops: {
       rail: 'Pool BitGo USDC (Astra)',
       account: '0xBG...AS',
@@ -352,10 +435,9 @@ export const MOVIMIENTOS: Movimiento[] = [
       sociedad_id: null,
       cuenta_id: null,
       cliente_id: null,
-      conc: 'PEND',
     },
   },
-  // ─── IMP · WITHDRAWAL USD a Capital Plus ────────────────────────────
+  // ─── OPS · WITHDRAWAL USD a Capital Plus ────────────────────────────
   {
     id: 'M-2026-12828',
     tipo: 'WITHDRAWAL',
@@ -363,6 +445,12 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '- USD 80.000',
     moneda: 'USD',
     status: 'COMPLETED',
+    origen: 'OPS',
+    requires_supervision: false,
+    supervised_by: null,
+    supervised_at: null,
+    estado_de_supervision: 'no_aplica',
+    created_by: SYSTEM_OPS,
     ops: {
       rail: 'Convera USD',
       account: 'CV-1188',
@@ -376,10 +464,10 @@ export const MOVIMIENTOS: Movimiento[] = [
       sociedad_id: 'asc',
       cuenta_id: 'cu-asc-convera',
       cliente_id: 'cli-capital-plus',
-      conc: 'CONC',
+      cuenta_operativa_cliente_id: '005520USD001',
     },
   },
-  // ─── IMP · DEPOSIT ARS imputado a Mendoza Trading ─────────────────
+  // ─── OPS · DEPOSIT ARS imputado a Mendoza Trading ───────────────────
   {
     id: 'M-2026-12827',
     tipo: 'DEPOSIT',
@@ -387,6 +475,12 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '+ ARS 22.000.000',
     moneda: 'ARS',
     status: 'COMPLETED',
+    origen: 'OPS',
+    requires_supervision: false,
+    supervised_by: null,
+    supervised_at: null,
+    estado_de_supervision: 'no_aplica',
+    created_by: SYSTEM_OPS,
     ops: {
       rail: 'Cuenta Galicia',
       account: 'GA-3344',
@@ -400,10 +494,10 @@ export const MOVIMIENTOS: Movimiento[] = [
       sociedad_id: 'hp',
       cuenta_id: 'cu-hp-galicia',
       cliente_id: 'cli-mendoza-trading',
-      conc: 'CONC',
+      cuenta_operativa_cliente_id: '005521ARS001',
     },
   },
-  // ─── PARC · FEE Bitso, sociedad asignada pero sin proveedor_id ─────
+  // ─── Manual · FEE Bitso · pendiente_de_supervision ──────────────────
   {
     id: 'M-2026-12826',
     tipo: 'FEE',
@@ -411,6 +505,12 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '- USDT 280',
     moneda: 'USDT',
     status: 'COMPLETED',
+    origen: 'Manual',
+    requires_supervision: true,
+    supervised_by: null,
+    supervised_at: null,
+    estado_de_supervision: 'pendiente_de_supervision',
+    created_by: USER_2,
     ops: {
       rail: 'Pool Bitso USDT',
       account: 'BX-USDT',
@@ -423,11 +523,9 @@ export const MOVIMIENTOS: Movimiento[] = [
       imput: 'PARC',
       sociedad_id: 'cp',
       cuenta_id: 'cu-cp-bitso-usdt',
-      proveedor_id: null,
-      conc: 'PEND',
     },
   },
-  // ─── PEND · DEPOSIT CAD FAILED de Andes Capital ─────────────────────
+  // ─── OPS · DEPOSIT CAD FAILED de Andes Capital ──────────────────────
   {
     id: 'M-2026-12825',
     tipo: 'DEPOSIT',
@@ -435,6 +533,12 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '+ CAD 65.000',
     moneda: 'CAD',
     status: 'FAILED',
+    origen: 'OPS',
+    requires_supervision: false,
+    supervised_by: null,
+    supervised_at: null,
+    estado_de_supervision: 'no_aplica',
+    created_by: SYSTEM_OPS,
     ops: {
       rail: 'BMO CAD',
       account: 'BM-2200',
@@ -448,7 +552,125 @@ export const MOVIMIENTOS: Movimiento[] = [
       sociedad_id: null,
       cuenta_id: null,
       cliente_id: null,
-      conc: 'PEND',
+    },
+  },
+  // ─── Manual · FEE bancario · pendiente_de_supervision (creado por U2,
+  // confirmable por U1) ───────────────────────────────────────────────
+  {
+    id: 'M-2026-12824',
+    tipo: 'FEE',
+    fecha: '2026-04-20',
+    monto: '- ARS 8.500',
+    moneda: 'ARS',
+    status: 'COMPLETED',
+    origen: 'Manual',
+    requires_supervision: true,
+    supervised_by: null,
+    supervised_at: null,
+    estado_de_supervision: 'pendiente_de_supervision',
+    created_by: USER_2,
+    ops: {
+      rail: 'BIND',
+      account: '4403443/1',
+      client: null,
+      counterparty: 'BIND',
+      partner: 'BIND',
+      provider: 'BIND',
+    },
+    fin: {
+      imput: 'PARC',
+      sociedad_id: 'hp',
+      cuenta_id: 'cu-hp-bind-1',
+      cliente_id: 'AS00000',
+      cuenta_operativa_cliente_id: 'AS00000ARS001',
+    },
+  },
+  // ─── Manual · ADDITION ajuste · rechazado (creado por U1, rechazado
+  // por U2) ────────────────────────────────────────────────────────────
+  {
+    id: 'M-2026-12823',
+    tipo: 'ADDITION',
+    fecha: '2026-04-19',
+    monto: '+ USD 12.000',
+    moneda: 'USD',
+    status: 'COMPLETED',
+    origen: 'Manual',
+    requires_supervision: true,
+    supervised_by: USER_2,
+    supervised_at: '2026-04-19T18:42:00Z',
+    estado_de_supervision: 'rechazado',
+    created_by: USER_1,
+    ops: {
+      rail: 'Bridge USD',
+      account: 'BR-7733',
+      client: null,
+      counterparty: null,
+      partner: 'Bridge',
+      provider: 'Bridge',
+    },
+    fin: {
+      imput: 'PARC',
+      sociedad_id: 'asc',
+      cuenta_id: 'cu-asc-bridge',
+      cliente_id: 'AS00000',
+      cuenta_operativa_cliente_id: 'AS00000USD001',
+    },
+  },
+  // ─── Manual · TAX bancario · pendiente_de_supervision (creado por U1,
+  // confirmable por U2) ───────────────────────────────────────────────
+  {
+    id: 'M-2026-12822',
+    tipo: 'TAX',
+    fecha: '2026-04-19',
+    monto: '- ARS 3.200',
+    moneda: 'ARS',
+    status: 'COMPLETED',
+    origen: 'Manual',
+    requires_supervision: true,
+    supervised_by: null,
+    supervised_at: null,
+    estado_de_supervision: 'pendiente_de_supervision',
+    created_by: USER_1,
+    ops: {
+      rail: 'BIND',
+      account: '4403443/1',
+      client: null,
+      counterparty: 'BIND',
+      partner: 'BIND',
+      provider: 'BIND',
+    },
+    fin: {
+      imput: 'IMP',
+      sociedad_id: 'hp',
+      cuenta_id: 'cu-hp-bind-1',
+      cliente_id: 'AS00000',
+      cuenta_operativa_cliente_id: 'AS00000ARS001',
     },
   },
 ];
+
+// ────────────────────────────────────────────────────────────────────
+// KPIs (Movimientos sub-tab L2 — REQ-50 §5.2)
+// ────────────────────────────────────────────────────────────────────
+
+export interface MovimientosKpis {
+  movimientosDelDia: number;
+  /** USD-equivalent volume ingresado (display string). */
+  volumenIngresado: string;
+  /** USD-equivalent volume egresado (display string). */
+  volumenEgresado: string;
+  pendientesDeImputacion: number;
+  pendientesDeSupervision: number;
+}
+
+export const MOVIMIENTOS_KPIS: MovimientosKpis = {
+  movimientosDelDia: MOVIMIENTOS.filter((m) => m.fecha === '2026-04-24').length,
+  volumenIngresado: 'USD 1.2M',
+  volumenEgresado: 'USD 980K',
+  pendientesDeImputacion: MOVIMIENTOS.filter(
+    (m) => m.fin.cuenta_id === null || m.fin.cliente_id === null,
+  ).length,
+  pendientesDeSupervision: MOVIMIENTOS.filter(
+    (m) => m.estado_de_supervision === 'pendiente_de_supervision',
+  ).length,
+};

@@ -25,7 +25,7 @@ import { ALERTS } from '@/mocks/genericos/alertas';
 import { REPORTS_CATALOG } from '@/mocks/genericos/reportes';
 import { MOVIMIENTOS } from '@/mocks/fin/movimientos';
 import { QUOTES } from '@/mocks/fin/quotes';
-import { POS_TREE } from '@/mocks/fin/disponibilidades';
+import { POSICION_TREE } from '@/mocks/fin/disponibilidades';
 import { DASHBOARD_ACTIVITY } from '@/mocks/fin/dashboard-activity';
 import type { Alerta, AlertaState, Severity } from '@/types/genericos';
 import { cn } from '@/lib/cn';
@@ -81,10 +81,10 @@ const reportesProxVencer = computed(() => {
   return n;
 });
 
-// ─── Posición por sociedad — derived from POS_TREE ─────────────────
-// Map each POS_TREE entry to a single dashboard cell. The legacy
+// ─── Posición por sociedad — derived from POSICION_TREE ─────────────────
+// Map each POSICION_TREE entry to a single dashboard cell. The legacy
 // prototype hardcoded the canonical 4 sociedades; we surface whatever
-// POS_TREE declares so the dashboard tracks the live mock dataset.
+// POSICION_TREE declares so the dashboard tracks the live mock dataset.
 interface SociedadCell {
   id: string;
   name: string;
@@ -103,7 +103,7 @@ const SOC_ACCENTS: Record<string, string> = {
 };
 
 const sociedadCells = computed<SociedadCell[]>(() =>
-  POS_TREE.map((s) => {
+  POSICION_TREE.map((s) => {
     const totals = s.totals ?? [];
     const [primary, ...rest] = totals;
     const primaryAmount = primary ? `${primary.lbl} ${primary.val}` : '—';
@@ -332,8 +332,8 @@ function onCardKeydown(event: KeyboardEvent, href: string): void {
         tabindex="0"
         data-testid="kpi-mov-pendientes"
         class="flex cursor-pointer flex-col gap-1.5 rounded-xl border border-b-2 bg-card-2 p-5 hover:border-b-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        @click="navigateTo(ROUTE_PATHS.MOVIMIENTOS)"
-        @keydown="onCardKeydown($event, ROUTE_PATHS.MOVIMIENTOS)"
+        @click="navigateTo(ROUTE_PATHS.DISPONIBILIDADES + '?tab=movimientos')"
+        @keydown="onCardKeydown($event, ROUTE_PATHS.DISPONIBILIDADES + '?tab=movimientos')"
       >
         <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
           Mov. pendientes de imputar
@@ -352,8 +352,8 @@ function onCardKeydown(event: KeyboardEvent, href: string): void {
         tabindex="0"
         data-testid="kpi-quotes-pend"
         class="flex cursor-pointer flex-col gap-1.5 rounded-xl border border-b-2 bg-card-2 p-5 hover:border-b-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        @click="navigateTo(ROUTE_PATHS.COTIZACIONES)"
-        @keydown="onCardKeydown($event, ROUTE_PATHS.COTIZACIONES)"
+        @click="navigateTo(ROUTE_PATHS.VENTAS)"
+        @keydown="onCardKeydown($event, ROUTE_PATHS.VENTAS)"
       >
         <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
           Quotes pend. facturación
@@ -405,7 +405,7 @@ function onCardKeydown(event: KeyboardEvent, href: string): void {
           <button
             type="button"
             class="text-[11px] text-t-3 hover:text-t-1"
-            @click="navigateTo(ROUTE_PATHS.TESORERIA)"
+            @click="navigateTo(ROUTE_PATHS.DISPONIBILIDADES)"
           >
             Ir a Tesorería →
           </button>
@@ -416,7 +416,7 @@ function onCardKeydown(event: KeyboardEvent, href: string): void {
             :key="cell.id"
             :data-testid="`dashboard-soc-${cell.id}`"
             class="flex cursor-pointer flex-col gap-1.5 rounded-lg border border-b-1 bg-card p-3 transition-colors hover:border-b-2"
-            @click="navigateTo(ROUTE_PATHS.TESORERIA)"
+            @click="navigateTo(ROUTE_PATHS.DISPONIBILIDADES)"
           >
             <div class="flex items-center gap-2">
               <span :class="cn('h-2 w-2 rounded-full', cell.accent)" aria-hidden="true" />
