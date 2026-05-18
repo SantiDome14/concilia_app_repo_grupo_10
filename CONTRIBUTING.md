@@ -56,8 +56,7 @@ These rules apply to **every file in the repository** and are non-negotiable. Th
 |---|---|---|
 | `framework/` | `[topic].md` | `marco-legal.md`, `mision-vision.md` |
 | `entities/` | `[entity-name].md` | `haz-pagos.md`, `ardua-solutions-corp.md` |
-| `discoveries/` | `[aplicacion]-[topic]-discovery.md` | `lex-alertas-discovery.md`, `clp-earn-discovery.md` |
-|  | `[topic]-discovery.md` (transversal) | `jira-automations-discovery.md` |
+| `discoveries/` | See §5.4 of `framework/project-instructions.md` for the full 7-category table (Product umbrella/module/functionality/transversal feature, Cross-core architecture, Internal infrastructure, Process/tooling) | `clp-discovery.md`, `lex-alertas-discovery.md`, `fin-reporteria-pnl-discovery.md`, `core-modulos-transversales-discovery.md`, `observabilidad-discovery.md`, `jira-sla-discovery.md` |
 | `features/[aplicacion]/` | `README.md` (global state) | `features/clp/README.md` |
 |  | `[aplicacion]-[modulo-o-feature].md` | `features/clp/clp-rfq.md`, `features/trd/trd-proveedores-de-liquidez.md` |
 | `features/common/` | `README.md` (global state of transversal features) | `features/common/README.md` |
@@ -77,15 +76,16 @@ The system enforces these relationships when proposing changes.
 
 ### 2.4 Discovery `features` field syntax
 
-The `features` array in a discovery's YAML frontmatter has three valid forms:
+The `features` array in a discovery's YAML frontmatter has four valid forms:
 
 | Case | Syntax | Example |
 |---|---|---|
 | Hypothesis scoped to one or more financial-core products | `[APP1]`, `[APP1, APP2]` | `[CLP]`, `[LEX, FIN]` |
 | Hypothesis on a **transversal feature** (cross-product, lives in `features/common/`) | `[COMMON]` | `[COMMON]` for a hypothesis on the unified notifications system |
-| Hypothesis on a **transversal infrastructure system** (no feature folder) | `[]` (empty array) | `[]` for `jira-automations-discovery.md`, `observabilidad-discovery.md` |
+| Hypothesis on **cross-core architecture** (questions how core apps relate to each other) | `[CORE]` | `[CORE]` for `core-modulos-transversales-discovery.md` |
+| Hypothesis on **internal infrastructure** or **process/tooling** (no feature folder) | `[]` (empty array) | `[]` for `jira-automations-discovery.md`, `observabilidad-discovery.md`, `jira-sla-discovery.md` |
 
-The `COMMON` token is reserved for transversal features only; do not use it for infrastructure tooling.
+The `COMMON` token is reserved for transversal features only; the `[CORE]` token is for cross-core architecture. Do not use either for internal infrastructure or process/tooling — those use empty array `[]`.
 
 ---
 
@@ -97,7 +97,7 @@ Discoveries are **investigations of hypotheses**. They are not snapshots of prod
 
 Every discovery file has two parts:
 
-- **YAML frontmatter** with metadata: `name`, `features`, `status`, `owner`, `created_at`, `updated_at`.
+- **YAML frontmatter** with metadata: `name`, `features`, `status`, `owner`, `created_at`, `updated_at`, `propagates_to`. See `framework/project-instructions.md` §11.3 for the full specification of each field.
 - **Body** starting with `# Heading` matching `name`, followed by two mandatory sections (`## Objetivo`, `## Contexto`). The rest of the body is free-form.
 
 The full specification with field semantics and template lives in `discoveries/README.md`.
@@ -116,9 +116,9 @@ A discovery file is **not deleted at conclusion**. It stays in `discoveries/` as
 
 ### 3.3 Critical propagation rule
 
-When a hypothesis is concluded, the system must always propose **propagating the conclusion to the affected feature file(s)**. A validated learning that doesn't update `features/` is a leak.
+When a hypothesis is concluded, the system must always propose **propagating the conclusion to the destination(s) declared in `propagates_to:`** — which may include `features/`, `framework/`, `entities/`, `workflows/`, or `skills/`, depending on the nature of the conclusion. A validated learning that doesn't propagate to its declared destination(s) is a leak.
 
-If a single discovery impacts multiple features, the propagation step must update every affected feature file.
+If a single discovery propagates to multiple destinations, the propagation step must update every affected file.
 
 ---
 

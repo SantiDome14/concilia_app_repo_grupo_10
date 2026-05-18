@@ -1,45 +1,82 @@
-# Discovery — Convención y criterio
+# Discoveries — Manual de uso
 
-> Última actualización: 2026-05-04
+> Este archivo es el **manual** de la carpeta `discoveries/`. Para el catálogo navegable de los discoveries existentes, ver [`INDEX.md`](./INDEX.md).
+>
+> Última actualización: 2026-05-17
 
 ## Propósito
 
-Esta carpeta contiene las **investigaciones de hipótesis** del área de Producto: cada archivo captura una hipótesis (o un área acotada de investigación) y los hallazgos que se acumulan mientras se la valida.
+`discoveries/` es la **fuente principal del pilar Thinking Partner** del framework (§4.1 de `framework/project-instructions.md`). Cada archivo captura una **hipótesis** o un área acotada de investigación, junto con los hallazgos que se acumulan mientras se la valida.
 
-Un discovery responde a la pregunta: **"¿qué hipótesis estamos validando, y qué aprendimos?"**. **No** es un snapshot del estado actual de un producto — eso vive en `features/`.
+Un discovery responde a la pregunta: **"¿qué hipótesis estamos investigando, y qué aprendimos?"**.
+
+Las hipótesis pueden tocar cualquier dimensión relevante para Producto: aplicaciones, módulos, funcionalidades, arquitectura cross-core, infraestructura, procesos, metodología, herramientas. No están limitadas a features de producto.
+
+Un discovery **no** es un snapshot del estado actual de un producto — eso vive en `features/`.
 
 ---
 
-## Lugar en la triada
+## Lugar en el framework
 
 ```
 Investigar → Definir → Prototipar
 discoveries/  features/   prototypes/
 ```
 
-Las tres carpetas forman el **bucle de producción** del framework. Cada hipótesis nace en `discoveries/`. Cuando madura, sus conclusiones se **propagan** al feature correspondiente en `features/[aplicacion]/`. El estado consolidado del producto vive en `features/`; el rastro del proceso de validación vive en `discoveries/`.
+La triada `discoveries → features → prototypes` describe el **subset producto-scoped** del bucle de producción. Cuando una hipótesis sobre un producto madura, sus conclusiones se **propagan al feature correspondiente** en `features/[aplicacion]/`, y eventualmente se reflejan en `prototypes/[aplicacion]/`.
+
+Pero `discoveries/` cubre más que productos. Una hipótesis sobre arquitectura, infraestructura o proceso también vive acá, y propaga a `framework/`, `entities/`, `workflows/`, `skills/` o queda auto-contenida en el propio discovery — sin pasar por la triada.
 
 ### Cardinalidad
 
-- **Discovery → Features: N-N.** Una hipótesis puede impactar uno o más features. Un feature puede recibir aportes de uno o más discoveries a lo largo de su vida.
-
-> Ejemplo: una investigación sobre cómo se autentican operadores externos en Ardua puede impactar simultáneamente a `features/clp/clp-accounts.md` y a `features/lex/lex-limites.md`. Cada feature se actualiza con la parte que le aplica; el discovery queda como registro único de la investigación.
+- **Discovery → cualquier destino: N-N.** Una hipótesis puede impactar uno o varios destinos. Un mismo archivo destino puede recibir aportes de uno o varios discoveries a lo largo de su vida.
 
 ---
 
-## Estructura
+## Estructura de la carpeta
 
-La carpeta es **plana**. Todo discovery vive directamente bajo `discoveries/`, sin subcarpetas. No existe distinción `active/archived` — el estado de cada discovery se captura en su header (ver §"Estructura del archivo").
+La carpeta es **plana**. Todo discovery vive directamente bajo `discoveries/`, sin subcarpetas. No existe distinción `active/archived` — el estado de cada discovery se captura en su frontmatter (ver "Ciclo de vida" más abajo).
+
+La navegación humana y de agentes se hace a través de [`INDEX.md`](./INDEX.md), no del filesystem. Ese índice se mantiene a mano por el agente que opera dentro del framework, dentro del flujo de sesión (ver `framework/project-instructions.md` §11.5).
+
+```
+discoveries/
+├── README.md             ← este archivo (manual de uso)
+├── INDEX.md              ← catálogo navegable por categoría y estado
+└── *-discovery.md        ← cada archivo = una hipótesis
+```
+
+---
+
+## Categorías de discovery
+
+El framework reconoce **siete categorías** según la naturaleza de lo que se investiga (definidas en `framework/project-instructions.md` §5.4):
+
+| Categoría | Patrón de naming | Ejemplo | `features:` |
+|---|---|---|---|
+| Producto — aplicación (umbrella) | `[aplicacion]-discovery.md` | `clp-discovery.md` | `[CLP]` |
+| Producto — módulo | `[aplicacion]-[modulo]-discovery.md` | `lex-alertas-discovery.md` | `[LEX]` |
+| Producto — funcionalidad | `[aplicacion]-[modulo]-[funcionalidad]-discovery.md` | `fin-reporteria-pnl-discovery.md` | `[FIN]` |
+| Producto — feature transversal | `[feature]-discovery.md` | `centro-de-alertas-discovery.md` | `[COMMON]` |
+| Arquitectura cross-core | `core-[topic]-discovery.md` | `core-modulos-transversales-discovery.md` | `[CORE]` |
+| Infraestructura interna | `[topic]-discovery.md` | `observabilidad-discovery.md` | `[]` |
+| Proceso / herramienta / metodología | `[topic]-discovery.md` | `jira-sla-discovery.md` | `[]` |
+
+**Reglas de coexistencia:**
+
+- `[aplicacion]-discovery.md` (umbrella) y `[aplicacion]-[modulo]-discovery.md` (módulo) **pueden coexistir**. El umbrella es la investigación product-wide; los módulo-específicos son bifurcaciones focalizadas.
+- Cuando un discovery acumula varias hipótesis sobre el mismo scope, **no se renombra** — las hipótesis adicionales son iteraciones en el mismo archivo. Si una hipótesis del umbrella merece archivo propio, se crea uno más profundo y se deja un breadcrumb en el original.
+- **Un archivo, una identidad de scope.** No existe `lex-alertas-criticas-discovery.md` y `lex-alertas-no-criticas-discovery.md` separados — eso es bifurcación a nivel hipótesis, y va dentro del body del archivo de módulo.
 
 ---
 
 ## Estructura del archivo
 
-Todo discovery sigue una estructura estandarizada que separa **metadatos** (header) y **contenido** (body). Esto permite que cualquier PM o herramienta externa pueda procesar el estado y alcance de un discovery sin leer todo el documento.
+Todo discovery sigue una estructura estandarizada que separa **metadatos** (header) y **contenido** (body). Esto permite que cualquier PM o herramienta pueda procesar el estado, alcance y destino de un discovery sin leer todo el documento.
 
 ### Header obligatorio — YAML frontmatter
 
-El archivo arranca con un bloque YAML delimitado por `---` que captura los metadatos del discovery:
+El archivo arranca con un bloque YAML delimitado por `---`:
 
 ```yaml
 ---
@@ -49,6 +86,7 @@ status: En investigación
 owner: Yasmani Rodriguez
 created_at: 2026-04-15
 updated_at: 2026-04-30
+propagates_to: []
 ---
 ```
 
@@ -56,30 +94,39 @@ updated_at: 2026-04-30
 
 | Campo | Tipo | Descripción |
 |---|---|---|
-| `name` | string | Título descriptivo de la investigación. Se repite como `# Heading` al inicio del body para visualización en GitHub. |
-| `features` | array | Lista de productos del financial-core afectados, en mayúsculas (`[LEX]`, `[CLP, FIN]`). Para hipótesis sobre **features transversales** (cross-product) usar `[COMMON]`. Para discoveries de **sistemas transversales de infraestructura** (`core-template-frontend`, `jira-automations`, `observabilidad`) usar array vacío `[]`. Ver §"Sintaxis de `features`" para la distinción. |
-| `status` | enum | Estado del discovery. Valores aceptados: `En investigación`, `Concluida`, `Descartada`. Ver §"Ciclo de vida" para el significado de cada uno. |
-| `owner` | string | Nombre completo del PM responsable de la investigación. |
-| `created_at` | date | Fecha de creación del archivo en formato `YYYY-MM-DD`. |
-| `updated_at` | date | Fecha de la última actualización significativa, en formato `YYYY-MM-DD`. Se actualiza con cada iteración. |
-
-El `features` array referencia productos a nivel de aplicación (carpeta en `features/`), no a nivel de feature file específico. Si un discovery aporta a `features/lex/lex-alertas.md`, el array igual lleva `[LEX]`. La referencia al feature file específico va en el body cuando se sepa.
+| `name` | string | Título descriptivo de la investigación. Se repite como `# Heading` al inicio del body. |
+| `features` | array | Filtro semántico rápido. Cuatro formas válidas: `[APP1]` o `[APP1, APP2]` para hipótesis sobre productos del financial-core; `[COMMON]` para features transversales; `[CORE]` para arquitectura cross-core; `[]` para infraestructura o proceso/tooling. Ver "Sintaxis de `features`" más abajo. |
+| `status` | enum | `En investigación`, `Concluida`, `Descartada`. |
+| `owner` | string | Nombre completo del PM responsable. |
+| `created_at` | date | `YYYY-MM-DD`. |
+| `updated_at` | date | `YYYY-MM-DD`. Se actualiza con cada iteración significativa. |
+| `propagates_to` | array | Paths relativos al root del repo donde se propagaron (o se van a propagar) las conclusiones del discovery. Se completa al concluir. Puede omitirse o ser `[]` mientras está `En investigación`, o cuando es `Descartada` sin propagación. |
 
 #### Sintaxis de `features`
-
-La convención distingue tres casos:
 
 | Caso | Sintaxis | Ejemplo |
 |---|---|---|
 | Hipótesis sobre uno o varios productos del financial-core | `[APP1]`, `[APP1, APP2]` | `[CLP]`, `[LEX, FIN]` |
-| Hipótesis sobre una **feature transversal** (cross-product, vive en `features/common/`) | `[COMMON]` | `[COMMON]` para una hipótesis sobre el sistema unificado de notificaciones |
-| Hipótesis sobre un **sistema transversal de infraestructura** (no es feature, no tiene carpeta en `features/`) | `[]` (array vacío) | `[]` para `jira-automations-discovery.md`, `observabilidad-discovery.md` |
+| Hipótesis sobre una **feature transversal** (vive en `features/common/`) | `[COMMON]` | `[COMMON]` para el sistema unificado de notificaciones |
+| Hipótesis sobre **arquitectura cross-core** | `[CORE]` | `[CORE]` para `core-modulos-transversales-discovery.md` |
+| Hipótesis sobre **infraestructura interna** o **proceso/tooling** | `[]` | `[]` para `jira-automations-discovery.md`, `observabilidad-discovery.md`, `jira-sla-discovery.md` |
 
-El token `COMMON` es **solo para features transversales** que viven en `features/common/`. No se usa para infraestructura interna; ésa lleva array vacío.
+El token `COMMON` es **solo para features transversales** que viven en `features/common/`. `[CORE]` es **solo para arquitectura cross-core**. Para infraestructura o tooling se usa array vacío `[]`.
+
+#### Sintaxis de `propagates_to`
+
+Lista de paths relativos al root del repo, uno por destino. Ejemplo de un discovery concluido con propagación múltiple:
+
+```yaml
+propagates_to:
+  - features/fin/fin-reporteria-pnl.md
+  - skills/ardua-pnl-report/SKILL.md
+  - framework/financial-core-modules.md
+```
 
 ### Body — mínimo obligatorio
 
-Después del frontmatter, el body arranca con el `# Heading` que repite el `name` del header (para visualización), y a continuación dos secciones obligatorias:
+Después del frontmatter, el body arranca con el `# Heading` que repite el `name`, y a continuación dos secciones obligatorias:
 
 ```markdown
 # [Mismo valor que `name` del frontmatter]
@@ -91,9 +138,9 @@ Qué se busca aprender, validar o decidir con esta investigación.
 Origen del problema, antecedentes relevantes, por qué esta hipótesis emerge ahora.
 ```
 
-El resto del body queda a **libre criterio de la interacción** (sesión con el sistema). Secciones típicas que pueden aparecer según el caso: hipótesis específicas, hallazgos, opciones evaluadas, decisiones, blockers, referencias a otros discoveries o features, anexos.
+El resto del body queda a libre criterio de la interacción. Secciones típicas según el caso: hipótesis específicas, hallazgos, opciones evaluadas, decisiones, blockers, referencias a otros discoveries o destinos, anexos.
 
-**Lo crítico:** que en algún punto del ciclo de vida del discovery, el `Objetivo` y el `Contexto` queden documentados — ya sea desde el primer guardado o aterrizados en iteraciones siguientes. Sin eso, el discovery no es navegable para nadie más que su autor.
+Lo crítico: que en algún punto del ciclo de vida del discovery, el `Objetivo` y el `Contexto` queden documentados. Sin eso, el discovery no es navegable para nadie más que su autor.
 
 ### Template completo
 
@@ -105,6 +152,7 @@ status: En investigación
 owner: [Nombre completo del PM]
 created_at: YYYY-MM-DD
 updated_at: YYYY-MM-DD
+propagates_to: []
 ---
 
 # [Mismo valor que `name`]
@@ -122,65 +170,40 @@ updated_at: YYYY-MM-DD
 
 ## Cuándo se crea un discovery
 
-Cuando hay una **hipótesis** que requiere investigación antes de poder afectar el estado de un producto. Por ejemplo:
+Cuando hay una hipótesis o un problema sin resolver que requiere investigación antes de poder afectar al producto, al framework, a una entidad, a un proceso o a una herramienta. Ejemplos:
 
-- *"El módulo de Earn de CLP debería operar con AdCap como contraparte de FCI"* → genera `clp-earn-discovery.md`.
-- *"Nuestro sistema de alertas LEX debe tener tres perfiles de comportamiento"* → genera `lex-alertas-discovery.md`.
-- *"Las automatizaciones de Jira deberían disparar comentarios automáticos al cambiar de estado"* → genera `jira-automations-discovery.md` (transversal, no scoped a un producto).
+- *"El módulo de Earn de CLP debería operar con AdCap como contraparte de FCI"* → `clp-earn-discovery.md`.
+- *"Nuestro sistema de alertas LEX debe tener tres perfiles de comportamiento"* → `lex-alertas-discovery.md`.
+- *"Las automatizaciones de Jira deberían disparar comentarios automáticos al cambiar de estado"* → `jira-automations-discovery.md`.
+- *"Hay que estandarizar criterios y funcionalidades transversales en todo el Ardua Financial Core"* → `core-modulos-transversales-discovery.md`.
 
 **No se crea un discovery para:**
 
-- Capturar el estado actual de un producto. Eso va a `features/[aplicacion]/README.md`.
-- Especificar un feature ya validado. Eso va a `features/[aplicacion]/[aplicacion]-[modulo-o-feature].md`.
-- Documentar una decisión operacional o un proceso. Eso vive en otros sistemas (Notion, framework, etc.).
+- Capturar el estado actual de un producto → eso va a `features/[aplicacion]/README.md`.
+- Especificar un feature ya validado → eso va a `features/[aplicacion]/[aplicacion]-[modulo-o-feature].md`.
+- Documentar un constraint ya consolidado del grupo (legal, operativo, contable) → eso va a `framework/`.
 
 ---
 
 ## Ciclo de vida
 
-Un discovery atraviesa tres estados:
+Un discovery atraviesa tres estados, declarados en el campo `status` del frontmatter:
 
 | Estado | Significado |
 |---|---|
-| **En investigación** | La hipótesis está siendo activamente validada. Se itera con cada nuevo hallazgo. |
-| **Concluida — propagada a features/[...]** | La hipótesis fue validada o suficientemente definida. Los hallazgos relevantes ya fueron propagados al/los feature(s) correspondiente(s). |
-| **Descartada** | La hipótesis fue rechazada. El archivo se mantiene como registro de **por qué** se descartó. |
-
-El estado se declara en el campo `status` del frontmatter del archivo (ver §"Estructura del archivo").
+| **En investigación** | La hipótesis está siendo activamente validada. Se itera con cada nuevo hallazgo. `propagates_to:` puede estar vacío o ser indicativo. |
+| **Concluida** | La hipótesis fue validada o suficientemente definida. Los hallazgos relevantes ya fueron propagados a los destinos declarados en `propagates_to:`. |
+| **Descartada** | La hipótesis fue rechazada. El archivo se mantiene como registro de **por qué** se descartó. `propagates_to:` puede quedar vacío. |
 
 ### Regla crítica de propagación
 
-> **Cuando una hipótesis se concluye, sus hallazgos relevantes se propagan al feature file correspondiente en `features/`.**
+> **Cuando una hipótesis se concluye, sus hallazgos relevantes se propagan al destino correspondiente.**
 >
-> Un aprendizaje validado que no actualiza `features/` es una fuga. El sistema debe siempre proponer la propagación al cerrar un discovery.
+> El destino depende de la naturaleza de la conclusión: `features/`, `framework/`, `entities/`, `workflows/`, `skills/`, o una combinación. Se declara explícitamente en el campo `propagates_to:`.
+>
+> Un aprendizaje validado que no se propaga a su destino declarado es una fuga. El sistema debe siempre proponer la propagación al cerrar un discovery.
 
-Si un discovery impacta varios features, la propagación debe actualizar **cada uno** de los features afectados.
-
----
-
-## Convención de nombres
-
-```
-[aplicacion]-[topic]-discovery.md        ← scoped a una aplicación o módulo
-[topic]-discovery.md                     ← transversal (no scoped)
-```
-
-Reglas:
-
-- Todo en **kebab-case**.
-- **ASCII only** — sin acentos, sin `ñ`, sin caracteres especiales. Set permitido: `[a-z0-9-]`.
-- Siempre termina en `-discovery.md`.
-- Cuando aplica, el prefijo `[aplicacion]-` agrupa el discovery con su aplicación de impacto principal en el listado de la carpeta.
-
-**Ejemplos:**
-
-```
-clp-earn-discovery.md                    ← hipótesis sobre Earn dentro de CLP
-trd-proveedores-de-liquidez-discovery.md ← hipótesis sobre Proveedores de TRD
-lex-alertas-discovery.md                 ← hipótesis sobre el módulo de Alertas de LEX
-jira-automations-discovery.md            ← transversal, no scoped a un producto
-observabilidad-discovery.md              ← transversal
-```
+Si un discovery propaga a múltiples destinos, la propagación debe actualizar **cada uno** de los archivos afectados.
 
 ---
 
@@ -192,13 +215,31 @@ El sufijo `v[N]` se reserva **solo para forks conceptuales reales**: pivotes, ca
 
 ---
 
-## Caso especial — Sistemas transversales
+## Creación de un archivo nuevo
 
-Algunos discoveries describen **sistemas transversales** que no son productos del financial-core (p. ej. `core-template-frontend`, `jira-automations`, `observabilidad`). Estos discoveries:
+Antes de crear uno nuevo:
 
-- Existen como cualquier otro archivo en `discoveries/`.
-- **No tienen carpeta correspondiente en `features/` ni en `prototypes/`.**
-- Sus definiciones, cuando se consolidan, viven dentro del propio discovery o se referencian desde `framework/`.
+1. Consultar [`INDEX.md`](./INDEX.md) y/o listar `discoveries/` para verificar si ya existe un discovery sobre el mismo dominio o hipótesis.
+2. Si existe → actualizar el archivo existente, no duplicar.
+3. Si no existe → crear con el patrón de naming correspondiente a la categoría (ver "Categorías de discovery") y declarar el estado inicial en el header (`En investigación`).
+4. Actualizar [`INDEX.md`](./INDEX.md) con la nueva entrada.
+
+Si la sesión introduce una hipótesis y no hay discovery, **el primer paso es proponer crearlo**.
+
+---
+
+## Mantenimiento de `INDEX.md`
+
+[`INDEX.md`](./INDEX.md) es un catálogo navegable de todos los discoveries, agrupado por categoría y con estado, owner y fecha de última actualización. Se mantiene **a mano** por el agente operando dentro del framework, dentro del flujo de cierre de sesión (`framework/project-instructions.md` §11.5).
+
+Eventos que disparan actualización del índice:
+
+- Se crea un discovery nuevo.
+- Se renombra un discovery existente.
+- Un discovery cambia de `status` (de `En investigación` a `Concluida` o `Descartada`).
+- Se actualiza `updated_at` de un discovery (la entrada en el índice debe reflejarlo).
+
+No hay script automatizado. El índice es un compromiso de mantenimiento manual.
 
 ---
 
@@ -206,25 +247,13 @@ Algunos discoveries describen **sistemas transversales** que no son productos de
 
 Algunos discoveries actuales (heredados del modelo previo) son **agregados por aplicación** que mezclan estado actual + hipótesis activas (p. ej. `clp-discovery.md`, `ops-discovery.md`, `trd-discovery.md`, `lex-discovery.md`, `fin-discovery.md`).
 
-Bajo el nuevo modelo, esos archivos se separan progresivamente cuando cada producto se toque en una sesión real:
+Bajo el modelo actual, esos archivos se separan progresivamente cuando cada producto se toca en una sesión real:
 
 1. El **estado actual** del producto se migra a `features/[aplicacion]/README.md` y a los feature files individuales.
-2. Las **hipótesis activas** quedan en `discoveries/` como discoveries scoped (`[aplicacion]-[topic]-discovery.md`).
+2. Las **hipótesis activas** quedan en `discoveries/` como discoveries scoped a su categoría correspondiente (módulo, funcionalidad, etc.).
 3. El archivo agregado original puede archivarse o mantenerse como referencia histórica según el caso.
 
 No se hace una migración en bloque — se separa cuando hay una sesión real que lo justifique.
-
----
-
-## Creación de un archivo nuevo
-
-Antes de crear uno nuevo:
-
-1. Listar `discoveries/` y verificar si ya existe un discovery sobre el mismo dominio o hipótesis.
-2. Si existe → actualizar el archivo existente, no duplicar.
-3. Si no existe → crear con el patrón de naming correspondiente y declarar el estado inicial en el header (`En investigación`).
-
-Si la sesión introduce una hipótesis y no hay discovery, **el primer paso es proponer crearlo**.
 
 ---
 

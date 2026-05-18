@@ -127,23 +127,38 @@ Expected outputs:
 
 ## 5. The Discovery–Features–Prototypes Triad
 
-These three folders form the **core production loop** of the framework. They are tightly coupled and reflect the natural flow of how products are created and updated at Ardua:
+These three folders form the **core production loop** of the framework for product-scoped work. They are tightly coupled and reflect the natural flow of how products are created and updated at Ardua:
 
 > **Investigate → Define → Prototype**
 >
 > First we investigate (discovery). From the investigation, definitions land (features). Those definitions give rise to prototypes — or to modifications of existing prototypes.
 
+The triad describes the **product-scoped subset** of discoveries. As declared in §5.1, `discoveries/` is the primary output of the Thinking Partner pillar (§4.1) and covers more than products — architectural decisions, methodology, infrastructure, tooling, and process all live as discoveries too. Those non-product discoveries do not flow through the triad; they propagate to `framework/`, `entities/`, `workflows/`, `skills/`, or remain self-contained.
+
 ### 5.1 `discoveries/` — Investigation of hypotheses
 
-**Role:** capture and validate hypotheses about how something works, should work, or could work.
+**Role:** `discoveries/` is the primary output of the **Thinking Partner** pillar (§4.1). It captures and validates hypotheses on any dimension relevant to Product: applications, modules, functionalities, architecture, infrastructure, processes, methodology, tooling. It is not restricted to product features.
 
-**Structure:** flat. Every discovery file lives directly in `discoveries/`, with no nested folders.
+A discovery is **not** a snapshot of a product's current state. The current state lives in `features/`. A discovery captures what was being investigated, what was learned, and where the conclusion landed.
 
-**Cardinality:** a single discovery can impact **one or many** features. Conversely, a single feature can receive contributions from **one or many** discoveries throughout its life. The relation is **N-N**.
+**Structure:** flat. Every discovery file lives directly in `discoveries/`, with no nested folders. Navigation is provided by `discoveries/INDEX.md` (catalog), not by filesystem hierarchy.
 
-**Lifecycle:** when a hypothesis matures (validated, discarded, or defined), the conclusions are **propagated directly to the corresponding feature file(s)** in `features/`. The discovery file itself remains as a historical record of the investigation.
+**Propagation:** when a hypothesis concludes, its conclusion propagates **to wherever the solution lives** in the repository. The destination depends on the nature of the conclusion:
 
-A discovery is **not** a snapshot of a product's current state. The current state lives in `features/`. A discovery captures what was being investigated and what was learned.
+- Product capability of a core application → `features/[aplicacion]/[...].md`
+- Cross-product transversal capability → `features/common/[feature].md`
+- Architectural, methodological, or structural decision → corresponding file in `framework/`
+- Operational capability of an entity → `entities/[name].md`
+- Automation → `workflows/[workflow].json`
+- Claude Skill → `skills/[name]/SKILL.md`
+- Decision to not proceed → only the discovery itself, with `status: Descartada`
+- A single discovery may propagate to multiple destinations simultaneously
+
+Propagation destinations are declared in the `propagates_to:` field of the YAML frontmatter (see §11.3). A concluded discovery without propagation to its corresponding destination is a leak and must be flagged by the system.
+
+**Cardinality:**
+
+- Discovery → any destination: **N-N**. A single discovery can impact one or many destinations; a single destination file can receive contributions from one or many discoveries.
 
 ### 5.2 `features/` — Source of truth of product state
 
@@ -170,13 +185,26 @@ The `features/common/` folder follows the same structure (`README.md` + per-capa
 
 **Cardinality with features:** **1-1** at the product level. `features/clp/` ↔ `prototypes/clp/`. Individual features within a product are reflected as views/modules inside the same prototype.
 
-### 5.4 Transversal systems vs transversal features
+### 5.4 Categories of discoveries
 
-The framework distinguishes two kinds of "transversal" things:
+Discoveries cover a broad range of inquiries, not just product features. The framework recognizes seven categories based on the **nature of what is being investigated**:
 
-- **Transversal features** — user-facing capabilities that appear in multiple products with the same semantics (notifications, alerts, inboxes). These **do** have a folder in `features/common/` and are referenced from discoveries with `features: [COMMON]`. They do not have a dedicated prototype folder — they are reflected inside the prototype of each product that implements them.
+| Category | Naming pattern | Example | `features:` frontmatter |
+|---|---|---|---|
+| Product — application (umbrella) | `[aplicacion]-discovery.md` | `clp-discovery.md` | `[CLP]` |
+| Product — module | `[aplicacion]-[modulo]-discovery.md` | `lex-alertas-discovery.md` | `[LEX]` |
+| Product — functionality | `[aplicacion]-[modulo]-[funcionalidad]-discovery.md` | `fin-reporteria-pnl-discovery.md` | `[FIN]` |
+| Product — transversal feature | `[feature]-discovery.md` | `centro-de-alertas-discovery.md` | `[COMMON]` |
+| Cross-core architecture | `core-[topic]-discovery.md` | `core-modulos-transversales-discovery.md` | `[CORE]` |
+| Internal infrastructure | `[topic]-discovery.md` | `observabilidad-discovery.md` | `[]` |
+| Process / tooling / methodology | `[topic]-discovery.md` | `jira-sla-discovery.md` | `[]` |
 
-- **Transversal infrastructure systems** — internal tooling that is not a user-facing feature (e.g., `core-template-frontend`, `jira-automations`, `observabilidad`). These have a discovery file but **do not have** a folder in `features/` or `prototypes/`. Their discoveries use `features: []`. Their definitions, when consolidated, live inside the discovery itself or are referenced from `framework/`.
+**Notes:**
+
+- The first four categories cover **product-scoped** discoveries. They propagate primarily to `features/`.
+- **Cross-core architecture** (`[CORE]`) is for hypotheses that question how the financial-core applications relate to each other or what should be standardized across them. They typically propagate to `framework/` and to multiple features simultaneously.
+- **Internal infrastructure** and **Process/tooling** discoveries share the same naming pattern (no application prefix) and are distinguished by content, not by name. They propagate to `framework/`, `skills/`, `workflows/`, or remain self-contained.
+- The last three categories (cross-core, infrastructure, process) **do not have** dedicated folders in `features/` or `prototypes/`. Their outputs land in the files that actually carry the decision.
 
 ---
 
@@ -284,7 +312,7 @@ At the start of every session, or when the work touches a specific core applicat
 
 3. **`features/[aplicacion]/`** — When the session targets a specific product, **the first file to load is `features/[aplicacion]/README.md`** to understand the product's current consolidated state. If the work touches a specific feature within the product, also load `features/[aplicacion]/[aplicacion]-[modulo-o-feature].md`. This is the source of truth.
 
-4. **`discoveries/`** — When the session involves investigating a hypothesis or refining one previously captured, identify and read the relevant `[topic]-discovery.md` file(s). Discoveries are flat in the folder; there is no `active/archived` distinction. A discovery may target one or several features in `features/`.
+4. **`discoveries/`** — When the session involves investigating a hypothesis or refining one previously captured, identify and read the relevant `*-discovery.md` file(s), and consult `discoveries/INDEX.md` for the catalog view. Discoveries are flat in the folder; there is no `active/archived` distinction. A discovery may propagate to one or several destinations across `features/`, `framework/`, `entities/`, `workflows/`, or `skills/` (see §5.1).
 
 5. **`prototypes/[aplicacion]/`** — Consulted when the session involves visualizing or iterating on the prototype of a product. Each product has its own prototype folder, in 1:1 correspondence with `features/`.
 
@@ -304,16 +332,16 @@ The system must propose updating files when any of the following events occur:
 
 | Event | File to update |
 | ----- | -------------- |
-| A new hypothesis is captured | `discoveries/[topic]-discovery.md` (new or existing) |
-| A hypothesis is validated, discarded, or refined | `discoveries/[topic]-discovery.md` AND propagation to `features/[aplicacion]/[...].md` |
+| A new hypothesis is captured | `discoveries/[name]-discovery.md` (new or existing) + `discoveries/INDEX.md` |
+| A hypothesis is validated, discarded, or refined | `discoveries/[name]-discovery.md` AND propagation to the destination(s) declared in `propagates_to:` (see §5.1) + `discoveries/INDEX.md` |
 | A scope or design decision is made | `features/[aplicacion]/[...].md` (the affected feature or the global README) |
 | The state of a product changes (new module, deprecated module, milestone) | `features/[aplicacion]/README.md` |
 | A prototype is created or iterated | `prototypes/[aplicacion]/` (the corresponding files inside the project folder) |
 | New information about an entity surfaces | `entities/[nombre-entidad].md` |
 
-**Critical propagation rule:** when a discovery hypothesis is concluded, the system must **always propose propagating** the conclusion to the affected feature file(s). A validated learning that doesn't update `features/` is a leak.
+**Critical propagation rule:** when a discovery concludes, the system must **always propose propagating** the conclusion to wherever the solution lives — `features/`, `framework/`, `entities/`, `workflows/`, `skills/`, or any combination thereof — as declared in the discovery's `propagates_to:` field. A concluded discovery whose conclusion did not propagate to its declared destination(s) is a leak.
 
-**Framework files (`framework/`) are not in scope for session updates.** They are only modified when explicitly requested by the Head of Product to reflect real changes in the group's legal, operational, or accounting structure, and require approval via Pull Request.
+**Framework files (`framework/`) are not in scope for direct session edits** unless the conclusion of a discovery propagates explicitly to them. Direct edits to `framework/` outside the propagation flow are reserved for Head of Product approval via Pull Request.
 
 The system must not update any file without explicit confirmation. It must propose the change, show which section would be modified, and write only after approval.
 
@@ -327,11 +355,18 @@ Every discovery file follows a standardized structure with two parts:
 
 1. **Header (YAML frontmatter)** — mandatory metadata block at the top of the file with the following fields:
    - `name` — descriptive title of the investigation
-   - `features` — array of products affected. Three valid forms: `[APP1]` or `[APP1, APP2]` for hypotheses scoped to financial-core products; `[COMMON]` for hypotheses on transversal features (those living in `features/common/`); `[]` for hypotheses on transversal infrastructure systems (`core-template-frontend`, `jira-automations`, `observabilidad`).
+   - `features` — array of products affected, used as a fast semantic filter. Four valid forms: `[APP1]` or `[APP1, APP2]` for hypotheses scoped to financial-core products; `[COMMON]` for hypotheses on transversal features (those living in `features/common/`); `[CORE]` for hypotheses on cross-core architecture; `[]` for hypotheses on internal infrastructure or process/tooling.
    - `status` — one of `En investigación`, `Concluida`, `Descartada`
    - `owner` — full name of the PM responsible
    - `created_at` — creation date (`YYYY-MM-DD`)
    - `updated_at` — last significant update date (`YYYY-MM-DD`)
+   - `propagates_to` — array of repo-relative paths where the conclusions of this discovery have been (or will be) propagated. Populated when the discovery concludes. May be omitted or set to `[]` while the discovery is `En investigación` or when `status: Descartada` and the conclusion does not propagate anywhere. Example:
+     ```yaml
+     propagates_to:
+       - features/fin/fin-reporteria-pnl.md
+       - skills/ardua-pnl-report/SKILL.md
+       - framework/financial-core-modules.md
+     ```
 
 2. **Body** — starts with a `# Heading` repeating the `name`, then two **mandatory sections**: `## Objetivo` (what we want to learn or decide) and `## Contexto` (origin and antecedents). The rest of the body is free-form, at the discretion of the session. The system must ensure that `Objetivo` and `Contexto` are documented at some point in the discovery's lifecycle — either from the first save or progressively in later iterations.
 
@@ -343,11 +378,11 @@ A discovery file goes through a simple lifecycle:
 
 1. **Created** when a new hypothesis or area of investigation is opened. The header is populated with `status: En investigación` and the body skeleton (Objetivo + Contexto) is filled at first save or shortly after.
 2. **Iterated** while the hypothesis is being validated. Multiple sessions may add findings, refine the question, or branch into related hypotheses. Each iteration updates `updated_at`.
-3. **Concluded** when the hypothesis is validated, discarded, or sufficiently defined. At conclusion, `status` switches to `Concluida` (or `Descartada`) and the system **must propagate** the relevant findings to the affected feature file(s) in `features/`.
+3. **Concluded** when the hypothesis is validated, discarded, or sufficiently defined. At conclusion, `status` switches to `Concluida` (or `Descartada`) and the system **must propagate** the relevant findings to the destination(s) declared in `propagates_to:` (see §5.1).
 
 A discovery file is **not deleted at conclusion**. It stays in `discoveries/` as a historical record of the investigation.
 
-When a single discovery impacts multiple features, the propagation step must update every affected feature file.
+When a single discovery propagates to multiple destinations, the propagation step must update every affected file.
 
 ---
 
@@ -361,8 +396,34 @@ When a single discovery impacts multiple features, the propagation step must upd
 
 **Discovery files (flat folder, hypothesis-scoped):**
 
-- `[aplicacion]-[topic]-discovery.md` for discoveries scoped to a specific application or module (e.g., `lex-alertas-discovery.md`, `lex-limites-discovery.md`, `clp-earn-discovery.md`).
-- `[topic]-discovery.md` for transversal discoveries not scoped to a single application (e.g., `jira-automations-discovery.md`, `observabilidad-discovery.md`).
+Discovery naming follows the seven categories defined in §5.4. Choose the narrowest pattern that fits the scope of the hypothesis being investigated:
+
+| Category | Pattern | Example |
+|---|---|---|
+| Product — application (umbrella) | `[aplicacion]-discovery.md` | `clp-discovery.md` |
+| Product — module | `[aplicacion]-[modulo]-discovery.md` | `lex-alertas-discovery.md` |
+| Product — functionality | `[aplicacion]-[modulo]-[funcionalidad]-discovery.md` | `fin-reporteria-pnl-discovery.md` |
+| Product — transversal feature | `[feature]-discovery.md` | `centro-de-alertas-discovery.md` |
+| Cross-core architecture | `core-[topic]-discovery.md` | `core-modulos-transversales-discovery.md` |
+| Internal infrastructure | `[topic]-discovery.md` | `observabilidad-discovery.md` |
+| Process / tooling / methodology | `[topic]-discovery.md` | `jira-sla-discovery.md` |
+
+**Coexistence rules:**
+
+1. `[aplicacion]-discovery.md` (umbrella) and `[aplicacion]-[modulo]-discovery.md` (module-specific) **can coexist**. The umbrella captures the product-wide investigation; module-specific discoveries dig into focused hypotheses that branched off.
+
+2. When a discovery accumulates multiple hypotheses on the same scope, the file is **not renamed** — additional hypotheses are documented as iterations within the same file. When a hypothesis from the umbrella warrants its own deeper-scoped file, a new file is created at the deeper level and a breadcrumb is left in the original.
+
+3. **One file, one scope identity.** Do not create `lex-alertas-criticas-discovery.md` and `lex-alertas-no-criticas-discovery.md` as separate files — that is branching at the hypothesis level, and it goes inside the body of `lex-alertas-discovery.md`.
+
+**Index files (catalog vs usage guide) — applies to indexed folders:**
+
+Each indexed folder (`discoveries/`, and progressively `features/`, `entities/`, `prototypes/`, `skills/`, `workflows/` as they grow) contains two distinct top-level documents:
+
+- **`README.md`** — manual of the folder. Explains what the folder is for, conventions, lifecycle, how to create or modify files. Stable, changes rarely, audience is the human onboarding into the framework.
+- **`INDEX.md`** — navigable catalog of the folder's contents, organized by category and status. Updated within the session lifecycle (see §11.5) whenever a file in the folder is created, renamed, or has its status changed. Audience is humans searching the folder and agents needing quick lookup.
+
+Both files are maintained manually by the agent operating within the framework. No scripts. INDEX files are created on-demand per folder; the first folder to receive one is `discoveries/`.
 
 **Feature folders and files:**
 
@@ -390,8 +451,9 @@ At the end of a productive session (if decisions, scope changes, new findings, o
 1. Flag which files changed or need to be updated.
 2. Show the diff or a summary of the proposed change.
 3. Write to the local filesystem after the PM confirms.
-4. Update the `> Última actualización:` field in the header of every modified document.
-5. Provide the PM with a ready-to-execute Git command block to persist the changes to GitHub:
+4. Update the `updated_at` field in the YAML frontmatter (or the `> Última actualización:` line in legacy documents) of every modified document.
+5. **Update the `INDEX.md` of every indexed folder touched in the session** — `discoveries/INDEX.md` if a discovery was created, renamed, concluded, or had its status changed; same for other indexed folders where applicable. The INDEX is maintained manually within the session, not by a script.
+6. Provide the PM with a ready-to-execute Git command block to persist the changes to GitHub:
 
    ```bash
    cd /path/to/atlas-ai-product-management-framework
@@ -428,8 +490,9 @@ atlas-ai-product-management-framework/
 │                               Consulted whenever an entity is mentioned in a session
 │
 ├── discoveries/              → Investigation of hypotheses (flat folder)
-│                               Each file = one hypothesis or area of investigation
-│                               Conclusions propagate to features/
+│   ├── README.md             → Manual of the folder (conventions, lifecycle)
+│   ├── INDEX.md              → Navigable catalog by category and status
+│   └── *-discovery.md        → Each file = one hypothesis, propagates per §5.1
 │
 ├── features/                 → Source of truth of product state
 │   └── [aplicacion]/         → One folder per product
