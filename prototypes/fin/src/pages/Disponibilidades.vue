@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useRoute, useRouter } from 'vue-router';
-import { ChevronRight, ChevronDown, Wallet, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-vue-next';
+import { ChevronRight, ChevronDown, Wallet } from 'lucide-vue-next';
 import { Badge } from '@/components/ui/badge';
 import {
   Segmenter,
@@ -12,9 +13,12 @@ import {
 } from '@/components/views';
 import type { SegmentOption } from '@/components/views/Segmenter.vue';
 import { KanbanBoard } from '@/components/kanban';
+import { TablePagination } from '@/components/data-display';
 import EmptyState from '@/components/feedback/EmptyState.vue';
 import { ManifestActionsMenu, ManifestModuleCTAs } from '@/components/manifest';
 import { useManifestModule } from '@/composables/useManifestModule';
+import { useTable } from '@/composables/useTable';
+import { PAGE_SIZE_OPTIONS } from '@/constants';
 import {
   FIN_DISPONIBILIDADES_MANIFEST_KEY,
 } from '@/manifests/fin.disponibilidades.actions';
@@ -29,14 +33,17 @@ import {
   POSICION_KPIS,
 } from '@/mocks/fin/disponibilidades';
 import {
-  CATALOGO_CUENTAS,
-  BANCOS_CUENTAS_KPIS,
-} from '@/mocks/fin/bancos_cuentas';
-import {
   MOVIMIENTOS,
   MOVIMIENTOS_KPIS,
 } from '@/mocks/fin/movimientos';
-import type { Movimiento } from '@/types/fin';
+import { useDisponibilidadesCatalogStore } from '@/stores/disponibilidadesCatalog';
+import type {
+  CuentaBanco,
+  EstructuraBanco,
+  EstructuraTipo,
+  Movimiento,
+} from '@/types/fin';
+import type { ModuleCTA } from '@/types/manifest';
 import type { KanbanAxis } from '@/types/kanban';
 
 // ════════════════════════════════════════════════════════════════════
@@ -60,7 +67,56 @@ import type { KanbanAxis } from '@/types/kanban';
 
 const movimientosMod = useManifestModule(FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST_KEY);
 useManifestModule(FIN_DISPONIBILIDADES_MANIFEST_KEY);
-useManifestModule(FIN_DISPONIBILIDADES_BANCOS_CUENTAS_MANIFEST_KEY);
+const bancosCuentasMod = useManifestModule(
+  FIN_DISPONIBILIDADES_BANCOS_CUENTAS_MANIFEST_KEY,
+);
+
+// ─── Pinia store for Bancos/Cuentas + Estructuras CRUD (Fase B) ──────
+const catalogStore = useDisponibilidadesCatalogStore();
+const { cuentas, kpis: bancosCuentasKpis } = storeToRefs(catalogStore);
+
+// Register a single creator factory on the bancos_cuentas manifest;
+// dispatches by `cta.id` (per Decision 4 of
+// `extend-fin-disponibilidades-bancos-cuentas-crud`). The dialog engine
+// invokes this on confirm for any CTA with `creates_record_type`.
+bancosCuentasMod.registerCreator((cta: ModuleCTA, formValues) => {
+  if (cta.id === 'fin.disponibilidades.bancos_cuentas.crear') {
+    const sociedad_id = String(formValues.sociedad_id ?? '');
+    const banco = String(formValues.banco ?? '');
+    const cuentaContableRaw = formValues.cuenta_contable;
+    const newCuenta: CuentaBanco = {
+      id: catalogStore.nextCuentaId(sociedad_id, banco),
+      sociedad_id,
+      banco,
+      tipo_estructura: String(formValues.tipo_estructura ?? '') as EstructuraTipo,
+      tipo_cuenta: String(formValues.tipo_cuenta ?? '') as CuentaBanco['tipo_cuenta'],
+      moneda: String(formValues.moneda ?? ''),
+      numero: String(formValues.numero ?? ''),
+      label: `${banco} · ${formValues.moneda ?? ''} · ${formValues.numero ?? ''}`,
+      label_short: `${formValues.moneda ?? ''} · ${formValues.numero ?? ''}`,
+      estado: 'Activa',
+      cuenta_contable:
+        typeof cuentaContableRaw === 'string' && cuentaContableRaw !== ''
+          ? cuentaContableRaw
+          : null,
+    };
+    catalogStore.addCuenta(newCuenta);
+    return newCuenta as unknown as Record<string, unknown>;
+  }
+  if (cta.id === 'fin.disponibilidades.bancos_cuentas.crear_estructura') {
+    const nombre = String(formValues.nombre ?? '');
+    const newEstructura: EstructuraBanco = {
+      id: catalogStore.nextEstructuraId(nombre),
+      nombre,
+      tipo_estructura: String(formValues.tipo_estructura ?? '') as EstructuraTipo,
+    };
+    catalogStore.addEstructura(newEstructura);
+    return newEstructura as unknown as Record<string, unknown>;
+  }
+  // Unknown CTA — return a stub so the engine doesn't throw; the
+  // manifest validator would have caught it earlier.
+  return formValues as Record<string, unknown>;
+});
 
 type SubTab = 'posicion' | 'bancos_cuentas' | 'movimientos';
 type AxisId =
@@ -121,7 +177,7 @@ const segmentOptions = computed<SegmentOption<SubTab>[]>(() => [
   {
     value: 'bancos_cuentas',
     label: 'Bancos / Cuentas',
-    count: CATALOGO_CUENTAS.length,
+    count: cuentas.value.length,
   },
   {
     value: 'movimientos',
@@ -166,13 +222,6 @@ const filteredMovimientos = computed<MovimientoProjected[]>(() => {
 
 // ─── Movimientos · view (Lista / Tarjetas / Tablero) — REQ-50 §5.3 ──
 const view = ref<ViewMode>('list');
-
-// ─── Pagination state (Bancos/Cuentas + Movimientos list views) ─────
-const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
-const pageSize = ref<number>(25);
-
-const pageBancosCuentas = ref(1);
-const pageMovimientos = ref(1);
 
 // ─── Movimientos · Kanban axes (REQ-50 §5.4) ─────────────────────────
 const MOVIMIENTOS_KANBAN_AXES: Record<AxisId, KanbanAxis> = {
@@ -333,55 +382,31 @@ function handleKanbanTransition(payload: {
   }
 }
 
-// ─── Bancos / Cuentas filter + pagination ────────────────────────────
+// ─── Bancos / Cuentas filter state ───────────────────────────────────
 const configFilter = ref<'all' | 'configured' | 'not_configured'>('all');
 
 const filteredCuentas = computed(() => {
-  if (configFilter.value === 'all') return CATALOGO_CUENTAS;
+  const list = cuentas.value;
+  if (configFilter.value === 'all') return list;
   if (configFilter.value === 'configured') {
-    return CATALOGO_CUENTAS.filter((c) => c.cuenta_contable !== null);
+    return list.filter((c) => c.cuenta_contable !== null);
   }
-  return CATALOGO_CUENTAS.filter((c) => c.cuenta_contable === null);
+  return list.filter((c) => c.cuenta_contable === null);
 });
 
-watch([filteredCuentas, pageSize], () => {
-  pageBancosCuentas.value = 1;
+// ─── Pagination via useTable (per core-data-tables spec) ─────────────
+// `useTable` owns page state, page-size state, paginated slice, total
+// pages and total count. The footer renders through `<TablePagination>`
+// — hand-rolled state in this page is forbidden by the spec.
+const bcTable = useTable({
+  data: filteredCuentas,
+  pageSize: 25,
 });
 
-const totalPagesBancosCuentas = computed(() =>
-  Math.max(1, Math.ceil(filteredCuentas.value.length / pageSize.value)),
-);
-
-const pagedCuentas = computed(() => {
-  const start = (pageBancosCuentas.value - 1) * pageSize.value;
-  return filteredCuentas.value.slice(start, start + pageSize.value);
+const movTable = useTable({
+  data: filteredMovimientos,
+  pageSize: 25,
 });
-
-function goBancosCuentasPage(delta: number): void {
-  const next = pageBancosCuentas.value + delta;
-  if (next < 1 || next > totalPagesBancosCuentas.value) return;
-  pageBancosCuentas.value = next;
-}
-
-// ─── Movimientos pagination ──────────────────────────────────────────
-watch([filteredMovimientos, pageSize], () => {
-  pageMovimientos.value = 1;
-});
-
-const totalPagesMovimientos = computed(() =>
-  Math.max(1, Math.ceil(filteredMovimientos.value.length / pageSize.value)),
-);
-
-const pagedMovimientos = computed(() => {
-  const start = (pageMovimientos.value - 1) * pageSize.value;
-  return filteredMovimientos.value.slice(start, start + pageSize.value);
-});
-
-function goMovimientosPage(delta: number): void {
-  const next = pageMovimientos.value + delta;
-  if (next < 1 || next > totalPagesMovimientos.value) return;
-  pageMovimientos.value = next;
-}
 
 // ─── Helpers ─────────────────────────────────────────────────────────
 function supervisionBadgeVariant(
@@ -535,19 +560,19 @@ function supervisionBadgeVariant(
       <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" data-testid="bancos-cuentas-kpis">
         <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
           <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Estructuras totales</div>
-          <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">{{ BANCOS_CUENTAS_KPIS.estructurasTotales }}</div>
+          <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">{{ bancosCuentasKpis.estructurasTotales }}</div>
         </div>
         <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
           <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Cuentas activas</div>
-          <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">{{ BANCOS_CUENTAS_KPIS.cuentasActivas }}</div>
+          <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">{{ bancosCuentasKpis.cuentasActivas }}</div>
         </div>
         <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
           <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Con configuración contable</div>
-          <div class="text-2xl font-extrabold leading-none tracking-tight text-success">{{ BANCOS_CUENTAS_KPIS.cuentasConfiguradas }}</div>
+          <div class="text-2xl font-extrabold leading-none tracking-tight text-success">{{ bancosCuentasKpis.cuentasConfiguradas }}</div>
         </div>
         <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
           <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Sin configurar</div>
-          <div class="text-2xl font-extrabold leading-none tracking-tight text-warning">{{ BANCOS_CUENTAS_KPIS.cuentasSinConfigurar }}</div>
+          <div class="text-2xl font-extrabold leading-none tracking-tight text-warning">{{ bancosCuentasKpis.cuentasSinConfigurar }}</div>
         </div>
       </section>
 
@@ -562,17 +587,6 @@ function supervisionBadgeVariant(
             <option value="all">Todas</option>
             <option value="configured">Configurada</option>
             <option value="not_configured">Sin configurar</option>
-          </select>
-        </label>
-        <div class="flex-1" />
-        <label class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-t-3">
-          Por página
-          <select
-            v-model.number="pageSize"
-            class="rounded-md border border-b-1 bg-card-2 px-2 py-1 text-xs text-t-2"
-            data-testid="bancos-cuentas-page-size"
-          >
-            <option v-for="size in PAGE_SIZE_OPTIONS" :key="size" :value="size">{{ size }}</option>
           </select>
         </label>
       </section>
@@ -594,7 +608,7 @@ function supervisionBadgeVariant(
           </thead>
           <tbody>
             <tr
-              v-for="cu in pagedCuentas"
+              v-for="cu in bcTable.paged.value"
               :key="cu.id"
               class="border-b border-b-1 last:border-b-0 hover:bg-white/[0.02]"
               :data-testid="`bancos-cuentas-row-${cu.id}`"
@@ -623,44 +637,24 @@ function supervisionBadgeVariant(
                 </div>
               </td>
             </tr>
-            <tr v-if="pagedCuentas.length === 0">
+            <tr v-if="bcTable.paged.value.length === 0">
               <td colspan="9" class="px-[18px] py-6 text-center text-xs text-t-4">
                 Sin cuentas que coincidan con los filtros.
               </td>
             </tr>
           </tbody>
         </table>
-        <!-- Pagination footer -->
-        <div
-          class="flex items-center justify-between border-t border-b-1 bg-card px-4 py-2 text-[11px] text-t-3"
-          data-testid="bancos-cuentas-pagination"
-        >
-          <span>
-            Página {{ pageBancosCuentas }} de {{ totalPagesBancosCuentas }} ·
-            {{ filteredCuentas.length }} cuentas en total
-          </span>
-          <div class="flex items-center gap-1">
-            <button
-              type="button"
-              class="flex h-7 w-7 items-center justify-center rounded-md border border-b-1 text-t-3 transition-colors hover:bg-card-2 disabled:cursor-not-allowed disabled:opacity-30"
-              :disabled="pageBancosCuentas <= 1"
-              data-testid="bancos-cuentas-page-prev"
-              @click="goBancosCuentasPage(-1)"
-            >
-              <ChevronLeft class="h-3 w-3" />
-            </button>
-            <button
-              type="button"
-              class="flex h-7 w-7 items-center justify-center rounded-md border border-b-1 text-t-3 transition-colors hover:bg-card-2 disabled:cursor-not-allowed disabled:opacity-30"
-              :disabled="pageBancosCuentas >= totalPagesBancosCuentas"
-              data-testid="bancos-cuentas-page-next"
-              @click="goBancosCuentasPage(1)"
-            >
-              <ChevronRightIcon class="h-3 w-3" />
-            </button>
-          </div>
-        </div>
       </section>
+      <TablePagination
+        :page="bcTable.page.value"
+        :page-size="bcTable.pageSize.value"
+        :total="bcTable.total.value"
+        :total-pages="bcTable.totalPages.value"
+        :page-size-options="PAGE_SIZE_OPTIONS"
+        data-testid="bancos-cuentas-pagination"
+        @update:page="bcTable.setPage"
+        @update:page-size="bcTable.setPageSize"
+      />
     </template>
 
     <!-- ─── SUB-TAB · MOVIMIENTOS ──────────────────────────────────── -->
@@ -745,25 +739,11 @@ function supervisionBadgeVariant(
         <span v-if="view === 'kanban' && activeAxis.description" class="text-[11px] text-t-4">
           {{ activeAxis.description }}
         </span>
-        <div class="flex-1" />
-        <label
-          v-if="view === 'list'"
-          class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-t-3"
-        >
-          Por página
-          <select
-            v-model.number="pageSize"
-            class="rounded-md border border-b-1 bg-card-2 px-2 py-1 text-xs text-t-2"
-            data-testid="movimientos-page-size"
-          >
-            <option v-for="size in PAGE_SIZE_OPTIONS" :key="size" :value="size">{{ size }}</option>
-          </select>
-        </label>
       </section>
 
       <!-- LIST view -->
+      <template v-if="view === 'list'">
       <section
-        v-if="view === 'list'"
         class="overflow-hidden rounded-[10px] border border-b-2 bg-card-2"
         data-testid="movimientos-table"
       >
@@ -784,7 +764,7 @@ function supervisionBadgeVariant(
           </thead>
           <tbody>
             <tr
-              v-for="m in pagedMovimientos"
+              v-for="m in movTable.paged.value"
               :key="m.id"
               class="border-b border-b-1 last:border-b-0 hover:bg-white/[0.02]"
               :data-testid="`movimientos-row-${m.id}`"
@@ -832,7 +812,7 @@ function supervisionBadgeVariant(
                 </div>
               </td>
             </tr>
-            <tr v-if="pagedMovimientos.length === 0">
+            <tr v-if="movTable.paged.value.length === 0">
               <td colspan="10">
                 <EmptyState
                   title="Sin movimientos"
@@ -842,36 +822,18 @@ function supervisionBadgeVariant(
             </tr>
           </tbody>
         </table>
-        <div
-          class="flex items-center justify-between border-t border-b-1 bg-card px-4 py-2 text-[11px] text-t-3"
-          data-testid="movimientos-pagination"
-        >
-          <span>
-            Página {{ pageMovimientos }} de {{ totalPagesMovimientos }} ·
-            {{ filteredMovimientos.length }} movimientos en total
-          </span>
-          <div class="flex items-center gap-1">
-            <button
-              type="button"
-              class="flex h-7 w-7 items-center justify-center rounded-md border border-b-1 text-t-3 transition-colors hover:bg-card-2 disabled:cursor-not-allowed disabled:opacity-30"
-              :disabled="pageMovimientos <= 1"
-              data-testid="movimientos-page-prev"
-              @click="goMovimientosPage(-1)"
-            >
-              <ChevronLeft class="h-3 w-3" />
-            </button>
-            <button
-              type="button"
-              class="flex h-7 w-7 items-center justify-center rounded-md border border-b-1 text-t-3 transition-colors hover:bg-card-2 disabled:cursor-not-allowed disabled:opacity-30"
-              :disabled="pageMovimientos >= totalPagesMovimientos"
-              data-testid="movimientos-page-next"
-              @click="goMovimientosPage(1)"
-            >
-              <ChevronRightIcon class="h-3 w-3" />
-            </button>
-          </div>
-        </div>
       </section>
+      <TablePagination
+        :page="movTable.page.value"
+        :page-size="movTable.pageSize.value"
+        :total="movTable.total.value"
+        :total-pages="movTable.totalPages.value"
+        :page-size-options="PAGE_SIZE_OPTIONS"
+        data-testid="movimientos-pagination"
+        @update:page="movTable.setPage"
+        @update:page-size="movTable.setPageSize"
+      />
+      </template>
 
       <!-- CARDS view -->
       <CardsGrid v-else-if="view === 'cards'" data-testid="movimientos-cards">

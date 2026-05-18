@@ -12,6 +12,7 @@ import {
   type ViewMode,
 } from '@/components/views';
 import { KanbanBoard } from '@/components/kanban';
+import { TablePagination } from '@/components/data-display';
 import { ManifestActionsMenu } from '@/components/manifest';
 import type { KanbanAxis, KanbanState } from '@/types/kanban';
 import { useManifestModule } from '@/composables/useManifestModule';
@@ -347,21 +348,6 @@ function statusVariant(status: RecordStatus): 'success' | 'warning' | 'neutral' 
   return 'neutral';
 }
 
-// ─── Pagination UI ──────────────────────────────────────────────────
-const paginationPages = computed<(number | '…')[]>(() => {
-  const tp = totalPages.value;
-  const current = page.value;
-  if (tp <= 7) return Array.from({ length: tp }, (_, i) => i + 1);
-  const pages: (number | '…')[] = [1];
-  if (current > 3) pages.push('…');
-  const start = Math.max(2, current - 1);
-  const end = Math.min(tp - 1, current + 1);
-  for (let i = start; i <= end; i++) pages.push(i);
-  if (current < tp - 2) pages.push('…');
-  pages.push(tp);
-  return pages;
-});
-
 function onBackdropClick(): void {
   openFilter.value = null;
 }
@@ -684,67 +670,16 @@ function onBackdropClick(): void {
     </div>
 
     <!-- Pagination — only in list view -->
-    <div v-if="view === 'list'" class="mt-3.5 flex items-center justify-between">
-      <div class="text-xs text-t-3">
-        Page <b class="font-semibold text-t-2">{{ page }}</b> of {{ totalPages }} · {{ total }}
-        resultado{{ total !== 1 ? 's' : '' }}
-      </div>
-      <div class="flex items-center gap-3">
-        <div class="flex items-center gap-1.5 text-xs text-t-3">
-          Show:
-          <select
-            :value="pageSize"
-            class="rounded-md border border-b-2 bg-card px-2 py-1 text-xs text-t-2 outline-none"
-            @change="(e) => setPageSize(Number((e.target as HTMLSelectElement).value))"
-          >
-            <option v-for="opt in PAGE_SIZE_OPTIONS" :key="opt" :value="opt">{{ opt }}</option>
-          </select>
-        </div>
-        <div class="flex items-center gap-1">
-          <button
-            type="button"
-            class="flex h-7 w-7 items-center justify-center rounded-md border border-b-2 bg-card text-xs font-semibold text-t-3 transition-colors hover:border-b-3 hover:text-t-1 disabled:cursor-not-allowed disabled:opacity-40"
-            :disabled="page === 1"
-            @click="setPage(page - 1)"
-          >
-            ‹
-          </button>
-          <template v-for="(p, i) in paginationPages" :key="i">
-            <button
-              v-if="p === '…'"
-              type="button"
-              class="h-7 w-auto cursor-default px-2 text-xs text-t-4"
-              disabled
-            >
-              …
-            </button>
-            <button
-              v-else
-              type="button"
-              :class="
-                cn(
-                  'flex h-7 w-7 items-center justify-center rounded-md border text-xs font-semibold transition-colors',
-                  p === page
-                    ? 'border-info bg-info-bg text-info'
-                    : 'border-b-2 bg-card text-t-3 hover:border-b-3 hover:text-t-1',
-                )
-              "
-              @click="setPage(p as number)"
-            >
-              {{ p }}
-            </button>
-          </template>
-          <button
-            type="button"
-            class="flex h-7 w-7 items-center justify-center rounded-md border border-b-2 bg-card text-xs font-semibold text-t-3 transition-colors hover:border-b-3 hover:text-t-1 disabled:cursor-not-allowed disabled:opacity-40"
-            :disabled="page === totalPages"
-            @click="setPage(page + 1)"
-          >
-            ›
-          </button>
-        </div>
-      </div>
-    </div>
+    <TablePagination
+      v-if="view === 'list'"
+      :page="page"
+      :page-size="pageSize"
+      :total="total"
+      :total-pages="totalPages"
+      :page-size-options="PAGE_SIZE_OPTIONS"
+      @update:page="setPage"
+      @update:page-size="setPageSize"
+    />
 
     <!-- ─── Create modal ─────────────────────────────────────────── -->
     <div
