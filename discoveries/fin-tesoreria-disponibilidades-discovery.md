@@ -26,7 +26,7 @@ La gestión de fondos en Ardua opera hoy con tres planos que se mezclan y se pro
 
 Esta arquitectura es estándar en custodios de fondos de terceros (EMIs, PSPCPs, exchanges, brokers, neobancos) y se conoce como **omnibus accounting**. Sin embargo, hasta ahora no estaba formalizada como modelo de sistema en Ardua, lo que genera tres problemas operativos:
 
-- **Fricción operativa**: cada vez que aparece un movimiento atípico (un fee, un SWAP, un pendiente de asignar, un movimiento entre cuentas propias, un préstamo intercompany), no hay una convención clara sobre quién lo registra, cómo se registra, ni qué impacto tiene en cada ledger.
+- **Fricción operativa**: cada vez que aparece un movimiento atípico (un fee, un SWAP, un pendiente de asignar, un movimiento entre cuentas propias, un préstamo intercompany, un aporte de capital), no hay una convención clara sobre quién lo registra, cómo se registra, ni qué impacto tiene en cada ledger.
 - **Riesgo de inconsistencia**: la falta de una ecuación de cierre formal entre lo físico y lo contable abre la puerta a que un cliente vea un saldo que no se corresponde con la posición real.
 - **Imposibilidad de escalar**: hoy resolver una pregunta de gestión simple ("¿tenemos USDC suficiente para cubrir todos los retiros pendientes?") requiere combinar manualmente información de varios Excels.
 
@@ -44,7 +44,7 @@ Este principio tiene cinco consecuencias directas sobre el diseño del módulo:
 
 3. **La capacidad de pago se calcula a nivel moneda agregada, no a nivel cuenta.** La métrica operativa que decide si Ardua puede honrar un retiro suma los saldos físicos en banda 1 a través de todas las cuentas en esa moneda dentro de la sociedad correspondiente.
 
-4. **La consistencia del sistema se verifica por la ecuación maestra** (sección siguiente), no por matchear evento a evento ni cliente a cliente con cuenta física.
+4. **La consistencia del sistema se verifica por la ecuación maestra** (sección siguiente), no por matchear evento a evento ni cliente a cuenta física.
 
 5. **La sociedad es la unidad mínima de adscripción del dinero.** Cada cuenta física pertenece a una sociedad; cada asiento contable pertenece a una sociedad; las obligaciones con clientes son una cuenta contable agregada por sociedad y por moneda. La ecuación maestra cuadra a nivel sociedad-moneda y a nivel consolidado-moneda — nunca a nivel cuenta-cliente, porque esa pregunta es inválida.
 
@@ -90,6 +90,7 @@ El dato fuente es el mismo evento físico-económico en el mundo. Lo que cambia 
 | Interés bancario recibido | No | **Tesorería** |
 | Pago a proveedor | No | **Tesorería** (Finanzas) |
 | Pago de salarios | No | **Tesorería** (Finanzas) |
+| **Aporte de capital propio** | **No** | **Tesorería (Finanzas)** |
 | Fondeo / barrido dentro de una sociedad | No | **Tesorería** |
 | Ajuste manual (válvula de escape) | Depende | Operaciones o Tesorería según naturaleza |
 
@@ -111,20 +112,25 @@ Donde **Capacidad operativa = Físico − Obligaciones − Pendientes**, calcula
 
 Esta ecuación es el contrato único que asegura que el sistema es internamente consistente. Si cuadra en cada moneda al cierre de cada operación, el sistema es válido — **independientemente de en qué cuenta esté cada peso, dólar o stablecoin**. Cualquier desvío material es un **break** que requiere workflow de investigación.
 
+### Equivalencia con la ecuación contable formal
+
+La ecuación maestra del módulo (Físico = Obligaciones + Pendientes + CapOp) y la ecuación contable formal (Activo = Pasivo + Patrimonio) son **equivalentes** cuando se reconoce que la Capacidad Operativa es la magnitud monetaria que en la contabilidad formal se llama **Patrimonio operativo**. El módulo trabaja con CapOp porque es más operativa (se calcula como residual y responde directamente la pregunta de capacidad de pago); el panel de Contabilidad refleja la misma magnitud como un saldo positivo en el grupo de cuentas Patrimonio operativo. Ambas representaciones cuadran simultáneamente desde T0, porque al cargar el sistema con saldos iniciales se carga también el saldo inicial de Patrimonio operativo = CapOp inicial calculada.
+
 ### Capacidad Operativa y Resultado del período no son equivalentes a nivel sociedad
 
-A nivel **consolidado del grupo**, la variación de Capacidad Operativa entre dos puntos en el tiempo es exactamente igual a la variación de Resultado del período (Ingresos − Egresos), porque las cuentas técnicas (Puente FX, Intercompany) se cancelan entre sí.
+A nivel **consolidado del grupo**, la variación de Capacidad Operativa entre dos puntos en el tiempo es igual a la variación de Resultado del período (Ingresos − Egresos) más los aportes de capital propio, porque las cuentas técnicas (Puente FX, Intercompany) se cancelan entre sí.
 
-A nivel **sociedad individual**, esa equivalencia se rompe. La diferencia se explica por movimientos en cuentas técnicas no resultativas:
+A nivel **sociedad individual**, esa equivalencia se rompe. La diferencia se explica por movimientos en cuentas técnicas no resultativas y por aportes de capital:
 
 ```
 ΔCapacidad Operativa (sociedad) =
     ΔIngresos − ΔEgresos
+  + ΔAportes de capital
   + ΔCta Intercompany neta (sociedad)
   + ΔPuente FX residual (sociedad)
 ```
 
-Cuando Circuit Pay presta 100K USDC a Ardua Solutions Corp, CP pierde Capacidad Operativa sin haber tenido ningún Egreso (registra una cuenta a cobrar intercompany), y ASC gana Capacidad Operativa sin haber tenido ningún Ingreso (registra una cuenta a pagar intercompany). El consolidado del grupo no cambia, pero los balances individuales sí.
+Cuando Circuit Pay presta 100K USDC a Ardua Solutions Corp, CP pierde Capacidad Operativa sin haber tenido ningún Egreso (registra una cuenta a cobrar intercompany), y ASC gana Capacidad Operativa sin haber tenido ningún Ingreso (registra una cuenta a pagar intercompany). Cuando Ardua aporta capital propio a ASC, la Capacidad Operativa de ASC sube sin que haya habido Ingresos — la contrapartida es Patrimonio operativo. Los aportes de capital son la única fuente exógena de cambio de CapOp consolidada además del Resultado.
 
 ## Modelo de movimientos · doble entrada con extensión operativa
 
@@ -138,7 +144,7 @@ Esto resuelve el problema de modelo de datos que tenía la implementación previ
 | Plano | Pregunta que contesta | Cuándo aplica |
 |---|---|---|
 | Físico (Banco/Cuenta) | ¿De qué cuenta entró o salió la plata? | Cuando hubo flujo de fondos |
-| Contable (Cliente / Resultado / Pendiente / Intercompany / Puente FX) | ¿Sobre qué etiqueta contable impacta dentro del libro de qué sociedad? | Siempre |
+| Contable (Cliente / Resultado / Pendiente / Intercompany / Puente FX / Patrimonio) | ¿Sobre qué etiqueta contable impacta dentro del libro de qué sociedad? | Siempre |
 
 El **cliente** no es un campo independiente del movimiento — es una propiedad embebida en la cuenta contable de Obligaciones (`Obligaciones con clientes — Cliente Y USDC` ya lleva al cliente embebido). La **sociedad** es un atributo top-level del asiento contable que lo adscribe a un libro específico.
 
@@ -175,6 +181,7 @@ Esta matriz es el **contrato cerrado del sistema** entre Operaciones, Tesorería
 | Interés bancario | — | Sí | — | Ingreso | 1 (soc. cuenta) | Db Disp · Cr Ingresos financieros |
 | Pago a proveedor | Sí | — | — | Egreso | 1 (soc. cuenta) | Db Gastos [categoría] · Cr Disp |
 | Pago de salarios | Sí | — | — | Egreso | 1 (soc. cuenta) | Db Gastos sueldos · Cr Disp |
+| **Aporte de capital propio** | **—** | **Sí** | **—** | **Ingreso** | **1 (soc. cuenta)** | **Db Disp · Cr Patrimonio operativo (Aportes de Ardua)** |
 | Ajuste manual | Depende | Depende | Depende | Depende | Configurable | Configurable con justificación obligatoria |
 
 ### Movimiento entre cuentas propias vs préstamo intercompany
@@ -185,6 +192,15 @@ Aunque operativamente parezcan similares (mover plata de una cuenta a otra), son
 - **Préstamo intercompany** y **sweeping cross-sociedad** ocurren entre **sociedades distintas** del grupo (Circuit Pay → Ardua Solutions Corp). Aunque la decisión la tome "Ardua" como grupo, las sociedades son entidades legales separadas con balance propio. Generan **dos asientos**, uno por sociedad, que reflejan la cuenta a cobrar / a pagar intercompany respectivamente.
 
 La distinción no es de tamaño ni de intencionalidad — es estructural. Toda transferencia entre cuentas de sociedades distintas, aunque sea operativa-de-tesorería sin involucrar clientes, sigue siendo intercompany y se modela como tal.
+
+### Aporte de capital propio vs préstamo intercompany
+
+Ambos son fuentes de fondeo de Ardua a una de sus sociedades, pero son **conceptualmente distintos**:
+
+- **Préstamo intercompany** ocurre **entre dos sociedades del grupo**: el fondeo viene de otra sociedad ya constituida, y la sociedad receptora tiene que devolverlo (es un pasivo intercompany). Es plata que ya existía dentro del consolidado del grupo — se reubica, no se crea.
+- **Aporte de capital propio** ocurre cuando **entra dinero al grupo desde afuera** (socios, capital social, aportes irrevocables). No hay sociedad origen dentro del grupo; el fondeo viene de los accionistas o de fuentes externas. Es plata que no existía en el consolidado del grupo y que ahora forma parte de él.
+
+A nivel consolidado, los préstamos intercompany se cancelan (la Cta a cobrar de una sociedad neteea con la Cta a pagar de la otra) y no cambian la Capacidad Operativa del grupo. **Los aportes de capital propio sí cambian la Capacidad Operativa del consolidado** — son la única vía exógena de aumentarla además del Resultado del período.
 
 ### Ajustes de Crédito y Débito (corrección de errores)
 
@@ -197,13 +213,15 @@ Ambos tipos pueden tocar cuentas de Ingresos o Egresos según la naturaleza del 
 
 ## Simulación de referencia
 
-El modelo se validó con una simulación canónica de 15 eventos (T0 a T14) sobre un setup de cuatro sociedades (Haz Pagos, Circuit Pay, Ardua Solutions Corp, Astra Ventures), ocho cuentas activas en tres monedas (ARS, USDC, EURC) y seis clientes con obligaciones multimoneda.
+El modelo se validó con una simulación canónica de 16 eventos (T0 a T15) sobre un setup de cuatro sociedades (Haz Pagos, Circuit Pay, Ardua Solutions Corp, Astra Ventures), ocho cuentas activas en tres monedas (ARS, USDC, EURC) y seis clientes con obligaciones multimoneda.
+
+Los saldos iniciales en T0 simulan la **carga inicial del sistema** (la realidad operativa de Ardua en el momento de su puesta en marcha). Esto incluye saldos iniciales en las tres cuentas con saldo de apertura: Disponibilidades, Obligaciones con clientes y **Patrimonio operativo** (= Capacidad Operativa inicial calculada). La ecuación maestra y el balance contable cuadran simultáneamente desde T0.
 
 Los saldos iniciales fueron dimensionados para que la **Capacidad Operativa sea positiva en las tres monedas en T0** (entre 6% y 8% del físico), reflejando una situación operativa realista para una fintech con omnibus accounting.
 
 | T | Evento | Plano físico | Asientos | Registra |
 |---|---|---|---|---|
-| T0 | Estado inicial (4 sociedades · 8 cuentas · 6 clientes) | — | — | — |
+| T0 | Estado inicial con saldos de apertura (4 sociedades · 8 cuentas · 6 clientes) | — | — | — |
 | T1 | Depósito 18.500.000 ARS a CBU COINAG | ✓ | 1 (HP) | Operaciones |
 | T2 | Fee 12.500 ARS a cli-tecno-sa | — | 1 (HP) | Operaciones |
 | T3 | SWAP 100.000 USDC → 91.500 EURC + spread 500 | — | 3 (CP) | Operaciones |
@@ -212,19 +230,21 @@ Los saldos iniciales fueron dimensionados para que la **Capacidad Operativa sea 
 | T6 | Pendiente: llegan 250.000 USDC a BITGO Pool | ✓ | 1 (CP) | Operaciones |
 | T7 | Asignación: 250.000 USDC son de cli-flynet-llc | — | 1 (CP) | Operaciones |
 | T8 | Movimiento 200.000 EURC entre REVOLUT y KRAKEN (AV) | ✓ | 1 (AV) | Tesorería |
-| **T9** | **Sweeping cross-sociedad: 500.000 USDC de CP a ASC** | **✓** | **2 (CP + ASC)** | **Tesorería** |
-| **T10** | **Préstamo intercompany: CP presta 100.000 USDC a ASC** | **✓** | **2 (CP + ASC)** | **Tesorería** |
+| T9 | Sweeping cross-sociedad: 500.000 USDC de CP a ASC | ✓ | 2 (CP + ASC) | Tesorería |
+| T10 | Préstamo intercompany: CP presta 100.000 USDC a ASC | ✓ | 2 (CP + ASC) | Tesorería |
 | T11 | Ajuste de Crédito: devolución 2.500 ARS a cli-tecno-sa | — | 1 (HP) | Operaciones |
 | T12 | Ajuste de Débito: cobro 800 EURC a cli-flynet-llc | — | 1 (AV) | Operaciones |
-| **T13** | **Pago a proveedor: 4.500.000 ARS desde BRUBANK (HP)** | **✓** | **1 (HP)** | **Tesorería (Finanzas)** |
-| **T14** | **Pago de salarios: 85.000 USDC desde COINBASE (ASC)** | **✓** | **1 (ASC)** | **Tesorería (Finanzas)** |
+| T13 | Pago a proveedor: 4.500.000 ARS desde BRUBANK (HP) | ✓ | 1 (HP) | Tesorería (Finanzas) |
+| T14 | Pago de salarios: 85.000 USDC desde COINBASE (ASC) | ✓ | 1 (ASC) | Tesorería (Finanzas) |
+| **T15** | **Aporte de capital propio: Ardua inyecta 500.000 USDC a COINBASE (ASC)** | **✓** | **1 (ASC)** | **Tesorería (Finanzas)** |
 
-**Resultado clave de la simulación:** la ecuación maestra cuadra en las tres monedas en cada uno de los quince estados, tanto a nivel consolidado como a nivel sociedad. La simulación valida:
+**Resultado clave de la simulación:** la ecuación maestra y el balance contable formal cuadran en las tres monedas en cada uno de los dieciséis estados, tanto a nivel consolidado como a nivel sociedad. La simulación valida:
 
-- **Anclaje #36**: a nivel grupo consolidado, Capacidad Operativa y Resultado del período se mueven de la misma manera; a nivel sociedad individual, divergen por el saldo de las cuentas técnicas (Intercompany, Puente FX).
+- **Anclaje #36**: a nivel grupo consolidado, Capacidad Operativa y Resultado del período se mueven de la misma manera (salvo aportes de capital); a nivel sociedad individual, divergen por el saldo de las cuentas técnicas (Intercompany, Puente FX) y por aportes recibidos.
 - **Anclaje #37**: cada asiento contable está adscripto a una sola sociedad — los eventos cross-sociedad (T9, T10) generan dos asientos independientes, no un asiento espejo.
 - **Anclaje #38**: ni siquiera lógicamente se intenta atribuir fondos físicos a clientes individuales — la única adscripción válida es a sociedad.
 - **Inmutabilidad operativa**: los ajustes (T11, T12) corrigen errores sin tocar los movimientos originales (T2). El libro contable refleja la corrección como asientos nuevos, no como ediciones.
+- **Aporte de capital exógeno**: T15 muestra cómo entra dinero al grupo desde afuera (socios, capital social) sin generar obligaciones con clientes, aumentando la Capacidad Operativa consolidada por el monto del aporte.
 
 La simulación se materializó en un **artefacto de validación del modelo conceptual** (`fin-tesoreria-disponibilidades-validation-artifact.html`) que muestra para cada evento las tres perspectivas y la posición consolidada en tiempo real, con deltas explícitos por columna y fila afectadas, y colapsibles por sociedad en la lente de Tesorería. Este artefacto **no es el prototipo del módulo** — el prototipo formal vive en `prototypes/fin/` como proyecto frontend independiente. El artefacto sirve únicamente como soporte visual para validar el comportamiento del modelo con los stakeholders y queda como referencia conceptual congelada del discovery.
 
@@ -270,7 +290,7 @@ Estos son los 38 anclajes acumulados durante la discovery, ordenados por dimensi
 22. El SWAP es contablemente tres eventos atómicos (SWAP_OUT, SWAP_IN, SPREAD) y físicamente cero — necesita mecanismo de cruce multimoneda en los asientos (cuenta puente o referencia de TC).
 23. Las cuentas de resultado (Ingresos / Gastos) son indicadores analíticos, no son origen de fondos — no se "gasta contra Fees", se gasta desde una cuenta de Disponibilidades registrando la naturaleza del egreso.
 24. El patrimonio operable de Ardua es plenamente operable dentro de la restricción de la ecuación maestra.
-25. Las cuentas de Disponibilidades son las únicas con realidad física — todas las demás cuentas contables (Ingresos, Gastos, Obligaciones, Pendientes, Puente FX, Intercompany) son etiquetas analíticas sobre el mismo dinero.
+25. Las cuentas de Disponibilidades son las únicas con realidad física — todas las demás cuentas contables (Ingresos, Gastos, Obligaciones, Pendientes, Puente FX, Intercompany, Patrimonio operativo) son etiquetas analíticas sobre el mismo dinero.
 26. El fee es un movimiento operativo en Operaciones (registrado como cualquier otro evento) que no tiene plano físico — distinguir "movimiento" (cualquier evento registrado) de "flujo de fondos" (movimiento con plano físico).
 
 ### Módulo Disponibilidades
@@ -278,14 +298,14 @@ Estos son los 38 anclajes acumulados durante la discovery, ordenados por dimensi
 27. Dos lentes que cohabitan — física (conciliación, fuente de verdad sobre lo real) y económica (capacidad de pago, base de decisión operativa).
 28. Cuatro vistas mínimas — Posición por cuenta · Posición consolidada por moneda · Movimientos del ledger · Conciliación.
 29. Posición principal con cuatro columnas por moneda — Físico, Obligaciones, Pendientes, Capacidad Operativa (residual).
-30. Capacidad Operativa como métrica nativa del módulo, derivada como residual de la ecuación maestra. Responde la pregunta del Objetivo: "¿cuánto puede operar Ardua sin tocar fondos de clientes?"
+30. Capacidad Operativa como métrica nativa del módulo, derivada como residual de la ecuación maestra. Responde la pregunta del Objetivo: "¿cuánto puede operar Ardua sin tocar fondos de clientes?". Es equivalente al saldo del grupo contable Patrimonio operativo — las dos representaciones cuadran simultáneamente en todo momento.
 31. Sociedad como eje primario de navegación, no solo filtro — cada Sociedad tiene su propia ecuación maestra por moneda además del consolidado del grupo.
 
 ### Contabilidad
 
-35. La lente contable trabaja sobre **7 grupos de cuentas**: Disponibilidades (Activo), Obligaciones con clientes (Pasivo), Pendientes de asignación (Pasivo), Puente FX (Técnica multimoneda), Intercompany (Técnica entre sociedades), Ingresos, Egresos. Estos 7 grupos son la unidad mínima visible en el panel de Contabilidad del módulo; el Motor Contable de V2 podrá refinarlos en cuentas individuales con jerarquía completa.
+35. La lente contable trabaja sobre **8 grupos de cuentas**: Disponibilidades (Activo), Obligaciones con clientes (Pasivo), Pendientes de asignación (Pasivo), Puente FX (Técnica multimoneda), Intercompany (Técnica entre sociedades), **Patrimonio operativo (Pasivo / Patrimonio, captura aportes y residual operativo de Ardua)**, Ingresos, Egresos. Estos 8 grupos son la unidad mínima visible en el panel de Contabilidad del módulo; el Motor Contable de V2 podrá refinarlos en cuentas individuales con jerarquía completa, incluyendo el desglose del Patrimonio operativo en Capital social, Reservas, Aportes irrevocables y Resultados Acumulados.
 
-36. **Capacidad Operativa y Resultado del período son equivalentes solo en el consolidado del grupo.** A nivel sociedad individual, su diferencia se explica por movimientos en cuentas técnicas no resultativas (Intercompany, Puente FX residual). Esta distinción justifica modelar las cuentas técnicas como cuentas contables formales y no como métricas derivadas — operativamente son lo que permite que la ecuación maestra cuadre por sociedad además de por consolidado. La fórmula completa es: ΔCapacidad Operativa (sociedad) = ΔIngresos − ΔEgresos + ΔIntercompany neto + ΔPuente FX residual. En el consolidado los dos últimos términos se cancelan; a nivel sociedad no.
+36. **Capacidad Operativa y Resultado del período son equivalentes solo en el consolidado del grupo, modulo aportes de capital.** A nivel sociedad individual, su diferencia se explica por movimientos en cuentas técnicas no resultativas (Intercompany, Puente FX residual) y por aportes recibidos. Esta distinción justifica modelar las cuentas técnicas como cuentas contables formales y no como métricas derivadas. La fórmula completa es: ΔCapacidad Operativa (sociedad) = ΔIngresos − ΔEgresos + ΔAportes de capital + ΔIntercompany neto + ΔPuente FX residual. En el consolidado, Intercompany y Puente FX se cancelan; los aportes de capital son la única fuente exógena de cambio del consolidado además del Resultado.
 
 37. **Cada asiento contable está adscripto a una sola sociedad.** Cuando un evento operativo afecta a dos sociedades (préstamo intercompany, sweeping cross-sociedad), se generan dos asientos formalmente independientes, uno en el libro contable de cada sociedad, relacionados únicamente por la referencia al mismo evento operativo. Esto permite filtrar el libro contable por sociedad sin combinaciones complejas, permite que cada sociedad cumpla con sus obligaciones regulatorias y contables de forma independiente, y refleja correctamente que las sociedades son entidades legales separadas con balance propio. La adscripción del asiento a sociedad se determina así: (a) si el movimiento tiene plano físico, la sociedad es la de la cuenta de Disponibilidades involucrada; (b) si no tiene plano físico (SWAPs, fees, ajustes), la sociedad es la que ejecuta operativamente el movimiento (decisión #13).
 
@@ -295,7 +315,7 @@ Estos son los 38 anclajes acumulados durante la discovery, ordenados por dimensi
 
 32. V1 entrega Posición consolidada sin Motor Contable — el modelo se sostiene porque cada movimiento lleva embebida su clasificación contable a través del tipo, y cada asiento lleva embebida su sociedad.
 33. Tres piezas obligatorias en V1 para que el modelo no quede coja sin Motor Contable — tipo "Ajuste manual" con justificación, vista de Libro de Movimientos como reporte cronológico filtrable por sociedad y por moneda, inmutabilidad con corrección vía Ajuste de Crédito o Débito.
-34. V2 = Motor Contable se monta encima sin retrabajo — lee los movimientos existentes, genera asientos formales preservando la adscripción a sociedad, plan de cuentas, libro diario y P&L por sociedad. Los movimientos no se recargan, se traducen.
+34. V2 = Motor Contable se monta encima sin retrabajo — lee los movimientos existentes incluyendo los aportes registrados en V1 en la cuenta técnica Patrimonio operativo, y los traduce a asientos formales con plan de cuentas patrimonial completo (Capital social, Reservas, Aportes irrevocables, Resultados Acumulados), preservando la adscripción a sociedad. Los movimientos no se recargan, se traducen. V1 trabaja con Patrimonio operativo como una sola cuenta técnica agregada con saldo de apertura cargado en T0 igual a la Capacidad Operativa inicial; V2 descompone ese saldo en los subtipos formales según la realidad histórica de cada sociedad.
 
 ## Scope V1 vs V2
 
@@ -304,20 +324,23 @@ Estos son los 38 anclajes acumulados durante la discovery, ordenados por dimensi
 | Funcionalidad | Estado |
 |---|---|
 | Catálogo de cuentas (Sociedad × Banco × Cuenta × Moneda) | Obligatorio |
-| Tipificación completa de movimientos según matriz (incluye Ajustes, Préstamo Intercompany, Sweeping cross-sociedad) | Obligatorio |
+| Tipificación completa de movimientos según matriz (incluye Ajustes, Préstamo Intercompany, Sweeping cross-sociedad, Aporte de capital propio) | Obligatorio |
 | Asientos contables adscriptos a sociedad (cada asiento pertenece a una sola sociedad) | Obligatorio |
 | Registro de movimientos por Operaciones | Obligatorio |
 | Registro de movimientos por Tesorería | Obligatorio |
+| Carga de saldos de apertura para Disponibilidades, Obligaciones y Patrimonio operativo | Obligatorio |
 | Posición por cuenta agrupada por sociedad (collapsible) | Obligatorio |
 | Posición consolidada por moneda con Capacidad Operativa derivada | Obligatorio |
 | Obligaciones por cliente × moneda (sin atribución a cuenta física) | Obligatorio |
-| Saldos por grupo de cuenta contable (7 grupos), filtrable por sociedad | Obligatorio |
+| Saldos por grupo de cuenta contable (8 grupos), filtrable por sociedad | Obligatorio |
 | Cta Intercompany como cuenta técnica con saldos por par de sociedades | Obligatorio |
+| Cta Patrimonio operativo como cuenta técnica agregada (sin desglose por subtipos) | Obligatorio |
 | Libro de Movimientos (vista cronológica filtrable por sociedad y moneda) | Obligatorio |
 | Tipo "Ajuste manual" con justificación textual obligatoria | Obligatorio |
 | Inmutabilidad con corrección vía Ajustes de Crédito/Débito | Obligatorio |
 | Conciliación contra extracto bancario | Obligatorio |
 | Ecuación maestra cuadrando por sociedad además de por consolidado | Obligatorio |
+| Balance contable formal cuadrado por sociedad (Activo = Pasivo + Patrimonio) | Obligatorio |
 | Alertas (capacidad operativa negativa por sociedad, pendiente > SLA, delta > tolerancia, Intercompany no liquidado > SLA) | Opcional |
 
 ### V2 — encima de V1 cuando llegue Motor Contable
@@ -325,16 +348,15 @@ Estos son los 38 anclajes acumulados durante la discovery, ordenados por dimensi
 | Funcionalidad | Estado |
 |---|---|
 | Plan de cuentas contable formal con jerarquía completa por sociedad | Diferido a V2 |
-| Patrimonio Ardua como cuenta contable con saldos de apertura por sociedad | Diferido a V2 |
+| Patrimonio Ardua con desglose formal (Capital social, Reservas, Aportes irrevocables, Resultados Acumulados, Resultado del Ejercicio) por sociedad | Diferido a V2 |
 | Libro Diario con asientos formales por sociedad | Diferido a V2 |
 | Mayor (mayorización de cuentas) por sociedad | Diferido a V2 |
 | P&L formal por período con cierre, por sociedad y consolidado | Diferido a V2 |
-| Balance contable formal por sociedad (Activo = Pasivo + Patrimonio + Resultado) | Diferido a V2 |
 | Cierre de ejercicio (transferencia Resultado del período → Resultados Acumulados) | Diferido a V2 |
 | Asientos manuales para casos no estándar | Diferido a V2 |
 | Multi-currency mark-to-market | Diferido a V2 |
 
-V2 no recarga movimientos — los lee del catálogo existente de V1 y los traduce a asientos formales según los templates contables ya definidos en la matriz de tipos, preservando la adscripción a sociedad que ya viene definida desde V1. Patrimonio Ardua como cuenta contable con saldo de apertura formal se introduce en V2 cuando el Motor Contable necesite producir balances formales por sociedad; en V1 esa magnitud existe operativamente como Capacidad Operativa (residual derivado) y no requiere reconstrucción de saldo histórico.
+V2 no recarga movimientos — los lee del catálogo existente de V1 y los traduce a asientos formales según los templates contables ya definidos en la matriz de tipos, preservando la adscripción a sociedad que ya viene definida desde V1. El **saldo agregado de Patrimonio operativo** que en V1 vive como una sola cuenta técnica se descompone en V2 en los subtipos patrimoniales formales (Capital social, Reservas, Aportes irrevocables, Resultados Acumulados) según la realidad histórica de cada sociedad.
 
 ## Hipótesis abiertas
 
@@ -352,9 +374,10 @@ V2 no recarga movimientos — los lee del catálogo existente de V1 y los traduc
 | H-10 | El TAX como tipo de movimiento (observado en el prototipo) requiere modelarse formalmente — naturaleza, registrador y flujo TRD → Tesorería | Facundo Vasques · Belén Gallo |
 | H-11 | Los Ajustes de Crédito y Débito como tipos formales cubren todos los casos de corrección sin necesidad de soportar edición o eliminación de movimientos previos | Belén Gallo · Operaciones · contador externo |
 | H-12 | La cuenta Intercompany se modela por par de sociedades × moneda (`Cta a cobrar/pagar — Sociedad X moneda Y`), o requiere granularidad adicional (por préstamo individual, por fecha de vencimiento) | Belén Gallo · contador externo · Tecnología |
-| H-13 | El módulo Disponibilidades V1 puede vivir sin Patrimonio Ardua como cuenta contable formal — la magnitud equivalente vive como Capacidad Operativa derivada. Patrimonio formal se introduce solo cuando llegue el Motor Contable V2 | Belén Gallo · contador externo |
-| **H-14** | **Para movimientos sin cuenta física (SWAPs, fees, ajustes), la sociedad del asiento se determina por la sociedad ejecutora del movimiento (típicamente Circuit Pay para SWAPs ejecutados por Trading Desk), no por la sociedad donde el cliente "tiene" más saldo. Validar si esta convención no genera distorsiones en los balances individuales** | **Belén Gallo · contador externo** |
-| **H-15** | **El sweeping cross-sociedad se modela como mini-intercompany (2 asientos) en lugar de como movimiento entre cuentas propias (1 asiento), para preservar la independencia contable de cada sociedad. Validar si Tesorería opera mentalmente con esta distinción o si la trata como una sola operación a nivel grupo** | **Belén Gallo · Juan Cruz Lotz** |
+| H-13 | El módulo Disponibilidades V1 trabaja con Patrimonio operativo como **una sola cuenta técnica agregada** (sin desglose en subtipos) y con saldo de apertura cargado en T0 igual a la Capacidad Operativa inicial calculada. El balance contable cuadra desde T0. El desglose patrimonial formal (Capital social, Reservas, Aportes irrevocables, Resultados Acumulados) y el cierre de ejercicio se introducen solo cuando llegue el Motor Contable V2 | Belén Gallo · contador externo |
+| H-14 | Para movimientos sin cuenta física (SWAPs, fees, ajustes), la sociedad del asiento se determina por la sociedad ejecutora del movimiento (típicamente Circuit Pay para SWAPs ejecutados por Trading Desk), no por la sociedad donde el cliente "tiene" más saldo. Validar si esta convención no genera distorsiones en los balances individuales | Belén Gallo · contador externo |
+| H-15 | El sweeping cross-sociedad se modela como mini-intercompany (2 asientos) en lugar de como movimiento entre cuentas propias (1 asiento), para preservar la independencia contable de cada sociedad. Validar si Tesorería opera mentalmente con esta distinción o si la trata como una sola operación a nivel grupo | Belén Gallo · Juan Cruz Lotz |
+| **H-16** | **El aporte de capital propio se modela como Db Disp · Cr Patrimonio operativo (cuenta técnica agregada sin subtipos en V1). Validar con contador externo si esta cuenta debe tener subtipos desde V1 (Capital social, Reservas, Aportes irrevocables) o si V2 los introduce y V1 solo registra el agregado** | **Belén Gallo · contador externo** |
 
 ## Decisiones pendientes
 
@@ -372,20 +395,22 @@ V2 no recarga movimientos — los lee del catálogo existente de V1 y los traduc
 | 10 | Formato del Libro de Movimientos exportable para auditoría, con filtros por sociedad obligatorios | Belén Gallo · contador externo | — |
 | 11 | Modelo de la cuenta Intercompany — granularidad (por par de sociedades × moneda vs por préstamo individual), mecanismo de liquidación, SLA de cancelación | Belén Gallo · contador externo · Tecnología | — |
 | 12 | Subtipos de movimiento intercompany — préstamo vs compra/venta vs aporte de capital, y cuáles soportar en V1 vs diferir a V2 | Belén Gallo · contador externo | — |
-| **13** | **Regla para determinar la sociedad de los asientos de movimientos sin cuenta física (SWAPs, fees, ajustes). Hipótesis actual: sociedad ejecutora del movimiento. Alternativa: sociedad donde el cliente tiene mayor saldo en la moneda involucrada** | **Belén Gallo · contador externo** | **—** |
+| 13 | Regla para determinar la sociedad de los asientos de movimientos sin cuenta física (SWAPs, fees, ajustes). Hipótesis actual: sociedad ejecutora del movimiento. Alternativa: sociedad donde el cliente tiene mayor saldo en la moneda involucrada | Belén Gallo · contador externo | — |
+| **14** | **Subtipos del Patrimonio operativo en V1 — ¿una sola cuenta agregada (`Aportes de Ardua`) o desglose desde V1 entre Capital social / Aportes irrevocables / Reservas? La hipótesis actual es agregada en V1, desglose en V2** | **Belén Gallo · contador externo** | **—** |
+| **15** | **Quién carga el saldo de apertura inicial de Patrimonio operativo por sociedad y moneda (Finanzas / contador / Tecnología) y bajo qué workflow de aprobación. Es un evento único en la puesta en marcha del módulo** | **Belén Gallo · contador externo · Tecnología** | **—** |
 
 ## Próximos pasos
 
-1. Validar el modelo conceptual con Belén Gallo en sesión dedicada, usando el artefacto de validación `fin-tesoreria-disponibilidades-validation-artifact.html` como soporte visual. Cubre los 15 eventos T0→T14 con todos los tipos (depósitos, retiros, fees, SWAPs, pendientes, ajustes, intercompany, sweeping cross-sociedad, pagos de Finanzas). Punto especial de validación: la decisión de **no desglosar Propio vs Cliente por cuenta** y por qué esta decisión es un correlato directo del modelo omnibus, no una limitación pendiente.
-2. Validar el tratamiento contable de los tipos críticos (SWAP, fees, pendientes, intercompany, sweeping cross-sociedad, ajustes) con el contador externo. Puntos especiales: (a) la decisión de generar 2 asientos por sociedad en intercompany se sostiene bajo el marco contable de cada entidad; (b) la sociedad de imputación para movimientos sin cuenta física (H-14, decisión #13).
-3. Cerrar las 15 hipótesis abiertas, propagando las conclusiones a `features/fin/fin-tesoreria-disponibilidades.md` cuando estén validadas.
-4. Resolver las 13 decisiones pendientes y reflejarlas en la matriz de tipos definitiva.
-5. Coordinar con Tecnología (Santiago Ahmed) la traducción del modelo a entidades y endpoints, manteniendo la separación entre lo que define Producto (qué y por qué) y cómo se implementa. Puntos especiales: (a) modelado de la cuenta Intercompany (decisión #11); (b) campo `sociedad` como atributo top-level del asiento contable (anclaje #37).
+1. Validar el modelo conceptual con Belén Gallo en sesión dedicada, usando el artefacto de validación `fin-tesoreria-disponibilidades-validation-artifact.html` como soporte visual. Cubre los 16 eventos T0→T15 con todos los tipos (depósitos, retiros, fees, SWAPs, pendientes, ajustes, intercompany, sweeping cross-sociedad, pagos de Finanzas, aporte de capital propio). Punto especial de validación: la decisión de **no desglosar Propio vs Cliente por cuenta** y por qué esta decisión es un correlato directo del modelo omnibus, no una limitación pendiente.
+2. Validar el tratamiento contable de los tipos críticos (SWAP, fees, pendientes, intercompany, sweeping cross-sociedad, ajustes, aporte de capital) con el contador externo. Puntos especiales: (a) la decisión de generar 2 asientos por sociedad en intercompany se sostiene bajo el marco contable de cada entidad; (b) la sociedad de imputación para movimientos sin cuenta física (H-14, decisión #13); (c) si el Patrimonio operativo en V1 puede ser una cuenta técnica única sin subtipos (H-16, decisión #14); (d) cómo se carga formalmente el saldo de apertura de Patrimonio operativo (decisión #15).
+3. Cerrar las 16 hipótesis abiertas, propagando las conclusiones a `features/fin/fin-tesoreria-disponibilidades.md` cuando estén validadas.
+4. Resolver las 15 decisiones pendientes y reflejarlas en la matriz de tipos definitiva.
+5. Coordinar con Tecnología (Santiago Ahmed) la traducción del modelo a entidades y endpoints, manteniendo la separación entre lo que define Producto (qué y por qué) y cómo se implementa. Puntos especiales: (a) modelado de la cuenta Intercompany (decisión #11); (b) campo `sociedad` como atributo top-level del asiento contable (anclaje #37); (c) modelado del Patrimonio operativo como cuenta técnica agregada por sociedad y moneda; (d) workflow de carga de saldos de apertura.
 6. Iterar sobre el prototipo formal del módulo en `prototypes/fin/`, alineándolo con la matriz de tipos y con las cuatro vistas mínimas definidas. El artefacto de validación queda como referencia conceptual congelada del discovery, no se itera junto con el prototipo.
 
 ## Referencias
 
-- Artefacto de validación del modelo conceptual: [`fin-tesoreria-disponibilidades-validation-artifact.html`](./fin-tesoreria-disponibilidades-validation-artifact.html) — 15 eventos T0→T14 con tres perspectivas sincronizadas, posición en tiempo real, collapsibles por sociedad en Tesorería, y asientos contables etiquetados por sociedad. HTML standalone, sin dependencias externas. **No es el prototipo del módulo** — su rol es soportar la validación del modelo con stakeholders y queda como referencia conceptual congelada del discovery.
+- Artefacto de validación del modelo conceptual: [`fin-tesoreria-disponibilidades-validation-artifact.html`](./fin-tesoreria-disponibilidades-validation-artifact.html) — 16 eventos T0→T15 con tres perspectivas sincronizadas, posición en tiempo real, collapsibles por sociedad en Tesorería, y asientos contables etiquetados por sociedad. HTML standalone, sin dependencias externas. **No es el prototipo del módulo** — su rol es soportar la validación del modelo con stakeholders y queda como referencia conceptual congelada del discovery.
 - Prototipo formal del módulo: vive en `prototypes/fin/` como proyecto frontend independiente, en 1:1 con `features/fin/`.
 - Discovery previo de OPS: [`ops-discovery.md`](./ops-discovery.md) — modelo operativo de movimientos, cuentas Pool, Bandejas y Comandas.
 - Discovery previo de FIN: [`fin-discovery.md`](./fin-discovery.md) — taxonomía v3 de FIN, distinción Tesorería OPS vs Tesorería FIN.

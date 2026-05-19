@@ -15,6 +15,7 @@
     --bg-warning: #faeeda;
     --bg-danger: #fcebeb;
     --bg-intercompany: #f1eafc;
+    --bg-patrimonio: #fdf3d8;
     --text-primary: #1a1a17;
     --text-secondary: #5f5e5a;
     --text-tertiary: #888780;
@@ -24,6 +25,7 @@
     --text-warning: #854f0b;
     --text-danger: #a32d2d;
     --text-intercompany: #5b3a8a;
+    --text-patrimonio: #8a5a0b;
     --border-tertiary: rgba(0, 0, 0, 0.08);
     --border-secondary: rgba(0, 0, 0, 0.18);
     --border-info: #378add;
@@ -88,6 +90,7 @@
       --bg-warning: #633806;
       --bg-danger: #791f1f;
       --bg-intercompany: #3a2a5e;
+      --bg-patrimonio: #4d3a0a;
       --text-primary: #f4f3ed;
       --text-secondary: #b4b2a9;
       --text-tertiary: #888780;
@@ -97,6 +100,7 @@
       --text-warning: #fac775;
       --text-danger: #f09595;
       --text-intercompany: #c8b4ec;
+      --text-patrimonio: #f0c970;
       --border-tertiary: rgba(255, 255, 255, 0.1);
       --border-secondary: rgba(255, 255, 255, 0.2);
       --accent-soft: rgba(29, 158, 117, 0.15);
@@ -436,6 +440,7 @@
   .con-card.con-pasivo-warn::before { background: var(--text-warning); }
   .con-card.con-tecnica::before { background: var(--text-tertiary); }
   .con-card.con-intercompany::before { background: var(--text-intercompany); }
+  .con-card.con-patrimonio::before { background: var(--text-patrimonio); }
   .con-card.con-ingreso::before { background: var(--text-success); }
   .con-card.con-egreso::before { background: var(--text-danger); }
 
@@ -457,6 +462,7 @@
   .con-card.con-pasivo-warn .con-card-tag { background: var(--bg-warning); color: var(--text-warning); }
   .con-card.con-tecnica .con-card-tag { background: var(--bg-secondary); color: var(--text-tertiary); }
   .con-card.con-intercompany .con-card-tag { background: var(--bg-intercompany); color: var(--text-intercompany); }
+  .con-card.con-patrimonio .con-card-tag { background: var(--bg-patrimonio); color: var(--text-patrimonio); }
   .con-card.con-ingreso .con-card-tag { background: var(--bg-success); color: var(--text-success); }
   .con-card.con-egreso .con-card-tag { background: var(--bg-danger); color: var(--text-danger); }
 
@@ -819,20 +825,19 @@
   .ops-mov-grid > * { display: grid; grid-template-columns: 180px 1fr 130px; gap: var(--space-2); }
   .tes-grid > * { display: grid; grid-template-columns: 220px 1fr 150px; gap: var(--space-3); }
 
-  /* Sticky table header inside scrollable section */
-  .scroll-area .row-header {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-  }
-
+  /* Sticky table header. Applied directly to .row-header so it works
+     regardless of intervening grid/flex containers and overflow:hidden ancestors.
+     The .society-group-table .row-header override below adds padding,
+     and since society groups don't scroll, sticky has no visual effect there. */
   .row-header {
     background: var(--bg-secondary); color: var(--text-tertiary);
     font-size: 10px !important;
     text-transform: uppercase; letter-spacing: 0.06em;
     font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: inset 0 -1px 0 var(--border-tertiary);
   }
   .row-new {
     background: linear-gradient(90deg, var(--bg-info) 0%, transparent 100%);
@@ -867,6 +872,7 @@
   .pill-intercompany { background: var(--bg-intercompany); color: var(--text-intercompany); }
   .pill-adjust { background: var(--bg-tertiary); color: var(--text-secondary); }
   .pill-finanzas { background: var(--bg-danger); color: var(--text-danger); }
+  .pill-patrimonio { background: var(--bg-patrimonio); color: var(--text-patrimonio); }
   .pill-noclient {
     background: var(--bg-secondary);
     color: var(--text-tertiary);
@@ -1049,7 +1055,7 @@
     </button>
     <div class="step-indicator">
       Paso <span class="step-pill" id="step-pill">T0</span>
-      <span id="step-total" style="color: var(--text-tertiary);">de T14</span>
+      <span id="step-total" style="color: var(--text-tertiary);">de T15</span>
     </div>
   </div>
 
@@ -1288,6 +1294,13 @@ const EVENTS = [
     ops: null,
     tes: { fisico: [{ cuenta: 'asc-coinbase', delta: -85000 }], registra: 'FIN', tipo: 'PAGO_SALARIO' },
     con: [{ sociedad: 'ASC', db: 'Gastos — sueldos y jornales (USDC)', cr: 'Disponibilidades — COINBASE USDC', monto: 85000, moneda: 'USDC' }]
+  },
+  {
+    id: 'T15', label: 'T15 · Aporte de capital propio', title: 'Ardua aporta 500.000 USDC a Ardua Solutions Corp (COINBASE)',
+    desc: 'Entrada de fondos propios desde afuera del grupo (socios / capital social). Aumenta el Físico sin generar Obligaciones con clientes — la Capacidad Operativa sube exactamente por el monto del aporte. Contrapartida contable: Patrimonio operativo. Registra Tesorería.',
+    ops: null,
+    tes: { fisico: [{ cuenta: 'asc-coinbase', delta: 500000 }], registra: 'FIN', tipo: 'APORTE_CAPITAL' },
+    con: [{ sociedad: 'ASC', db: 'Disponibilidades — COINBASE USDC', cr: 'Aportes de Ardua — capital operativo USDC', monto: 500000, moneda: 'USDC' }]
   }
 ];
 
@@ -1299,6 +1312,7 @@ function groupOfAccount(name) {
   if (n.startsWith('pendientes')) return 'Pendientes';
   if (n.startsWith('cuenta puente')) return 'Puente FX';
   if (n.startsWith('cta a cobrar intercompany') || n.startsWith('cta a pagar intercompany')) return 'Intercompany';
+  if (n.startsWith('aportes') || n.startsWith('patrimonio operativo')) return 'Patrimonio operativo';
   if (n.startsWith('ingresos')) return 'Ingresos';
   if (n.startsWith('gastos') || n.startsWith('egresos')) return 'Egresos';
   return 'Otros';
@@ -1310,6 +1324,7 @@ const GRUPOS_CONTABLES = [
   { key: 'Pendientes',       cssClass: 'con-pasivo-warn',  naturaleza: 'Pasivo',      sign: { db: -1, cr: +1 } },
   { key: 'Puente FX',        cssClass: 'con-tecnica',      naturaleza: 'Técnica',     sign: { db: +1, cr: -1 } },
   { key: 'Intercompany',     cssClass: 'con-intercompany', naturaleza: 'Intercompany',sign: { db: +1, cr: -1 } },
+  { key: 'Patrimonio operativo', cssClass: 'con-patrimonio', naturaleza: 'Patrimonio', sign: { db: -1, cr: +1 } },
   { key: 'Ingresos',         cssClass: 'con-ingreso',      naturaleza: 'Ingreso',     sign: { db: -1, cr: +1 } },
   { key: 'Egresos',          cssClass: 'con-egreso',       naturaleza: 'Egreso',      sign: { db: +1, cr: -1 } }
 ];
@@ -1782,8 +1797,9 @@ function renderTes() {
       const isNew = m.eventIdx === currentStep;
       const intercompanyPill = m.tipo === 'PRESTAMO_INTERCOMPANY' ? ' <span class="pill pill-intercompany">INTERCOMPANY</span>' : '';
       const finanzasPill = (m.tipo === 'PAGO_PROVEEDOR' || m.tipo === 'PAGO_SALARIO') ? ' <span class="pill pill-finanzas">FINANZAS</span>' : '';
+      const aportePill = m.tipo === 'APORTE_CAPITAL' ? ' <span class="pill pill-patrimonio">APORTE</span>' : '';
       html += `<div class="${isNew ? 'row-new' : ''}">`;
-      html += `<span class="num-strong" style="text-align:left; font-size: 12px;">${m.tipo}${intercompanyPill}${finanzasPill}</span>`;
+      html += `<span class="num-strong" style="text-align:left; font-size: 12px;">${m.tipo}${intercompanyPill}${finanzasPill}${aportePill}</span>`;
       html += `<span style="font-size: 12px;">${m.cuenta}</span>`;
       html += `<span class="num" style="font-size: 12px;">− ${fmt(m.monto)} ${m.moneda}</span>`;
       html += '</div>';
@@ -1815,6 +1831,9 @@ function computeAccountingBalances() {
     balances['Disponibilidades'][m] += initFisico;
     const initOblig = Object.values(INITIAL_OBLIG).reduce((s, c) => s + (c[m] || 0), 0);
     balances['Obligaciones'][m] += initOblig;
+    // Saldo de apertura de Patrimonio operativo = CapOp inicial calculada (Físico - Obligaciones - Pendientes)
+    // Pendientes en T0 son 0, entonces Patrimonio inicial = Físico - Obligaciones
+    balances['Patrimonio operativo'][m] += initFisico - initOblig;
   });
 
   return balances;
