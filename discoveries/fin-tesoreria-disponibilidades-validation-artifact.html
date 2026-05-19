@@ -14,6 +14,7 @@
     --bg-success: #eaf3de;
     --bg-warning: #faeeda;
     --bg-danger: #fcebeb;
+    --bg-intercompany: #f1eafc;
     --text-primary: #1a1a17;
     --text-secondary: #5f5e5a;
     --text-tertiary: #888780;
@@ -21,6 +22,7 @@
     --text-success: #3b6d11;
     --text-warning: #854f0b;
     --text-danger: #a32d2d;
+    --text-intercompany: #5b3a8a;
     --border-tertiary: rgba(0, 0, 0, 0.08);
     --border-secondary: rgba(0, 0, 0, 0.18);
     --border-info: #378add;
@@ -46,6 +48,7 @@
       --bg-success: #27500a;
       --bg-warning: #633806;
       --bg-danger: #791f1f;
+      --bg-intercompany: #3a2a5e;
       --text-primary: #f4f3ed;
       --text-secondary: #b4b2a9;
       --text-tertiary: #888780;
@@ -53,6 +56,7 @@
       --text-success: #97c459;
       --text-warning: #fac775;
       --text-danger: #f09595;
+      --text-intercompany: #c8b4ec;
       --border-tertiary: rgba(255, 255, 255, 0.1);
       --border-secondary: rgba(255, 255, 255, 0.2);
       --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -80,29 +84,20 @@
       radial-gradient(at 80% 100%, rgba(55, 138, 221, 0.04) 0%, transparent 50%);
   }
 
-  .app-shell {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 2rem 1.5rem;
-  }
+  .app-shell { max-width: 1280px; margin: 0 auto; padding: 2rem 1.5rem; }
 
   .app-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 2rem;
-    padding-bottom: 1.5rem;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 2rem; padding-bottom: 1.5rem;
     border-bottom: 1px solid var(--border-tertiary);
-    gap: 2rem;
-    flex-wrap: wrap;
+    gap: 2rem; flex-wrap: wrap;
   }
 
   .brand { display: flex; align-items: center; gap: 12px; }
   .brand-mark {
     width: 40px; height: 40px;
     border-radius: var(--radius-md);
-    background: var(--accent);
-    color: white;
+    background: var(--accent); color: white;
     display: flex; align-items: center; justify-content: center;
     font-weight: 600; font-size: 16px;
     letter-spacing: -0.02em;
@@ -168,17 +163,13 @@
     background: var(--bg-surface);
     border: 1px solid var(--border-tertiary);
     border-radius: var(--radius-md);
-    font-size: 12px;
-    color: var(--text-secondary);
+    font-size: 12px; color: var(--text-secondary);
     box-shadow: var(--shadow-sm);
   }
   .step-pill {
-    background: var(--accent);
-    color: white;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-weight: 600;
-    font-size: 11px;
+    background: var(--accent); color: white;
+    padding: 2px 8px; border-radius: 10px;
+    font-weight: 600; font-size: 11px;
     letter-spacing: 0.02em;
   }
 
@@ -207,49 +198,37 @@
     padding: 1.25rem 1.5rem;
     margin-bottom: 1.5rem;
     box-shadow: var(--shadow-md);
-    position: relative;
-    overflow: hidden;
+    position: relative; overflow: hidden;
     transition: all 0.4s var(--transition);
   }
   .event-card::before {
     content: '';
-    position: absolute;
-    left: 0; top: 0; bottom: 0;
+    position: absolute; left: 0; top: 0; bottom: 0;
     width: 3px;
     background: linear-gradient(180deg, var(--accent) 0%, var(--accent-dark) 100%);
   }
   .event-label {
-    font-size: 11px;
-    color: var(--text-tertiary);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin-bottom: 6px;
-    font-weight: 600;
+    font-size: 11px; color: var(--text-tertiary);
+    letter-spacing: 0.08em; text-transform: uppercase;
+    margin-bottom: 6px; font-weight: 600;
   }
   .event-title {
-    font-size: 18px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    line-height: 1.3;
+    font-size: 18px; font-weight: 600;
+    letter-spacing: -0.01em; line-height: 1.3;
     margin-bottom: 6px;
   }
   .event-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
 
   .section-label {
-    font-size: 11px;
-    color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-weight: 600;
-    margin-bottom: 12px;
+    font-size: 11px; color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    font-weight: 600; margin-bottom: 12px;
   }
 
-  /* === DIMENSION CARDS (Posición consolidada header) === */
   .dim-cards-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 14px;
-    margin-bottom: 2rem;
+    gap: 14px; margin-bottom: 2rem;
   }
   .dim-card {
     background: var(--bg-surface);
@@ -257,26 +236,22 @@
     border-radius: var(--radius-lg);
     padding: 16px 18px;
     box-shadow: var(--shadow-sm);
-    position: relative;
-    overflow: hidden;
+    position: relative; overflow: hidden;
     transition: all 0.3s var(--transition);
   }
   .dim-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
   .dim-card::before {
     content: '';
-    position: absolute;
-    left: 0; top: 0; bottom: 0;
+    position: absolute; left: 0; top: 0; bottom: 0;
     width: 3px;
   }
   .dim-card.dim-fisico::before { background: var(--text-primary); }
   .dim-card.dim-oblig::before { background: var(--text-info); }
   .dim-card.dim-pend::before { background: var(--text-warning); }
-  .dim-card.dim-patrim::before { background: var(--text-success); }
+  .dim-card.dim-capop::before { background: var(--accent); }
 
   .dim-card-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    display: flex; align-items: center; gap: 8px;
     margin-bottom: 14px;
   }
   .dim-card-icon {
@@ -288,53 +263,30 @@
   .dim-card.dim-fisico .dim-card-icon { background: var(--bg-secondary); color: var(--text-primary); }
   .dim-card.dim-oblig .dim-card-icon { background: var(--bg-info); color: var(--text-info); }
   .dim-card.dim-pend .dim-card-icon { background: var(--bg-warning); color: var(--text-warning); }
-  .dim-card.dim-patrim .dim-card-icon { background: var(--bg-success); color: var(--text-success); }
+  .dim-card.dim-capop .dim-card-icon { background: var(--bg-success); color: var(--accent-dark); }
 
-  .dim-card-label {
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-  }
+  .dim-card-label { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
 
   .dim-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    padding: 6px 0;
-    font-size: 13px;
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 6px 0; font-size: 13px;
     border-bottom: 1px dashed var(--border-tertiary);
   }
   .dim-row:last-child { border-bottom: none; }
 
   .dim-mon {
     color: var(--text-tertiary);
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 11px; font-weight: 600;
     letter-spacing: 0.04em;
   }
-  .dim-val-wrap {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 2px;
-  }
-  .dim-val {
-    font-variant-numeric: tabular-nums;
-    font-weight: 600;
-    font-size: 14px;
-  }
-  .dim-delta {
-    font-size: 11px;
-    font-variant-numeric: tabular-nums;
-    font-weight: 600;
-  }
+  .dim-val-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .dim-val { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 14px; }
+  .dim-delta { font-size: 11px; font-variant-numeric: tabular-nums; font-weight: 600; }
 
-  /* === TOTAL CARDS (Operaciones y Tesorería) === */
   .totals-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 14px;
-    margin-bottom: 1.25rem;
+    gap: 14px; margin-bottom: 1.25rem;
   }
   .total-card {
     background: var(--bg-surface);
@@ -342,80 +294,58 @@
     border-radius: var(--radius-lg);
     padding: 16px 18px;
     box-shadow: var(--shadow-sm);
-    position: relative;
-    overflow: hidden;
+    position: relative; overflow: hidden;
     transition: all 0.3s var(--transition);
   }
   .total-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
   .total-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    display: flex; justify-content: space-between; align-items: center;
     margin-bottom: 10px;
   }
   .total-card-label {
-    font-size: 11px;
-    color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    font-size: 11px; color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.06em;
     font-weight: 600;
   }
   .total-card-sublabel {
-    font-size: 10px;
-    color: var(--text-tertiary);
-    font-weight: 400;
-    margin-left: 4px;
+    font-size: 10px; color: var(--text-tertiary);
+    font-weight: 400; margin-left: 4px;
   }
   .total-card-tag {
-    background: var(--bg-info);
-    color: var(--text-info);
-    padding: 2px 8px;
-    border-radius: 8px;
-    font-size: 10px;
-    font-weight: 700;
+    background: var(--bg-info); color: var(--text-info);
+    padding: 2px 8px; border-radius: 8px;
+    font-size: 10px; font-weight: 700;
     letter-spacing: 0.04em;
   }
   .total-card-value {
-    font-size: 22px;
-    font-weight: 700;
+    font-size: 22px; font-weight: 700;
     font-variant-numeric: tabular-nums;
-    letter-spacing: -0.02em;
-    line-height: 1.2;
+    letter-spacing: -0.02em; line-height: 1.2;
     color: var(--text-info);
   }
   .total-card-currency {
-    font-size: 12px;
-    color: var(--text-tertiary);
-    font-weight: 500;
-    margin-left: 6px;
+    font-size: 12px; color: var(--text-tertiary);
+    font-weight: 500; margin-left: 6px;
     letter-spacing: 0.04em;
   }
   .total-card-delta {
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-    font-weight: 600;
-    margin-top: 8px;
+    font-size: 12px; font-variant-numeric: tabular-nums;
+    font-weight: 600; margin-top: 8px;
     padding-top: 8px;
     border-top: 1px dashed var(--border-tertiary);
-    display: flex;
-    align-items: center;
-    gap: 4px;
+    display: flex; align-items: center; gap: 4px;
   }
   .total-card-delta-empty {
-    font-size: 11px;
-    color: var(--text-tertiary);
-    margin-top: 8px;
-    padding-top: 8px;
+    font-size: 11px; color: var(--text-tertiary);
+    margin-top: 8px; padding-top: 8px;
     border-top: 1px dashed var(--border-tertiary);
     font-style: italic;
   }
 
-  /* === CON CARDS (Contabilidad por grupo de cuentas) === */
   .con-cards-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 14px;
-    margin-bottom: 1.5rem;
+    gap: 14px; margin-bottom: 1.5rem;
   }
   .con-card {
     background: var(--bg-surface);
@@ -423,35 +353,28 @@
     border-radius: var(--radius-lg);
     padding: 16px 18px;
     box-shadow: var(--shadow-sm);
-    position: relative;
-    overflow: hidden;
+    position: relative; overflow: hidden;
     transition: all 0.3s var(--transition);
   }
   .con-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
   .con-card::before {
     content: '';
-    position: absolute;
-    left: 0; top: 0; bottom: 0;
+    position: absolute; left: 0; top: 0; bottom: 0;
     width: 3px;
   }
   .con-card.con-activo::before { background: var(--text-success); }
   .con-card.con-pasivo::before { background: var(--text-info); }
   .con-card.con-pasivo-warn::before { background: var(--text-warning); }
   .con-card.con-tecnica::before { background: var(--text-tertiary); }
+  .con-card.con-intercompany::before { background: var(--text-intercompany); }
   .con-card.con-ingreso::before { background: var(--text-success); }
   .con-card.con-egreso::before { background: var(--text-danger); }
 
   .con-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    display: flex; justify-content: space-between; align-items: center;
     margin-bottom: 12px;
   }
-  .con-card-label {
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-  }
+  .con-card-label { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
   .con-card-tag {
     font-size: 9px;
     padding: 3px 8px;
@@ -464,10 +387,10 @@
   .con-card.con-pasivo .con-card-tag { background: var(--bg-info); color: var(--text-info); }
   .con-card.con-pasivo-warn .con-card-tag { background: var(--bg-warning); color: var(--text-warning); }
   .con-card.con-tecnica .con-card-tag { background: var(--bg-secondary); color: var(--text-tertiary); }
+  .con-card.con-intercompany .con-card-tag { background: var(--bg-intercompany); color: var(--text-intercompany); }
   .con-card.con-ingreso .con-card-tag { background: var(--bg-success); color: var(--text-success); }
   .con-card.con-egreso .con-card-tag { background: var(--bg-danger); color: var(--text-danger); }
 
-  /* === SHARED === */
   .section {
     background: var(--bg-surface);
     border: 1px solid var(--border-tertiary);
@@ -476,76 +399,44 @@
     box-shadow: var(--shadow-sm);
     overflow: hidden;
   }
-
   .section-header {
     padding: 14px 20px;
     border-bottom: 1px solid var(--border-tertiary);
     background: var(--bg-secondary);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    display: flex; justify-content: space-between; align-items: center;
   }
   .section-title {
-    font-size: 11px;
-    color: var(--text-tertiary);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: 11px; color: var(--text-tertiary);
+    letter-spacing: 0.08em; text-transform: uppercase;
     font-weight: 600;
   }
   .section-badge {
-    background: var(--bg-tertiary);
-    color: var(--text-secondary);
-    padding: 2px 10px;
-    border-radius: 10px;
-    font-size: 11px;
-    font-weight: 500;
+    background: var(--bg-tertiary); color: var(--text-secondary);
+    padding: 2px 10px; border-radius: 10px;
+    font-size: 11px; font-weight: 500;
   }
 
   .table-grid { display: grid; }
   .table-grid > * { padding: 10px 16px; font-size: 13px; align-items: center; border-bottom: 1px solid var(--border-tertiary); }
   .table-grid > *:last-child { border-bottom: none; }
 
-  .pos-obl-grid > * {
-    display: grid;
-    grid-template-columns: 200px 100px repeat(3, 1fr);
-    gap: 12px;
-  }
-
-  .physical-grid > * {
-    display: grid;
-    grid-template-columns: 120px 1fr 70px 110px 150px;
-    gap: 12px;
-  }
-
-  .ops-grid > * {
-    display: grid;
-    grid-template-columns: 160px 1fr 160px 160px;
-    gap: 12px;
-  }
-
-  .tes-grid > * {
-    display: grid;
-    grid-template-columns: 260px 1fr 150px;
-    gap: 12px;
-  }
+  .pos-obl-grid > * { display: grid; grid-template-columns: 200px 100px repeat(3, 1fr); gap: 12px; }
+  .physical-grid > * { display: grid; grid-template-columns: 120px 1fr 70px 110px 150px; gap: 12px; }
+  .ops-grid > * { display: grid; grid-template-columns: 160px 1fr 160px 160px; gap: 12px; }
+  .tes-grid > * { display: grid; grid-template-columns: 260px 1fr 150px; gap: 12px; }
 
   .row-header {
-    background: var(--bg-secondary);
-    color: var(--text-tertiary);
+    background: var(--bg-secondary); color: var(--text-tertiary);
     font-size: 11px !important;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    text-transform: uppercase; letter-spacing: 0.06em;
     font-weight: 600;
   }
   .row-soc {
     background: var(--bg-tertiary);
     font-size: 12px !important;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-secondary);
-    font-weight: 600;
-    padding: 10px 16px !important;
-    display: block !important;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-secondary); font-weight: 600;
+    padding: 10px 16px !important; display: block !important;
   }
   .row-new {
     background: linear-gradient(90deg, var(--bg-info) 0%, transparent 100%);
@@ -571,20 +462,18 @@
   .delta-inline { font-size: 11px; opacity: 0.9; margin-left: 4px; }
 
   .pill {
-    display: inline-block;
-    padding: 2px 8px;
+    display: inline-block; padding: 2px 8px;
     border-radius: 10px;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.04em; text-transform: uppercase;
   }
   .pill-pending { background: var(--bg-warning); color: var(--text-warning); }
+  .pill-intercompany { background: var(--bg-intercompany); color: var(--text-intercompany); }
+  .pill-adjust { background: var(--bg-tertiary); color: var(--text-secondary); }
   .pill-noop { color: var(--text-tertiary); font-style: italic; font-size: 11px; }
 
   .tabs-bar {
-    display: flex;
-    gap: 4px;
+    display: flex; gap: 4px;
     margin-bottom: 1.25rem;
     border-bottom: 1px solid var(--border-tertiary);
     padding-bottom: 1px;
@@ -592,18 +481,14 @@
   .tab {
     padding: 10px 18px;
     font-size: 13px;
-    background: none;
-    border: none;
+    background: none; border: none;
     border-bottom: 2px solid transparent;
     color: var(--text-secondary);
-    font-family: inherit;
-    font-weight: 500;
+    font-family: inherit; font-weight: 500;
     cursor: pointer;
     transition: all 0.15s var(--transition);
     margin-bottom: -1px;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
+    display: inline-flex; align-items: center; gap: 8px;
   }
   .tab:hover { color: var(--text-primary); }
   .tab.active {
@@ -612,12 +497,9 @@
     font-weight: 600;
   }
   .tab-count {
-    background: var(--bg-tertiary);
-    color: var(--text-secondary);
-    padding: 1px 7px;
-    border-radius: 10px;
-    font-size: 10px;
-    font-weight: 600;
+    background: var(--bg-tertiary); color: var(--text-secondary);
+    padding: 1px 7px; border-radius: 10px;
+    font-size: 10px; font-weight: 600;
   }
   .tab.active .tab-count { background: var(--accent); color: white; }
 
@@ -628,10 +510,8 @@
   }
 
   .empty-state {
-    padding: 2.5rem 1rem;
-    text-align: center;
-    color: var(--text-tertiary);
-    font-size: 13px;
+    padding: 2.5rem 1rem; text-align: center;
+    color: var(--text-tertiary); font-size: 13px;
     background: var(--bg-secondary);
     border-radius: var(--radius-md);
     margin: 0 0 1rem;
@@ -649,10 +529,8 @@
   .asiento-id {
     padding: 8px 14px;
     background: var(--bg-secondary);
-    font-size: 11px;
-    color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    font-size: 11px; color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.06em;
     font-weight: 600;
     border-bottom: 1px solid var(--border-tertiary);
   }
@@ -668,11 +546,9 @@
   .asiento-grid > *:last-child { border-bottom: none; }
 
   .footer-note {
-    margin-top: 3rem;
-    padding-top: 1.5rem;
+    margin-top: 3rem; padding-top: 1.5rem;
     border-top: 1px solid var(--border-tertiary);
-    color: var(--text-tertiary);
-    font-size: 12px;
+    color: var(--text-tertiary); font-size: 12px;
     text-align: center;
   }
 
@@ -729,7 +605,7 @@
     </button>
     <div class="step-indicator">
       Paso <span class="step-pill" id="step-pill">T0</span>
-      <span id="step-total" style="color: var(--text-tertiary);">de T9</span>
+      <span id="step-total" style="color: var(--text-tertiary);">de T12</span>
     </div>
   </div>
 
@@ -739,7 +615,7 @@
     <div class="event-desc" id="event-desc">Cuatro sociedades, ocho cuentas activas, tres clientes con saldo.</div>
   </div>
 
-  <div class="section-label">Posición consolidada · ecuación maestra</div>
+  <div class="section-label">Posición consolidada · gestión de fondos</div>
   <div class="dim-cards-grid" id="dim-cards"></div>
 
   <div class="tabs-bar">
@@ -885,10 +761,34 @@ const EVENTS = [
   },
   {
     id: 'T9', label: 'T9 · Sweeping de patrimonio', title: 'Tesorería barre 500.000 USDC de BITGO Pool a COINBASE',
-    desc: 'Saca patrimonio Ardua de la pool mixta hacia una cuenta propia limpia. Solo cambia composición física.',
+    desc: 'Saca patrimonio Ardua de la pool mixta hacia una cuenta propia limpia. Solo cambia composición física dentro de una sociedad.',
     ops: null,
     tes: { fisico: [{ cuenta: 'cp-bitgo-usdc', delta: -500000 }, { cuenta: 'asc-coinbase', delta: 500000 }], registra: 'FIN', tipo: 'SWEEPING' },
     con: [{ db: 'Disponibilidades — COINBASE USDC', cr: 'Disponibilidades — BITGO USDC', monto: 500000, moneda: 'USDC' }]
+  },
+  {
+    id: 'T10', label: 'T10 · Préstamo intercompany', title: 'Haz Pagos presta 100.000 USDC a Ardua Solutions Corp',
+    desc: 'Transferencia física entre cuentas de sociedades distintas. No es movimiento entre cuentas propias — son entidades legales separadas, cada una con balance propio. Introduce la cuenta técnica Intercompany.',
+    ops: null,
+    tes: { fisico: [{ cuenta: 'cp-bitgo-usdc', delta: -100000 }, { cuenta: 'asc-coinbase', delta: 100000 }], registra: 'FIN', tipo: 'PRESTAMO_INTERCOMPANY' },
+    con: [
+      { db: 'Cta a cobrar intercompany — Astra Ventures USDC (HP)', cr: 'Disponibilidades — BITGO USDC (HP)', monto: 100000, moneda: 'USDC' },
+      { db: 'Disponibilidades — COINBASE USDC (ASC)', cr: 'Cta a pagar intercompany — Haz Pagos USDC (ASC)', monto: 100000, moneda: 'USDC' }
+    ]
+  },
+  {
+    id: 'T11', label: 'T11 · Ajuste de Crédito a favor del cliente', title: 'Devolución de 2.500 ARS de fee cobrado de más a cli-tecno-sa',
+    desc: 'Operaciones detecta que se cobró un fee de más en T2. Sin plano físico — corrige la imputación contable. Ingresos baja (corrige el ingreso registrado mal); Obligaciones sube (le debemos más al cliente).',
+    ops: { tipo: 'AJUSTE_CREDITO', cuenta: '—', cliente: 'cli-tecno-sa', monto: 2500, moneda: 'ARS', signo: '+', registra: 'OPS' },
+    tes: { fisico: [] },
+    con: [{ db: 'Ingresos por fees — depósito (ARS)', cr: 'Obligaciones — cli-tecno-sa ARS', monto: 2500, moneda: 'ARS' }]
+  },
+  {
+    id: 'T12', label: 'T12 · Ajuste de Débito a favor de Ardua', title: 'Cobro de 800 EURC de fee no registrado a cli-flynet-llc',
+    desc: 'Operaciones detecta que olvidó cobrar un fee. Sin plano físico — corrige la imputación contable. Obligaciones baja (le debemos menos al cliente); Ingresos sube.',
+    ops: { tipo: 'AJUSTE_DEBITO', cuenta: '—', cliente: 'cli-flynet-llc', monto: 800, moneda: 'EURC', signo: '−', registra: 'OPS' },
+    tes: { fisico: [] },
+    con: [{ db: 'Obligaciones — cli-flynet-llc EURC', cr: 'Ingresos por fees — operativos (EURC)', monto: 800, moneda: 'EURC' }]
   }
 ];
 
@@ -899,18 +799,20 @@ function groupOfAccount(name) {
   if (n.startsWith('obligaciones')) return 'Obligaciones';
   if (n.startsWith('pendientes')) return 'Pendientes';
   if (n.startsWith('cuenta puente')) return 'Puente FX';
+  if (n.startsWith('cta a cobrar intercompany') || n.startsWith('cta a pagar intercompany')) return 'Intercompany';
   if (n.startsWith('ingresos')) return 'Ingresos';
   if (n.startsWith('gastos') || n.startsWith('egresos')) return 'Egresos';
   return 'Otros';
 }
 
 const GRUPOS_CONTABLES = [
-  { key: 'Disponibilidades', cssClass: 'con-activo',      naturaleza: 'Activo',  sign: { db: +1, cr: -1 } },
-  { key: 'Obligaciones',     cssClass: 'con-pasivo',      naturaleza: 'Pasivo',  sign: { db: -1, cr: +1 } },
-  { key: 'Pendientes',       cssClass: 'con-pasivo-warn', naturaleza: 'Pasivo',  sign: { db: -1, cr: +1 } },
-  { key: 'Puente FX',        cssClass: 'con-tecnica',     naturaleza: 'Técnica', sign: { db: +1, cr: -1 } },
-  { key: 'Ingresos',         cssClass: 'con-ingreso',     naturaleza: 'Ingreso', sign: { db: -1, cr: +1 } },
-  { key: 'Egresos',          cssClass: 'con-egreso',      naturaleza: 'Egreso',  sign: { db: +1, cr: -1 } }
+  { key: 'Disponibilidades', cssClass: 'con-activo',       naturaleza: 'Activo',      sign: { db: +1, cr: -1 } },
+  { key: 'Obligaciones',     cssClass: 'con-pasivo',       naturaleza: 'Pasivo',      sign: { db: -1, cr: +1 } },
+  { key: 'Pendientes',       cssClass: 'con-pasivo-warn',  naturaleza: 'Pasivo',      sign: { db: -1, cr: +1 } },
+  { key: 'Puente FX',        cssClass: 'con-tecnica',      naturaleza: 'Técnica',     sign: { db: +1, cr: -1 } },
+  { key: 'Intercompany',     cssClass: 'con-intercompany', naturaleza: 'Intercompany',sign: { db: +1, cr: -1 } },
+  { key: 'Ingresos',         cssClass: 'con-ingreso',      naturaleza: 'Ingreso',     sign: { db: -1, cr: +1 } },
+  { key: 'Egresos',          cssClass: 'con-egreso',       naturaleza: 'Egreso',      sign: { db: +1, cr: -1 } }
 ];
 
 let currentStep = 0;
@@ -993,24 +895,24 @@ function accountLabel(id) {
 }
 
 function getPositionByDimension() {
-  const out = { fisico: {}, oblig: {}, pend: {}, patrim: {} };
-  const dDim = { fisico: {}, oblig: {}, pend: {}, patrim: {} };
+  const out = { fisico: {}, oblig: {}, pend: {}, capop: {} };
+  const dDim = { fisico: {}, oblig: {}, pend: {}, capop: {} };
   MONEDAS.forEach(m => {
     const fisico = accounts.filter(a => a.moneda === m).reduce((s,a) => s + a.saldo, 0);
     const oblig = Object.values(obligaciones).reduce((s,c) => s + (c[m] || 0), 0);
     const pend = pendientes[m] || 0;
-    const patrim = fisico - oblig - pend;
+    const capop = fisico - oblig - pend;
     out.fisico[m] = fisico;
     out.oblig[m] = oblig;
     out.pend[m] = pend;
-    out.patrim[m] = patrim;
+    out.capop[m] = capop;
     const dF = deltas.physicalByCurrency[m] || 0;
     const dO = deltas.obligByCurrency[m] || 0;
     const dP = deltas.pendientes[m] || 0;
     dDim.fisico[m] = dF;
     dDim.oblig[m] = dO;
     dDim.pend[m] = dP;
-    dDim.patrim[m] = dF - dO - dP;
+    dDim.capop[m] = dF - dO - dP;
   });
   return { values: out, deltas: dDim };
 }
@@ -1029,10 +931,10 @@ function renderProgress() {
 function renderDimensionCards() {
   const { values, deltas: dDim } = getPositionByDimension();
   const dims = [
-    { key: 'fisico',  label: 'Físico',          cssClass: 'dim-fisico', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"></rect><circle cx="12" cy="12.5" r="2.5"></circle><path d="M3 10h18"></path></svg>' },
-    { key: 'oblig',   label: 'Obligaciones',    cssClass: 'dim-oblig',  icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>' },
-    { key: 'pend',    label: 'Pendientes',      cssClass: 'dim-pend',   icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>' },
-    { key: 'patrim',  label: 'Patrimonio',      cssClass: 'dim-patrim', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>' }
+    { key: 'fisico', label: 'Físico',              cssClass: 'dim-fisico', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"></rect><circle cx="12" cy="12.5" r="2.5"></circle><path d="M3 10h18"></path></svg>' },
+    { key: 'oblig',  label: 'Obligaciones',        cssClass: 'dim-oblig',  icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>' },
+    { key: 'pend',   label: 'Pendientes',          cssClass: 'dim-pend',   icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>' },
+    { key: 'capop',  label: 'Capacidad operativa', cssClass: 'dim-capop',  icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>' }
   ];
   let html = '';
   dims.forEach(d => {
@@ -1056,10 +958,8 @@ function renderDimensionCards() {
   document.getElementById('dim-cards').innerHTML = html;
 }
 
-// ============ OPERACIONES TAB ============
 function renderOps() {
   let html = '';
-
   const tot = { ARS: 0, USDC: 0, EURC: 0 };
   const totD = { ARS: 0, USDC: 0, EURC: 0 };
   Object.keys(obligaciones).forEach(c => {
@@ -1137,8 +1037,9 @@ function renderOps() {
       const monto = m.signo === '+' ? '+' : m.signo === '−' ? '−' : '';
       const cuenta = m.cuenta === '—' ? '<span class="pill-noop">sin flujo físico</span>' : (m.cuenta === 'Por asignar' ? '<span class="pill-noop">por asignar</span>' : accountLabel(m.cuenta));
       const estado = m.estado === 'PENDING' ? ' <span class="pill pill-pending">PENDING</span>' : '';
+      const ajuste = (m.tipo === 'AJUSTE_CREDITO' || m.tipo === 'AJUSTE_DEBITO') ? ' <span class="pill pill-adjust">AJUSTE</span>' : '';
       html += `<div class="${isNew ? 'row-new' : ''}">`;
-      html += `<span class="num-strong" style="text-align:left;">${m.tipo}${estado}</span>`;
+      html += `<span class="num-strong" style="text-align:left;">${m.tipo}${estado}${ajuste}</span>`;
       html += `<span>${cuenta}</span>`;
       html += `<span>${m.cliente}</span>`;
       html += `<span class="num">${monto} ${fmt(m.monto)} ${m.moneda}</span>`;
@@ -1146,14 +1047,11 @@ function renderOps() {
     });
     html += '</div></div>';
   }
-
   return html;
 }
 
-// ============ TESORERÍA TAB ============
 function renderTes() {
   let html = '';
-
   const fisicoTot = { ARS: 0, USDC: 0, EURC: 0 };
   const fisicoTotD = { ARS: 0, USDC: 0, EURC: 0 };
   const accCountByMoneda = {};
@@ -1217,8 +1115,9 @@ function renderTes() {
     html += '<div class="row-header"><span>Tipo</span><span>Cuentas afectadas</span><span class="num">Monto</span></div>';
     finMovs.forEach(m => {
       const isNew = m.eventIdx === currentStep;
+      const intercompanyPill = m.tipo === 'PRESTAMO_INTERCOMPANY' ? ' <span class="pill pill-intercompany">INTERCOMPANY</span>' : '';
       html += `<div class="${isNew ? 'row-new' : ''}">`;
-      html += `<span class="num-strong" style="text-align:left;">${m.tipo}</span>`;
+      html += `<span class="num-strong" style="text-align:left;">${m.tipo}${intercompanyPill}</span>`;
       html += `<span>${m.cuenta}</span>`;
       html += `<span class="num">${fmt(m.monto)} ${m.moneda}</span>`;
       html += '</div>';
@@ -1228,7 +1127,6 @@ function renderTes() {
   return html;
 }
 
-// ============ CONTABILIDAD TAB ============
 function computeAccountingBalances() {
   const balances = {};
   GRUPOS_CONTABLES.forEach(g => { balances[g.key] = { ARS: 0, USDC: 0, EURC: 0 }; });
@@ -1276,7 +1174,6 @@ function computeAccountingDeltas() {
 
 function renderCon() {
   let html = '';
-
   const balances = computeAccountingBalances();
   const dBalances = computeAccountingDeltas();
 
