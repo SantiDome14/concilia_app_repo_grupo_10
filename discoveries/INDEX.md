@@ -98,7 +98,7 @@ Archivos que viven en `discoveries/` pero **no son discoveries** — son insumos
 
 | Archivo | Propósito | Discovery asociado |
 |---|---|---|
-| [`fin-tesoreria-disponibilidades-validation-artifact.html`](./fin-tesoreria-disponibilidades-validation-artifact.html) | Simulador interactivo del modelo conceptual de Disponibilidades — 10 eventos T0→T9 con tres perspectivas sincronizadas. HTML standalone para validación con stakeholders. **No es el prototipo del módulo** | [`fin-tesoreria-disponibilidades-discovery.md`](./fin-tesoreria-disponibilidades-discovery.md) |
+| [`fin-tesoreria-disponibilidades-validation-artifact.html`](./fin-tesoreria-disponibilidades-validation-artifact.html) | Simulador interactivo del modelo conceptual de Disponibilidades — 15 eventos T0→T14 con tres perspectivas sincronizadas, asientos contables adscriptos a sociedad y collapsibles por sociedad en la lente de Tesorería. HTML standalone para validación con stakeholders. **No es el prototipo del módulo** | [`fin-tesoreria-disponibilidades-discovery.md`](./fin-tesoreria-disponibilidades-discovery.md) |
 | [`core-modulos-transversales-briefing-tech.md`](./core-modulos-transversales-briefing-tech.md) | Briefing técnico para Claude Design — Refinamiento del set transversal del core | [`core-modulos-transversales-discovery.md`](./core-modulos-transversales-discovery.md) |
 
 ---
