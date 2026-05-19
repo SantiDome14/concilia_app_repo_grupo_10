@@ -75,8 +75,11 @@
     --space-6: 24px;
     --space-8: 32px;
 
-    /* Fixed heights for scrollable panels */
-    --panel-max-height: 540px;
+    /* Fixed heights for scrollable panels.
+       Kept low enough (360px) to guarantee internal scroll activates with
+       8+ rows, so the sticky row-header has a scrolling ancestor to stick to.
+       With align-items:stretch in ops-layout, both panels match heights. */
+    --panel-max-height: 360px;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -146,6 +149,10 @@
     overflow-x: hidden;
     scrollbar-width: thin;
     scrollbar-color: var(--text-quaternary) transparent;
+    /* Reserve gutter for the scrollbar even when not visible, so right-aligned
+       header content (e.g. MONTO) isn't covered by macOS overlay scrollbars
+       when the panel becomes scrollable. */
+    scrollbar-gutter: stable;
   }
   .scroll-area::-webkit-scrollbar { width: 8px; }
   .scroll-area::-webkit-scrollbar-track { background: transparent; }
