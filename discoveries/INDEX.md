@@ -2,7 +2,7 @@
 
 > Catálogo navegable de los discoveries existentes. Para entender la convención de naming, los estados y el ciclo de vida, ver [`README.md`](./README.md).
 >
-> Última actualización: **2026-05-17** · **20 discoveries** + **1 artefacto de soporte**
+> Última actualización: **2026-05-19** · **22 discoveries** + **1 artefacto de soporte**
 
 ---
 
@@ -15,7 +15,7 @@ Hipótesis product-wide sobre una aplicación del financial-core. Pueden coexist
 | [`ops-discovery.md`](./ops-discovery.md) | Módulo de Ops — Session Context | En investigación | Yasmani Rodriguez | 2026-05-14 |
 | [`clp-discovery.md`](./clp-discovery.md) | Client Portal (CLP) — Session Context | En investigación | Yasmani Rodriguez | 2026-04-10 |
 | [`fin-discovery.md`](./fin-discovery.md) | Aplicación de Finanzas (FIN) — Session Context | En investigación | Yasmani Rodriguez | 2026-04-27 |
-| [`lex-discovery.md`](./lex-discovery.md) | LEX — Legal File Management · Discovery Document | En investigación | Yasmani Rodriguez | 2026-04-24 |
+| [`lex-discovery.md`](./lex-discovery.md) | LEX — Legal File Management · Discovery Document | En investigación | Yasmani Rodriguez | 2026-05-19 |
 | [`trd-discovery.md`](./trd-discovery.md) | Aplicación TRD — Discovery Document | Concluida | Yasmani Rodriguez | 2026-04-10 |
 | [`com-discovery.md`](./com-discovery.md) | COM — Living Discovery Document | Descartada | Yasmani Rodriguez | 2026-04-07 |
 
@@ -41,6 +41,8 @@ Hipótesis sobre una funcionalidad específica dentro de un módulo.
 
 | Archivo | Nombre | Estado | Owner | Última act. | Propaga a |
 |---|---|---|---|---|---|
+| [`lex-clientes-export-altas-legales-discovery.md`](./lex-clientes-export-altas-legales-discovery.md) | LEX — Export automático de clientes onboardeados a planillas de Altas Legales | Concluida | Santino Domeniconi | 2026-05-19 | `features/lex/lex-clientes-export-altas-legales.md` · `features/lex/README.md` |
+| [`portal-clientes-mail-bienvenida-discovery.md`](./portal-clientes-mail-bienvenida-discovery.md) | CLP — Actualización del mail de bienvenida al nuevo branding | Concluida | Santino Domeniconi | 2026-05-19 | `features/clp/clp-mail-bienvenida.md` · `features/clp/README.md` |
 | [`fin-reporteria-pnl-discovery.md`](./fin-reporteria-pnl-discovery.md) | Reporte de P&L (FIN · PnL Skill) — Session Context | Concluida | Yasmani Rodriguez | 2026-05-17 | `skills/ardua-pnl-report/SKILL.md` |
 
 ---
