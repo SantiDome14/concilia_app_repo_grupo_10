@@ -112,7 +112,7 @@ export const FIN_DISPONIBILIDADES_MANIFEST: Manifest = {
             type: 'lookup',
             catalog: 'clp.clientes',
             required: false,
-            placeholder: 'Buscá cliente o seleccioná AS00000 para Cuenta de Cliente de Ardua',
+            placeholder: 'Buscar cliente o AS00000...',
             hint: 'Si no aplica un cliente externo, usá la Cuenta de Cliente de Ardua (AS00000).',
           },
           {
