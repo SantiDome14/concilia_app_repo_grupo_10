@@ -1,7 +1,7 @@
 ---
 name: LEX — Visibilidad de quotes del rulo en el detalle de cliente
 features: [LEX]
-status: En investigación
+status: Concluida
 owner: Santino Domeniconi
 created_at: 2026-05-20
 updated_at: 2026-05-20
@@ -21,13 +21,16 @@ El área de Legal & Compliance (Camila Cattaneo) necesita acceder al historial d
 
 Confirmado con Santiago Ahmed (2026-05-20): los quotes del rulo ya están capturados en TRD. El problema no es de captura de datos sino de visibilidad: Legal no tiene acceso a esa información desde LEX, que es la aplicación donde trabaja y donde gestiona los límites del cliente.
 
-El requerimiento fue iniciado por Camila vía Slack (REQ-82). Se publicaron 6 preguntas de clarificación en el hilo el 2026-05-15. Camila aún no respondió — las respuestas van a definir la forma de presentación del dato (tabla transaccional vs. totalizadores).
+El requerimiento fue iniciado por Camila vía Slack (REQ-82). Se publicaron 6 preguntas de clarificación en el hilo el 2026-05-15.
 
 Se prepararon dos prototipos HTML para validar con Camila en persona:
 - `Rulo_A_-_Totalizadores.html` — vista con métricas agregadas (operaciones, vol. fiat, vol. crypto, última operación) y breakdown por tipo de trade.
-- `Rulo_B_-_Historial_de_quotes.html` — vista con tabla transaccional quote a quote con los 7 campos requeridos por Legal.
+- `Rulo_B_-_Historial_de_quotes.html` — vista con tabla transaccional quote a quote con los campos requeridos por Legal.
 
-La validación presencial con Camila (Legal & Compliance) definirá cuál de las dos presentaciones cubre mejor su workflow de reasignación de límites, o si la solución final combina ambas.
+**Validación presencial con Camila Cattaneo (Legal & Compliance) — 2026-05-20:**
+- Ganó el prototipo B (tabla transaccional). La vista de totalizadores fue descartada.
+- Se incorporaron tres ajustes al scope: (1) columna "Número de TC" adicional a "Tipo de TC"; (2) total de monto fiat como footer de tabla con selector de rango libre; (3) dockets de comitente como badges (AS en violeta, CIR en azul).
+- Criterio de identificación de cliente del rulo resuelto por decisión de producto: la sección aparece para todo cliente que tenga al menos un límite configurado en LEX.
 
 ---
 
@@ -57,61 +60,62 @@ Mismo patrón que el CTA "Ver movimientos completos en OPS" del REQ-53. LEX mues
 
 ### D-05 — Patrones de UX heredados del prototipo del REQ-53 (Yasmani Rodriguez)
 
-Al revisar el prototipo `lex_operatoria_prototype.html` (REQ-53), se identificaron cuatro patrones funcionales que aplican igual a la sección Rulo y se incorporan al scope del REQ-82:
+Al revisar el prototipo `lex_operatoria_prototype.html` (REQ-53), se identificaron cuatro patrones funcionales que aplican igual a la sección Rulo:
 
-- **Filtro de período interactivo** — pills `Últimos 30 días / 90 días / Año en curso / Total histórico` que recalculan los datos al cambiar la selección, con skeleton loader de transición.
-- **Skeleton loader** — shimmer animado en KPIs y tabla mientras se cargan los datos, para dar feedback visual durante la espera.
-- **Nota de contexto** — banner informativo sutil arriba de la sección: _"Para ver los límites configurados de este cliente, consultá la tab Límites."_ Orienta al usuario sin saturar la UI.
-- **Tooltip en KPIs** — al hacer hover sobre un valor numérico de alto nivel se muestra el detalle (aplica a vista totalizadores).
-
-**Fuente:** revisión del prototipo `lex_operatoria_prototype.html` (REQ-53 · Yasmani Rodriguez) · sesión 2026-05-20.
-
-### D-06 — CTA al pie implementado como botón funcional con feedback visual
-
-El CTA "Ver detalle completo en TRD →" se implementa como botón (no link estático), con feedback visual al hacer click — consistente con el patrón del botón "Ver movimientos completos en OPS" del REQ-53.
+- **Skeleton loader** — shimmer animado en la tabla mientras se cargan los datos.
+- **Nota de contexto** — banner informativo sutil: _"Para ver los límites configurados de este cliente, consultá la tab Límites."_
+- **Tooltip en columnas numéricas** — al hover sobre valores numéricos se muestra el detalle.
+- **CTA al pie como botón funcional** — con feedback visual al hacer click.
 
 **Fuente:** revisión del prototipo `lex_operatoria_prototype.html` (REQ-53 · Yasmani Rodriguez) · sesión 2026-05-20.
+
+### D-06 — Prototipo B elegido como base. Vista de totalizadores descartada
+
+En validación presencial con Camila (2026-05-20), la vista B (tabla transaccional quote a quote) fue elegida como base de la solución. La vista A (totalizadores) fue descartada para v1.
+
+**Fuente:** validación presencial con Camila Cattaneo (2026-05-20).
+
+### D-07 — Tabla con 9 columnas provenientes de TRD
+
+| Columna | Descripción |
+|---|---|
+| Fecha | Fecha del quote |
+| Tipo de trade | Compra / Venta |
+| Tipo de TC | MEP / CCL |
+| Número de TC | Número del tipo de cambio aplicado por Mesa al cerrar la operación |
+| Moneda fiat | Moneda fiat de la operación |
+| Monto fiat | Monto en moneda fiat |
+| Tipo de crypto | Tipo de criptomoneda |
+| Monto crypto | Monto en criptomoneda |
+| Comitente | Docket del cliente como badge (AS en violeta / CIR en azul) |
+
+"Tipo de TC" y "Número de TC" son dos columnas separadas — ambas provenientes de TRD.
+
+**Fuente:** validación presencial con Camila Cattaneo (2026-05-20).
+
+### D-08 — Footer de totales y selector de rango libre
+
+Al pie de la tabla se muestra el total acumulado de Monto fiat para el período seleccionado. El filtro de período es un selector de rango libre (fecha desde / fecha hasta), no pills fijas — porque el período de análisis varía según el caso de reasignación.
+
+**Fuente:** validación presencial con Camila Cattaneo (2026-05-20).
+
+### D-09 — Dockets de comitente como badges
+
+La columna Comitente muestra el docket con el mismo estilo visual que el listado de clientes de LEX: AS en violeta, CIR en azul.
+
+**Fuente:** validación presencial con Camila Cattaneo (2026-05-20).
+
+### D-10 — Criterio de identificación de cliente del rulo: presencia de límites en LEX
+
+La sección "Rulo" aparece en la tab Operatoria únicamente para clientes que tienen al menos un límite configurado en LEX. No requiere flag externo ni consulta a TRD — la condición vive completamente en LEX.
+
+**Fuente:** decisión de producto · Santino Domeniconi (2026-05-20).
 
 ---
 
 ## Hipótesis abiertas
 
-### H-01 — Tabla transaccional vs. totalizadores
-
-**Hipótesis:** Camila puede necesitar ver los quotes individualmente (tabla transaccional con todos los campos) o un resumen agregado (totalizadores + tabla), o ambos. La forma de presentación impacta directamente el diseño de la sección.
-
-**Cómo validar:** validación presencial con Camila usando los prototipos `Rulo_A_-_Totalizadores.html` y `Rulo_B_-_Historial_de_quotes.html`. Complementar con respuestas a las preguntas 1 a 5 del hilo de REQ-82 (publicadas 2026-05-15).
-
-**Estado:** pendiente — validación con Camila programada.
-
-### H-02 — Criterio de identificación de "cliente del rulo"
-
-**Hipótesis:** debe existir algún atributo o flag que distinga un cliente del rulo de uno que no lo es, para que la sección "Rulo" aparezca solo cuando corresponde. Puede ser un atributo en LEX, un flag en TRD, o una definición operativa de Mesa.
-
-**Cómo validar:** consultar con Facundo Vásques (Head of Trading) o Santiago Ahmed.
-
-**Estado:** pendiente.
-
-### H-03 — Filtros temporales
-
-**Hipótesis:** Camila puede necesitar filtrar el historial por período (igual que el selector de ventana del REQ-53) o puede ser suficiente con ver el histórico completo.
-
-**Cómo validar:** validación presencial con Camila usando los prototipos. Confirmar si las cuatro ventanas del REQ-53 aplican igual al rulo o si necesita alguna distinta.
-
-**Estado:** pendiente — validación con Camila programada.
-
----
-
-## Campos requeridos por Legal (por quote)
-
-Según el requerimiento original de Camila:
-
-- Fecha
-- Tipo de trade
-- Tipo de TC
-- Moneda fiat y monto fiat
-- Tipo de crypto y monto en crypto
-- Número de comitente del cliente
+_Ninguna. Todas las hipótesis fueron resueltas al 2026-05-20._
 
 ---
 
@@ -119,17 +123,17 @@ Según el requerimiento original de Camila:
 
 | Archivo | Descripción | Estado |
 |---|---|---|
-| `Rulo_A_-_Totalizadores.html` | Vista con métricas agregadas y breakdown por tipo de trade | Listo para validación con Camila |
-| `Rulo_B_-_Historial_de_quotes.html` | Vista con tabla transaccional quote a quote (7 campos) | Listo para validación con Camila |
+| `Rulo_A_-_Totalizadores.html` | Vista con métricas agregadas y breakdown por tipo de trade | Descartada en validación con Camila (2026-05-20) |
+| `Rulo_B_-_Historial_de_quotes.html` | Vista con tabla transaccional quote a quote (9 columnas) | Base de la solución — aprobada por Camila (2026-05-20) |
 
-Ambos prototipos están en la rama `feat/lex-rulo-quotes-operatoria-rulo`. La validación con Camila definirá cuál de las dos vistas — o una combinación — entra al scope final del REQ-82.
+Ambos prototipos están en la rama `feat/lex-rulo-quotes-operatoria-rulo`.
 
 ---
 
 ## Dependencias
 
 - **REQ-53 (Tab Operatoria):** la sección "Rulo" vive dentro de la tab Operatoria. REQ-53 está en `SENT TO DEV`. Si REQ-53 no está desplegado cuando este REQ avance, se evalúa si la sección puede lanzarse de forma independiente o debe esperar.
-- **TRD:** fuente de datos. Pendiente mapear qué endpoint/servicio de TRD expone los quotes del rulo y con qué campos.
+- **TRD:** fuente de todos los campos de la tabla. Pendiente mapear qué endpoint/servicio de TRD expone los quotes del rulo con los 9 campos requeridos.
 
 ---
 
@@ -146,5 +150,7 @@ Ambos prototipos están en la rama `feat/lex-rulo-quotes-operatoria-rulo`. La va
 
 | Fecha | Cambio |
 |---|---|
-| 2026-05-20 | Creación del discovery a partir del enriquecimiento de REQ-82. Decisiones D-01 a D-04 cerradas. Hipótesis H-01 a H-03 abiertas, pendientes de respuesta de Camila. |
-| 2026-05-20 | Se agregan D-05 y D-06 con patrones UX heredados del prototipo REQ-53 (Yasmani Rodriguez). Se incorporan dos prototipos HTML para validación presencial con Camila: `Rulo_A_-_Totalizadores.html` y `Rulo_B_-_Historial_de_quotes.html`. Sección Prototipos agregada. |
+| 2026-05-20 | Creación del discovery a partir del enriquecimiento de REQ-82. Decisiones D-01 a D-04 cerradas. Hipótesis H-01 a H-03 abiertas. |
+| 2026-05-20 | D-05 y D-06 agregadas con patrones UX del prototipo REQ-53. Prototipos A y B preparados para validación con Camila. |
+| 2026-05-20 | Validación presencial con Camila completada. D-06 a D-09 cerradas. Prototipo B elegido. 9 columnas definidas. Footer y selector de rango libre confirmados. Dockets como badges confirmados. |
+| 2026-05-20 | D-10 cerrada: criterio de identificación de cliente del rulo resuelto por decisión de producto (presencia de límites en LEX). Discovery concluido. Status → Concluida. |
