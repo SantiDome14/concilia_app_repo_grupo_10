@@ -248,11 +248,14 @@ type MovimientoProjected = Movimiento & {
 type Periodo = 'todo' | 'dia' | 'semana' | 'mes';
 type TipoFilter = MovimientoTipo | 'all';
 
+type StatusFilter = Movimiento['status'] | 'all';
+
 const movQuery = ref('');
 const movPeriodo = ref<Periodo>('todo');
 const movTipo = ref<TipoFilter>('all');
 const movRail = ref<string>('all');
 const movCuenta = ref<string>('all');
+const movStatus = ref<StatusFilter>('all');
 
 /** Reference "today" anchor for the period filter — matches the mock data. */
 const MOV_TODAY_ISO = '2026-04-24';
@@ -315,6 +318,9 @@ const filteredMovimientos = computed<MovimientoProjected[]>(() => {
   if (movCuenta.value !== 'all') {
     source = source.filter((m) => m.fin.cuenta_id === movCuenta.value);
   }
+  if (movStatus.value !== 'all') {
+    source = source.filter((m) => m.status === movStatus.value);
+  }
 
   return source.map((m) => ({
     ...m,
@@ -340,6 +346,7 @@ function clearMovFilters(): void {
   movTipo.value = 'all';
   movRail.value = 'all';
   movCuenta.value = 'all';
+  movStatus.value = 'all';
 }
 
 const movFiltersActive = computed<boolean>(
@@ -348,7 +355,8 @@ const movFiltersActive = computed<boolean>(
     movPeriodo.value !== 'todo' ||
     movTipo.value !== 'all' ||
     movRail.value !== 'all' ||
-    movCuenta.value !== 'all',
+    movCuenta.value !== 'all' ||
+    movStatus.value !== 'all',
 );
 
 // ─── Movimientos · view (Lista / Tarjetas / Tablero) — REQ-50 §5.3 ──
@@ -1059,7 +1067,7 @@ const movTable = useTable({
         class="flex flex-wrap items-center gap-2"
         data-testid="movimientos-filters"
       >
-        <span class="text-sm font-bold text-t-2">Ledger de movimientos</span>
+        <span class="text-sm font-bold text-t-2">Ledger</span>
         <span class="rounded-full bg-card px-2 py-0.5 text-[11px] text-t-3">
           {{ filteredMovimientos.length }}
         </span>
@@ -1118,6 +1126,17 @@ const movTable = useTable({
             <SelectItem v-for="o in cuentaOptions" :key="o.value" :value="o.value">
               {{ o.label }}
             </SelectItem>
+          </SelectContent>
+        </Select>
+        <Select v-model="movStatus">
+          <SelectTrigger class="h-9 w-[140px] text-xs" aria-label="Filtrar por estado operativo">
+            <SelectValue placeholder="Estado · Todos" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Estado · Todos</SelectItem>
+            <SelectItem value="COMPLETED">Completed</SelectItem>
+            <SelectItem value="PENDING">Pending</SelectItem>
+            <SelectItem value="FAILED">Failed</SelectItem>
           </SelectContent>
         </Select>
         <button

@@ -223,7 +223,7 @@ describe('Disponibilidades page · FIN (REQ-50)', () => {
     expect(allHtml).not.toContain('estado_de_supervision');
   });
 
-  it('Movimientos exposes search + Período / Tipo / Rail / Estructura·Cuenta filters (Partner removed — redundant with Banco/Cuenta)', async () => {
+  it('Movimientos exposes search + Período / Tipo / Rail / Estructura·Cuenta / Estado filters', async () => {
     const { wrapper } = await mountPage(
       `${ROUTE_PATHS.DISPONIBILIDADES}?tab=movimientos`,
     );
@@ -231,10 +231,12 @@ describe('Disponibilidades page · FIN (REQ-50)', () => {
     expect(filters.exists()).toBe(true);
     expect(filters.find('[data-testid="movimientos-search"]').exists()).toBe(true);
     const labels = filters.text();
+    expect(labels).toContain('Ledger');
     expect(labels).toContain('Período');
     expect(labels).toContain('Tipo');
     expect(labels).toContain('Rail');
     expect(labels).toContain('Estructura / Cuenta');
+    expect(labels).toContain('Estado');
     expect(labels).not.toContain('Partner ·');
   });
 

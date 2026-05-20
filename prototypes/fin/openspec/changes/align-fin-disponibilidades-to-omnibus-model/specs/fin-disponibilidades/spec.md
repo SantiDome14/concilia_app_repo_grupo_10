@@ -398,6 +398,7 @@ The `Categoría` axis SHALL be the default lens for predicate evaluation (replac
 - **Tipo** — values `Todos` (default) + one entry per tipo of the matriz (18 entries).
 - **Rail** — values `Todos` (default) + the 15 canonical rails exposed by `RAIL_OPTIONS` (WIRE / VCURRENCY USDT / VCURRENCY USDC / VCURRENCY / SWIFT / SPEI / SPE / SEPA / PIX / INTERNAL / FX / FEDWIRE / Faster Payments / ARDUA / ACH). The set is rendered in full regardless of the rails present in the current data — the filter shape stays stable across data states.
 - **Estructura / Cuenta** — values `Todas` (default) + each active cuenta from the catalog (label: `banco · moneda · numero`). This filter SHALL also subsume the Partner discriminator — `ops.partner` is the bank / structure of the cuenta, so a separate Partner filter would be redundant.
+- **Estado** — values `Todos` (default) / `Completed` / `Pending` / `Failed`. Maps directly to `Movimiento.status`.
 
 A "Limpiar" button SHALL appear when any filter is active and SHALL reset all filters to their default value. Native `<select>` SHALL NOT be used.
 
@@ -427,7 +428,7 @@ A "Limpiar" button SHALL appear when any filter is active and SHALL reset all fi
 #### Scenario: Search + filters surface canonical L3 controls
 
 - **WHEN** the Movimientos sub-tab is active
-- **THEN** a `[data-testid="movimientos-filters"]` strip is rendered with a search input and four `<Select>` filters (Período / Tipo / Rail / Estructura · Cuenta)
+- **THEN** a `[data-testid="movimientos-filters"]` strip is rendered with a search input and five `<Select>` filters (Período / Tipo / Rail / Estructura · Cuenta / Estado)
 - **AND** the search input is a shadcn-vue `<Input>` (NOT a native `<input>`)
 - **AND** each filter is a shadcn-vue `<Select>` (NOT a native `<select>`)
 - **AND** no separate Partner filter is rendered (redundant with Estructura · Cuenta)
