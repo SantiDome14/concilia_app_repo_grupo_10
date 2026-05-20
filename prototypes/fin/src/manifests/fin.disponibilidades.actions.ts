@@ -31,20 +31,17 @@ export const FIN_DISPONIBILIDADES_MANIFEST: Manifest = {
       dimension: 'governance',
       label: 'Cargar movimiento manual',
       description:
-        'Cargá un movimiento manual de los tipos registrados por FIN (comisiones, intereses, pagos, sweepings, intercompany, aportes, ajustes). Los tipos OPS-native (DEPOSIT/WITHDRAWAL/FEE/SWAP/etc) se cargan desde OPS, no acá. Si tu rol requiere supervisión, el movimiento queda pendiente hasta que otro usuario lo confirme.',
+        'Cargá un movimiento manual de los tipos registrados por FIN (comisiones, intereses, pagos, sweepings, intercompany, aportes, ajustes). Los tipos OPS-native (DEPOSIT/WITHDRAWAL/FEE/SWAP/etc) se cargan desde OPS, no acá.',
       icon: 'plus',
       is_module_cta: true,
       creates_record_type: 'movimiento',
       capabilities: {
-        required_role_any_of: [
-          'fin.disponibilidades.movimientos.cargar_directo',
-          'fin.disponibilidades.movimientos.cargar_con_supervision',
-        ],
+        required_role_any_of: ['fin.disponibilidades.movimientos.cargar_directo'],
       },
       dialog: {
         title: 'Cargar movimiento manual',
         description:
-          'El movimiento se persiste en el ledger. Si tu capability es `cargar_con_supervision`, queda en pendiente_de_supervision y no impacta saldos hasta que un supervisor distinto lo confirme. Para movimientos cross-sociedad (Préstamo intercompany / Sweeping), completá los campos Sociedad / Cuenta destino — el sistema genera dos asientos espejo con `evento_id` compartido.',
+          'El movimiento se persiste en el ledger e impacta los saldos de la Posición. Para movimientos cross-sociedad (Préstamo intercompany / Sweeping), completá los campos Sociedad / Cuenta destino — el sistema genera dos asientos espejo con `evento_id` compartido.',
         fields: [
           {
             id: 'tipo',

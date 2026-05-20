@@ -45,9 +45,9 @@ V1 does NOT apply cross-currency conversions: every KPI and saldo SHALL be prese
 - **THEN** the confirmation is blocked
 - **AND** an inline error reads "Ecuación maestra desbalanceada en HP / ARS — investigar antes de confirmar"
 
-### Requirement: The 21-row matriz de tipos MUST be the closed contract of MovimientoTipo
+### Requirement: The 18-row matriz de tipos MUST be the closed contract of MovimientoTipo
 
-The `MovimientoTipo` union SHALL contain exactly the 21 values enumerated in the feature's matriz (one value per row of the matriz). Note that some "events" in the feature prose collapse onto the same union value (e.g., legacy collector flows map to `DEPOSIT`/`WITHDRAWAL`); the matriz row is what matters.
+The `MovimientoTipo` union SHALL contain exactly the 18 values enumerated below. The matriz is the closed contract; tipos that look "pending" (e.g. a deposit awaiting client identification) are NOT separate tipos — they are records of an existing tipo with `fin.cliente_id == null`. The simulator-only pending tipos (`SOLICITUD_RETIRO_PENDING`, `DEPOSITO_PENDIENTE`, `ASIGNACION_PENDIENTE`) are NOT part of the union.
 
 | Tipo | Registra |
 |---|---|
@@ -58,9 +58,6 @@ The `MovimientoTipo` union SHALL contain exactly the 21 values enumerated in the
 | `SWAP_OUT` | OPS |
 | `SWAP_IN` | OPS |
 | `SPREAD` | OPS |
-| `SOLICITUD_RETIRO_PENDING` | OPS |
-| `DEPOSITO_PENDIENTE` | OPS |
-| `ASIGNACION_PENDIENTE` | OPS |
 | `AJUSTE_CREDITO` | OPS |
 | `AJUSTE_DEBITO` | OPS |
 | `MOV_ENTRE_CUENTAS_PROPIAS` | FIN |
@@ -87,28 +84,29 @@ Any event that does not fit one of these rows SHALL be treated as a missing tipo
 - **WHEN** a new tipo is added to the union without a matching branch in `categoriaOf`
 - **THEN** the TypeScript compiler reports `Type 'never' is not assignable to type 'MovimientoCategoria'` on the default branch
 
-### Requirement: Movimientos MUST be classified by Categoría (A-F) derived from tipo + cliente + flujo físico
+### Requirement: Movimientos MUST be classified by Categoría (A-E) derived from tipo + cliente + flujo físico
 
-Every `Movimiento` SHALL be classified by a derived `Categoria: 'A' | 'B' | 'C' | 'D' | 'E' | 'F'` computed from `(tipo, has_cliente, has_physical_flow)`:
+Every `Movimiento` SHALL be classified by a derived `Categoria: 'A' | 'B' | 'C' | 'D' | 'E'` computed from `(tipo, has_cliente, has_physical_flow)`:
 
 | Categoría | Descripción | Tipos representativos |
 |---|---|---|
 | A | Con cliente + físico | `DEPOSIT`, `WITHDRAWAL` |
-| B | Con cliente, sin físico | `FEE`, `REBATE`, `SWAP_OUT/IN` (cliente), `AJUSTE_CREDITO`, `AJUSTE_DEBITO`, `ASIGNACION_PENDIENTE` |
+| B | Con cliente, sin físico | `FEE`, `REBATE`, `SWAP_OUT/IN` (cliente), `AJUSTE_CREDITO`, `AJUSTE_DEBITO` |
 | C | Sin cliente + físico (interno) | `COMISION_BANCARIA`, `INTERES_BANCARIO`, `PAGO_PROVEEDOR`, `PAGO_SALARIOS`, `MOV_ENTRE_CUENTAS_PROPIAS`, `APORTE_CAPITAL` |
 | D | Sin cliente + físico (cross-sociedad) | `PRESTAMO_INTERCOMPANY`, `SWEEPING_CROSS_SOCIEDAD` |
 | E | Sin cliente, sin físico | `SPREAD`, `AJUSTE_MANUAL` (sin cliente) |
-| F | Cliente NO IDENTIFICADO | `DEPOSITO_PENDIENTE` |
 
 The categoría SHALL be derived, NOT stored. The page SHALL project records through `categoriaOf(tipo)` and expose `_categoria` as a derived field on the projected shape (same pattern as `_imp_ardua`, `_imp_cliente`, `_sociedad`).
 
 For categorías **C, D, and E**, the Lado Cliente field SHALL NOT apply — it is not "vacío", not "sin asignar", not imputable to a synthetic placeholder. The contrapartida económica is a formal cuenta contable (Ingresos / Egresos / Patrimonio operativo / Intercompany / Puente FX).
 
+A categoría F for "Cliente NO IDENTIFICADO" was considered and removed alongside the pending tipos: a depósito sin cliente identificado es un `DEPOSIT` con `fin.cliente_id == null` (categoría A en estado de imputación parcial), no un tipo separado. The KPI "Pendientes" is computed from records with `fin.cliente_id == null`, independent of the tipo.
+
 #### Scenario: Categoría drives axis selection on Tablero
 
 - **GIVEN** the Movimientos sub-tab is in Tablero view with axis `Categoría`
 - **WHEN** the Tablero renders
-- **THEN** the columns are `A`, `B`, `C`, `D`, `E`, `F` in that fixed order
+- **THEN** the columns are `A`, `B`, `C`, `D`, `E` in that fixed order
 - **AND** each movimiento card lands in the column matching `categoriaOf(m.tipo)`
 
 #### Scenario: Asignar Cliente is hidden for C/D/E categorías
@@ -118,7 +116,7 @@ For categorías **C, D, and E**, the Lado Cliente field SHALL NOT apply — it i
 - **THEN** the actions "Asignar Cliente" and "Editar Cliente" are NOT present
 - **AND** the actions "Asignar Banco y Cuenta" and "Editar Banco y Cuenta" remain available
 
-#### Scenario: Asignar Cliente visible for A/B/F categorías
+#### Scenario: Asignar Cliente visible for A/B categorías
 
 - **GIVEN** a movimiento has `tipo: 'FEE'` (categoría B)
 - **WHEN** the operator opens the kebab menu of that row
@@ -172,12 +170,10 @@ When an operative event affects two sociedades (`PRESTAMO_INTERCOMPANY` or `SWEE
 
 Each half SHALL be fully accountable on its own sociedad's ledger. The ecuación maestra SHALL hold independently per sociedad after the two asientos are persisted.
 
-The supervision flag, if any, SHALL apply atomically to the pair: confirming the pair confirms both halves; rejecting the pair rejects both halves; neither half can be confirmed or rejected without the other.
-
 #### Scenario: Préstamo intercompany generates two records sharing evento_id
 
 - **GIVEN** the operator loads a `PRESTAMO_INTERCOMPANY` of `500_000 USD` from `HP` to `ASC`
-- **WHEN** the supervisor confirms
+- **WHEN** the carga manual dialog is confirmed
 - **THEN** two Movimiento records are persisted:
   - One with `fin.sociedad_id: 'hp'`, `asiento_id: 'AS-99001-HP'`, `evento_id: 'EV-99001'`
   - One with `fin.sociedad_id: 'asc'`, `asiento_id: 'AS-99001-ASC'`, `evento_id: 'EV-99001'`
@@ -189,14 +185,6 @@ The supervision flag, if any, SHALL apply atomically to the pair: confirming the
 - **WHEN** the table renders the two halves of a Préstamo intercompany
 - **THEN** ONLY the `HP` half is visible
 - **AND** the `ASC` half is filtered out
-
-#### Scenario: Rejecting one half rejects the pair
-
-- **GIVEN** a Préstamo intercompany pair in `pendiente_de_supervision`
-- **WHEN** the supervisor rejects the `HP` half
-- **THEN** both halves transition to `rechazado` atomically
-- **AND** neither half contributes to any Posición saldo in any future render
-- **AND** the audit log records the rejection of the pair, not just one half
 
 ### Requirement: Movimientos MUST be inmutables; corrections MUST be registered via Ajuste de Crédito / Débito / Manual
 
@@ -292,7 +280,7 @@ The dialog opened by the "Cargar movimiento manual" Main CTA SHALL expose, in it
 | `SWEEPING_CROSS_SOCIEDAD` | D |
 | `AJUSTE_MANUAL` | E |
 
-OPS-registered tipos (DEPOSIT / WITHDRAWAL / FEE / REBATE / SWAP_* / SPREAD / SOLICITUD_RETIRO_PENDING / DEPOSITO_PENDIENTE / ASIGNACION_PENDIENTE / AJUSTE_CREDITO / AJUSTE_DEBITO) SHALL NOT appear in the dialog. They are loaded through OPS, not through FIN.
+OPS-registered tipos (DEPOSIT / WITHDRAWAL / FEE / REBATE / SWAP_* / SPREAD / AJUSTE_CREDITO / AJUSTE_DEBITO) SHALL NOT appear in the dialog. They are loaded through OPS, not through FIN.
 
 The dialog SHALL be context-aware on the tipo:
 
@@ -331,7 +319,7 @@ The dialog SHALL validate required fields and apply the lookups cascade (Socieda
 - **AND** no `cuenta_operativa_cliente_id` field is present
 - **AND** the dialog accepts only Sociedad + Cuenta + amount + Motivo
 
-### Requirement: Movimientos sub-tab MUST list the global ledger with three views and 7 reconfigurable axes including Categoría
+### Requirement: Movimientos sub-tab MUST list the global ledger with three views and 6 reconfigurable axes including Categoría
 
 The Movimientos sub-tab SHALL render the global ledger of FIN, including movements registered by either app (`origen ∈ {'OPS', 'FIN'}` — `'TRD'` no aplica al ledger de Disponibilidades, and the legacy `'Manual'` collapses into `'FIN'`). The view SHALL NOT apply any filter by origin at mount; the operator MAY filter via the L3 toolbar. The L2 KPI strip SHALL expose:
 
@@ -340,32 +328,30 @@ The Movimientos sub-tab SHALL render the global ledger of FIN, including movemen
 | Movimientos del día | Count |
 | Volumen ingresado | Per-moneda rows (no USD-equivalent in V1) |
 | Volumen egresado | Per-moneda rows (no USD-equivalent in V1) |
-| Pendientes de imputación | Count |
-| Pendientes de supervisión | Count |
-| Pendientes de asignación | Count of `DEPOSITO_PENDIENTE` records without their matching `ASIGNACION_PENDIENTE` |
+| Pendientes de imputación | Count of records with `fin.cuenta_id == null` (Lado Ardua pending) |
+| Pendientes de asignación | Count of DEPOSIT / WITHDRAWAL records with `fin.cliente_id == null` (Lado Cliente pending — feeds the Pendientes KPI of the ecuación maestra) |
 
-The sub-tab SHALL expose three views via `<ViewToggle>`: **Lista** (default), **Tarjetas**, **Tablero**. The Tablero view SHALL be state-driven by an axis selector that allows switching between **seven** axes:
+The sub-tab SHALL expose three views via `<ViewToggle>`: **Lista** (default), **Tarjetas**, **Tablero**. The Tablero view SHALL be state-driven by an axis selector that allows switching between **six** axes:
 
 | Axis | Values |
 | --- | --- |
 | Estado operativo (default) | Pending / Processing / Completed / Failed |
 | Estado de imputación Lado Ardua | Sin asignar / Asignado |
 | Estado de imputación Lado Cliente | Sin asignar / Asignado / No aplica |
-| Estado de supervisión | Pendiente de supervisión / Confirmado / Rechazado (no_aplica hidden) |
-| Tipo de movimiento | One column per tipo of the matriz (21 columns) |
+| Tipo de movimiento | One column per tipo of the matriz (18 columns) |
 | Sociedad | One column per active Sociedad |
-| **Categoría** | A / B / C / D / E / F |
+| **Categoría** | A / B / C / D / E |
 
 The `Categoría` axis SHALL be the default lens for predicate evaluation (replacing the `origen`-based discrimination of the previous Requirement). The `origen` field SHALL remain visible as a column / badge in Lista and Tarjetas views but SHALL NOT be the primary categorisation.
 
-#### Scenario: Categoría axis renders 6 columns
+#### Scenario: Categoría axis renders 5 columns
 
 - **GIVEN** the Movimientos sub-tab is in Tablero view
 - **WHEN** the operator selects axis `Categoría`
-- **THEN** the Tablero renders 6 columns: A, B, C, D, E, F in that fixed order
+- **THEN** the Tablero renders 5 columns: A, B, C, D, E in that fixed order
 - **AND** each card lands in the column matching `categoriaOf(card.tipo)`
 
-#### Scenario: Lista view exposes 21 distinct tipos
+#### Scenario: Lista view exposes 18 distinct tipos
 
 - **GIVEN** the mock data covers every tipo of the matriz
 - **WHEN** the Lista view renders
@@ -379,22 +365,20 @@ The `Categoría` axis SHALL be the default lens for predicate evaluation (replac
 - **THEN** the card body shows three rows, one per moneda, each with the moneda nativa total
 - **AND** NO USD-equivalent consolidated figure is shown
 
-### Requirement: Movimientos MUST expose six contextual row-level actions gated by categoría (not by origen)
+### Requirement: Movimientos MUST expose four contextual row-level actions gated by categoría (not by origen)
 
-Each row of the Movimientos table SHALL expose a `⋯` kebab menu via `<ManifestActionsMenu :manifest-key="fin.disponibilidades.movimientos">` with up to six actions, each gated by its `enable_when` predicate. The predicate base SHALL switch from `origen` to `categoría`:
+Each row of the Movimientos table SHALL expose a `⋯` kebab menu via `<ManifestActionsMenu :manifest-key="fin.disponibilidades.movimientos">` with up to four actions, each gated by its `enable_when` predicate. The predicate base SHALL switch from `origen` to `categoría`:
 
 | Action | Capability | `show_when` | `enable_when` |
 |---|---|---|---|
-| Asignar Banco y Cuenta | `imputar_ardua` | `categoría ∈ {C, D, E}` (FIN-imputed) | `fin.cuenta_id === null` |
-| Editar Banco y Cuenta | `imputar_ardua` | idem | `fin.cuenta_id !== null` |
-| Asignar Cliente | `imputar_cliente` | `categoría ∈ {A, B, F}` (cliente applies) | `fin.cliente_id === null` |
+| Asignar Banco y Cuenta | `imputar_ardua` | always | `fin.cuenta_id === null` AND `categoría ∈ {C, D, E}` |
+| Editar Banco y Cuenta | `imputar_ardua` | always | `fin.cuenta_id !== null` AND `categoría ∈ {C, D, E}` |
+| Asignar Cliente | `imputar_cliente` | `categoría ∈ {A, B}` (cliente applies) | `fin.cliente_id === null` |
 | Editar Cliente | `imputar_cliente` | idem | `fin.cliente_id !== null` |
-| Confirmar carga manual | `supervisar_carga` | always (manuales) | `requires_supervision === true` AND `supervised_by === null` AND `created_by !== current_user` |
-| Rechazar carga manual | `supervisar_carga` | always (manuales) | idem |
 
-For movimientos en categoría A (DEPOSIT, WITHDRAWAL) and B (FEE, REBATE, SWAP cliente, AJUSTE_*) the imputación de Banco y Cuenta is realised by OPS, not by FIN — the action SHALL show but stay disabled with `disable_reason: 'Imputado desde OPS'` and `disable_tag: 'Solo OPS'`. For categoría F (DEPOSITO_PENDIENTE) the Asignar Cliente action SHALL be the path to register the matching ASIGNACION_PENDIENTE.
+For movimientos en categoría A (DEPOSIT, WITHDRAWAL) and B (FEE, REBATE, SWAP cliente, AJUSTE_*) the imputación de Banco y Cuenta is realised by OPS, not by FIN — the action SHALL show but stay disabled with `disable_reason: 'Lado Ardua imputado por OPS'` and `disable_tag: 'Solo OPS'`.
 
-The `created_by !== current_user` predicate is enforced at the page level (the actions menu hides the entry when the current user is the creator); the manifest's `enable_when` only checks the gating conditions the engine can express today.
+Supervisión actions (`Confirmar carga manual`, `Rechazar carga manual`) were removed from this Requirement set in V1 — see the corresponding REMOVED Requirement below. Reintroduction (via capabilities) is a follow-up change.
 
 #### Scenario: Asignar Banco y Cuenta shown but disabled for categoría A
 
@@ -402,7 +386,7 @@ The `created_by !== current_user` predicate is enforced at the page level (the a
 - **WHEN** the operator opens the kebab menu
 - **THEN** "Editar Banco y Cuenta" is present but disabled
 - **AND** the disabled tag reads "Solo OPS"
-- **AND** the disable_reason tooltip reads "Imputado desde OPS"
+- **AND** the disable_reason tooltip reads "Lado Ardua imputado por OPS"
 
 #### Scenario: Asignar Banco y Cuenta enabled for categoría C
 
@@ -415,13 +399,7 @@ The `created_by !== current_user` predicate is enforced at the page level (the a
 
 - **GIVEN** a movimiento has `tipo: 'INTERES_BANCARIO'` (categoría C)
 - **WHEN** the operator opens the kebab menu
-- **THEN** neither "Asignar Cliente" nor "Editar Cliente" is present (predicate `categoría ∈ {A, B, F}` fails)
-
-#### Scenario: Confirmar carga manual hidden for the creator (unchanged)
-
-- **GIVEN** a movimiento was created by user `U1` with `requires_supervision: true, supervised_by: null`
-- **WHEN** user `U1` opens the kebab menu of that movement
-- **THEN** the "Confirmar carga manual" entry is NOT present
+- **THEN** neither "Asignar Cliente" nor "Editar Cliente" is present (predicate `categoría ∈ {A, B}` fails)
 
 ### Requirement: Carga manual dialog MUST validate required fields and route to direct-or-supervised flow per creator capability
 
@@ -445,9 +423,8 @@ The "Cargar movimiento manual" CTA SHALL open a dialog that validates required f
 
 On confirm:
 
-- If the creator holds `fin.disponibilidades.movimientos.cargar_directo`, the movement SHALL be persisted with `requires_supervision: false`, impact saldos immediately, and the Posición sub-tab SHALL include its amount on next render.
-- If the creator holds `fin.disponibilidades.movimientos.cargar_con_supervision`, the movement SHALL be persisted with `requires_supervision: true`, displayed with the "Pendiente de supervisión" badge in the Movimientos sub-tab, and SHALL NOT impact saldos until confirmed.
-- For cross-sociedad tipos (PRESTAMO_INTERCOMPANY, SWEEPING_CROSS_SOCIEDAD), the engine SHALL create two `Movimiento` records sharing `evento_id` (per the society-scoped asientos Requirement). Both halves SHALL inherit `requires_supervision` from the same capability check on the creator — they are confirmed or rejected as a pair.
+- The creator MUST hold `fin.disponibilidades.movimientos.cargar_directo`. The movement SHALL be persisted and SHALL impact saldos immediately — the Posición sub-tab SHALL include its amount on next render. Supervision was removed in V1; a future change MAY reintroduce a `cargar_con_supervision` capability that defers saldo impact until a supervisor confirms.
+- For cross-sociedad tipos (PRESTAMO_INTERCOMPANY, SWEEPING_CROSS_SOCIEDAD), the engine SHALL create two `Movimiento` records sharing `evento_id` (per the society-scoped asientos Requirement).
 
 #### Scenario: Required-field validation blocks submission
 
@@ -456,21 +433,20 @@ On confirm:
 - **THEN** the dialog displays an inline error under "Motivo" reading "Motivo es obligatorio (≥ 10 caracteres)"
 - **AND** the submit button is disabled
 
-#### Scenario: Direct flow with cargar_directo
+#### Scenario: Direct flow with cargar_directo impacts saldos immediately
 
-- **GIVEN** the operator holds `cargar_directo` (NOT `cargar_con_supervision`)
+- **GIVEN** the operator holds `cargar_directo`
 - **WHEN** the operator fills all required fields and confirms with a single-sociedad tipo (e.g. `COMISION_BANCARIA`)
-- **THEN** one movement is persisted with `requires_supervision: false`
+- **THEN** one movement is persisted
 - **AND** the Posición sub-tab includes its amount on the next render
+- **AND** no supervision queue or "Pendiente de supervisión" badge appears
 
-#### Scenario: Supervised flow with cargar_con_supervision
+#### Scenario: Cross-sociedad cargar_directo persists two records
 
-- **GIVEN** the operator holds `cargar_con_supervision`
+- **GIVEN** the operator holds `cargar_directo`
 - **WHEN** the operator fills the cross-sociedad fields and confirms a `PRESTAMO_INTERCOMPANY`
-- **THEN** two records are persisted, both with `requires_supervision: true, supervised_by: null, supervised_at: null, estado_de_supervision: 'pendiente_de_supervision'`
-- **AND** both records share the same `evento_id`
-- **AND** the Movimientos sub-tab displays both rows with a "Pendiente de supervisión" badge
-- **AND** the Posición sub-tab does NOT include their amounts
+- **THEN** two records are persisted with distinct `id` and `asiento_id` but the same `evento_id`
+- **AND** both halves impact their sociedad's saldo on the next render
 
 ## REMOVED Requirements
 
@@ -483,3 +459,31 @@ On confirm:
 - The `clp.clientes` catalog resolver SHALL stop including the synthetic `AS00000` entry in its results.
 - Any spec scenario that exercises the AS00000 search flow is removed (this Requirement and its 2 scenarios).
 - Capability `fin.disponibilidades.movimientos.imputar_cliente` retains its semantics — it gates the action; the action is just no longer surfaced for C/D/E records.
+
+### Requirement: Posición MUST exclude movements pending supervision from saldo aggregation
+
+**Reason:** Supervisión as a first-class concept was removed in V1. Manual movements impact saldos immediately on confirm; there is no "pendiente de supervisión" intermediate state. The team will validate the operational flows with the area first and may reintroduce supervision (likely via capabilities) in a follow-up change.
+
+**Migration:**
+- The fields `requires_supervision`, `supervised_by`, `supervised_at`, `estado_de_supervision` SHALL be removed from `Movimiento`.
+- The type `EstadoDeSupervision` SHALL be removed.
+- Mocks SHALL drop these fields from every record.
+- Posición saldo aggregation SHALL include every confirmed movement on every render — no supervision-based exclusion.
+
+### Requirement: Rechazar carga manual MUST require a justification closure ≥ 10 characters and the rejected movement MUST never impact saldos
+
+**Reason:** With the supervision flow removed, the `Rechazar carga manual` action no longer exists. The action and its dialog are removed from the `fin.disponibilidades.movimientos` manifest.
+
+**Migration:**
+- The action `fin.disponibilidades.movimientos.supervisar.rechazar` SHALL be removed from the manifest.
+- The companion action `fin.disponibilidades.movimientos.supervisar.confirmar` SHALL also be removed.
+- The kanban axis `estado_de_supervision` SHALL be removed from the manifest's `kanban_axes`.
+
+### Requirement: The eight capabilities of fin-disponibilidades MUST be declared and evaluated by the manifest engine
+
+**Reason:** Two of the eight capabilities pertained to supervisión (`cargar_con_supervision`, `supervisar_carga`) which was removed in V1. The capability set tightens to six: `ver`, `bancos_cuentas.crear`, `bancos_cuentas.configurar_contable`, `movimientos.imputar_ardua`, `movimientos.imputar_cliente`, `movimientos.cargar_directo`.
+
+**Migration:**
+- The DEV seed `DEV_FALLBACK_CAPABILITIES` SHALL drop `fin.disponibilidades.movimientos.cargar_con_supervision` and `fin.disponibilidades.movimientos.supervisar_carga`.
+- The `Cargar movimiento manual` CTA's `capabilities.required_role_any_of` SHALL be `['fin.disponibilidades.movimientos.cargar_directo']` (single-capability gate).
+- A future change MAY reintroduce supervision capabilities; the framework's wildcard rule (`'*'` grants all) keeps dev unblocked.

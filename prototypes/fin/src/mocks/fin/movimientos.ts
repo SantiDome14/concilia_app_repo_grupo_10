@@ -2,29 +2,29 @@
 // Mock dataset · `movimiento` records (FIN.Disponibilidades.Movimientos)
 // ────────────────────────────────────────────────────────────────────
 // Per `align-fin-disponibilidades-to-omnibus-model`, the ledger covers
-// every tipo of the 21-row matriz with at least one representative
-// record. Multi-record events are modelled as documented in Decision 2
-// of design.md:
+// every tipo of the 18-row matriz with at least one representative
+// record. Multi-record events:
 //
 //   - `PRESTAMO_INTERCOMPANY` and `SWEEPING_CROSS_SOCIEDAD` are TWO
 //     distinct records per event sharing `evento_id`, each with its own
 //     `asiento_id` and `fin.sociedad_id`.
 //   - `SWAP_OUT` + `SWAP_IN` + `SPREAD` form a TRIPLE from a single
 //     ejecución, sharing `evento_id`.
-//   - `DEPOSITO_PENDIENTE` followed by its `ASIGNACION_PENDIENTE` share
-//     `evento_id`.
 //
 // AS00000 cleanup: every record in categoría C / D / E carries
 // `cliente_id: null` (no synthetic placeholder).
 //
-// Supervisión state mix: pendiente_de_supervision (×3), confirmado
-// (×2), rechazado (×1), no_aplica (rest). FIN-side records authored by
-// `dev-yasmani-2` are supervisable by `dev-yasmani` per the
-// `created_by !== current_user` predicate.
+// Supervision removed in V1 — el área valida los flujos primero y la
+// supervisión podrá reintroducirse via capabilities en un cambio futuro.
 //
-// `origen` enumeration: `'OPS'` (vostros + pendientes registrados en OPS)
+// Pending types removed — los simuladores SOLICITUD_RETIRO_PENDING /
+// DEPOSITO_PENDIENTE / ASIGNACION_PENDIENTE no son tipos del modelo
+// real. Un depósito sin cliente identificado es un `DEPOSIT` con
+// `fin.cliente_id == null` (alimenta la KPI Pendientes); la asignación
+// posterior se hace vía la acción `Asignar Cliente`.
+//
+// `origen` enumeration: `'OPS'` (vostros + ajustes registrados en OPS)
 // vs `'FIN'` (nostros, no-operativos, intercompany, ajustes manuales).
-// `'TRD'` no aplica al ledger de Disponibilidades.
 // ════════════════════════════════════════════════════════════════════
 
 import type { Movimiento, PerMoneda } from '@/types/fin';
@@ -47,10 +47,6 @@ export const MOVIMIENTOS: Movimiento[] = [
     moneda: 'USD',
     status: 'COMPLETED',
     origen: 'OPS',
-    requires_supervision: false,
-    supervised_by: null,
-    supervised_at: null,
-    estado_de_supervision: 'no_aplica',
     created_by: SYSTEM_OPS,
     asiento_id: 'AS-12840-ASC',
     evento_id: null,
@@ -80,10 +76,6 @@ export const MOVIMIENTOS: Movimiento[] = [
     moneda: 'USDC',
     status: 'COMPLETED',
     origen: 'OPS',
-    requires_supervision: false,
-    supervised_by: null,
-    supervised_at: null,
-    estado_de_supervision: 'no_aplica',
     created_by: SYSTEM_OPS,
     asiento_id: 'AS-12841-CP',
     evento_id: null,
@@ -106,7 +98,7 @@ export const MOVIMIENTOS: Movimiento[] = [
 
   // ════════════════════════════════════════════════════════════════
   // Categoría B — Con cliente, sin físico
-  // (FEE / REBATE / SWAP_* / AJUSTE_CR/DB / ASIGNACION_PENDIENTE / SOLICITUD_RETIRO_PENDING)
+  // (FEE / REBATE / SWAP_OUT / SWAP_IN / AJUSTE_CREDITO / AJUSTE_DEBITO)
   // ════════════════════════════════════════════════════════════════
 
   // ─── B · FEE — OPS, cliente imputado ────────────────────────────
@@ -118,10 +110,6 @@ export const MOVIMIENTOS: Movimiento[] = [
     moneda: 'ARS',
     status: 'COMPLETED',
     origen: 'OPS',
-    requires_supervision: false,
-    supervised_by: null,
-    supervised_at: null,
-    estado_de_supervision: 'no_aplica',
     created_by: SYSTEM_OPS,
     asiento_id: 'AS-12839-HP',
     evento_id: null,
@@ -151,10 +139,6 @@ export const MOVIMIENTOS: Movimiento[] = [
     moneda: 'USDC',
     status: 'COMPLETED',
     origen: 'FIN',
-    requires_supervision: true,
-    supervised_by: USER_2,
-    supervised_at: '2026-04-22T15:30:00Z',
-    estado_de_supervision: 'confirmado',
     created_by: USER_1,
     asiento_id: 'AS-12831-CP',
     evento_id: null,
@@ -184,10 +168,6 @@ export const MOVIMIENTOS: Movimiento[] = [
     moneda: 'USDT',
     status: 'COMPLETED',
     origen: 'OPS',
-    requires_supervision: false,
-    supervised_by: null,
-    supervised_at: null,
-    estado_de_supervision: 'no_aplica',
     created_by: SYSTEM_OPS,
     asiento_id: 'AS-12838-CP',
     evento_id: 'EV-99021',
@@ -216,10 +196,6 @@ export const MOVIMIENTOS: Movimiento[] = [
     moneda: 'USDC',
     status: 'COMPLETED',
     origen: 'OPS',
-    requires_supervision: false,
-    supervised_by: null,
-    supervised_at: null,
-    estado_de_supervision: 'no_aplica',
     created_by: SYSTEM_OPS,
     asiento_id: 'AS-12837-CP',
     evento_id: 'EV-99021',
@@ -248,10 +224,6 @@ export const MOVIMIENTOS: Movimiento[] = [
     moneda: 'ARS',
     status: 'COMPLETED',
     origen: 'FIN',
-    requires_supervision: true,
-    supervised_by: null,
-    supervised_at: null,
-    estado_de_supervision: 'pendiente_de_supervision',
     created_by: USER_2,
     asiento_id: 'AS-12831A-HP',
     evento_id: null,
@@ -282,10 +254,6 @@ export const MOVIMIENTOS: Movimiento[] = [
     moneda: 'USD',
     status: 'COMPLETED',
     origen: 'FIN',
-    requires_supervision: true,
-    supervised_by: USER_2,
-    supervised_at: '2026-04-22T12:00:00Z',
-    estado_de_supervision: 'confirmado',
     created_by: USER_1,
     asiento_id: 'AS-12830-ASC',
     evento_id: null,
@@ -306,59 +274,22 @@ export const MOVIMIENTOS: Movimiento[] = [
     },
   },
 
-  // ─── B · SOLICITUD_RETIRO_PENDING — sin asiento (reserva) ───────
-  {
-    id: 'M-2026-12827S',
-    tipo: 'SOLICITUD_RETIRO_PENDING',
-    fecha: '2026-04-21',
-    monto: '- ARS 5.000.000',
-    moneda: 'ARS',
-    status: 'PENDING',
-    origen: 'OPS',
-    requires_supervision: false,
-    supervised_by: null,
-    supervised_at: null,
-    estado_de_supervision: 'no_aplica',
-    created_by: SYSTEM_OPS,
-    asiento_id: null,
-    evento_id: null,
-    ops: {
-      rail: 'CBU Coinag',
-      account: '0170-4521',
-      client: 'Mendoza Trading',
-      counterparty: null,
-      partner: 'Coinag',
-      provider: 'Coinag',
-    },
-    fin: {
-      imput: 'PEND',
-      sociedad_id: 'hp',
-      cuenta_id: 'cu-hp-coinag-1',
-      cliente_id: 'cli-mendoza-trading',
-      cuenta_operativa_cliente_id: '005521ARS001',
-    },
-  },
-
-  // ════════════════════════════════════════════════════════════════
-  // Categoría F — Cliente NO IDENTIFICADO + ASIGNACION_PENDIENTE pair
-  // ════════════════════════════════════════════════════════════════
-
-  // ─── F · DEPOSITO_PENDIENTE — sin asignar (evento EV-99033) ─────
+  // ─── A · DEPOSIT — sin cliente identificado (alimenta Pendientes KPI) ─
+  // Un depósito ingresa físicamente pero el cliente aún no fue
+  // identificado. La cuenta contable destino transitoria es "Pendientes
+  // de asignación"; una vez que el cliente se imputa via `Asignar
+  // Cliente`, el saldo se mueve a Obligaciones con clientes.
   {
     id: 'M-2026-12842',
-    tipo: 'DEPOSITO_PENDIENTE',
+    tipo: 'DEPOSIT',
     fecha: '2026-04-24',
     monto: '+ ARS 8.500.000',
     moneda: 'ARS',
     status: 'COMPLETED',
     origen: 'OPS',
-    requires_supervision: false,
-    supervised_by: null,
-    supervised_at: null,
-    estado_de_supervision: 'no_aplica',
     created_by: SYSTEM_OPS,
     asiento_id: 'AS-12842-HP',
-    evento_id: 'EV-99033',
+    evento_id: null,
     ops: {
       rail: 'CBU Coinag',
       account: '0170-4521',
@@ -375,56 +306,18 @@ export const MOVIMIENTOS: Movimiento[] = [
     },
   },
 
-  // ─── B · ASIGNACION_PENDIENTE — closes EV-99033 ─────────────────
-  {
-    id: 'M-2026-12842B',
-    tipo: 'ASIGNACION_PENDIENTE',
-    fecha: '2026-04-24',
-    monto: '+ ARS 8.500.000',
-    moneda: 'ARS',
-    status: 'COMPLETED',
-    origen: 'OPS',
-    requires_supervision: false,
-    supervised_by: null,
-    supervised_at: null,
-    estado_de_supervision: 'no_aplica',
-    created_by: SYSTEM_OPS,
-    asiento_id: 'AS-12842B-HP',
-    evento_id: 'EV-99033',
-    ops: {
-      rail: 'CBU Coinag',
-      account: '0170-4521',
-      client: 'ACME Corp',
-      counterparty: null,
-      partner: 'Coinag',
-      provider: 'Coinag',
-    },
-    fin: {
-      imput: 'IMP',
-      sociedad_id: 'hp',
-      cuenta_id: 'cu-hp-coinag-1',
-      cliente_id: 'cli-acme',
-      cuenta_operativa_cliente_id: '005516ARS001',
-      cliente_imputation_note: 'Identificado por nro de comprobante + CUIT',
-    },
-  },
-
-  // ─── F · DEPOSITO_PENDIENTE — aún sin asignar ────────────────────
+  // ─── A · DEPOSIT — otra contribución a Pendientes (USDC) ──────────
   {
     id: 'M-2026-12829',
-    tipo: 'DEPOSITO_PENDIENTE',
+    tipo: 'DEPOSIT',
     fecha: '2026-04-21',
     monto: '+ USDC 130.000',
     moneda: 'USDC',
     status: 'COMPLETED',
     origen: 'OPS',
-    requires_supervision: false,
-    supervised_by: null,
-    supervised_at: null,
-    estado_de_supervision: 'no_aplica',
     created_by: SYSTEM_OPS,
     asiento_id: 'AS-12829-AV',
-    evento_id: 'EV-99041',
+    evento_id: null,
     ops: {
       rail: 'Pool BitGo USDC (Astra)',
       account: '0xBG...AS',
@@ -454,10 +347,6 @@ export const MOVIMIENTOS: Movimiento[] = [
     moneda: 'USD',
     status: 'COMPLETED',
     origen: 'FIN',
-    requires_supervision: true,
-    supervised_by: USER_2,
-    supervised_at: '2026-04-23T14:10:00Z',
-    estado_de_supervision: 'confirmado',
     created_by: USER_1,
     asiento_id: 'AS-12836-ASC',
     evento_id: 'EV-99012',
@@ -487,10 +376,6 @@ export const MOVIMIENTOS: Movimiento[] = [
     moneda: 'ARS',
     status: 'COMPLETED',
     origen: 'FIN',
-    requires_supervision: true,
-    supervised_by: null,
-    supervised_at: null,
-    estado_de_supervision: 'pendiente_de_supervision',
     created_by: USER_2,
     asiento_id: 'AS-12824-HP',
     evento_id: null,
@@ -519,10 +404,6 @@ export const MOVIMIENTOS: Movimiento[] = [
     moneda: 'USD',
     status: 'COMPLETED',
     origen: 'FIN',
-    requires_supervision: true,
-    supervised_by: USER_2,
-    supervised_at: '2026-04-18T17:00:00Z',
-    estado_de_supervision: 'confirmado',
     created_by: USER_1,
     asiento_id: 'AS-12820-ASC',
     evento_id: null,
@@ -551,10 +432,6 @@ export const MOVIMIENTOS: Movimiento[] = [
     moneda: 'ARS',
     status: 'COMPLETED',
     origen: 'FIN',
-    requires_supervision: true,
-    supervised_by: null,
-    supervised_at: null,
-    estado_de_supervision: 'pendiente_de_supervision',
     created_by: USER_1,
     asiento_id: 'AS-12822-HP',
     evento_id: null,
@@ -583,10 +460,6 @@ export const MOVIMIENTOS: Movimiento[] = [
     moneda: 'ARS',
     status: 'COMPLETED',
     origen: 'FIN',
-    requires_supervision: true,
-    supervised_by: null,
-    supervised_at: null,
-    estado_de_supervision: 'pendiente_de_supervision',
     created_by: USER_2,
     asiento_id: 'AS-12819-HP',
     evento_id: null,
@@ -615,10 +488,6 @@ export const MOVIMIENTOS: Movimiento[] = [
     moneda: 'USD',
     status: 'COMPLETED',
     origen: 'FIN',
-    requires_supervision: true,
-    supervised_by: USER_2,
-    supervised_at: '2026-04-15T10:00:00Z',
-    estado_de_supervision: 'confirmado',
     created_by: USER_1,
     asiento_id: 'AS-12818-ASC',
     evento_id: null,
@@ -652,10 +521,6 @@ export const MOVIMIENTOS: Movimiento[] = [
     moneda: 'USD',
     status: 'COMPLETED',
     origen: 'FIN',
-    requires_supervision: true,
-    supervised_by: USER_2,
-    supervised_at: '2026-04-14T16:00:00Z',
-    estado_de_supervision: 'confirmado',
     created_by: USER_1,
     asiento_id: 'AS-99001-HP',
     evento_id: 'EV-99001',
@@ -687,10 +552,6 @@ export const MOVIMIENTOS: Movimiento[] = [
     moneda: 'USD',
     status: 'COMPLETED',
     origen: 'FIN',
-    requires_supervision: true,
-    supervised_by: USER_2,
-    supervised_at: '2026-04-14T16:00:00Z',
-    estado_de_supervision: 'confirmado',
     created_by: USER_1,
     asiento_id: 'AS-99001-ASC',
     evento_id: 'EV-99001',
@@ -722,10 +583,6 @@ export const MOVIMIENTOS: Movimiento[] = [
     moneda: 'USDC',
     status: 'COMPLETED',
     origen: 'FIN',
-    requires_supervision: true,
-    supervised_by: USER_1,
-    supervised_at: '2026-04-13T11:30:00Z',
-    estado_de_supervision: 'confirmado',
     created_by: USER_2,
     asiento_id: 'AS-99002-HP',
     evento_id: 'EV-99002',
@@ -757,10 +614,6 @@ export const MOVIMIENTOS: Movimiento[] = [
     moneda: 'USDC',
     status: 'COMPLETED',
     origen: 'FIN',
-    requires_supervision: true,
-    supervised_by: USER_1,
-    supervised_at: '2026-04-13T11:30:00Z',
-    estado_de_supervision: 'confirmado',
     created_by: USER_2,
     asiento_id: 'AS-99002-CP',
     evento_id: 'EV-99002',
@@ -796,10 +649,6 @@ export const MOVIMIENTOS: Movimiento[] = [
     moneda: 'USD',
     status: 'COMPLETED',
     origen: 'OPS',
-    requires_supervision: false,
-    supervised_by: null,
-    supervised_at: null,
-    estado_de_supervision: 'no_aplica',
     created_by: SYSTEM_OPS,
     asiento_id: 'AS-99021-CP',
     evento_id: 'EV-99021',
@@ -828,10 +677,6 @@ export const MOVIMIENTOS: Movimiento[] = [
     moneda: 'USD',
     status: 'COMPLETED',
     origen: 'FIN',
-    requires_supervision: true,
-    supervised_by: USER_2,
-    supervised_at: '2026-04-19T18:42:00Z',
-    estado_de_supervision: 'rechazado',
     created_by: USER_1,
     asiento_id: 'AS-12823-ASC',
     evento_id: null,
@@ -860,10 +705,6 @@ export const MOVIMIENTOS: Movimiento[] = [
     moneda: 'ARS',
     status: 'COMPLETED',
     origen: 'FIN',
-    requires_supervision: false,
-    supervised_by: null,
-    supervised_at: null,
-    estado_de_supervision: 'no_aplica',
     created_by: 'system-fin',
     asiento_id: 'AS-12832-HP',
     evento_id: null,
@@ -894,23 +735,10 @@ export interface MovimientosKpis {
   volumenIngresado: PerMoneda;
   /** Per-moneda outgoing volume (no USD-equivalent in V1). */
   volumenEgresado: PerMoneda;
+  /** Movements without a `fin.cuenta_id` (Lado Ardua pending). */
   pendientesDeImputacion: number;
-  pendientesDeSupervision: number;
-  /** DEPOSITO_PENDIENTE records without a closing ASIGNACION_PENDIENTE. */
+  /** Income movements without a `fin.cliente_id` (Lado Cliente pending — feed the Pendientes KPI). */
   pendientesDeAsignacion: number;
-}
-
-function countPendientesAsignacion(movs: Movimiento[]): number {
-  const asignacionEventos = new Set(
-    movs
-      .filter((m) => m.tipo === 'ASIGNACION_PENDIENTE' && m.evento_id != null)
-      .map((m) => m.evento_id as string),
-  );
-  return movs.filter(
-    (m) =>
-      m.tipo === 'DEPOSITO_PENDIENTE' &&
-      (m.evento_id == null || !asignacionEventos.has(m.evento_id)),
-  ).length;
 }
 
 export const MOVIMIENTOS_KPIS: MovimientosKpis = {
@@ -929,8 +757,9 @@ export const MOVIMIENTOS_KPIS: MovimientosKpis = {
   pendientesDeImputacion: MOVIMIENTOS.filter(
     (m) => m.fin.cuenta_id == null,
   ).length,
-  pendientesDeSupervision: MOVIMIENTOS.filter(
-    (m) => m.estado_de_supervision === 'pendiente_de_supervision',
+  pendientesDeAsignacion: MOVIMIENTOS.filter(
+    (m) =>
+      (m.tipo === 'DEPOSIT' || m.tipo === 'WITHDRAWAL') &&
+      m.fin.cliente_id == null,
   ).length,
-  pendientesDeAsignacion: countPendientesAsignacion(MOVIMIENTOS),
 };

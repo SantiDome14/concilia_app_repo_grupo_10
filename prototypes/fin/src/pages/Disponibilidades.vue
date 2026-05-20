@@ -135,7 +135,6 @@ type AxisId =
   | 'estado_operativo'
   | 'estado_imputacion_ardua'
   | 'estado_imputacion_cliente'
-  | 'estado_de_supervision'
   | 'tipo'
   | 'sociedad'
   | 'categoria';
@@ -287,22 +286,6 @@ const MOVIMIENTOS_KANBAN_AXES: Record<AxisId, KanbanAxis> = {
     ],
     transitions: [{ from: 'sin_asignar', to: 'asignado', mode: 'modal' }],
   },
-  estado_de_supervision: {
-    axis_id: 'estado_de_supervision',
-    label: 'Estado de supervisión',
-    description:
-      'Solo movimientos manuales. Drag a Confirmar/Rechazar abre el dialog del manifest.',
-    state_field: 'estado_de_supervision',
-    states: [
-      { id: 'pendiente_de_supervision', label: 'Pendiente', order: 1 },
-      { id: 'confirmado', label: 'Confirmado', order: 2, terminal: true },
-      { id: 'rechazado', label: 'Rechazado', order: 3, terminal: true },
-    ],
-    transitions: [
-      { from: 'pendiente_de_supervision', to: 'confirmado', mode: 'modal' },
-      { from: 'pendiente_de_supervision', to: 'rechazado', mode: 'modal' },
-    ],
-  },
   tipo: {
     axis_id: 'tipo',
     label: 'Tipo de movimiento',
@@ -359,7 +342,6 @@ const MOVIMIENTOS_KANBAN_AXES: Record<AxisId, KanbanAxis> = {
       { id: 'C', label: 'C · interno', order: 3 },
       { id: 'D', label: 'D · cross-sociedad', order: 4 },
       { id: 'E', label: 'E · sin cliente, sin físico', order: 5 },
-      { id: 'F', label: 'F · cliente no identificado', order: 6 },
     ],
     transitions: [],
     read_only: true,
@@ -370,7 +352,6 @@ function parseAxis(value: unknown): AxisId {
   if (
     value === 'estado_imputacion_ardua' ||
     value === 'estado_imputacion_cliente' ||
-    value === 'estado_de_supervision' ||
     value === 'tipo' ||
     value === 'sociedad' ||
     value === 'categoria'
@@ -423,15 +404,6 @@ function handleKanbanTransition(payload: {
       'fin.disponibilidades.movimientos.imputar_cliente.asignar',
       record as unknown as Record<string, unknown>,
     );
-  } else if (activeAxisId.value === 'estado_de_supervision') {
-    const actionId =
-      payload.toState === 'rechazado'
-        ? 'fin.disponibilidades.movimientos.supervisar.rechazar'
-        : 'fin.disponibilidades.movimientos.supervisar.confirmar';
-    movimientosMod.openDialog(
-      actionId,
-      record as unknown as Record<string, unknown>,
-    );
   }
 }
 
@@ -461,21 +433,6 @@ const movTable = useTable({
   pageSize: 25,
 });
 
-// ─── Helpers ─────────────────────────────────────────────────────────
-function supervisionBadgeVariant(
-  estado: Movimiento['estado_de_supervision'],
-): 'success' | 'warning' | 'danger' | 'neutral' {
-  switch (estado) {
-    case 'confirmado':
-      return 'success';
-    case 'pendiente_de_supervision':
-      return 'warning';
-    case 'rechazado':
-      return 'danger';
-    default:
-      return 'neutral';
-  }
-}
 </script>
 
 <template>
@@ -780,7 +737,7 @@ function supervisionBadgeVariant(
 
     <!-- ─── SUB-TAB · MOVIMIENTOS ──────────────────────────────────── -->
     <template v-else>
-      <section class="grid grid-cols-2 gap-3 lg:grid-cols-6" data-testid="movimientos-kpis">
+      <section class="grid grid-cols-2 gap-3 lg:grid-cols-5" data-testid="movimientos-kpis">
         <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
           <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Movimientos del día</div>
           <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">{{ MOVIMIENTOS_KPIS.movimientosDelDia }}</div>
@@ -818,15 +775,6 @@ function supervisionBadgeVariant(
             :class="MOVIMIENTOS_KPIS.pendientesDeImputacion > 0 ? 'text-warning' : 'text-t-1'"
           >
             {{ MOVIMIENTOS_KPIS.pendientesDeImputacion }}
-          </div>
-        </div>
-        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
-          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Pendientes de supervisión</div>
-          <div
-            class="text-2xl font-extrabold leading-none tracking-tight"
-            :class="MOVIMIENTOS_KPIS.pendientesDeSupervision > 0 ? 'text-warning' : 'text-t-1'"
-          >
-            {{ MOVIMIENTOS_KPIS.pendientesDeSupervision }}
           </div>
         </div>
         <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
@@ -879,10 +827,9 @@ function supervisionBadgeVariant(
             <option value="estado_operativo">Estado operativo</option>
             <option value="estado_imputacion_ardua">Estado imputación Lado Ardua</option>
             <option value="estado_imputacion_cliente">Estado imputación Lado Cliente</option>
-            <option value="estado_de_supervision">Estado de supervisión</option>
             <option value="tipo">Tipo de movimiento</option>
             <option value="sociedad">Sociedad</option>
-            <option value="categoria">Categoría (A-F)</option>
+            <option value="categoria">Categoría (A-E)</option>
           </select>
         </label>
         <span v-if="view === 'kanban' && activeAxis.description" class="text-[11px] text-t-4">
@@ -907,7 +854,6 @@ function supervisionBadgeVariant(
               <th class="px-3.5 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-t-3">Monto</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Origen</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Estado op.</th>
-              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Supervisión</th>
               <th class="px-3.5 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-t-3">Acciones</th>
             </tr>
           </thead>
@@ -940,16 +886,6 @@ function supervisionBadgeVariant(
                   {{ m.status }}
                 </Badge>
               </td>
-              <td class="px-3.5 py-2.5">
-                <Badge
-                  v-if="m.estado_de_supervision !== 'no_aplica'"
-                  :variant="supervisionBadgeVariant(m.estado_de_supervision)"
-                  class="text-[10px]"
-                >
-                  {{ m.estado_de_supervision }}
-                </Badge>
-                <span v-else class="text-[11px] text-t-4">—</span>
-              </td>
               <td class="px-3.5 py-2.5 text-center" @click.stop>
                 <div class="flex items-center justify-center">
                   <ManifestActionsMenu
@@ -962,7 +898,7 @@ function supervisionBadgeVariant(
               </td>
             </tr>
             <tr v-if="movTable.paged.value.length === 0">
-              <td colspan="10">
+              <td colspan="9">
                 <EmptyState
                   title="Sin movimientos"
                   description="No hay movimientos que coincidan con los filtros aplicados."
@@ -1020,12 +956,7 @@ function supervisionBadgeVariant(
           </template>
           <template #footer>
             <span>{{ m.fecha }}</span>
-            <Badge
-              v-if="m.estado_de_supervision !== 'no_aplica'"
-              :variant="supervisionBadgeVariant(m.estado_de_supervision)"
-            >
-              {{ m.estado_de_supervision }}
-            </Badge>
+            <Badge variant="neutral" class="text-[10px]">{{ m._categoria }}</Badge>
           </template>
         </CardItem>
       </CardsGrid>
@@ -1073,17 +1004,9 @@ function supervisionBadgeVariant(
                 </div>
               </template>
               <template #footer>
-                <Badge
-                  v-if="(record as unknown as Movimiento).estado_de_supervision !== 'no_aplica'"
-                  :variant="
-                    supervisionBadgeVariant(
-                      (record as unknown as Movimiento).estado_de_supervision,
-                    )
-                  "
-                >
-                  {{ (record as unknown as Movimiento).estado_de_supervision }}
+                <Badge variant="neutral" class="text-[10px]">
+                  {{ categoriaOf((record as unknown as Movimiento).tipo) }}
                 </Badge>
-                <span v-else>—</span>
               </template>
             </CardItem>
           </template>

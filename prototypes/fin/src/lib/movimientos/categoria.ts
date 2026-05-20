@@ -33,8 +33,6 @@ export function categoriaOf(tipo: MovimientoTipo): MovimientoCategoria {
     case 'SWAP_IN':
     case 'AJUSTE_CREDITO':
     case 'AJUSTE_DEBITO':
-    case 'ASIGNACION_PENDIENTE':
-    case 'SOLICITUD_RETIRO_PENDING':
       return 'B';
 
     // C — Sin cliente + físico (interno)
@@ -56,10 +54,6 @@ export function categoriaOf(tipo: MovimientoTipo): MovimientoCategoria {
     case 'AJUSTE_MANUAL':
       return 'E';
 
-    // F — Cliente NO IDENTIFICADO
-    case 'DEPOSITO_PENDIENTE':
-      return 'F';
-
     default: {
       // Exhaustiveness check — if a new tipo is added to the union without
       // a matching branch above, the compiler will report:
@@ -75,13 +69,13 @@ export function categoriaOf(tipo: MovimientoTipo): MovimientoCategoria {
  * carries (or expects) a Lado Cliente. Used by manifest `show_when`
  * predicates and by the page-level dialog field gating.
  *
- * Categorías A, B, F have a Lado Cliente (real, derivable, or pending).
- * Categorías C, D, E do NOT — the contrapartida es una cuenta contable
- * formal (Ingresos / Egresos / Patrimonio operativo / Intercompany /
- * Puente FX), no un cliente sintético.
+ * Categorías A, B have a Lado Cliente. Categorías C, D, E do NOT — the
+ * contrapartida es una cuenta contable formal (Ingresos / Egresos /
+ * Patrimonio operativo / Intercompany / Puente FX), no un cliente
+ * sintético.
  */
 export function categoriaHasLadoCliente(categoria: MovimientoCategoria): boolean {
-  return categoria === 'A' || categoria === 'B' || categoria === 'F';
+  return categoria === 'A' || categoria === 'B';
 }
 
 /**

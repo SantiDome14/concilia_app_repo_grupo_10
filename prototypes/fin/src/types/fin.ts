@@ -16,10 +16,10 @@
 //      canonical record is `Movimiento`; display shapes are derivable
 //      surfaces.
 //
-// Per REQ-50 (`add-fin-disponibilidades`):
-//   - `Movimiento.origen` is now top-level with values `'OPS' | 'FIN'`.
-//   - `Movimiento.requires_supervision`, `supervised_by`, `supervised_at`,
-//     `estado_de_supervision` are top-level fields for manual loads.
+// Per `align-fin-disponibilidades-to-omnibus-model`:
+//   - `Movimiento.origen` is top-level with values `'OPS' | 'FIN'`.
+//   - The supervision flow was removed in V1 — manual loads impact saldos
+//     directly. Reintroduction (via capabilities) is a follow-up change.
 //   - `RetiroCola` and the Cola sub-tab are eliminated; the queue
 //     surfaces as the Sub-tab Movimientos with `enable_when` predicates.
 // ════════════════════════════════════════════════════════════════════
@@ -34,21 +34,24 @@ export type CuentaIcon = 'bank' | 'wallet';
 export type Moneda = 'ARS' | 'USD' | 'USDC' | 'USDT' | 'CAD' | 'EUR' | string;
 
 /**
- * Movement type discriminator carried by every `movimiento` record. The 22
- * values are the closed contract of the matriz cerrada in the feature
- * `features/fin/fin-tesoreria-disponibilidades.md`. Any event that does not
- * fit one of these values indicates a missing tipo in the matriz, not a
- * manifest gap — adding a new tipo SHALL go through an OpenSpec change.
+ * Movement type discriminator carried by every `movimiento` record. The 18
+ * values are the closed contract of the matriz cerrada — version after
+ * `align-fin-disponibilidades-to-omnibus-model` removed the simulator-only
+ * pending tipos (`SOLICITUD_RETIRO_PENDING`, `DEPOSITO_PENDIENTE`,
+ * `ASIGNACION_PENDIENTE`). Pendientes de asignación remain as a contable
+ * grupo (Pasivo técnico) — they are computed from records with
+ * `fin.cliente_id == null`, not modelled as separate tipos.
  *
- * Tipo registered by OPS (vostro flow + pending lifecycle + ajustes):
+ * Tipo registered by OPS (vostro flow + ajustes):
  *   DEPOSIT, WITHDRAWAL, FEE, REBATE, SWAP_OUT, SWAP_IN, SPREAD,
- *   SOLICITUD_RETIRO_PENDING, DEPOSITO_PENDIENTE, ASIGNACION_PENDIENTE,
  *   AJUSTE_CREDITO, AJUSTE_DEBITO.
  *
  * Tipo registered by FIN (nostros + manual non-operativos + intercompany):
  *   MOV_ENTRE_CUENTAS_PROPIAS, PRESTAMO_INTERCOMPANY, SWEEPING_CROSS_SOCIEDAD,
  *   COMISION_BANCARIA, INTERES_BANCARIO, PAGO_PROVEEDOR, PAGO_SALARIOS,
  *   APORTE_CAPITAL, AJUSTE_MANUAL.
+ *
+ * Adding a new tipo SHALL go through an OpenSpec change.
  */
 export type MovimientoTipo =
   | 'DEPOSIT'
@@ -58,9 +61,6 @@ export type MovimientoTipo =
   | 'SWAP_OUT'
   | 'SWAP_IN'
   | 'SPREAD'
-  | 'SOLICITUD_RETIRO_PENDING'
-  | 'DEPOSITO_PENDIENTE'
-  | 'ASIGNACION_PENDIENTE'
   | 'AJUSTE_CREDITO'
   | 'AJUSTE_DEBITO'
   | 'MOV_ENTRE_CUENTAS_PROPIAS'
@@ -77,18 +77,22 @@ export type MovimientoTipo =
  * Categoría derivada del tipo según la dimensión (presencia de cliente ×
  * presencia de flujo físico) del feature.
  *   A — Con cliente + físico (DEPOSIT, WITHDRAWAL).
- *   B — Con cliente, sin físico (FEE, REBATE, SWAP_*, AJUSTE_CR/DB, ASIGNACION_PENDIENTE).
+ *   B — Con cliente, sin físico (FEE, REBATE, SWAP_*, AJUSTE_CR/DB).
  *   C — Sin cliente + físico (interno): COMISION_BANCARIA, INTERES_BANCARIO,
  *       PAGO_PROVEEDOR, PAGO_SALARIOS, MOV_ENTRE_CUENTAS_PROPIAS, APORTE_CAPITAL.
  *   D — Sin cliente + físico (cross-sociedad): PRESTAMO_INTERCOMPANY,
  *       SWEEPING_CROSS_SOCIEDAD.
  *   E — Sin cliente, sin físico: SPREAD, AJUSTE_MANUAL.
- *   F — Cliente NO IDENTIFICADO: DEPOSITO_PENDIENTE.
  *
  * Derived from `tipo` via `categoriaOf()` in `@/lib/movimientos/categoria`.
  * Never stored on the record — see Decision 1 of the change's design.md.
+ *
+ * Categoría F (Cliente NO IDENTIFICADO) was removed alongside the pending
+ * tipos: a depósito sin cliente identificado es un `DEPOSIT` con
+ * `fin.cliente_id == null` (categoría A en estado de imputación parcial),
+ * no un tipo separado.
  */
-export type MovimientoCategoria = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
+export type MovimientoCategoria = 'A' | 'B' | 'C' | 'D' | 'E';
 
 /**
  * Grupos contables del módulo Disponibilidades (no plan de cuentas formal —
@@ -128,20 +132,6 @@ export type ImputacionState = 'PEND' | 'PARC' | 'IMP';
 
 /** Conciliación lifecycle (legacy — not in REQ-50 v1, retained for archived fields). */
 export type ConciliacionState = 'PEND' | 'CONC' | 'DIFF';
-
-/**
- * Supervision state for manual movements (REQ-50 §6.3). Orthogonal to
- * the operational state inherited from REQ-42.
- *   - `'no_aplica'` — origen is OPS or TRD; supervision is not relevant.
- *   - `'pendiente_de_supervision'` — manual load awaiting confirmation.
- *   - `'confirmado'` — confirmed by a supervisor (≠ creator). Impacts saldos.
- *   - `'rechazado'` — rejected by a supervisor. Never impacts saldos.
- */
-export type EstadoDeSupervision =
-  | 'no_aplica'
-  | 'pendiente_de_supervision'
-  | 'confirmado'
-  | 'rechazado';
 
 /** Documentación lifecycle for a `quote` (Cotizaciones kanban axis). */
 export type FacturaState = 'pendiente' | 'facturada' | 'no-req';
@@ -225,13 +215,9 @@ export interface MovimientoFin {
 
 /**
  * `movimiento` record consumed by the `fin.disponibilidades.movimientos`
- * manifest. Per REQ-50, five top-level fields drive the supervision
- * flow and the lens / origin discriminators:
- *   - `origen` — OPS / TRD / Manual (REQ-50 §5.1).
- *   - `requires_supervision`, `supervised_by`, `supervised_at`,
- *     `estado_de_supervision` — local supervision flags (REQ-50 §6).
- *   - `created_by` — the user that created the manual load, used by
- *     the `Confirmar carga manual` predicate (creator ≠ supervisor).
+ * manifest. Per the omnibus alignment change, the supervision flow was
+ * removed in V1 — the area will validate the flows first and supervision
+ * may be reintroduced via capabilities in a follow-up change.
  *
  * Two namespaces are nested at runtime:
  *   - `ops.*` — read-only OPS-native data (rail, account, counterparty,
@@ -247,17 +233,9 @@ export interface Movimiento {
   monto: string;
   moneda: Moneda;
   status: 'COMPLETED' | 'PENDING' | 'FAILED';
-  /** Origin of the movement — drives manifest predicates (REQ-50 §5.1). */
+  /** Origin of the movement — which app registered it. */
   origen: MovimientoOrigen;
-  /** True when the movement is a manual load awaiting confirmation (REQ-50 §6.2). */
-  requires_supervision: boolean;
-  /** Supervisor user id, set on `Confirmar carga manual` (REQ-50 §6.2). */
-  supervised_by: string | null;
-  /** Supervision timestamp (ISO), set on `Confirmar carga manual` (REQ-50 §6.2). */
-  supervised_at: string | null;
-  /** Supervision state — orthogonal to `status` (REQ-50 §6.3). */
-  estado_de_supervision: EstadoDeSupervision;
-  /** Creator user id — used by the `created_by !== current_user` predicate. */
+  /** Creator user id — audit metadata; the human or system that registered the movement. */
   created_by: string | null;
   /**
    * Asiento contable identifier. V1 modela el asiento a nivel grupo
@@ -322,10 +300,10 @@ export interface Quote {
 
 /**
  * `carga_manual_solicitud` payload created by the
- * `fin.disponibilidades.movimientos.cargar_*` action. Per REQ-50 §6.5,
- * the dialog accepts the fields below; on confirm, the engine creates
- * a `Movimiento` record with `requires_supervision` derived from the
- * creator's capability.
+ * `fin.disponibilidades.movimientos.cargar_manual` CTA. On confirm, the
+ * engine creates a `Movimiento` record (or a pair of mirrored records
+ * sharing `evento_id` for cross-sociedad tipos). Supervision was removed
+ * in V1; reintroduction is a follow-up change.
  */
 export interface CargaManualSolicitud {
   sociedad_id: string;

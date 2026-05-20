@@ -172,7 +172,7 @@ describe('Disponibilidades page · FIN (REQ-50)', () => {
     expect(banner.text()).toContain('Limpiar filtro');
   });
 
-  it('exposes the Movimientos KPI strip with the 6 omnibus-model KPIs (incl. per-moneda volumes + pendientes de asignación)', async () => {
+  it('exposes the Movimientos KPI strip with 5 omnibus-model KPIs (per-moneda volumes + pendientes de imputación / asignación; no supervisión card)', async () => {
     const { wrapper } = await mountPage(
       `${ROUTE_PATHS.DISPONIBILIDADES}?tab=movimientos`,
     );
@@ -183,8 +183,8 @@ describe('Disponibilidades page · FIN (REQ-50)', () => {
     expect(text).toContain('Volumen ingresado');
     expect(text).toContain('Volumen egresado');
     expect(text).toContain('Pendientes de imputación');
-    expect(text).toContain('Pendientes de supervisión');
     expect(text).toContain('Pendientes de asignación');
+    expect(text).not.toContain('Pendientes de supervisión');
     // Per-moneda rows in volume cards.
     expect(wrapper.find('[data-testid="movimientos-kpi-ingresado"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="movimientos-kpi-egresado"]').exists()).toBe(true);
@@ -212,14 +212,14 @@ describe('Disponibilidades page · FIN (REQ-50)', () => {
     expect(html).toContain('Sin configurar');
   });
 
-  it('Movimientos table includes a row per movimiento and a Supervisión column with badge when applicable', async () => {
+  it('Movimientos table renders one row per movimiento with no Supervisión column (supervisión removed in V1)', async () => {
     const { wrapper } = await mountPage(
       `${ROUTE_PATHS.DISPONIBILIDADES}?tab=movimientos`,
     );
     const rows = wrapper.findAll('[data-testid^="movimientos-row-"]');
     expect(rows.length).toBeGreaterThan(0);
-    // At least one row shows the "pendiente_de_supervision" badge.
     const allHtml = wrapper.html();
-    expect(allHtml).toContain('pendiente_de_supervision');
+    expect(allHtml).not.toContain('pendiente_de_supervision');
+    expect(allHtml).not.toContain('estado_de_supervision');
   });
 });

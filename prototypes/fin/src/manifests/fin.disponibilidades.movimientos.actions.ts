@@ -22,12 +22,11 @@
 //     Egresos / Patrimonio operativo / Intercompany / Puente FX), not a
 //     cliente — the action is not surfaced.
 //
-//   - Confirmar / Rechazar carga manual — unchanged from the previous
-//     spec; the `created_by !== current_user` predicate is enforced at the
-//     page level.
-//
 // Each predicate is constructed as a fresh JSON-strict subtree (no
 // shared references → no circular flag in the validator).
+//
+// Supervisión removed in V1 — el área valida los flujos primero y la
+// supervisión podrá reintroducirse via capabilities en un cambio futuro.
 // ════════════════════════════════════════════════════════════════════
 
 import type { Manifest, Predicate } from '@/types/manifest';
@@ -59,8 +58,8 @@ function tiposFinImputables(): string[] {
   ];
 }
 
-// Tipos that belong to categorías A, B, F — the only tipos for which
-// the Lado Cliente is applicable. Used by the Asignar/Editar Cliente
+// Tipos that belong to categorías A, B — the only tipos for which the
+// Lado Cliente is applicable. Used by the Asignar/Editar Cliente
 // show_when.
 function tiposWithLadoCliente(): string[] {
   return [
@@ -74,10 +73,6 @@ function tiposWithLadoCliente(): string[] {
     'SWAP_IN',
     'AJUSTE_CREDITO',
     'AJUSTE_DEBITO',
-    'ASIGNACION_PENDIENTE',
-    'SOLICITUD_RETIRO_PENDING',
-    // F
-    'DEPOSITO_PENDIENTE',
   ];
 }
 
@@ -132,12 +127,6 @@ export const FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST: Manifest = {
       states: ['sin_asignar', 'asignado'],
     },
     {
-      axis_id: 'estado_de_supervision',
-      dimension: 'governance',
-      drop_target_state: 'confirmado',
-      states: ['pendiente_de_supervision', 'confirmado', 'rechazado'],
-    },
-    {
       axis_id: 'tipo',
       dimension: 'governance',
       states: [
@@ -148,9 +137,6 @@ export const FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST: Manifest = {
         'SWAP_OUT',
         'SWAP_IN',
         'SPREAD',
-        'SOLICITUD_RETIRO_PENDING',
-        'DEPOSITO_PENDIENTE',
-        'ASIGNACION_PENDIENTE',
         'AJUSTE_CREDITO',
         'AJUSTE_DEBITO',
         'MOV_ENTRE_CUENTAS_PROPIAS',
@@ -172,7 +158,7 @@ export const FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST: Manifest = {
     {
       axis_id: 'categoria',
       dimension: 'governance',
-      states: ['A', 'B', 'C', 'D', 'E', 'F'],
+      states: ['A', 'B', 'C', 'D', 'E'],
     },
   ],
 
@@ -348,102 +334,6 @@ export const FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST: Manifest = {
         update_fields: ['fin.cliente_id', 'fin.cuenta_operativa_cliente_id'],
         audit: true,
         toast: 'Cliente actualizado',
-      },
-    },
-    // ─── 5 · Confirmar carga manual (governance) ────────────────────
-    // The `created_by !== current_user` predicate of the spec is enforced
-    // at the page level (the actions menu hides this entry when the
-    // current user is the creator). The engine cannot express
-    // `field !== current_user` natively today.
-    {
-      id: 'fin.disponibilidades.movimientos.supervisar.confirmar',
-      dimension: 'governance',
-      label: 'Confirmar carga manual',
-      description:
-        'Confirmá el movimiento manual. Una vez confirmado impacta los saldos de la Posición. Requiere que seas distinto del usuario que cargó el movimiento (verificado a nivel page).',
-      icon: 'check-circle',
-      target_field: 'estado_de_supervision',
-      enable_when: {
-        all: [
-          { field_equals: { field: 'requires_supervision', value: true } },
-          { field_is_null: 'supervised_by' },
-        ],
-      },
-      disable_reason: 'Ya confirmado o no requiere supervisión',
-      capabilities: {
-        required_role_any_of: ['fin.disponibilidades.movimientos.supervisar_carga'],
-      },
-      dialog: {
-        title: 'Confirmar carga manual',
-        description:
-          'Al confirmar, el movimiento entra al ledger y se computa en los saldos de la Posición.',
-        fields: [
-          {
-            id: 'nota_confirmacion',
-            label: 'Nota (opcional)',
-            type: 'textarea',
-            required: false,
-            max_length: 280,
-          },
-        ],
-        confirm_label: 'Confirmar',
-      },
-      on_confirm: {
-        update_fields: ['nota_confirmacion'],
-        set_fields: {
-          supervised_by: '$current_user',
-          supervised_at: '$now',
-          estado_de_supervision: 'confirmado',
-        },
-        audit: true,
-        toast: 'Carga manual confirmada · saldos actualizados',
-      },
-    },
-    // ─── 6 · Rechazar carga manual (governance) ─────────────────────
-    {
-      id: 'fin.disponibilidades.movimientos.supervisar.rechazar',
-      dimension: 'governance',
-      label: 'Rechazar carga manual',
-      description:
-        'Rechazá el movimiento manual con justificación obligatoria (≥ 10 caracteres). El rechazo NUNCA impacta saldos.',
-      icon: 'x-circle',
-      danger: true,
-      target_field: 'estado_de_supervision',
-      enable_when: {
-        all: [
-          { field_equals: { field: 'requires_supervision', value: true } },
-          { field_is_null: 'supervised_by' },
-        ],
-      },
-      disable_reason: 'Ya confirmado o no requiere supervisión',
-      capabilities: {
-        required_role_any_of: ['fin.disponibilidades.movimientos.supervisar_carga'],
-      },
-      dialog: {
-        title: 'Rechazar carga manual',
-        description:
-          'El rechazo es irreversible y queda registrado en el audit log. El movimiento permanece visible pero no impacta saldos. Justificación obligatoria (≥ 10 caracteres).',
-        fields: [
-          {
-            id: 'motivo_rechazo',
-            label: 'Justificación',
-            type: 'textarea',
-            required: true,
-            max_length: 500,
-            placeholder: 'Justificación obligatoria (mínimo 10 caracteres)...',
-          },
-        ],
-        confirm_label: 'Rechazar carga',
-      },
-      on_confirm: {
-        update_fields: ['motivo_rechazo'],
-        set_fields: {
-          supervised_by: '$current_user',
-          supervised_at: '$now',
-          estado_de_supervision: 'rechazado',
-        },
-        audit: true,
-        toast: 'Carga manual rechazada',
       },
     },
   ],

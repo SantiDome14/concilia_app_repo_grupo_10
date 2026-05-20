@@ -24,8 +24,6 @@ const MATRIZ: Array<[MovimientoTipo, MovimientoCategoria]> = [
   ['SWAP_IN', 'B'],
   ['AJUSTE_CREDITO', 'B'],
   ['AJUSTE_DEBITO', 'B'],
-  ['ASIGNACION_PENDIENTE', 'B'],
-  ['SOLICITUD_RETIRO_PENDING', 'B'],
   // C — Sin cliente + físico (interno)
   ['COMISION_BANCARIA', 'C'],
   ['INTERES_BANCARIO', 'C'],
@@ -39,8 +37,6 @@ const MATRIZ: Array<[MovimientoTipo, MovimientoCategoria]> = [
   // E — Sin cliente, sin físico
   ['SPREAD', 'E'],
   ['AJUSTE_MANUAL', 'E'],
-  // F — Cliente NO IDENTIFICADO
-  ['DEPOSITO_PENDIENTE', 'F'],
 ];
 
 describe('categoriaOf', () => {
@@ -51,19 +47,17 @@ describe('categoriaOf', () => {
   it('covers every tipo of the closed matriz exactly once', () => {
     const seen = new Set(MATRIZ.map(([tipo]) => tipo));
     expect(seen.size).toBe(MATRIZ.length);
-    // The MovimientoTipo union has 21 values (the 22nd row of the matriz —
-    // Solicitud de retiro PENDING — is shared with the OPS-side flow; the
-    // matriz row count is 22 events, but two of them collapse onto the same
-    // tipo in the union per Decision 3 of design.md).
-    expect(MATRIZ.length).toBe(21);
+    // The MovimientoTipo union has 18 values after the omnibus alignment
+    // removed the simulator-only pending tipos (SOLICITUD_RETIRO_PENDING,
+    // DEPOSITO_PENDIENTE, ASIGNACION_PENDIENTE).
+    expect(MATRIZ.length).toBe(18);
   });
 });
 
 describe('categoriaHasLadoCliente', () => {
-  it('returns true for A, B, F (cliente applies)', () => {
+  it('returns true for A, B (cliente applies)', () => {
     expect(categoriaHasLadoCliente('A')).toBe(true);
     expect(categoriaHasLadoCliente('B')).toBe(true);
-    expect(categoriaHasLadoCliente('F')).toBe(true);
   });
 
   it('returns false for C, D, E (no lado cliente)', () => {
@@ -80,9 +74,8 @@ describe('categoriaIsFinImputable', () => {
     expect(categoriaIsFinImputable('E')).toBe(true);
   });
 
-  it('returns false for A, B, F (OPS imputa o cliente identifica)', () => {
+  it('returns false for A, B (OPS imputa o cliente identifica)', () => {
     expect(categoriaIsFinImputable('A')).toBe(false);
     expect(categoriaIsFinImputable('B')).toBe(false);
-    expect(categoriaIsFinImputable('F')).toBe(false);
   });
 });
