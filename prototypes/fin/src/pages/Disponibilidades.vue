@@ -251,7 +251,6 @@ const movQuery = ref('');
 const movPeriodo = ref<Periodo>('todo');
 const movTipo = ref<TipoFilter>('all');
 const movRail = ref<string>('all');
-const movPartner = ref<string>('all');
 const movCuenta = ref<string>('all');
 
 /** Reference "today" anchor for the period filter — matches the mock data. */
@@ -268,17 +267,6 @@ function withinPeriodo(fecha: string, periodo: Periodo): boolean {
 /** Distinct sorted rail labels present in the ledger — drives the Rail filter. */
 const railOptions = computed<string[]>(() =>
   Array.from(new Set(MOVIMIENTOS.map((m) => m.ops.rail).filter(Boolean))).sort(),
-);
-
-/** Distinct sorted partner labels present in the ledger — drives the Partner filter. */
-const partnerOptions = computed<string[]>(() =>
-  Array.from(
-    new Set(
-      MOVIMIENTOS.map((m) => m.ops.partner).filter(
-        (p): p is string => typeof p === 'string' && p.length > 0,
-      ),
-    ),
-  ).sort(),
 );
 
 /** Cuenta options pulled from the catalog store (active only). */
@@ -321,9 +309,6 @@ const filteredMovimientos = computed<MovimientoProjected[]>(() => {
   if (movRail.value !== 'all') {
     source = source.filter((m) => m.ops.rail === movRail.value);
   }
-  if (movPartner.value !== 'all') {
-    source = source.filter((m) => m.ops.partner === movPartner.value);
-  }
   if (movCuenta.value !== 'all') {
     source = source.filter((m) => m.fin.cuenta_id === movCuenta.value);
   }
@@ -351,7 +336,6 @@ function clearMovFilters(): void {
   movPeriodo.value = 'todo';
   movTipo.value = 'all';
   movRail.value = 'all';
-  movPartner.value = 'all';
   movCuenta.value = 'all';
 }
 
@@ -361,7 +345,6 @@ const movFiltersActive = computed<boolean>(
     movPeriodo.value !== 'todo' ||
     movTipo.value !== 'all' ||
     movRail.value !== 'all' ||
-    movPartner.value !== 'all' ||
     movCuenta.value !== 'all',
 );
 
@@ -1126,15 +1109,6 @@ const movTable = useTable({
             <SelectItem v-for="r in railOptions" :key="r" :value="r">{{ r }}</SelectItem>
           </SelectContent>
         </Select>
-        <Select v-model="movPartner">
-          <SelectTrigger class="h-9 w-[140px] text-xs" aria-label="Filtrar por partner">
-            <SelectValue placeholder="Partner · Todos" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Partner · Todos</SelectItem>
-            <SelectItem v-for="p in partnerOptions" :key="p" :value="p">{{ p }}</SelectItem>
-          </SelectContent>
-        </Select>
         <Select v-model="movCuenta">
           <SelectTrigger class="h-9 w-[200px] text-xs" aria-label="Filtrar por estructura / cuenta">
             <SelectValue placeholder="Estructura / Cuenta · Todas" />
@@ -1204,7 +1178,6 @@ const movTable = useTable({
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Cliente</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Rail</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Tipo</th>
-              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Partner</th>
               <th class="px-3.5 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-t-3">Monto</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Origen</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Estado op.</th>
@@ -1228,16 +1201,6 @@ const movTable = useTable({
                 </span>
               </td>
               <td class="px-3.5 py-2.5 text-xs text-t-2">{{ m.tipo }}</td>
-              <td class="px-3.5 py-2.5">
-                <Badge
-                  v-if="m.ops.partner"
-                  :variant="m.origen === 'OPS' ? 'info' : 'neutral'"
-                  class="text-[10px]"
-                >
-                  {{ m.ops.partner }}
-                </Badge>
-                <span v-else class="text-[11px] text-t-4">—</span>
-              </td>
               <td
                 class="px-3.5 py-2.5 text-right font-mono text-xs tabular-nums"
                 :class="m.monto.startsWith('+') ? 'text-success' : 'text-danger'"
@@ -1281,7 +1244,7 @@ const movTable = useTable({
               </td>
             </tr>
             <tr v-if="movTable.paged.value.length === 0">
-              <td colspan="11">
+              <td colspan="10">
                 <EmptyState
                   title="Sin movimientos"
                   description="No hay movimientos que coincidan con los filtros aplicados."

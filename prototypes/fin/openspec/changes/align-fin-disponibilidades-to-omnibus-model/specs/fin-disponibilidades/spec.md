@@ -382,12 +382,11 @@ The `Categoría` axis SHALL be the default lens for predicate evaluation (replac
 - **Período** — values `Todo` (default) / `Día` / `Semana` / `Mes` relative to the page's reference "today".
 - **Tipo** — values `Todos` (default) + one entry per tipo of the matriz (18 entries).
 - **Rail** — values `Todos` (default) + each distinct `ops.rail` present in the ledger.
-- **Partner** — values `Todos` (default) + each distinct non-null `ops.partner`.
-- **Estructura / Cuenta** — values `Todas` (default) + each active cuenta from the catalog (label: `banco · moneda · numero`).
+- **Estructura / Cuenta** — values `Todas` (default) + each active cuenta from the catalog (label: `banco · moneda · numero`). This filter SHALL also subsume the Partner discriminator — `ops.partner` is the bank / structure of the cuenta, so a separate Partner filter would be redundant.
 
 A "Limpiar" button SHALL appear when any filter is active and SHALL reset all filters to their default value. Native `<select>` SHALL NOT be used.
 
-**Lista view columns** (left to right): `ID · Fecha · Cliente · Rail · Tipo · Partner · Monto · Origen · Estado op. · Banco / Cuenta · Acciones`. The `Banco / Cuenta` column SHALL resolve `fin.cuenta_id` against the disponibilidadesCatalog store and render banco on the top line + `moneda · numero` on the secondary line; an unassigned `fin.cuenta_id` SHALL render a "Sin asignar" warning badge. The `Monto` cell SHALL render green when the displayed string starts with `+` and red when it starts with `-`.
+**Lista view columns** (left to right): `ID · Fecha · Cliente · Rail · Tipo · Monto · Origen · Estado op. · Banco / Cuenta · Acciones`. The `Banco / Cuenta` column SHALL resolve `fin.cuenta_id` against the disponibilidadesCatalog store and render banco on the top line + `moneda · numero` on the secondary line; an unassigned `fin.cuenta_id` SHALL render a "Sin asignar" warning badge. The `Monto` cell SHALL render green when the displayed string starts with `+` and red when it starts with `-`. A standalone Partner column is NOT rendered — the same information lives in the `Banco / Cuenta` column.
 
 #### Scenario: Categoría axis renders 5 columns
 
@@ -413,14 +412,15 @@ A "Limpiar" button SHALL appear when any filter is active and SHALL reset all fi
 #### Scenario: Search + filters surface canonical L3 controls
 
 - **WHEN** the Movimientos sub-tab is active
-- **THEN** a `[data-testid="movimientos-filters"]` strip is rendered with a search input and five `<Select>` filters (Período / Tipo / Rail / Partner / Estructura · Cuenta)
+- **THEN** a `[data-testid="movimientos-filters"]` strip is rendered with a search input and four `<Select>` filters (Período / Tipo / Rail / Estructura · Cuenta)
 - **AND** the search input is a shadcn-vue `<Input>` (NOT a native `<input>`)
 - **AND** each filter is a shadcn-vue `<Select>` (NOT a native `<select>`)
+- **AND** no separate Partner filter is rendered (redundant with Estructura · Cuenta)
 
-#### Scenario: Lista view exposes Rail / Partner / Banco-Cuenta columns
+#### Scenario: Lista view exposes Rail / Banco-Cuenta columns (no Partner)
 
 - **WHEN** the Lista view renders
-- **THEN** the column headers contain `Rail`, `Partner`, and `Banco / Cuenta`
+- **THEN** the column headers contain `Rail` and `Banco / Cuenta` but NOT `Partner`
 - **AND** for each row, the `Banco / Cuenta` cell either renders the banco label + moneda·numero (when `fin.cuenta_id` resolves) or a "Sin asignar" warning badge
 
 ### Requirement: Movimientos MUST expose four contextual row-level actions gated by categoría (not by origen)

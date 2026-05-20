@@ -223,7 +223,7 @@ describe('Disponibilidades page · FIN (REQ-50)', () => {
     expect(allHtml).not.toContain('estado_de_supervision');
   });
 
-  it('Movimientos exposes search + Período / Tipo / Rail / Partner / Estructura·Cuenta filters', async () => {
+  it('Movimientos exposes search + Período / Tipo / Rail / Estructura·Cuenta filters (Partner removed — redundant with Banco/Cuenta)', async () => {
     const { wrapper } = await mountPage(
       `${ROUTE_PATHS.DISPONIBILIDADES}?tab=movimientos`,
     );
@@ -234,11 +234,11 @@ describe('Disponibilidades page · FIN (REQ-50)', () => {
     expect(labels).toContain('Período');
     expect(labels).toContain('Tipo');
     expect(labels).toContain('Rail');
-    expect(labels).toContain('Partner');
     expect(labels).toContain('Estructura / Cuenta');
+    expect(labels).not.toContain('Partner ·');
   });
 
-  it('Movimientos Lista view exposes the new columns Rail / Partner / Banco-Cuenta', async () => {
+  it('Movimientos Lista view exposes columns Rail / Banco-Cuenta (no Partner column — redundant)', async () => {
     const { wrapper } = await mountPage(
       `${ROUTE_PATHS.DISPONIBILIDADES}?tab=movimientos`,
     );
@@ -246,8 +246,8 @@ describe('Disponibilidades page · FIN (REQ-50)', () => {
     expect(table.exists()).toBe(true);
     const headers = table.findAll('th').map((th) => th.text());
     expect(headers).toContain('Rail');
-    expect(headers).toContain('Partner');
     expect(headers).toContain('Banco / Cuenta');
+    expect(headers).not.toContain('Partner');
   });
 
   it('Bancos / Cuentas exposes search + Sociedad / Estructura / Cuenta / Moneda / Estado / Config filters', async () => {
