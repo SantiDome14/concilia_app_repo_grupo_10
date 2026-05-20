@@ -2,7 +2,7 @@
 
 > Catálogo navegable de los discoveries existentes. Para entender la convención de naming, los estados y el ciclo de vida, ver [`README.md`](./README.md).
 >
-> Última actualización: **2026-05-19** · **23 discoveries** + **2 artefactos de soporte**
+> Última actualización: **2026-05-20** · **23 discoveries** + **2 artefactos de soporte**
 
 ---
 
@@ -27,12 +27,12 @@ Hipótesis product-wide sobre una aplicación del financial-core. Pueden coexist
 
 Hipótesis focalizadas en un módulo específico dentro de una aplicación.
 
-| Archivo | Nombre | Estado | Owner | Última act. |
-|---|---|---|---|---|
-| [`fin-tesoreria-disponibilidades-discovery.md`](./fin-tesoreria-disponibilidades-discovery.md) | FIN · Tesorería · Disponibilidades — modelo conceptual del módulo | En investigación | Yasmani Rodriguez | 2026-05-19 |
-| [`lex-alertas-discovery.md`](./lex-alertas-discovery.md) | LEX — Módulo Alertas · Discovery Document | En investigación | Yasmani Rodriguez | 2026-04-24 |
-| [`lex-limites-discovery.md`](./lex-limites-discovery.md) | LEX — Límites · Discovery Document | En investigación | Yasmani Rodriguez | 2026-04-23 |
-| [`trd-proveedores-de-liquidez-discovery.md`](./trd-proveedores-de-liquidez-discovery.md) | TRD — Proveedores de Liquidez · Discovery Document | Concluida | Yasmani Rodriguez | 2026-04-10 |
+| Archivo | Nombre | Estado | Owner | Última act. | Propaga a |
+|---|---|---|---|---|---|
+| [`fin-tesoreria-disponibilidades-discovery.md`](./fin-tesoreria-disponibilidades-discovery.md) | FIN · Tesorería · Disponibilidades — modelo conceptual del módulo | En investigación | Yasmani Rodriguez | 2026-05-20 | `features/fin/fin-tesoreria-disponibilidades.md` · [REQ-50](https://arduasolutions.atlassian.net/browse/REQ-50) |
+| [`lex-alertas-discovery.md`](./lex-alertas-discovery.md) | LEX — Módulo Alertas · Discovery Document | En investigación | Yasmani Rodriguez | 2026-04-24 | _—_ |
+| [`lex-limites-discovery.md`](./lex-limites-discovery.md) | LEX — Límites · Discovery Document | En investigación | Yasmani Rodriguez | 2026-04-23 | _—_ |
+| [`trd-proveedores-de-liquidez-discovery.md`](./trd-proveedores-de-liquidez-discovery.md) | TRD — Proveedores de Liquidez · Discovery Document | Concluida | Yasmani Rodriguez | 2026-04-10 | _—_ |
 
 ---
 
@@ -110,7 +110,7 @@ Archivos que viven en `discoveries/` pero **no son discoveries** — son insumos
 - El índice se actualiza **a mano** dentro del flujo de sesión cada vez que se crea, renombra, concluye o actualiza un discovery (ver `framework/project-instructions.md` §11.5).
 - Las tablas están ordenadas por `updated_at` descendente dentro de cada categoría.
 - Estados posibles: `En investigación` · `Concluida` · `Descartada`.
-- Cuando un discovery tiene `status: Concluida` y `propagates_to:` no vacío, la columna "Propaga a" se agrega en la tabla correspondiente.
+- Cuando un discovery tiene `propagates_to:` no vacío (sea `Concluida`, `Descartada`, o `En investigación` con propagación parcial ya consolidada), la columna "Propaga a" se agrega en la tabla correspondiente.
 
 ### Casos pendientes de revisión
 

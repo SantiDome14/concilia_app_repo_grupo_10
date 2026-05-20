@@ -1,6 +1,6 @@
 # FIN — Finance
 
-> Última actualización: 2026-05-04
+> Última actualización: 2026-05-20
 > Estado: En definición progresiva
 
 ---
@@ -19,7 +19,7 @@
 |---|---|---|---|
 | Bancos | _Pendiente — primera feature a construir_ | _Pendiente_ | _—_ |
 | Contabilidad | _En discovery_ | _Pendiente_ | `discoveries/fin-discovery.md` |
-| Tesorería | _En discovery_ | _Pendiente_ | `discoveries/fin-discovery.md` |
+| Tesorería · Disponibilidades | IN ANALYSIS (REQ-50) — modelo conceptual cerrado | [`fin-tesoreria-disponibilidades.md`](./fin-tesoreria-disponibilidades.md) | `discoveries/fin-tesoreria-disponibilidades-discovery.md` · [REQ-50](https://arduasolutions.atlassian.net/browse/REQ-50) |
 | Finanzas / Reporting | _En discovery_ | _Pendiente_ | `discoveries/fin-discovery.md` |
 | Compras | _En discovery_ | _Pendiente_ | `discoveries/fin-discovery.md` |
 
