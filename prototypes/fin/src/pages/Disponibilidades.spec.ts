@@ -222,4 +222,46 @@ describe('Disponibilidades page · FIN (REQ-50)', () => {
     expect(allHtml).not.toContain('pendiente_de_supervision');
     expect(allHtml).not.toContain('estado_de_supervision');
   });
+
+  it('Movimientos exposes search + Período / Tipo / Rail / Partner / Estructura·Cuenta filters', async () => {
+    const { wrapper } = await mountPage(
+      `${ROUTE_PATHS.DISPONIBILIDADES}?tab=movimientos`,
+    );
+    const filters = wrapper.find('[data-testid="movimientos-filters"]');
+    expect(filters.exists()).toBe(true);
+    expect(filters.find('[data-testid="movimientos-search"]').exists()).toBe(true);
+    const labels = filters.text();
+    expect(labels).toContain('Período');
+    expect(labels).toContain('Tipo');
+    expect(labels).toContain('Rail');
+    expect(labels).toContain('Partner');
+    expect(labels).toContain('Estructura / Cuenta');
+  });
+
+  it('Movimientos Lista view exposes the new columns Rail / Partner / Banco-Cuenta', async () => {
+    const { wrapper } = await mountPage(
+      `${ROUTE_PATHS.DISPONIBILIDADES}?tab=movimientos`,
+    );
+    const table = wrapper.find('[data-testid="movimientos-table"]');
+    expect(table.exists()).toBe(true);
+    const headers = table.findAll('th').map((th) => th.text());
+    expect(headers).toContain('Rail');
+    expect(headers).toContain('Partner');
+    expect(headers).toContain('Banco / Cuenta');
+  });
+
+  it('Bancos / Cuentas exposes search + Sociedad / Estructura / Cuenta / Moneda / Estado / Config filters', async () => {
+    const { wrapper } = await mountPage(
+      `${ROUTE_PATHS.DISPONIBILIDADES}?tab=bancos_cuentas`,
+    );
+    const filters = wrapper.find('[data-testid="bancos-cuentas-filters"]');
+    expect(filters.exists()).toBe(true);
+    expect(filters.find('[data-testid="bancos-cuentas-search"]').exists()).toBe(true);
+    const text = filters.text();
+    expect(text).toContain('Sociedad');
+    expect(text).toContain('Estructura');
+    expect(text).toContain('Moneda');
+    expect(text).toContain('Estado');
+    expect(text).toContain('Config');
+  });
 });

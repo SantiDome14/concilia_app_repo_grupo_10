@@ -264,6 +264,38 @@ The previous `saldo_propio` / `saldo_cliente` segmentation per cuenta is removed
 - **THEN** that Cuenta is NOT in the tree
 - **AND** the Sociedad node's per-moneda totals exclude that Cuenta's saldo
 
+### Requirement: Bancos / Cuentas sub-tab MUST list the catalogue with FIN-specific columns and the canonical search + filters strip
+
+The Bancos / Cuentas sub-tab SHALL list the same catalogue of cuentas as REQ-42 §8.1, with the columns inherited from REQ-42 plus the FIN-specific column **Cuenta contable**. The Cuenta contable column SHALL render either the configured accounting metadata or a "Sin configurar" badge in the warning / ámbar tone.
+
+The sub-tab SHALL render the canonical L3 search + filters strip (per `core-template-frontend`) above the table, using the shadcn-vue `<Input>` and `<Select>` primitives. Native `<select>` SHALL NOT be used.
+
+- **Search input** — placeholder "Buscar por banco, número o cuenta contable…". Searches case-insensitively against `banco`, `numero`, and `cuenta_contable`.
+- **Sociedad** — values `Todas` (default) + one entry per distinct `sociedad_id`.
+- **Estructura** — values `Todas` (default) + one entry per distinct `tipo_estructura` (REQ-42 §8.1 values).
+- **Cuenta** — values `Todas` (default) + one entry per distinct `tipo_cuenta` (REQ-42 §8.1 values).
+- **Moneda** — values `Todas` (default) + one entry per distinct `moneda`.
+- **Estado** — values `Todos` (default) / `Activa` / `Inactiva`.
+- **Config. contable** — values `Todas` (default) / `Configurada` / `Sin configurar`.
+
+A "Limpiar" button SHALL appear when any filter is active and SHALL reset all filters to their default value.
+
+The L2 KPI strip SHALL expose: Estructuras totales, Cuentas totales activas, Cuentas con configuración contable, Cuentas sin configuración contable.
+
+#### Scenario: Filter strip exposes search + 6 filters using canonical components
+
+- **WHEN** the Bancos / Cuentas sub-tab is active
+- **THEN** a `[data-testid="bancos-cuentas-filters"]` strip is rendered with a search input and 6 `<Select>` filters (Sociedad / Estructura / Cuenta / Moneda / Estado / Config)
+- **AND** the search input is a shadcn-vue `<Input>` (NOT a native `<input>`)
+- **AND** each filter is a shadcn-vue `<Select>` (NOT a native `<select>`)
+
+#### Scenario: Limpiar clears all active filters
+
+- **GIVEN** the operator has the Estado filter set to `Inactiva` and a search query "BIND"
+- **WHEN** the operator clicks "Limpiar"
+- **THEN** all filters return to their default `Todas` / `Todos` value
+- **AND** the search input is emptied
+
 ### Requirement: Cargar movimiento manual dialog MUST expose only FIN-registered tipos and support cross-sociedad pair generation
 
 The dialog opened by the "Cargar movimiento manual" Main CTA SHALL expose, in its `tipo` select field, only the FIN-registered tipos of the matriz:
@@ -344,6 +376,19 @@ The sub-tab SHALL expose three views via `<ViewToggle>`: **Lista** (default), **
 
 The `Categoría` axis SHALL be the default lens for predicate evaluation (replacing the `origen`-based discrimination of the previous Requirement). The `origen` field SHALL remain visible as a column / badge in Lista and Tarjetas views but SHALL NOT be the primary categorisation.
 
+**L3 search + filters (canonical template pattern, per `core-template-frontend`).** The Movimientos sub-tab SHALL render the standard search + filter strip above the data surface, using the shadcn-vue `<Select>` and `<Input>` primitives:
+
+- **Search input** — placeholder "Buscar por nombre de cliente o ID…". Searches case-insensitively against `ops.client` and `id`.
+- **Período** — values `Todo` (default) / `Día` / `Semana` / `Mes` relative to the page's reference "today".
+- **Tipo** — values `Todos` (default) + one entry per tipo of the matriz (18 entries).
+- **Rail** — values `Todos` (default) + each distinct `ops.rail` present in the ledger.
+- **Partner** — values `Todos` (default) + each distinct non-null `ops.partner`.
+- **Estructura / Cuenta** — values `Todas` (default) + each active cuenta from the catalog (label: `banco · moneda · numero`).
+
+A "Limpiar" button SHALL appear when any filter is active and SHALL reset all filters to their default value. Native `<select>` SHALL NOT be used.
+
+**Lista view columns** (left to right): `ID · Fecha · Cliente · Rail · Tipo · Partner · Monto · Origen · Estado op. · Banco / Cuenta · Acciones`. The `Banco / Cuenta` column SHALL resolve `fin.cuenta_id` against the disponibilidadesCatalog store and render banco on the top line + `moneda · numero` on the secondary line; an unassigned `fin.cuenta_id` SHALL render a "Sin asignar" warning badge. The `Monto` cell SHALL render green when the displayed string starts with `+` and red when it starts with `-`.
+
 #### Scenario: Categoría axis renders 5 columns
 
 - **GIVEN** the Movimientos sub-tab is in Tablero view
@@ -364,6 +409,19 @@ The `Categoría` axis SHALL be the default lens for predicate evaluation (replac
 - **WHEN** the "Volumen ingresado" KPI renders
 - **THEN** the card body shows three rows, one per moneda, each with the moneda nativa total
 - **AND** NO USD-equivalent consolidated figure is shown
+
+#### Scenario: Search + filters surface canonical L3 controls
+
+- **WHEN** the Movimientos sub-tab is active
+- **THEN** a `[data-testid="movimientos-filters"]` strip is rendered with a search input and five `<Select>` filters (Período / Tipo / Rail / Partner / Estructura · Cuenta)
+- **AND** the search input is a shadcn-vue `<Input>` (NOT a native `<input>`)
+- **AND** each filter is a shadcn-vue `<Select>` (NOT a native `<select>`)
+
+#### Scenario: Lista view exposes Rail / Partner / Banco-Cuenta columns
+
+- **WHEN** the Lista view renders
+- **THEN** the column headers contain `Rail`, `Partner`, and `Banco / Cuenta`
+- **AND** for each row, the `Banco / Cuenta` cell either renders the banco label + moneda·numero (when `fin.cuenta_id` resolves) or a "Sin asignar" warning badge
 
 ### Requirement: Movimientos MUST expose four contextual row-level actions gated by categoría (not by origen)
 

@@ -6,11 +6,20 @@ import {
   ChevronRight,
   ChevronDown,
   Clock,
+  Search,
   TrendingUp,
   Users,
   Wallet,
 } from 'lucide-vue-next';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Segmenter,
   ViewToggle,
@@ -53,6 +62,7 @@ import type {
   Moneda,
   Movimiento,
   MovimientoCategoria,
+  MovimientoTipo,
   PerMoneda,
 } from '@/types/fin';
 import type { ModuleCTA } from '@/types/manifest';
@@ -233,9 +243,91 @@ type MovimientoProjected = Movimiento & {
   _categoria: MovimientoCategoria;
 };
 
+// ─── Movimientos · L3 filter state ───────────────────────────────────
+type Periodo = 'todo' | 'dia' | 'semana' | 'mes';
+type TipoFilter = MovimientoTipo | 'all';
+
+const movQuery = ref('');
+const movPeriodo = ref<Periodo>('todo');
+const movTipo = ref<TipoFilter>('all');
+const movRail = ref<string>('all');
+const movPartner = ref<string>('all');
+const movCuenta = ref<string>('all');
+
+/** Reference "today" anchor for the period filter — matches the mock data. */
+const MOV_TODAY_ISO = '2026-04-24';
+
+function withinPeriodo(fecha: string, periodo: Periodo): boolean {
+  if (periodo === 'todo') return true;
+  const today = new Date(`${MOV_TODAY_ISO}T00:00:00Z`).getTime();
+  const cutoffDays = periodo === 'dia' ? 0 : periodo === 'semana' ? 7 : 30;
+  const cutoff = today - cutoffDays * 86_400_000;
+  return new Date(`${fecha}T00:00:00Z`).getTime() >= cutoff;
+}
+
+/** Distinct sorted rail labels present in the ledger — drives the Rail filter. */
+const railOptions = computed<string[]>(() =>
+  Array.from(new Set(MOVIMIENTOS.map((m) => m.ops.rail).filter(Boolean))).sort(),
+);
+
+/** Distinct sorted partner labels present in the ledger — drives the Partner filter. */
+const partnerOptions = computed<string[]>(() =>
+  Array.from(
+    new Set(
+      MOVIMIENTOS.map((m) => m.ops.partner).filter(
+        (p): p is string => typeof p === 'string' && p.length > 0,
+      ),
+    ),
+  ).sort(),
+);
+
+/** Cuenta options pulled from the catalog store (active only). */
+const cuentaOptions = computed<Array<{ value: string; label: string }>>(() =>
+  cuentas.value
+    .filter((c) => c.estado === 'Activa')
+    .map((c) => ({
+      value: c.id,
+      label: `${c.banco} · ${c.moneda} · ${c.numero}`,
+    })),
+);
+
+/** Resolve a `fin.cuenta_id` against the catalog store — returns null when unassigned. */
+function getCuenta(cuentaId: string | null | undefined): CuentaBanco | null {
+  if (!cuentaId) return null;
+  return cuentas.value.find((c) => c.id === cuentaId) ?? null;
+}
+
 const filteredMovimientos = computed<MovimientoProjected[]>(() => {
-  const id = drillCuentaId.value;
-  const source = id ? MOVIMIENTOS.filter((m) => m.fin.cuenta_id === id) : MOVIMIENTOS;
+  const drillId = drillCuentaId.value;
+  let source = drillId
+    ? MOVIMIENTOS.filter((m) => m.fin.cuenta_id === drillId)
+    : MOVIMIENTOS;
+
+  const q = movQuery.value.trim().toLowerCase();
+  if (q !== '') {
+    source = source.filter((m) => {
+      const clientHit = (m.ops.client ?? '').toLowerCase().includes(q);
+      const idHit = m.id.toLowerCase().includes(q);
+      return clientHit || idHit;
+    });
+  }
+  if (movPeriodo.value !== 'todo') {
+    source = source.filter((m) => withinPeriodo(m.fecha, movPeriodo.value));
+  }
+  if (movTipo.value !== 'all') {
+    const tipo = movTipo.value;
+    source = source.filter((m) => m.tipo === tipo);
+  }
+  if (movRail.value !== 'all') {
+    source = source.filter((m) => m.ops.rail === movRail.value);
+  }
+  if (movPartner.value !== 'all') {
+    source = source.filter((m) => m.ops.partner === movPartner.value);
+  }
+  if (movCuenta.value !== 'all') {
+    source = source.filter((m) => m.fin.cuenta_id === movCuenta.value);
+  }
+
   return source.map((m) => ({
     ...m,
     _imp_ardua: m.fin.cuenta_id ? 'asignado' : 'sin_asignar',
@@ -244,6 +336,34 @@ const filteredMovimientos = computed<MovimientoProjected[]>(() => {
     _categoria: categoriaOf(m.tipo),
   }));
 });
+
+/** Tipo options derived from the manifest's kanban axis (single source of truth). */
+const movTipoOptions = computed<Array<{ id: MovimientoTipo; label: string }>>(
+  () =>
+    MOVIMIENTOS_KANBAN_AXES.tipo.states.map((s) => ({
+      id: s.id as MovimientoTipo,
+      label: s.label,
+    })),
+);
+
+function clearMovFilters(): void {
+  movQuery.value = '';
+  movPeriodo.value = 'todo';
+  movTipo.value = 'all';
+  movRail.value = 'all';
+  movPartner.value = 'all';
+  movCuenta.value = 'all';
+}
+
+const movFiltersActive = computed<boolean>(
+  () =>
+    movQuery.value.trim() !== '' ||
+    movPeriodo.value !== 'todo' ||
+    movTipo.value !== 'all' ||
+    movRail.value !== 'all' ||
+    movPartner.value !== 'all' ||
+    movCuenta.value !== 'all',
+);
 
 // ─── Movimientos · view (Lista / Tarjetas / Tablero) — REQ-50 §5.3 ──
 const view = ref<ViewMode>('list');
@@ -408,16 +528,84 @@ function handleKanbanTransition(payload: {
 }
 
 // ─── Bancos / Cuentas filter state ───────────────────────────────────
-const configFilter = ref<'all' | 'configured' | 'not_configured'>('all');
+const bcQuery = ref('');
+const bcSociedad = ref<string>('all');
+const bcTipoEstructura = ref<string>('all');
+const bcTipoCuenta = ref<string>('all');
+const bcMoneda = ref<string>('all');
+const bcEstado = ref<string>('all');
+const bcConfig = ref<'all' | 'configured' | 'not_configured'>('all');
+
+const bcSociedadOptions = computed<Array<{ value: string; label: string }>>(() =>
+  Array.from(new Set(cuentas.value.map((c) => c.sociedad_id))).map((id) => ({
+    value: id,
+    label: id.toUpperCase(),
+  })),
+);
+const bcTipoEstructuraOptions = computed<string[]>(() =>
+  Array.from(new Set(cuentas.value.map((c) => c.tipo_estructura))).sort(),
+);
+const bcTipoCuentaOptions = computed<string[]>(() =>
+  Array.from(new Set(cuentas.value.map((c) => c.tipo_cuenta))).sort(),
+);
+const bcMonedaOptions = computed<string[]>(() =>
+  Array.from(new Set(cuentas.value.map((c) => c.moneda))).sort(),
+);
 
 const filteredCuentas = computed(() => {
-  const list = cuentas.value;
-  if (configFilter.value === 'all') return list;
-  if (configFilter.value === 'configured') {
-    return list.filter((c) => c.cuenta_contable !== null);
+  let list = cuentas.value;
+  const q = bcQuery.value.trim().toLowerCase();
+  if (q !== '') {
+    list = list.filter((c) => {
+      const banco = c.banco.toLowerCase();
+      const num = c.numero.toLowerCase();
+      const cuentaContable = (c.cuenta_contable ?? '').toLowerCase();
+      return banco.includes(q) || num.includes(q) || cuentaContable.includes(q);
+    });
   }
-  return list.filter((c) => c.cuenta_contable === null);
+  if (bcSociedad.value !== 'all') {
+    list = list.filter((c) => c.sociedad_id === bcSociedad.value);
+  }
+  if (bcTipoEstructura.value !== 'all') {
+    list = list.filter((c) => c.tipo_estructura === bcTipoEstructura.value);
+  }
+  if (bcTipoCuenta.value !== 'all') {
+    list = list.filter((c) => c.tipo_cuenta === bcTipoCuenta.value);
+  }
+  if (bcMoneda.value !== 'all') {
+    list = list.filter((c) => c.moneda === bcMoneda.value);
+  }
+  if (bcEstado.value !== 'all') {
+    list = list.filter((c) => c.estado === bcEstado.value);
+  }
+  if (bcConfig.value === 'configured') {
+    list = list.filter((c) => c.cuenta_contable !== null);
+  } else if (bcConfig.value === 'not_configured') {
+    list = list.filter((c) => c.cuenta_contable === null);
+  }
+  return list;
 });
+
+const bcFiltersActive = computed<boolean>(
+  () =>
+    bcQuery.value.trim() !== '' ||
+    bcSociedad.value !== 'all' ||
+    bcTipoEstructura.value !== 'all' ||
+    bcTipoCuenta.value !== 'all' ||
+    bcMoneda.value !== 'all' ||
+    bcEstado.value !== 'all' ||
+    bcConfig.value !== 'all',
+);
+
+function clearBcFilters(): void {
+  bcQuery.value = '';
+  bcSociedad.value = 'all';
+  bcTipoEstructura.value = 'all';
+  bcTipoCuenta.value = 'all';
+  bcMoneda.value = 'all';
+  bcEstado.value = 'all';
+  bcConfig.value = 'all';
+}
 
 // ─── Pagination via useTable (per core-data-tables spec) ─────────────
 // `useTable` owns page state, page-size state, paginated slice, total
@@ -654,19 +842,96 @@ const movTable = useTable({
         </div>
       </section>
 
-      <section class="flex flex-wrap items-center gap-3" data-testid="bancos-cuentas-filters">
-        <label class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-t-3">
-          Configuración contable
-          <select
-            v-model="configFilter"
-            class="rounded-md border border-b-1 bg-card-2 px-2 py-1 text-xs text-t-2"
-            data-testid="bancos-cuentas-filter-config"
-          >
-            <option value="all">Todas</option>
-            <option value="configured">Configurada</option>
-            <option value="not_configured">Sin configurar</option>
-          </select>
-        </label>
+      <section
+        class="flex flex-wrap items-center gap-2"
+        data-testid="bancos-cuentas-filters"
+      >
+        <span class="text-sm font-bold text-t-2">Catálogo de cuentas</span>
+        <span class="rounded-full bg-card px-2 py-0.5 text-[11px] text-t-3">
+          {{ filteredCuentas.length }}
+        </span>
+        <div class="w-4" />
+        <div class="relative">
+          <Search class="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-t-4" />
+          <Input
+            v-model="bcQuery"
+            placeholder="Buscar por banco, número o cuenta contable…"
+            class="w-[260px] pl-8"
+            data-testid="bancos-cuentas-search"
+          />
+        </div>
+        <div class="flex-1" />
+        <Select v-model="bcSociedad">
+          <SelectTrigger class="h-9 w-[140px] text-xs" aria-label="Filtrar por sociedad">
+            <SelectValue placeholder="Sociedad · Todas" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Sociedad · Todas</SelectItem>
+            <SelectItem v-for="s in bcSociedadOptions" :key="s.value" :value="s.value">
+              {{ s.label }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        <Select v-model="bcTipoEstructura">
+          <SelectTrigger class="h-9 w-[160px] text-xs" aria-label="Filtrar por tipo de estructura">
+            <SelectValue placeholder="Estructura · Todas" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Estructura · Todas</SelectItem>
+            <SelectItem v-for="t in bcTipoEstructuraOptions" :key="t" :value="t">
+              {{ t }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        <Select v-model="bcTipoCuenta">
+          <SelectTrigger class="h-9 w-[160px] text-xs" aria-label="Filtrar por tipo de cuenta">
+            <SelectValue placeholder="Cuenta · Todas" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Cuenta · Todas</SelectItem>
+            <SelectItem v-for="t in bcTipoCuentaOptions" :key="t" :value="t">
+              {{ t }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        <Select v-model="bcMoneda">
+          <SelectTrigger class="h-9 w-[120px] text-xs" aria-label="Filtrar por moneda">
+            <SelectValue placeholder="Moneda · Todas" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Moneda · Todas</SelectItem>
+            <SelectItem v-for="m in bcMonedaOptions" :key="m" :value="m">{{ m }}</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select v-model="bcEstado">
+          <SelectTrigger class="h-9 w-[120px] text-xs" aria-label="Filtrar por estado">
+            <SelectValue placeholder="Estado · Todos" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Estado · Todos</SelectItem>
+            <SelectItem value="Activa">Activa</SelectItem>
+            <SelectItem value="Inactiva">Inactiva</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select v-model="bcConfig">
+          <SelectTrigger class="h-9 w-[160px] text-xs" aria-label="Filtrar por configuración contable">
+            <SelectValue placeholder="Config. · Todas" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Config. · Todas</SelectItem>
+            <SelectItem value="configured">Configurada</SelectItem>
+            <SelectItem value="not_configured">Sin configurar</SelectItem>
+          </SelectContent>
+        </Select>
+        <button
+          v-if="bcFiltersActive"
+          type="button"
+          class="text-[11px] font-bold uppercase tracking-wider text-info hover:text-info/80"
+          data-testid="bancos-cuentas-clear-filters"
+          @click="clearBcFilters"
+        >
+          Limpiar
+        </button>
       </section>
 
       <section class="overflow-hidden rounded-[10px] border border-b-2 bg-card-2" data-testid="bancos-cuentas-table">
@@ -806,33 +1071,121 @@ const movTable = useTable({
         </button>
       </section>
 
-      <!-- Axis selector + page size (only on relevant views) -->
+      <!-- L3 · Search + filters (canonical template pattern) -->
       <section
-        v-if="view === 'kanban' || view === 'list'"
+        class="flex flex-wrap items-center gap-2"
+        data-testid="movimientos-filters"
+      >
+        <span class="text-sm font-bold text-t-2">Ledger de movimientos</span>
+        <span class="rounded-full bg-card px-2 py-0.5 text-[11px] text-t-3">
+          {{ filteredMovimientos.length }}
+        </span>
+        <div class="w-4" />
+        <div class="relative">
+          <Search class="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-t-4" />
+          <Input
+            v-model="movQuery"
+            placeholder="Buscar por nombre de cliente o ID…"
+            class="w-[260px] pl-8"
+            data-testid="movimientos-search"
+          />
+        </div>
+        <div class="flex-1" />
+        <Select v-model="movPeriodo">
+          <SelectTrigger class="h-9 w-[130px] text-xs" aria-label="Filtrar por período">
+            <SelectValue placeholder="Período · Todo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todo">Período · Todo</SelectItem>
+            <SelectItem value="dia">Período · Día</SelectItem>
+            <SelectItem value="semana">Período · Semana</SelectItem>
+            <SelectItem value="mes">Período · Mes</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select v-model="movTipo">
+          <SelectTrigger class="h-9 w-[170px] text-xs" aria-label="Filtrar por tipo">
+            <SelectValue placeholder="Tipo · Todos" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tipo · Todos</SelectItem>
+            <SelectItem
+              v-for="t in movTipoOptions"
+              :key="t.id"
+              :value="t.id"
+            >
+              {{ t.label }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        <Select v-model="movRail">
+          <SelectTrigger class="h-9 w-[130px] text-xs" aria-label="Filtrar por rail">
+            <SelectValue placeholder="Rail · Todos" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Rail · Todos</SelectItem>
+            <SelectItem v-for="r in railOptions" :key="r" :value="r">{{ r }}</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select v-model="movPartner">
+          <SelectTrigger class="h-9 w-[140px] text-xs" aria-label="Filtrar por partner">
+            <SelectValue placeholder="Partner · Todos" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Partner · Todos</SelectItem>
+            <SelectItem v-for="p in partnerOptions" :key="p" :value="p">{{ p }}</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select v-model="movCuenta">
+          <SelectTrigger class="h-9 w-[200px] text-xs" aria-label="Filtrar por estructura / cuenta">
+            <SelectValue placeholder="Estructura / Cuenta · Todas" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Estructura / Cuenta · Todas</SelectItem>
+            <SelectItem v-for="o in cuentaOptions" :key="o.value" :value="o.value">
+              {{ o.label }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        <button
+          v-if="movFiltersActive"
+          type="button"
+          class="text-[11px] font-bold uppercase tracking-wider text-info hover:text-info/80"
+          data-testid="movimientos-clear-filters"
+          @click="clearMovFilters"
+        >
+          Limpiar
+        </button>
+      </section>
+
+      <!-- Axis selector (only when Tablero view is active) -->
+      <section
+        v-if="view === 'kanban'"
         class="flex flex-wrap items-center gap-3"
         data-testid="movimientos-toolbar"
       >
         <label
-          v-if="view === 'kanban'"
           class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-t-3"
           data-testid="movimientos-axis-selector"
         >
           Eje del Tablero
-          <select
-            :value="activeAxisId"
-            class="rounded-md border border-b-1 bg-card-2 px-2 py-1 text-xs text-t-2"
-            data-testid="movimientos-axis-select"
-            @change="setActiveAxis(($event.target as HTMLSelectElement).value as AxisId)"
+          <Select
+            :model-value="activeAxisId"
+            @update:model-value="setActiveAxis(($event as AxisId))"
           >
-            <option value="estado_operativo">Estado operativo</option>
-            <option value="estado_imputacion_ardua">Estado imputación Lado Ardua</option>
-            <option value="estado_imputacion_cliente">Estado imputación Lado Cliente</option>
-            <option value="tipo">Tipo de movimiento</option>
-            <option value="sociedad">Sociedad</option>
-            <option value="categoria">Categoría (A-E)</option>
-          </select>
+            <SelectTrigger class="h-8 w-[240px] text-xs" aria-label="Seleccionar eje del Tablero">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="estado_operativo">Estado operativo</SelectItem>
+              <SelectItem value="estado_imputacion_ardua">Estado imputación Lado Ardua</SelectItem>
+              <SelectItem value="estado_imputacion_cliente">Estado imputación Lado Cliente</SelectItem>
+              <SelectItem value="tipo">Tipo de movimiento</SelectItem>
+              <SelectItem value="sociedad">Sociedad</SelectItem>
+              <SelectItem value="categoria">Categoría (A-E)</SelectItem>
+            </SelectContent>
+          </Select>
         </label>
-        <span v-if="view === 'kanban' && activeAxis.description" class="text-[11px] text-t-4">
+        <span v-if="activeAxis.description" class="text-[11px] text-t-4">
           {{ activeAxis.description }}
         </span>
       </section>
@@ -848,12 +1201,14 @@ const movTable = useTable({
             <tr class="border-b border-b-2">
               <th class="px-[18px] py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">ID</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Fecha</th>
-              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Tipo</th>
-              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Cuenta</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Cliente</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Rail</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Tipo</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Partner</th>
               <th class="px-3.5 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-t-3">Monto</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Origen</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Estado op.</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Banco / Cuenta</th>
               <th class="px-3.5 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-t-3">Acciones</th>
             </tr>
           </thead>
@@ -866,10 +1221,29 @@ const movTable = useTable({
             >
               <td class="px-[18px] py-2.5 font-mono text-xs text-t-3">{{ m.id }}</td>
               <td class="px-3.5 py-2.5 text-xs text-t-3">{{ m.fecha }}</td>
+              <td class="px-3.5 py-2.5 text-xs font-semibold text-t-2">{{ m.ops.client ?? '—' }}</td>
+              <td class="px-3.5 py-2.5">
+                <span class="rounded bg-card px-1.5 py-0.5 font-mono text-[10px] font-bold text-t-3">
+                  {{ m.ops.rail }}
+                </span>
+              </td>
               <td class="px-3.5 py-2.5 text-xs text-t-2">{{ m.tipo }}</td>
-              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ m.fin.cuenta_id ?? '—' }}</td>
-              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ m.fin.cliente_id ?? '—' }}</td>
-              <td class="px-3.5 py-2.5 text-right text-xs font-mono text-t-2">{{ m.monto }}</td>
+              <td class="px-3.5 py-2.5">
+                <Badge
+                  v-if="m.ops.partner"
+                  :variant="m.origen === 'OPS' ? 'info' : 'neutral'"
+                  class="text-[10px]"
+                >
+                  {{ m.ops.partner }}
+                </Badge>
+                <span v-else class="text-[11px] text-t-4">—</span>
+              </td>
+              <td
+                class="px-3.5 py-2.5 text-right font-mono text-xs tabular-nums"
+                :class="m.monto.startsWith('+') ? 'text-success' : 'text-danger'"
+              >
+                {{ m.monto }}
+              </td>
               <td class="px-3.5 py-2.5">
                 <Badge
                   :variant="m.origen === 'OPS' ? 'info' : 'warning'"
@@ -886,6 +1260,15 @@ const movTable = useTable({
                   {{ m.status }}
                 </Badge>
               </td>
+              <td class="px-3.5 py-2.5 text-xs">
+                <template v-if="getCuenta(m.fin.cuenta_id)">
+                  <div class="font-semibold text-t-2">{{ getCuenta(m.fin.cuenta_id)?.banco }}</div>
+                  <div class="text-[11px] text-t-4">
+                    {{ getCuenta(m.fin.cuenta_id)?.moneda }} · {{ getCuenta(m.fin.cuenta_id)?.numero }}
+                  </div>
+                </template>
+                <Badge v-else variant="warning" class="text-[10px]">Sin asignar</Badge>
+              </td>
               <td class="px-3.5 py-2.5 text-center" @click.stop>
                 <div class="flex items-center justify-center">
                   <ManifestActionsMenu
@@ -898,7 +1281,7 @@ const movTable = useTable({
               </td>
             </tr>
             <tr v-if="movTable.paged.value.length === 0">
-              <td colspan="9">
+              <td colspan="11">
                 <EmptyState
                   title="Sin movimientos"
                   description="No hay movimientos que coincidan con los filtros aplicados."
