@@ -28,7 +28,11 @@ import { INBOX_SOLICITUDES } from '@/mocks/genericos/inbox';
 import { REPORTS_CATALOG } from '@/mocks/genericos/reportes';
 import { POSICION_TREE } from '@/mocks/fin/disponibilidades';
 import { DASHBOARD_ACTIVITY } from '@/mocks/fin/dashboard-activity';
-import { slicePosicionTrend, type PosicionTrendPoint } from '@/mocks/fin/posicion-trend';
+import {
+  slicePosicionTrend,
+  type DashboardPeriod,
+  type PosicionTrendPoint,
+} from '@/mocks/fin/posicion-trend';
 import type { Alerta, AlertaState, Severity } from '@/types/genericos';
 import { cn } from '@/lib/cn';
 
@@ -90,21 +94,21 @@ const reportesVencidos = computed(() => {
  * Placeholder USD-eq value for the Posición consolidada KPI. V1 does NOT
  * apply cross-currency conversions; this requires the Tipos de Cambio
  * (FX rates) catalog which is a follow-up change. Until then we surface
- * the static seed from the trend series' last point.
+ * the static seed from the trend series' last point (latest day, regardless
+ * of the chart period selected).
  */
 const posicionConsolidadaUsdM = computed<number>(() => {
-  const trend = slicePosicionTrend('today');
+  const trend = slicePosicionTrend('dia');
   return trend.length > 0 ? (trend[trend.length - 1]?.value ?? 28.4) : 28.4;
 });
 
 // ─── Trend de Posición consolidada (USD-eq) ──────────────────────────
-// Driven by the L1 period selector ("Días del Dashboard"). The chart is
-// capped at 30 days. On the 'today' selector we fall back to last 7d so
-// the line stays visible (a single point isn't a chart).
-const posicionTrend = computed<PosicionTrendPoint[]>(() => {
-  const p = period.value === 'today' ? '7' : (period.value as '7' | '30');
-  return slicePosicionTrend(p);
-});
+// Driven by the L1 period selector — canonical 5-value period set
+// (Día / Mes / Trimestre / Semestre / Año). `dia` falls back to last
+// 7d so the line stays readable.
+const posicionTrend = computed<PosicionTrendPoint[]>(() =>
+  slicePosicionTrend(period.value),
+);
 
 const trendDelta = computed<{ pct: number; positive: boolean } | null>(() => {
   const series = posicionTrend.value;
@@ -118,20 +122,38 @@ const trendDelta = computed<{ pct: number; positive: boolean } | null>(() => {
 
 const sociedadCount = computed(() => POSICION_TREE.length);
 
-// Axis tick formatters for the trend chart. X is a unix-ms timestamp →
-// days-from-today (`-Nd` for past days, `Hoy` for today); Y is USD
-// millions → compact "USD XXM" display. The relative-day labeling makes
-// the selected period (7d / 30d) obvious at a glance.
+// Axis tick formatters for the trend chart. X exposes one tick per day
+// in the selected period (`xTickValues` below). To keep labels readable
+// we render text only every Nth tick — the rest stays as visible marks
+// without a label. Y is USD millions → compact "USD XX.XM" display.
 const TREND_TODAY_MS = new Date('2026-04-24T00:00:00Z').getTime();
 const MS_PER_DAY = 86_400_000;
+
+/** Days between adjacent X-axis labels per period. */
+const X_LABEL_EVERY: Record<DashboardPeriod, number> = {
+  dia: 1,
+  mes: 5,
+  trimestre: 15,
+  semestre: 30,
+  año: 30,
+};
+
 function formatTrendX(value: number): string {
   const daysFromToday = Math.round((value - TREND_TODAY_MS) / MS_PER_DAY);
+  const stride = X_LABEL_EVERY[period.value];
+  if (daysFromToday !== 0 && daysFromToday % stride !== 0) return '';
   if (daysFromToday === 0) return 'Hoy';
   return `${daysFromToday}d`;
 }
+
 function formatTrendY(value: number): string {
   return `USD ${value.toFixed(1)}M`;
 }
+
+/** One tick per data point — drives "30 secciones" / "90 secciones" etc. */
+const trendXTickValues = computed<number[]>(() =>
+  posicionTrend.value.map((p) => Date.parse(p.date)),
+);
 
 // ─── Alertas activas widget ──────────────────────────────────────────
 const SEVERITY_RANK: Record<Severity, number> = {
@@ -261,14 +283,15 @@ const ACTIVITY_ICON: Record<'success' | 'info' | 'warning', typeof Check> = {
 };
 
 // ─── L1 · Period selector + Export CTA ───────────────────────────────
-// The trend chart is capped at 30 days — beyond that the daily points
-// crowd the X axis and the line loses its signal. Longer historical
-// views belong in /reportes, not here.
-const period = ref<string>('30');
-const PERIOD_OPTIONS = [
-  { value: 'today', label: 'Hoy' },
-  { value: '7', label: 'Últimos 7 días' },
-  { value: '30', label: 'Últimos 30 días' },
+// Canonical period set: Día (Hoy) / Mes / Trimestre / Semestre / Año.
+// The trend chart renders one X-axis tick per day in the selected range.
+const period = ref<DashboardPeriod>('mes');
+const PERIOD_OPTIONS: Array<{ value: DashboardPeriod; label: string }> = [
+  { value: 'dia', label: 'Hoy' },
+  { value: 'mes', label: 'Mes' },
+  { value: 'trimestre', label: 'Trimestre' },
+  { value: 'semestre', label: 'Semestre' },
+  { value: 'año', label: 'Año' },
 ];
 
 function exportSummary(): void {
@@ -452,9 +475,9 @@ function onCardKeydown(event: KeyboardEvent, href: string): void {
             :data="posicionTrend as unknown as Array<Record<string, unknown>>"
             :x-accessor="(d) => Date.parse((d as unknown as PosicionTrendPoint).date)"
             :y-accessor="(d) => (d as unknown as PosicionTrendPoint).value"
+            :x-tick-values="trendXTickValues"
             :x-tick-format="formatTrendX"
             :y-tick-format="formatTrendY"
-            :x-num-ticks="period === '7' ? 7 : 6"
             :y-num-ticks="4"
             :colors="['info']"
             title="Posición consolidada USD-equivalente"

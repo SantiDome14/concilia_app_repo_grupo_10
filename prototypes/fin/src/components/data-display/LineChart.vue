@@ -33,6 +33,9 @@ const props = defineProps<{
   /** Optional tick count hint passed to Unovis. */
   xNumTicks?: number;
   yNumTicks?: number;
+  /** Explicit tick positions. Overrides numTicks when provided. */
+  xTickValues?: number[];
+  yTickValues?: number[];
 }>();
 
 const isEmpty = computed(() => !Array.isArray(props.data) || props.data.length === 0);
@@ -80,11 +83,13 @@ const containerHeight = computed(() => props.height ?? '100%');
         type="x"
         :tick-format="props.xTickFormat"
         :num-ticks="props.xNumTicks"
+        :tick-values="props.xTickValues"
       />
       <VisAxis
         type="y"
         :tick-format="props.yTickFormat"
         :num-ticks="props.yNumTicks"
+        :tick-values="props.yTickValues"
       />
       <VisTooltip v-if="props.tooltip ?? true" />
     </VisXYContainer>
