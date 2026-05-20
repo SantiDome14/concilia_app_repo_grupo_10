@@ -308,13 +308,33 @@ function onCardKeydown(event: KeyboardEvent, href: string): void {
       </div>
     </header>
 
-    <!-- L2 · KPIs · canonical 4 tiles per core-modulo-genericos
-         (Alertas activas / Inbox pendientes / Reportes próx. a vencer)
-         + FIN-specific Posición consolidada. -->
+    <!-- L2 · KPIs · canonical 4 tiles per core-modulo-genericos.
+         Convention: the app-specific "main card" goes FIRST — for FIN
+         that's Posición consolidada, the most relevant single read-out
+         for the operator. The 3 cross-cutting tiles (Alertas / Inbox /
+         Reportes) follow. -->
     <section
       class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
       data-testid="dashboard-kpis"
     >
+      <div
+        class="flex flex-col gap-1.5 rounded-xl border border-b-2 bg-card-2 p-5"
+        data-testid="kpi-posicion-consolidada"
+      >
+        <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
+          Posición consolidada
+        </span>
+        <div
+          class="font-mono text-2xl font-extrabold leading-none tracking-tight text-t-1"
+          data-testid="kpi-posicion-consolidada-value"
+        >
+          USD {{ posicionConsolidadaUsdM.toFixed(1) }}M
+        </div>
+        <div class="text-[11px] text-t-4">
+          equivalente · {{ sociedadCount }} sociedades · FX pendiente
+        </div>
+      </div>
+
       <div
         role="button"
         tabindex="0"
@@ -374,24 +394,6 @@ function onCardKeydown(event: KeyboardEvent, href: string): void {
         </div>
         <div class="text-[11px] text-t-4">
           {{ reportesVencidos }} vencido<span v-if="reportesVencidos !== 1">s</span>
-        </div>
-      </div>
-
-      <div
-        class="flex flex-col gap-1.5 rounded-xl border border-b-2 bg-card-2 p-5"
-        data-testid="kpi-posicion-consolidada"
-      >
-        <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
-          Posición consolidada
-        </span>
-        <div
-          class="font-mono text-2xl font-extrabold leading-none tracking-tight text-t-1"
-          data-testid="kpi-posicion-consolidada-value"
-        >
-          USD {{ posicionConsolidadaUsdM.toFixed(1) }}M
-        </div>
-        <div class="text-[11px] text-t-4">
-          equivalente · {{ sociedadCount }} sociedades · FX pendiente
         </div>
       </div>
     </section>
