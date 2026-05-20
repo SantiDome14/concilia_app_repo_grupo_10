@@ -114,6 +114,20 @@
   --chart-6: hsl(172 66% 50%);   /* teal   #2DD4BF */
   --chart-7: hsl(340 75% 55%);   /* pink   #E11D48 */
   --chart-8: hsl(197 71% 73%);   /* sky    #93C5FD */
+
+  /* Unovis axis tokens — override defaults so gridlines, tick marks and
+     labels use FIN's design tokens. Otherwise Unovis ships invisible
+     dark-mode defaults that blend into bg-card-2. */
+  --vis-axis-tick-color: hsl(var(--t-4));
+  --vis-axis-grid-color: hsl(var(--t-4) / 0.4);
+  --vis-axis-domain-color: hsl(var(--t-4));
+  --vis-axis-tick-label-color: hsl(var(--t-3));
+  --vis-axis-label-color: hsl(var(--t-2));
+  --vis-dark-axis-tick-color: hsl(var(--t-4));
+  --vis-dark-axis-grid-color: hsl(var(--t-4) / 0.4);
+  --vis-dark-axis-domain-color: hsl(var(--t-4));
+  --vis-dark-axis-tick-label-color: hsl(var(--t-3));
+  --vis-dark-axis-label-color: hsl(var(--t-2));
 }
 
 /* ────────────────────────────────────────────────────────────────
