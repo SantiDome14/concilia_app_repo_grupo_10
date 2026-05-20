@@ -270,7 +270,7 @@ describe('Disponibilidades page · FIN (REQ-50)', () => {
     expect(headers).not.toContain('Partner');
   });
 
-  it('Bancos / Cuentas exposes search + Sociedad / Estructura / Cuenta / Moneda / Estado / Config filters', async () => {
+  it('Bancos / Cuentas exposes search + Sociedad / Estructura / Cuenta / Moneda / Estado filters (no Config filter)', async () => {
     const { wrapper } = await mountPage(
       `${ROUTE_PATHS.DISPONIBILIDADES}?tab=bancos_cuentas`,
     );
@@ -278,10 +278,11 @@ describe('Disponibilidades page · FIN (REQ-50)', () => {
     expect(filters.exists()).toBe(true);
     expect(filters.find('[data-testid="bancos-cuentas-search"]').exists()).toBe(true);
     const text = filters.text();
+    expect(text).toContain('Catalogo');
     expect(text).toContain('Sociedad');
     expect(text).toContain('Estructura');
     expect(text).toContain('Moneda');
     expect(text).toContain('Estado');
-    expect(text).toContain('Config');
+    expect(text).not.toContain('Config. ·');
   });
 });

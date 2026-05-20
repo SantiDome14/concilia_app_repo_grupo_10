@@ -525,7 +525,6 @@ const bcTipoEstructura = ref<string>('all');
 const bcTipoCuenta = ref<string>('all');
 const bcMoneda = ref<string>('all');
 const bcEstado = ref<string>('all');
-const bcConfig = ref<'all' | 'configured' | 'not_configured'>('all');
 
 const bcSociedadOptions = computed<Array<{ value: string; label: string }>>(() =>
   Array.from(new Set(cuentas.value.map((c) => c.sociedad_id))).map((id) => ({
@@ -569,11 +568,6 @@ const filteredCuentas = computed(() => {
   if (bcEstado.value !== 'all') {
     list = list.filter((c) => c.estado === bcEstado.value);
   }
-  if (bcConfig.value === 'configured') {
-    list = list.filter((c) => c.cuenta_contable !== null);
-  } else if (bcConfig.value === 'not_configured') {
-    list = list.filter((c) => c.cuenta_contable === null);
-  }
   return list;
 });
 
@@ -584,8 +578,7 @@ const bcFiltersActive = computed<boolean>(
     bcTipoEstructura.value !== 'all' ||
     bcTipoCuenta.value !== 'all' ||
     bcMoneda.value !== 'all' ||
-    bcEstado.value !== 'all' ||
-    bcConfig.value !== 'all',
+    bcEstado.value !== 'all',
 );
 
 function clearBcFilters(): void {
@@ -595,7 +588,6 @@ function clearBcFilters(): void {
   bcTipoCuenta.value = 'all';
   bcMoneda.value = 'all';
   bcEstado.value = 'all';
-  bcConfig.value = 'all';
 }
 
 // ─── Pagination via useTable (per core-data-tables spec) ─────────────
@@ -837,7 +829,7 @@ const movTable = useTable({
         class="flex flex-wrap items-center gap-2"
         data-testid="bancos-cuentas-filters"
       >
-        <span class="text-sm font-bold text-t-2">Catálogo de cuentas</span>
+        <span class="text-sm font-bold text-t-2">Catalogo</span>
         <span class="rounded-full bg-card px-2 py-0.5 text-[11px] text-t-3">
           {{ filteredCuentas.length }}
         </span>
@@ -902,16 +894,6 @@ const movTable = useTable({
             <SelectItem value="all">Estado · Todos</SelectItem>
             <SelectItem value="Activa">Activa</SelectItem>
             <SelectItem value="Inactiva">Inactiva</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select v-model="bcConfig">
-          <SelectTrigger class="h-9 w-[160px] text-xs" aria-label="Filtrar por configuración contable">
-            <SelectValue placeholder="Config. · Todas" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Config. · Todas</SelectItem>
-            <SelectItem value="configured">Configurada</SelectItem>
-            <SelectItem value="not_configured">Sin configurar</SelectItem>
           </SelectContent>
         </Select>
         <button

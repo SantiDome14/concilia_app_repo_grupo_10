@@ -291,18 +291,20 @@ The sub-tab SHALL render the canonical L3 search + filters strip (per `core-temp
 - **Cuenta** — values `Todas` (default) + one entry per distinct `tipo_cuenta` (REQ-42 §8.1 values).
 - **Moneda** — values `Todas` (default) + one entry per distinct `moneda`.
 - **Estado** — values `Todos` (default) / `Activa` / `Inactiva`.
-- **Config. contable** — values `Todas` (default) / `Configurada` / `Sin configurar`.
+
+A standalone "Configuración contable" filter is NOT rendered — the "Cuenta contable" column already exposes the per-row state (configured vs "Sin configurar" badge), and the search input covers free-text lookup against the metadata field.
 
 A "Limpiar" button SHALL appear when any filter is active and SHALL reset all filters to their default value.
 
 The L2 KPI strip SHALL expose: Estructuras totales, Cuentas totales activas, Cuentas con configuración contable, Cuentas sin configuración contable.
 
-#### Scenario: Filter strip exposes search + 6 filters using canonical components
+#### Scenario: Filter strip exposes search + 5 filters using canonical components
 
 - **WHEN** the Bancos / Cuentas sub-tab is active
-- **THEN** a `[data-testid="bancos-cuentas-filters"]` strip is rendered with a search input and 6 `<Select>` filters (Sociedad / Estructura / Cuenta / Moneda / Estado / Config)
+- **THEN** a `[data-testid="bancos-cuentas-filters"]` strip is rendered with a search input and 5 `<Select>` filters (Sociedad / Estructura / Cuenta / Moneda / Estado)
 - **AND** the search input is a shadcn-vue `<Input>` (NOT a native `<input>`)
 - **AND** each filter is a shadcn-vue `<Select>` (NOT a native `<select>`)
+- **AND** no standalone Configuración contable filter is rendered (the column + search cover that need)
 
 #### Scenario: Limpiar clears all active filters
 
