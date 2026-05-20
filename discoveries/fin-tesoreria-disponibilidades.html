@@ -506,6 +506,23 @@
   .section-body { flex: 1; min-height: 0; }
   .section-body.scrollable { max-height: var(--panel-max-height); }
 
+  /* Variant of section-body that holds a fixed header on top of a scrollable
+     rows area. Both share the same max-height budget via flexbox: header takes
+     its natural size, scroll-area fills the rest and scrolls when overflowing.
+     Robust replacement for position:sticky on the row-header. */
+  .section-body.with-fixed-header {
+    display: flex;
+    flex-direction: column;
+    max-height: var(--panel-max-height);
+  }
+  .section-body.with-fixed-header > .table-grid:first-child {
+    flex-shrink: 0;
+  }
+  .section-body.with-fixed-header > .scroll-area {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
   /* === ADAPTIVE LAYOUT for Operaciones === */
   .ops-layout {
     display: grid;
@@ -837,19 +854,25 @@
   .ops-mov-grid > * { display: grid; grid-template-columns: 180px 1fr 130px; gap: var(--space-2); }
   .tes-grid > * { display: grid; grid-template-columns: 220px 1fr 150px; gap: var(--space-3); }
 
-  /* Sticky table header. Applied directly to .row-header so it works
-     regardless of intervening grid/flex containers and overflow:hidden ancestors.
-     The .society-group-table .row-header override below adds padding,
-     and since society groups don't scroll, sticky has no visual effect there. */
+  /* Row-header: pure visual styling. NOT sticky-positioned — sticky has too many
+     edge cases (overlay scrollbars, overflow:hidden ancestors, scroll-context
+     indeterminacy). Instead, the header is rendered as a sibling above the
+     scroll-area (see .section-body.with-fixed-header) which is the approach
+     used by Notion, Linear, Ant Design, Material UI, etc. */
   .row-header {
     background: var(--bg-secondary); color: var(--text-tertiary);
     font-size: 10px !important;
     text-transform: uppercase; letter-spacing: 0.06em;
     font-weight: 600;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    box-shadow: inset 0 -1px 0 var(--border-tertiary);
+  }
+
+  /* Variant applied when the row-header is rendered OUTSIDE the scroll-area.
+     The extra padding-right (8px = scrollbar width) compensates for the
+     scrollbar gutter inside the scroll-area below, so right-aligned content
+     lines up vertically with the right-aligned content in the data rows. */
+  .row-header-floating {
+    padding-right: calc(var(--space-6) + 8px) !important;
+    border-bottom: 1px solid var(--border-tertiary);
   }
   .row-new {
     background: linear-gradient(90deg, var(--bg-info) 0%, transparent 100%);
@@ -1629,9 +1652,12 @@ function renderOps() {
     if (!movs.length) {
       html += '<div class="section-body">' + renderEmptyState('movements') + '</div>';
     } else {
-      html += '<div class="section-body scrollable scroll-area">';
+      html += '<div class="section-body with-fixed-header">';
       html += '<div class="table-grid ops-mov-grid">';
-      html += '<div class="row-header"><span>Tipo</span><span>Cliente</span><span class="num">Monto</span></div>';
+      html += '<div class="row-header row-header-floating"><span>Tipo</span><span>Cliente</span><span class="num">Monto</span></div>';
+      html += '</div>';
+      html += '<div class="scroll-area">';
+      html += '<div class="table-grid ops-mov-grid">';
       movs.forEach(m => {
         const isNew = m.eventIdx === currentStep;
         const monto = m.signo === '+' ? '+' : m.signo === '−' ? '−' : '';
@@ -1648,6 +1674,7 @@ function renderOps() {
         html += `<span class="num" style="font-size: 12px;">${monto} ${fmt(m.monto)} ${m.moneda}</span>`;
         html += '</div>';
       });
+      html += '</div>';
       html += '</div>';
       html += '</div>';
     }
@@ -1802,9 +1829,12 @@ function renderTes() {
   } else {
     html += '<div class="section">';
     html += '<div class="section-header"><div class="section-title">Movimientos · perspectiva cuenta</div><div class="section-badge">' + finMovs.length + ' registros</div></div>';
-    html += '<div class="section-body scrollable scroll-area">';
+    html += '<div class="section-body with-fixed-header">';
     html += '<div class="table-grid tes-grid">';
-    html += '<div class="row-header"><span>Tipo</span><span>Cuentas afectadas</span><span class="num">Monto</span></div>';
+    html += '<div class="row-header row-header-floating"><span>Tipo</span><span>Cuentas afectadas</span><span class="num">Monto</span></div>';
+    html += '</div>';
+    html += '<div class="scroll-area">';
+    html += '<div class="table-grid tes-grid">';
     finMovs.forEach(m => {
       const isNew = m.eventIdx === currentStep;
       const intercompanyPill = m.tipo === 'PRESTAMO_INTERCOMPANY' ? ' <span class="pill pill-intercompany">INTERCOMPANY</span>' : '';
@@ -1816,7 +1846,7 @@ function renderTes() {
       html += `<span class="num" style="font-size: 12px;">− ${fmt(m.monto)} ${m.moneda}</span>`;
       html += '</div>';
     });
-    html += '</div></div></div>';
+    html += '</div></div></div></div>';
   }
   return html;
 }
