@@ -9,6 +9,8 @@ import { resolveSeriesColor, type SeriesColor, type ChartSeries } from './chart-
 // ────────────────────────────────────────────────────────────────────
 // Spec: `core-charts`. Single + multi-series via `series`.
 // Empty data renders <EmptyState>; never an empty axes canvas.
+// Optional tick formatters expose human-readable axis labels (e.g.,
+// date short format on X, compact currency on Y).
 // ════════════════════════════════════════════════════════════════════
 
 const props = defineProps<{
@@ -25,6 +27,12 @@ const props = defineProps<{
   title?: string;
   description?: string;
   emptyMessage?: string;
+  /** Tick label formatters. Receive the raw axis value (number | Date). */
+  xTickFormat?: (value: number) => string;
+  yTickFormat?: (value: number) => string;
+  /** Optional tick count hint passed to Unovis. */
+  xNumTicks?: number;
+  yNumTicks?: number;
 }>();
 
 const isEmpty = computed(() => !Array.isArray(props.data) || props.data.length === 0);
@@ -68,8 +76,16 @@ const containerHeight = computed(() => props.height ?? '100%');
         :y="serie.accessor"
         :color="resolvedColors[idx]"
       />
-      <VisAxis type="x" />
-      <VisAxis type="y" />
+      <VisAxis
+        type="x"
+        :tick-format="props.xTickFormat"
+        :num-ticks="props.xNumTicks"
+      />
+      <VisAxis
+        type="y"
+        :tick-format="props.yTickFormat"
+        :num-ticks="props.yNumTicks"
+      />
       <VisTooltip v-if="props.tooltip ?? true" />
     </VisXYContainer>
   </div>

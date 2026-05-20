@@ -98,11 +98,11 @@ const posicionConsolidadaUsdM = computed<number>(() => {
 });
 
 // ─── Trend de Posición consolidada (USD-eq) ──────────────────────────
-// Driven by the L1 period selector. The chart accepts only periods that
-// map to a date range; on the 'today' selector we still show last 7d as
-// fallback so the line stays visible.
+// Driven by the L1 period selector ("Días del Dashboard"). The chart is
+// capped at 30 days. On the 'today' selector we fall back to last 7d so
+// the line stays visible (a single point isn't a chart).
 const posicionTrend = computed<PosicionTrendPoint[]>(() => {
-  const p = period.value === 'today' ? '7' : (period.value as '7' | '30' | '90');
+  const p = period.value === 'today' ? '7' : (period.value as '7' | '30');
   return slicePosicionTrend(p);
 });
 
@@ -117,6 +117,19 @@ const trendDelta = computed<{ pct: number; positive: boolean } | null>(() => {
 });
 
 const sociedadCount = computed(() => POSICION_TREE.length);
+
+// Axis tick formatters for the trend chart. X is a unix-ms timestamp →
+// short DD/MM display; Y is USD millions → compact "USD XXM" display.
+const TREND_X_FORMATTER = new Intl.DateTimeFormat('es-AR', {
+  day: '2-digit',
+  month: '2-digit',
+});
+function formatTrendX(value: number): string {
+  return TREND_X_FORMATTER.format(new Date(value));
+}
+function formatTrendY(value: number): string {
+  return `USD ${value.toFixed(1)}M`;
+}
 
 // ─── Alertas activas widget ──────────────────────────────────────────
 const SEVERITY_RANK: Record<Severity, number> = {
@@ -246,12 +259,14 @@ const ACTIVITY_ICON: Record<'success' | 'info' | 'warning', typeof Check> = {
 };
 
 // ─── L1 · Period selector + Export CTA ───────────────────────────────
+// The trend chart is capped at 30 days — beyond that the daily points
+// crowd the X axis and the line loses its signal. Longer historical
+// views belong in /reportes, not here.
 const period = ref<string>('30');
 const PERIOD_OPTIONS = [
+  { value: 'today', label: 'Hoy' },
   { value: '7', label: 'Últimos 7 días' },
   { value: '30', label: 'Últimos 30 días' },
-  { value: '90', label: 'Últimos 90 días' },
-  { value: 'today', label: 'Hoy · 24 abr 2026' },
 ];
 
 function exportSummary(): void {
@@ -435,6 +450,10 @@ function onCardKeydown(event: KeyboardEvent, href: string): void {
             :data="posicionTrend as unknown as Array<Record<string, unknown>>"
             :x-accessor="(d) => Date.parse((d as unknown as PosicionTrendPoint).date)"
             :y-accessor="(d) => (d as unknown as PosicionTrendPoint).value"
+            :x-tick-format="formatTrendX"
+            :y-tick-format="formatTrendY"
+            :x-num-ticks="period === '7' ? 7 : 6"
+            :y-num-ticks="4"
             :colors="['info']"
             title="Posición consolidada USD-equivalente"
             description="Serie diaria de la posición consolidada del grupo, convertida a USD vía Tipos de Cambio (catálogo pendiente)."

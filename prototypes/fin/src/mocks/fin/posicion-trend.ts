@@ -46,9 +46,12 @@ export const POSICION_TREND_90D: PosicionTrendPoint[] = Array.from(
   },
 );
 
-/** Slice the trend by the dashboard period selector. */
+/**
+ * Slice the trend by the dashboard period selector. The dashboard caps
+ * the visible range at 30 days — longer windows belong in /reportes.
+ */
 export function slicePosicionTrend(
-  period: '7' | '30' | '90' | 'today',
+  period: '7' | '30' | 'today',
 ): PosicionTrendPoint[] {
   if (period === 'today') return POSICION_TREND_90D.slice(-1);
   const days = Number(period);
