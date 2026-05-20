@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { formatCurrency, formatDate, nextSequentialId, truncate } from './format';
+import {
+  formatCompact,
+  formatCurrency,
+  formatDate,
+  nextSequentialId,
+  truncate,
+} from './format';
 
 describe('format', () => {
   describe('formatCurrency', () => {
@@ -39,6 +45,34 @@ describe('format', () => {
 
     it('truncates and appends ellipsis when over limit', () => {
       expect(truncate('hello world', 8)).toBe('hello w…');
+    });
+  });
+
+  describe('formatCompact', () => {
+    it('formats billions with B suffix and 2 decimals', () => {
+      expect(formatCompact(1_117_230_500)).toBe('1.12B');
+    });
+
+    it('formats millions with M suffix and 2 decimals', () => {
+      expect(formatCompact(5_700_000)).toBe('5.70M');
+    });
+
+    it('formats thousands with K suffix and 2 decimals', () => {
+      expect(formatCompact(270_000)).toBe('270.00K');
+    });
+
+    it('renders values under 1000 as plain integers', () => {
+      expect(formatCompact(999)).toBe('999');
+      expect(formatCompact(0)).toBe('0');
+    });
+
+    it('accepts pre-formatted display strings with dot thousands separators', () => {
+      expect(formatCompact('1.017.930.500')).toBe('1.02B');
+      expect(formatCompact('8.500.000')).toBe('8.50M');
+    });
+
+    it('returns the input verbatim when not a number', () => {
+      expect(formatCompact('—')).toBe('—');
     });
   });
 });

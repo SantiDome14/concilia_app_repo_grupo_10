@@ -1,28 +1,33 @@
 // ════════════════════════════════════════════════════════════════════
 // Manifest · FIN.Disponibilidades · Movimientos (record `movimiento`)
 // ────────────────────────────────────────────────────────────────────
-// Per REQ-50 §5.7, this manifest declares ONLY the six contextual
-// actions of the Movimientos sub-tab:
-//   - Asignar / Editar Banco y Cuenta (capability `imputar_ardua`)
-//   - Asignar / Editar Cliente (capability `imputar_cliente`)
-//   - Confirmar / Rechazar carga manual (capability `supervisar_carga`)
+// Per `align-fin-disponibilidades-to-omnibus-model`, the predicates of
+// this manifest pivot from `origen` (OPS / TRD / Manual) to the
+// categoría (A-F) of the closed matriz. Categoría is derived from
+// `tipo` via `categoriaOf` in `@/lib/movimientos/categoria`; since the
+// engine's predicate alphabet does not include a derived-value check,
+// the predicates here enumerate the tipos that belong to each
+// categoría through `record_type_in`.
 //
-// The 4 dropped actions of the legacy `fin.movimientos.actions.ts`
-// (Proveedor / Partner / Banco-Exchange / Imputar-Contable / Marcar
-// Intercompany / Marcar Diferencias / Marcar Conciliado) are NOT in
-// REQ-50's scope and are not migrated here (Decision 4 of design.md).
+// Action gating (per the spec MODIFIED Requirement):
 //
-// Notes on engine constraints:
-//   - `Dimension` is restricted to 6 canonical values; we use
-//     `imputacion` for the imputation axes and `governance` for the
-//     supervision axis + tipo / sociedad axes (closest fit).
-//   - The `created_by !== current_user` predicate of REQ-50 §5.7 is
-//     enforced at the page level. The manifest's `enable_when` checks
-//     the gating conditions the engine can evaluate today
-//     (requires_supervision + supervised_by); the page applies the
-//     creator filter via a small `useAuth`-aware wrapper.
-//   - Each `show_when` call invokes `nostroOrManualPredicate()` so the
-//     manifest stays JSON-strict serialisable (no shared subtrees).
+//   - Asignar / Editar Banco y Cuenta — applies to all categorías. Enabled
+//     only when categoría ∈ {C, D, E} (FIN-imputable). For categoría A, B,
+//     F the action shows but is disabled with disable_tag "Solo OPS"
+//     because the Lado Ardua is imputed by OPS at the time of the event.
+//
+//   - Asignar / Editar Cliente — shown only for categoría ∈ {A, B, F},
+//     the only categorías where the Lado Cliente is applicable. For C, D,
+//     E the contrapartida es una cuenta contable formal (Ingresos /
+//     Egresos / Patrimonio operativo / Intercompany / Puente FX), not a
+//     cliente — the action is not surfaced.
+//
+//   - Confirmar / Rechazar carga manual — unchanged from the previous
+//     spec; the `created_by !== current_user` predicate is enforced at the
+//     page level.
+//
+// Each predicate is constructed as a fresh JSON-strict subtree (no
+// shared references → no circular flag in the validator).
 // ════════════════════════════════════════════════════════════════════
 
 import type { Manifest, Predicate } from '@/types/manifest';
@@ -30,39 +35,70 @@ import type { Manifest, Predicate } from '@/types/manifest';
 export const FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST_KEY =
   'fin.disponibilidades.movimientos' as const;
 
-const VOSTRO_DISABLED_REASON = 'Imputado desde OPS';
+const DISABLE_REASON_NOT_FIN_IMPUTABLE = 'Lado Ardua imputado por OPS';
 
-// Movements that FIN imputa from Disponibilidades: nostros (origen
-// Manual or TRD) and the non-vostro OPS types (FEE, TAX, REBATE,
-// ADDITION, TRANSFER_*, SWAP_*). Vostros (OPS · DEPOSIT/WITHDRAWAL/
-// COLLECTOR_*) are imputed from OPS — the action shows but stays
-// disabled with `disable_reason: 'Imputado desde OPS'`.
-//
-// Factory function returns a fresh tree on every call so the manifest
-// stays JSON-strict serialisable (no shared subtrees → no circular
-// reference flag in the validator).
-function nostroOrManualPredicate(): Predicate {
+// Tipos that belong to categorías C, D, E — the only tipos for which
+// FIN imputa el Lado Ardua. Used by the Asignar/Editar Banco y Cuenta
+// enable_when. Factory returns a fresh array on every call so the
+// manifest stays JSON-strict serialisable.
+function tiposFinImputables(): string[] {
+  return [
+    // C
+    'COMISION_BANCARIA',
+    'INTERES_BANCARIO',
+    'PAGO_PROVEEDOR',
+    'PAGO_SALARIOS',
+    'MOV_ENTRE_CUENTAS_PROPIAS',
+    'APORTE_CAPITAL',
+    // D
+    'PRESTAMO_INTERCOMPANY',
+    'SWEEPING_CROSS_SOCIEDAD',
+    // E
+    'SPREAD',
+    'AJUSTE_MANUAL',
+  ];
+}
+
+// Tipos that belong to categorías A, B, F — the only tipos for which
+// the Lado Cliente is applicable. Used by the Asignar/Editar Cliente
+// show_when.
+function tiposWithLadoCliente(): string[] {
+  return [
+    // A
+    'DEPOSIT',
+    'WITHDRAWAL',
+    // B
+    'FEE',
+    'REBATE',
+    'SWAP_OUT',
+    'SWAP_IN',
+    'AJUSTE_CREDITO',
+    'AJUSTE_DEBITO',
+    'ASIGNACION_PENDIENTE',
+    'SOLICITUD_RETIRO_PENDING',
+    // F
+    'DEPOSITO_PENDIENTE',
+  ];
+}
+
+// Enable predicate for Asignar Banco y Cuenta — fin.cuenta_id missing
+// AND tipo es FIN-imputable (categoría C, D, E).
+function enableImputarArduaAsignar(): Predicate {
   return {
-    any: [
-      { field_equals: { field: 'origen', value: 'Manual' } },
-      { field_equals: { field: 'origen', value: 'TRD' } },
-      {
-        all: [
-          { field_equals: { field: 'origen', value: 'OPS' } },
-          {
-            record_type_in: [
-              'FEE',
-              'TAX',
-              'REBATE',
-              'ADDITION',
-              'TRANSFER_OUT',
-              'TRANSFER_IN',
-              'SWAP_OUT',
-              'SWAP_IN',
-            ],
-          },
-        ],
-      },
+    all: [
+      { field_is_null: 'fin.cuenta_id' },
+      { record_type_in: tiposFinImputables() },
+    ],
+  };
+}
+
+// Enable predicate for Editar Banco y Cuenta — fin.cuenta_id present
+// AND tipo es FIN-imputable.
+function enableImputarArduaEditar(): Predicate {
+  return {
+    all: [
+      { field_is_not_null: 'fin.cuenta_id' },
+      { record_type_in: tiposFinImputables() },
     ],
   };
 }
@@ -107,22 +143,36 @@ export const FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST: Manifest = {
       states: [
         'DEPOSIT',
         'WITHDRAWAL',
-        'COLLECTOR_IN',
-        'COLLECTOR_OUT',
-        'SWAP_IN',
-        'SWAP_OUT',
-        'TRANSFER_IN',
-        'TRANSFER_OUT',
         'FEE',
-        'TAX',
         'REBATE',
-        'ADDITION',
+        'SWAP_OUT',
+        'SWAP_IN',
+        'SPREAD',
+        'SOLICITUD_RETIRO_PENDING',
+        'DEPOSITO_PENDIENTE',
+        'ASIGNACION_PENDIENTE',
+        'AJUSTE_CREDITO',
+        'AJUSTE_DEBITO',
+        'MOV_ENTRE_CUENTAS_PROPIAS',
+        'PRESTAMO_INTERCOMPANY',
+        'SWEEPING_CROSS_SOCIEDAD',
+        'COMISION_BANCARIA',
+        'INTERES_BANCARIO',
+        'PAGO_PROVEEDOR',
+        'PAGO_SALARIOS',
+        'APORTE_CAPITAL',
+        'AJUSTE_MANUAL',
       ],
     },
     {
       axis_id: 'sociedad',
       dimension: 'governance',
       states: ['hp', 'cp', 'asc', 'av'],
+    },
+    {
+      axis_id: 'categoria',
+      dimension: 'governance',
+      states: ['A', 'B', 'C', 'D', 'E', 'F'],
     },
   ],
 
@@ -133,19 +183,18 @@ export const FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST: Manifest = {
       dimension: 'imputacion',
       label: 'Asignar Banco y Cuenta',
       description:
-        'Asigná la Sociedad / Estructura / Cuenta del Lado Ardua. Aplica a movimientos nostro y manuales no operativos.',
+        'Asigná la Sociedad / Cuenta del Lado Ardua. Aplica a movimientos de categoría C/D/E (FIN imputa). Para categoría A/B/F (Depósitos, Retiros, Fees, etc.) la imputación corre por cuenta de OPS.',
       icon: 'credit-card',
       target_field: 'fin.cuenta_id',
-      show_when: nostroOrManualPredicate(),
-      enable_when: { field_is_null: 'fin.cuenta_id' },
-      disable_reason: VOSTRO_DISABLED_REASON,
+      enable_when: enableImputarArduaAsignar(),
+      disable_reason: DISABLE_REASON_NOT_FIN_IMPUTABLE,
       disable_tag: 'Solo OPS',
       capabilities: {
         required_role_any_of: ['fin.disponibilidades.movimientos.imputar_ardua'],
       },
       dialog: {
         title: 'Asignar Banco y Cuenta',
-        description: 'Origen de fondos — Sociedad / Estructura / Cuenta del movimiento.',
+        description: 'Origen de fondos — Sociedad / Cuenta del movimiento.',
         fields: [
           {
             id: 'fin.sociedad_id',
@@ -182,8 +231,9 @@ export const FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST: Manifest = {
       description: 'Editá la imputación actual del Lado Ardua.',
       icon: 'edit',
       target_field: 'fin.cuenta_id',
-      show_when: nostroOrManualPredicate(),
-      enable_when: { field_is_not_null: 'fin.cuenta_id' },
+      enable_when: enableImputarArduaEditar(),
+      disable_reason: DISABLE_REASON_NOT_FIN_IMPUTABLE,
+      disable_tag: 'Solo OPS',
       capabilities: {
         required_role_any_of: ['fin.disponibilidades.movimientos.imputar_ardua'],
       },
@@ -221,20 +271,18 @@ export const FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST: Manifest = {
       dimension: 'imputacion',
       label: 'Asignar Cliente',
       description:
-        'Asigná el Cliente + Cuenta Operativa del Cliente. Para nostros / manuales no operativos podés usar la Cuenta de Cliente de Ardua (AS00000).',
+        'Asigná el Cliente + Cuenta Operativa del Cliente. Aplica solo a categorías A, B, F (movimientos con o esperando cliente externo).',
       icon: 'user-plus',
       target_field: 'fin.cliente_id',
-      show_when: nostroOrManualPredicate(),
+      show_when: { record_type_in: tiposWithLadoCliente() },
       enable_when: { field_is_null: 'fin.cliente_id' },
-      disable_reason: VOSTRO_DISABLED_REASON,
-      disable_tag: 'Solo OPS',
       capabilities: {
         required_role_any_of: ['fin.disponibilidades.movimientos.imputar_cliente'],
       },
       dialog: {
         title: 'Asignar Cliente',
         description:
-          'Cliente externo o Cuenta de Cliente de Ardua (AS00000) cuando no aplica un externo.',
+          'Buscá el cliente por razón social, CUIT o nombre del titular.',
         fields: [
           {
             id: 'fin.cliente_id',
@@ -242,8 +290,7 @@ export const FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST: Manifest = {
             type: 'lookup',
             catalog: 'clp.clientes',
             required: true,
-            placeholder: 'Buscar por razón social, Tax ID o AS00000...',
-            hint: 'Para movimientos sin cliente externo, usá AS00000 (Cuenta de Cliente de Ardua)',
+            placeholder: 'Buscar por razón social o CUIT...',
           },
           {
             id: 'fin.cuenta_operativa_cliente_id',
@@ -271,7 +318,7 @@ export const FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST: Manifest = {
       description: 'Editá la imputación actual del Lado Cliente.',
       icon: 'edit',
       target_field: 'fin.cliente_id',
-      show_when: nostroOrManualPredicate(),
+      show_when: { record_type_in: tiposWithLadoCliente() },
       enable_when: { field_is_not_null: 'fin.cliente_id' },
       capabilities: {
         required_role_any_of: ['fin.disponibilidades.movimientos.imputar_cliente'],
@@ -304,9 +351,9 @@ export const FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST: Manifest = {
       },
     },
     // ─── 5 · Confirmar carga manual (governance) ────────────────────
-    // The `created_by !== current_user` predicate of REQ-50 §5.7 is
-    // enforced at the page level (the actions menu hides this entry
-    // when the current user is the creator). The engine cannot express
+    // The `created_by !== current_user` predicate of the spec is enforced
+    // at the page level (the actions menu hides this entry when the
+    // current user is the creator). The engine cannot express
     // `field !== current_user` natively today.
     {
       id: 'fin.disponibilidades.movimientos.supervisar.confirmar',

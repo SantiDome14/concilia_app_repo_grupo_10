@@ -33,20 +33,80 @@ export type CuentaIcon = 'bank' | 'wallet';
 /** Currency code displayed next to balances (open string union). */
 export type Moneda = 'ARS' | 'USD' | 'USDC' | 'USDT' | 'CAD' | 'EUR' | string;
 
-/** Movement type discriminator carried by every `movimiento` record. */
+/**
+ * Movement type discriminator carried by every `movimiento` record. The 22
+ * values are the closed contract of the matriz cerrada in the feature
+ * `features/fin/fin-tesoreria-disponibilidades.md`. Any event that does not
+ * fit one of these values indicates a missing tipo in the matriz, not a
+ * manifest gap — adding a new tipo SHALL go through an OpenSpec change.
+ *
+ * Tipo registered by OPS (vostro flow + pending lifecycle + ajustes):
+ *   DEPOSIT, WITHDRAWAL, FEE, REBATE, SWAP_OUT, SWAP_IN, SPREAD,
+ *   SOLICITUD_RETIRO_PENDING, DEPOSITO_PENDIENTE, ASIGNACION_PENDIENTE,
+ *   AJUSTE_CREDITO, AJUSTE_DEBITO.
+ *
+ * Tipo registered by FIN (nostros + manual non-operativos + intercompany):
+ *   MOV_ENTRE_CUENTAS_PROPIAS, PRESTAMO_INTERCOMPANY, SWEEPING_CROSS_SOCIEDAD,
+ *   COMISION_BANCARIA, INTERES_BANCARIO, PAGO_PROVEEDOR, PAGO_SALARIOS,
+ *   APORTE_CAPITAL, AJUSTE_MANUAL.
+ */
 export type MovimientoTipo =
-  | 'COLLECTOR_IN'
-  | 'COLLECTOR_OUT'
-  | 'WITHDRAWAL'
   | 'DEPOSIT'
-  | 'TRANSFER_IN'
-  | 'TRANSFER_OUT'
-  | 'SWAP_IN'
-  | 'SWAP_OUT'
+  | 'WITHDRAWAL'
   | 'FEE'
-  | 'TAX'
   | 'REBATE'
-  | 'ADDITION';
+  | 'SWAP_OUT'
+  | 'SWAP_IN'
+  | 'SPREAD'
+  | 'SOLICITUD_RETIRO_PENDING'
+  | 'DEPOSITO_PENDIENTE'
+  | 'ASIGNACION_PENDIENTE'
+  | 'AJUSTE_CREDITO'
+  | 'AJUSTE_DEBITO'
+  | 'MOV_ENTRE_CUENTAS_PROPIAS'
+  | 'PRESTAMO_INTERCOMPANY'
+  | 'SWEEPING_CROSS_SOCIEDAD'
+  | 'COMISION_BANCARIA'
+  | 'INTERES_BANCARIO'
+  | 'PAGO_PROVEEDOR'
+  | 'PAGO_SALARIOS'
+  | 'APORTE_CAPITAL'
+  | 'AJUSTE_MANUAL';
+
+/**
+ * Categoría derivada del tipo según la dimensión (presencia de cliente ×
+ * presencia de flujo físico) del feature.
+ *   A — Con cliente + físico (DEPOSIT, WITHDRAWAL).
+ *   B — Con cliente, sin físico (FEE, REBATE, SWAP_*, AJUSTE_CR/DB, ASIGNACION_PENDIENTE).
+ *   C — Sin cliente + físico (interno): COMISION_BANCARIA, INTERES_BANCARIO,
+ *       PAGO_PROVEEDOR, PAGO_SALARIOS, MOV_ENTRE_CUENTAS_PROPIAS, APORTE_CAPITAL.
+ *   D — Sin cliente + físico (cross-sociedad): PRESTAMO_INTERCOMPANY,
+ *       SWEEPING_CROSS_SOCIEDAD.
+ *   E — Sin cliente, sin físico: SPREAD, AJUSTE_MANUAL.
+ *   F — Cliente NO IDENTIFICADO: DEPOSITO_PENDIENTE.
+ *
+ * Derived from `tipo` via `categoriaOf()` in `@/lib/movimientos/categoria`.
+ * Never stored on the record — see Decision 1 of the change's design.md.
+ */
+export type MovimientoCategoria = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
+
+/**
+ * Grupos contables del módulo Disponibilidades (no plan de cuentas formal —
+ * eso llega con el Motor Contable en V2). Patrimonio operativo es la cuenta
+ * técnica que captura aportes propios y residual operativo de Ardua; su
+ * saldo de apertura en T0 = Capacidad Operativa inicial (`Bancos − Obligaciones
+ * − Pendientes`). Subtipos formales (Capital social, Aportes irrevocables,
+ * Reservas, Resultados Acumulados) se introducen en V2.
+ */
+export type GrupoContable =
+  | 'disponibilidades'
+  | 'obligaciones_clientes'
+  | 'pendientes_asignacion'
+  | 'puente_fx'
+  | 'intercompany'
+  | 'patrimonio_operativo'
+  | 'ingresos'
+  | 'egresos';
 
 /**
  * Origin of a recorded movement (REQ-50 §5.1).
@@ -136,9 +196,14 @@ export interface MovimientoFin {
   /** Cuenta Operativa del Cliente (REQ-42 §6). */
   cuenta_operativa_cliente_id?: string | null;
   cliente_imputation_note?: string | null;
-  /** Transfer flow — reference to the destination account (TRANSFER_OUT). */
+  /**
+   * Counterparty account for movements that reference a second cuenta on the
+   * same sociedad: `MOV_ENTRE_CUENTAS_PROPIAS`. Cross-sociedad events
+   * (`PRESTAMO_INTERCOMPANY`, `SWEEPING_CROSS_SOCIEDAD`) do NOT use these
+   * fields — they generate two distinct Movimiento records linked by
+   * `evento_id` (one per sociedad), each carrying its own `fin.cuenta_id`.
+   */
   cuenta_destino_id?: string | null;
-  /** Transfer flow — reference to the origin account (TRANSFER_IN). */
   cuenta_origen_id?: string | null;
   // Legacy fields preserved for archived migration compatibility.
   proveedor_id?: string | null;
@@ -190,6 +255,21 @@ export interface Movimiento {
   estado_de_supervision: EstadoDeSupervision;
   /** Creator user id — used by the `created_by !== current_user` predicate. */
   created_by: string | null;
+  /**
+   * Asiento contable identifier. V1 modela el asiento a nivel grupo
+   * contable (no plan de cuentas formal). Cross-sociedad events generate
+   * two distinct Movimientos with two distinct `asiento_id`s sharing
+   * `evento_id` (see Decision 2 of the omnibus alignment change).
+   */
+  asiento_id?: string | null;
+  /**
+   * Operative event correlation id. Two Movimientos belong to the same
+   * operative event iff they share `evento_id`. Used for:
+   *   - Cross-sociedad pairs (`PRESTAMO_INTERCOMPANY`, `SWEEPING_CROSS_SOCIEDAD`).
+   *   - SWAP triples (`SWAP_OUT` + `SWAP_IN` + `SPREAD` from a single ejecución).
+   *   - `DEPOSITO_PENDIENTE` followed by its `ASIGNACION_PENDIENTE`.
+   */
+  evento_id?: string | null;
   ops: MovimientoOps;
   fin: MovimientoFin;
 }
@@ -348,22 +428,29 @@ export interface SociedadTotal {
   val: string;
 }
 
-/** Single account row inside a Sociedad. Numeric fields are
- *  pre-formatted strings (display-ready values straight from the
- *  seed data). */
+/**
+ * Single account row inside a Sociedad. Under the omnibus accounting model
+ * each Cuenta carries only its physical saldo in moneda nativa — the previous
+ * `saldo_propio` / `saldo_cliente` segmentation is malformed (the question
+ * "¿de qué cliente es la plata que está en esta cuenta?" is not answerable
+ * per the closed conceptual model).
+ *
+ * Pre-formatted strings are display-ready values from the seed data. The
+ * tree renders 4 columns Banco / Cuenta / Moneda / Saldo; `det` is an
+ * optional sub-line shown under the cuenta number.
+ */
 export interface CuentaPos {
   icon: CuentaIcon;
   /** Account id from the catalogue (used by drill-down `cuenta_id`). */
   id: string;
-  name: string;
-  /** Detail line under the name (e.g. CBU, wallet hash). */
-  det: string;
-  /** Pre-formatted balance, no currency symbol. */
+  /** Bank / Estructura name (e.g., 'BIND', 'COINAG', 'BITGO'). */
+  banco: string;
+  /** Account number / wallet hash (e.g., 'Cta 4403443/1', '0xBG...A8C2'). */
+  numero: string;
+  /** Optional sub-line under the cuenta (e.g., 'CBU principal · pool de CVUs'). */
+  det?: string;
+  /** Pre-formatted physical balance in moneda nativa, no currency symbol. */
   saldo: string;
-  /** Saldo Propio (the part of the saldo attributable to Ardua's own funds). */
-  saldo_propio: string;
-  /** Saldo Cliente (the part attributable to client funds via Cuentas Operativas). */
-  saldo_cliente: string;
   moneda: Moneda;
 }
 
@@ -373,12 +460,35 @@ export interface SociedadPos {
   /** Subtitle under the name (e.g. "PSP · Argentina · ARS"). */
   sub: string;
   open: boolean;
+  /** Per-moneda total chips (one per moneda held by this sociedad). */
   totals: SociedadTotal[];
-  /** Aggregate saldo propio of every cuenta in this sociedad. */
-  total_propio: string;
-  /** Aggregate saldo cliente of every cuenta in this sociedad. */
-  total_cliente: string;
   cuentas: CuentaPos[];
+}
+
+/**
+ * Pre-formatted display strings per moneda. The key is the Moneda code
+ * (`'ARS' | 'USD' | 'USDC' | 'USDT' | 'EUR' | 'CAD' | ...`), the value is
+ * the display string with thousands separators but no currency symbol
+ * (the moneda code is rendered as a separate column in the KPI card body).
+ */
+export type PerMoneda = Partial<Record<Moneda, string>>;
+
+/**
+ * The 4 dimensions of the ecuación maestra:
+ *   Σ Bancos = Σ Obligaciones + Σ Pendientes + Σ Capacidad Operativa
+ * valid per moneda M, for each sociedad and the consolidated group. Each
+ * dimension is rendered per-moneda — V1 does NOT apply cross-currency
+ * conversions.
+ */
+export interface PosicionEcuacionMaestra {
+  /** Σ Bancos — saldo físico real en cuentas activas, por moneda. */
+  bancos: PerMoneda;
+  /** Σ Obligaciones — total adeudado por Ardua a clientes, por moneda. */
+  obligaciones: PerMoneda;
+  /** Σ Pendientes — fondos ingresados sin identificar cliente, por moneda. */
+  pendientes: PerMoneda;
+  /** Capacidad Operativa — residual `Bancos − Obligaciones − Pendientes`, por moneda. */
+  capacidadOperativa: PerMoneda;
 }
 
 /**

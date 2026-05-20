@@ -2,7 +2,14 @@
 import { computed, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useRoute, useRouter } from 'vue-router';
-import { ChevronRight, ChevronDown, Wallet } from 'lucide-vue-next';
+import {
+  ChevronRight,
+  ChevronDown,
+  Clock,
+  TrendingUp,
+  Users,
+  Wallet,
+} from 'lucide-vue-next';
 import { Badge } from '@/components/ui/badge';
 import {
   Segmenter,
@@ -36,12 +43,17 @@ import {
   MOVIMIENTOS,
   MOVIMIENTOS_KPIS,
 } from '@/mocks/fin/movimientos';
+import { categoriaOf } from '@/lib/movimientos/categoria';
+import { formatCompact } from '@/lib/format';
 import { useDisponibilidadesCatalogStore } from '@/stores/disponibilidadesCatalog';
 import type {
   CuentaBanco,
   EstructuraBanco,
   EstructuraTipo,
+  Moneda,
   Movimiento,
+  MovimientoCategoria,
+  PerMoneda,
 } from '@/types/fin';
 import type { ModuleCTA } from '@/types/manifest';
 import type { KanbanAxis } from '@/types/kanban';
@@ -125,7 +137,19 @@ type AxisId =
   | 'estado_imputacion_cliente'
   | 'estado_de_supervision'
   | 'tipo'
-  | 'sociedad';
+  | 'sociedad'
+  | 'categoria';
+
+// Stable key list for rendering per-moneda KPI rows in a deterministic
+// order across the 4 ecuación-maestra cards.
+const MONEDAS_ORDER: Moneda[] = ['ARS', 'USD', 'USDC', 'USDT', 'EUR', 'CAD'];
+
+function perMonedaRows(per: PerMoneda): Array<{ moneda: Moneda; val: string }> {
+  return MONEDAS_ORDER.filter((m) => per[m] != null).map((m) => ({
+    moneda: m,
+    val: per[m] as string,
+  }));
+}
 
 const route = useRoute();
 const router = useRouter();
@@ -207,6 +231,7 @@ type MovimientoProjected = Movimiento & {
   _imp_ardua: 'sin_asignar' | 'asignado';
   _imp_cliente: 'sin_asignar' | 'asignado';
   _sociedad: string;
+  _categoria: MovimientoCategoria;
 };
 
 const filteredMovimientos = computed<MovimientoProjected[]>(() => {
@@ -217,6 +242,7 @@ const filteredMovimientos = computed<MovimientoProjected[]>(() => {
     _imp_ardua: m.fin.cuenta_id ? 'asignado' : 'sin_asignar',
     _imp_cliente: m.fin.cliente_id ? 'asignado' : 'sin_asignar',
     _sociedad: m.fin.sociedad_id ?? 'sin_asignar',
+    _categoria: categoriaOf(m.tipo),
   }));
 });
 
@@ -284,16 +310,25 @@ const MOVIMIENTOS_KANBAN_AXES: Record<AxisId, KanbanAxis> = {
     states: [
       { id: 'DEPOSIT', label: 'DEPOSIT', order: 1 },
       { id: 'WITHDRAWAL', label: 'WITHDRAWAL', order: 2 },
-      { id: 'COLLECTOR_IN', label: 'COLLECTOR_IN', order: 3 },
-      { id: 'COLLECTOR_OUT', label: 'COLLECTOR_OUT', order: 4 },
-      { id: 'SWAP_IN', label: 'SWAP_IN', order: 5 },
-      { id: 'SWAP_OUT', label: 'SWAP_OUT', order: 6 },
-      { id: 'TRANSFER_IN', label: 'TRANSFER_IN', order: 7 },
-      { id: 'TRANSFER_OUT', label: 'TRANSFER_OUT', order: 8 },
-      { id: 'FEE', label: 'FEE', order: 9 },
-      { id: 'TAX', label: 'TAX', order: 10 },
-      { id: 'REBATE', label: 'REBATE', order: 11 },
-      { id: 'ADDITION', label: 'ADDITION', order: 12 },
+      { id: 'FEE', label: 'FEE', order: 3 },
+      { id: 'REBATE', label: 'REBATE', order: 4 },
+      { id: 'SWAP_OUT', label: 'SWAP_OUT', order: 5 },
+      { id: 'SWAP_IN', label: 'SWAP_IN', order: 6 },
+      { id: 'SPREAD', label: 'SPREAD', order: 7 },
+      { id: 'SOLICITUD_RETIRO_PENDING', label: 'SOLICITUD_RETIRO', order: 8 },
+      { id: 'DEPOSITO_PENDIENTE', label: 'DEP_PENDIENTE', order: 9 },
+      { id: 'ASIGNACION_PENDIENTE', label: 'ASIG_PENDIENTE', order: 10 },
+      { id: 'AJUSTE_CREDITO', label: 'AJUSTE_CR', order: 11 },
+      { id: 'AJUSTE_DEBITO', label: 'AJUSTE_DB', order: 12 },
+      { id: 'MOV_ENTRE_CUENTAS_PROPIAS', label: 'MOV_CUENTAS', order: 13 },
+      { id: 'PRESTAMO_INTERCOMPANY', label: 'PRESTAMO_IC', order: 14 },
+      { id: 'SWEEPING_CROSS_SOCIEDAD', label: 'SWEEPING_CS', order: 15 },
+      { id: 'COMISION_BANCARIA', label: 'COMISION_BCO', order: 16 },
+      { id: 'INTERES_BANCARIO', label: 'INTERES_BCO', order: 17 },
+      { id: 'PAGO_PROVEEDOR', label: 'PAGO_PROV', order: 18 },
+      { id: 'PAGO_SALARIOS', label: 'PAGO_SAL', order: 19 },
+      { id: 'APORTE_CAPITAL', label: 'APORTE_CAP', order: 20 },
+      { id: 'AJUSTE_MANUAL', label: 'AJUSTE_MAN', order: 21 },
     ],
     transitions: [],
     read_only: true,
@@ -312,6 +347,23 @@ const MOVIMIENTOS_KANBAN_AXES: Record<AxisId, KanbanAxis> = {
     transitions: [],
     read_only: true,
   },
+  categoria: {
+    axis_id: 'categoria',
+    label: 'Categoría',
+    description:
+      'Clasificación por (presencia de cliente × presencia de flujo físico) — A/B/F tienen Lado Cliente; C/D/E imputa FIN.',
+    state_field: '_categoria',
+    states: [
+      { id: 'A', label: 'A · cliente + físico', order: 1 },
+      { id: 'B', label: 'B · cliente, sin físico', order: 2 },
+      { id: 'C', label: 'C · interno', order: 3 },
+      { id: 'D', label: 'D · cross-sociedad', order: 4 },
+      { id: 'E', label: 'E · sin cliente, sin físico', order: 5 },
+      { id: 'F', label: 'F · cliente no identificado', order: 6 },
+    ],
+    transitions: [],
+    read_only: true,
+  },
 };
 
 function parseAxis(value: unknown): AxisId {
@@ -320,7 +372,8 @@ function parseAxis(value: unknown): AxisId {
     value === 'estado_imputacion_cliente' ||
     value === 'estado_de_supervision' ||
     value === 'tipo' ||
-    value === 'sociedad'
+    value === 'sociedad' ||
+    value === 'categoria'
   ) {
     return value;
   }
@@ -458,38 +511,107 @@ function supervisionBadgeVariant(
 
     <!-- ─── SUB-TAB · POSICIÓN ─────────────────────────────────────── -->
     <template v-if="subTab === 'posicion'">
-      <section
-        class="grid grid-cols-2 gap-3 lg:grid-cols-5"
-        data-testid="posicion-kpis"
-      >
-        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
-          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">
-            Posición consolidada
-          </div>
-          <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">
-            {{ POSICION_KPIS.posicionConsolidada }}
-          </div>
-          <div class="mt-1.5 text-[11px] text-t-4">USD equivalente</div>
-        </div>
-        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
-          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Total Propio</div>
-          <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">{{ POSICION_KPIS.totalPropio }}</div>
-        </div>
-        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
-          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Total Cliente</div>
-          <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">{{ POSICION_KPIS.totalCliente }}</div>
-        </div>
-        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
-          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Sociedades activas</div>
-          <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">{{ POSICION_KPIS.sociedadesActivas }}</div>
-        </div>
-        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
-          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Cuentas activas</div>
-          <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">{{ POSICION_KPIS.cuentasActivas }}</div>
+      <!-- L2 · Ecuación maestra · 4 cards × multi-moneda rows.
+           Bancos = Obligaciones + Pendientes + Capacidad operativa, valid
+           per moneda. V1 no aplica conversiones cross-moneda — cada KPI
+           se presenta en moneda nativa con compact notation. -->
+      <section class="space-y-3">
+        <h2
+          class="text-[11px] font-extrabold uppercase tracking-[0.14em] text-t-3"
+          data-testid="posicion-kpis-title"
+        >
+          Posición consolidada
+        </h2>
+        <div
+          class="grid grid-cols-2 gap-3 lg:grid-cols-4"
+          data-testid="posicion-kpis"
+        >
+        <article class="rounded-xl border border-b-2 bg-card-2 px-5 py-4">
+          <header class="mb-4 flex items-center gap-2.5">
+            <span class="flex h-7 w-7 items-center justify-center rounded-md bg-info-bg text-info">
+              <Wallet class="h-3.5 w-3.5" />
+            </span>
+            <h3 class="text-sm font-bold text-t-1">Bancos</h3>
+          </header>
+          <ul class="space-y-2" data-testid="posicion-kpi-bancos">
+            <li
+              v-for="(row, idx) in perMonedaRows(POSICION_KPIS.bancos)"
+              :key="row.moneda"
+              class="flex items-baseline justify-between gap-3 pb-2 last:pb-0"
+              :class="idx < perMonedaRows(POSICION_KPIS.bancos).length - 1 && 'border-b border-dotted border-b-1'"
+            >
+              <span class="text-[11px] font-bold uppercase tracking-wider text-t-3">{{ row.moneda }}</span>
+              <span class="font-mono text-base font-extrabold tabular-nums text-t-1">{{ formatCompact(row.val) }}</span>
+            </li>
+          </ul>
+        </article>
+        <article class="rounded-xl border border-b-2 bg-card-2 px-5 py-4">
+          <header class="mb-4 flex items-center gap-2.5">
+            <span class="flex h-7 w-7 items-center justify-center rounded-md bg-danger-bg text-danger">
+              <Users class="h-3.5 w-3.5" />
+            </span>
+            <h3 class="text-sm font-bold text-t-1">Obligaciones</h3>
+          </header>
+          <ul class="space-y-2" data-testid="posicion-kpi-obligaciones">
+            <li
+              v-for="(row, idx) in perMonedaRows(POSICION_KPIS.obligaciones)"
+              :key="row.moneda"
+              class="flex items-baseline justify-between gap-3 pb-2 last:pb-0"
+              :class="idx < perMonedaRows(POSICION_KPIS.obligaciones).length - 1 && 'border-b border-dotted border-b-1'"
+            >
+              <span class="text-[11px] font-bold uppercase tracking-wider text-t-3">{{ row.moneda }}</span>
+              <span class="font-mono text-base font-extrabold tabular-nums text-t-1">{{ formatCompact(row.val) }}</span>
+            </li>
+          </ul>
+        </article>
+        <article class="rounded-xl border border-b-2 bg-card-2 px-5 py-4">
+          <header class="mb-4 flex items-center gap-2.5">
+            <span class="flex h-7 w-7 items-center justify-center rounded-md bg-warning-bg text-warning">
+              <Clock class="h-3.5 w-3.5" />
+            </span>
+            <h3 class="text-sm font-bold text-t-1">Pendientes</h3>
+          </header>
+          <ul class="space-y-2" data-testid="posicion-kpi-pendientes">
+            <li
+              v-for="(row, idx) in perMonedaRows(POSICION_KPIS.pendientes)"
+              :key="row.moneda"
+              class="flex items-baseline justify-between gap-3 pb-2 last:pb-0"
+              :class="idx < perMonedaRows(POSICION_KPIS.pendientes).length - 1 && 'border-b border-dotted border-b-1'"
+            >
+              <span class="text-[11px] font-bold uppercase tracking-wider text-t-3">{{ row.moneda }}</span>
+              <span class="font-mono text-base font-extrabold tabular-nums text-t-1">{{ formatCompact(row.val) }}</span>
+            </li>
+          </ul>
+        </article>
+        <article class="rounded-xl border border-b-2 bg-card-2 px-5 py-4">
+          <header class="mb-4 flex items-center gap-2.5">
+            <span class="flex h-7 w-7 items-center justify-center rounded-md bg-success-bg text-success">
+              <TrendingUp class="h-3.5 w-3.5" />
+            </span>
+            <h3 class="text-sm font-bold text-t-1">Capacidad operativa</h3>
+          </header>
+          <ul class="space-y-2" data-testid="posicion-kpi-capacidad-operativa">
+            <li
+              v-for="(row, idx) in perMonedaRows(POSICION_KPIS.capacidadOperativa)"
+              :key="row.moneda"
+              class="flex items-baseline justify-between gap-3 pb-2 last:pb-0"
+              :class="idx < perMonedaRows(POSICION_KPIS.capacidadOperativa).length - 1 && 'border-b border-dotted border-b-1'"
+            >
+              <span class="text-[11px] font-bold uppercase tracking-wider text-t-3">{{ row.moneda }}</span>
+              <span class="font-mono text-base font-extrabold tabular-nums text-t-1">{{ formatCompact(row.val) }}</span>
+            </li>
+          </ul>
+        </article>
         </div>
       </section>
 
-      <section class="space-y-2" data-testid="posicion-tree">
+      <section class="space-y-3" data-testid="posicion-tree">
+        <h2
+          class="text-[11px] font-extrabold uppercase tracking-[0.14em] text-t-3"
+          data-testid="posicion-tree-title"
+        >
+          Saldos por cuentas agrupados por sociedad
+        </h2>
         <div
           v-for="soc in POSICION_TREE"
           :key="soc.id"
@@ -509,8 +631,6 @@ function supervisionBadgeVariant(
               <div class="text-[11px] text-t-4">{{ soc.sub }}</div>
             </div>
             <div class="flex items-center gap-2">
-              <Badge variant="neutral" class="font-mono text-[10px]">Propio {{ soc.total_propio }}</Badge>
-              <Badge variant="info" class="font-mono text-[10px]">Cliente {{ soc.total_cliente }}</Badge>
               <Badge v-for="t in soc.totals" :key="t.lbl" variant="neutral" class="font-mono">
                 {{ t.lbl }} {{ t.val }}
               </Badge>
@@ -520,12 +640,10 @@ function supervisionBadgeVariant(
             <table class="w-full border-collapse">
               <thead>
                 <tr class="border-b border-b-1">
-                  <th class="px-[18px] py-2 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Cuenta</th>
-                  <th class="px-3.5 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Detalle</th>
-                  <th class="px-3.5 py-2 text-right text-[10px] font-bold uppercase tracking-wider text-t-3">Saldo total</th>
-                  <th class="px-3.5 py-2 text-right text-[10px] font-bold uppercase tracking-wider text-t-3">Propio</th>
-                  <th class="px-3.5 py-2 text-right text-[10px] font-bold uppercase tracking-wider text-t-3">Cliente</th>
+                  <th class="px-[18px] py-2 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Banco</th>
+                  <th class="px-3.5 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Cuenta</th>
                   <th class="px-3.5 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Moneda</th>
+                  <th class="px-3.5 py-2 text-right text-[10px] font-bold uppercase tracking-wider text-t-3">Saldo</th>
                 </tr>
               </thead>
               <tbody>
@@ -539,14 +657,17 @@ function supervisionBadgeVariant(
                   <td class="px-[18px] py-2 text-xs text-t-2">
                     <div class="flex items-center gap-2">
                       <Wallet class="h-3.5 w-3.5 text-t-4" />
-                      <span class="font-semibold">{{ cu.name }}</span>
+                      <span class="font-semibold">{{ cu.banco }}</span>
                     </div>
                   </td>
-                  <td class="px-3.5 py-2 text-xs text-t-4">{{ cu.det }}</td>
-                  <td class="px-3.5 py-2 text-right text-xs font-mono text-t-2">{{ cu.saldo }}</td>
-                  <td class="px-3.5 py-2 text-right text-xs font-mono text-t-3">{{ cu.saldo_propio }}</td>
-                  <td class="px-3.5 py-2 text-right text-xs font-mono text-info">{{ cu.saldo_cliente }}</td>
-                  <td class="px-3.5 py-2 text-xs text-t-3">{{ cu.moneda }}</td>
+                  <td class="px-3.5 py-2 text-xs text-t-2">
+                    <div class="font-mono">{{ cu.numero }}</div>
+                    <div v-if="cu.det" class="text-[11px] text-t-4">{{ cu.det }}</div>
+                  </td>
+                  <td class="px-3.5 py-2 text-xs">
+                    <span class="rounded bg-card px-1.5 py-0.5 font-mono text-[11px] font-bold text-t-3">{{ cu.moneda }}</span>
+                  </td>
+                  <td class="px-3.5 py-2 text-right text-xs font-mono tabular-nums text-t-2">{{ cu.saldo }}</td>
                 </tr>
               </tbody>
             </table>
@@ -659,18 +780,36 @@ function supervisionBadgeVariant(
 
     <!-- ─── SUB-TAB · MOVIMIENTOS ──────────────────────────────────── -->
     <template v-else>
-      <section class="grid grid-cols-2 gap-3 lg:grid-cols-5" data-testid="movimientos-kpis">
+      <section class="grid grid-cols-2 gap-3 lg:grid-cols-6" data-testid="movimientos-kpis">
         <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
           <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Movimientos del día</div>
           <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">{{ MOVIMIENTOS_KPIS.movimientosDelDia }}</div>
         </div>
         <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
           <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Volumen ingresado</div>
-          <div class="text-2xl font-extrabold leading-none tracking-tight text-success">{{ MOVIMIENTOS_KPIS.volumenIngresado }}</div>
+          <ul class="space-y-1" data-testid="movimientos-kpi-ingresado">
+            <li
+              v-for="row in perMonedaRows(MOVIMIENTOS_KPIS.volumenIngresado)"
+              :key="row.moneda"
+              class="flex items-baseline justify-between gap-2 text-sm"
+            >
+              <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">{{ row.moneda }}</span>
+              <span class="font-mono font-extrabold text-success">{{ row.val }}</span>
+            </li>
+          </ul>
         </div>
         <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
           <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Volumen egresado</div>
-          <div class="text-2xl font-extrabold leading-none tracking-tight text-danger">{{ MOVIMIENTOS_KPIS.volumenEgresado }}</div>
+          <ul class="space-y-1" data-testid="movimientos-kpi-egresado">
+            <li
+              v-for="row in perMonedaRows(MOVIMIENTOS_KPIS.volumenEgresado)"
+              :key="row.moneda"
+              class="flex items-baseline justify-between gap-2 text-sm"
+            >
+              <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">{{ row.moneda }}</span>
+              <span class="font-mono font-extrabold text-danger">{{ row.val }}</span>
+            </li>
+          </ul>
         </div>
         <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
           <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Pendientes de imputación</div>
@@ -688,6 +827,15 @@ function supervisionBadgeVariant(
             :class="MOVIMIENTOS_KPIS.pendientesDeSupervision > 0 ? 'text-warning' : 'text-t-1'"
           >
             {{ MOVIMIENTOS_KPIS.pendientesDeSupervision }}
+          </div>
+        </div>
+        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">Pendientes de asignación</div>
+          <div
+            class="text-2xl font-extrabold leading-none tracking-tight"
+            :class="MOVIMIENTOS_KPIS.pendientesDeAsignacion > 0 ? 'text-warning' : 'text-t-1'"
+          >
+            {{ MOVIMIENTOS_KPIS.pendientesDeAsignacion }}
           </div>
         </div>
       </section>
@@ -734,6 +882,7 @@ function supervisionBadgeVariant(
             <option value="estado_de_supervision">Estado de supervisión</option>
             <option value="tipo">Tipo de movimiento</option>
             <option value="sociedad">Sociedad</option>
+            <option value="categoria">Categoría (A-F)</option>
           </select>
         </label>
         <span v-if="view === 'kanban' && activeAxis.description" class="text-[11px] text-t-4">
