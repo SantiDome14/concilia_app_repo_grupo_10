@@ -1,0 +1,2025 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Disponibilidades · Demo · Ardua Solutions</title>
+<style>
+  :root {
+    --bg-page: #fafaf7;
+    --bg-surface: #ffffff;
+    --bg-secondary: #f4f3ed;
+    --bg-tertiary: #edebe2;
+    --bg-info: #e6f1fb;
+    --bg-success: #eaf3de;
+    --bg-warning: #faeeda;
+    --bg-danger: #fcebeb;
+    --bg-intercompany: #f1eafc;
+    --bg-patrimonio: #fdf3d8;
+    --text-primary: #1a1a17;
+    --text-secondary: #5f5e5a;
+    --text-tertiary: #888780;
+    --text-quaternary: #aaa9a3;
+    --text-info: #185fa5;
+    --text-success: #3b6d11;
+    --text-warning: #854f0b;
+    --text-danger: #a32d2d;
+    --text-intercompany: #5b3a8a;
+    --text-patrimonio: #8a5a0b;
+    --border-tertiary: rgba(0, 0, 0, 0.08);
+    --border-secondary: rgba(0, 0, 0, 0.18);
+    --border-info: #378add;
+    --accent: #1d9e75;
+    --accent-dark: #0f6e56;
+    --accent-soft: rgba(29, 158, 117, 0.08);
+
+    --soc-hp: #4a7fc7;
+    --soc-hp-bg: #e6efff;
+    --soc-cp: #c77a4a;
+    --soc-cp-bg: #ffeede;
+    --soc-asc: #4ac79e;
+    --soc-asc-bg: #def7ed;
+    --soc-av: #9e4ac7;
+    --soc-av-bg: #f0deff;
+
+    --avatar-1: #5b8dd6;
+    --avatar-2: #d68a5b;
+    --avatar-3: #5bd6a1;
+    --avatar-4: #d65b8d;
+    --avatar-5: #8d5bd6;
+    --avatar-6: #d6c45b;
+    --avatar-7: #5bc4d6;
+    --avatar-8: #a1d65b;
+
+    --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.03);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08);
+    --shadow-glow: 0 0 0 3px rgba(29, 158, 117, 0.12);
+
+    --radius-xs: 4px;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 20px;
+    --radius-full: 9999px;
+
+    --transition: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+
+    /* Fixed heights for scrollable panels.
+       Kept low enough (360px) to guarantee internal scroll activates with
+       8+ rows, so the sticky row-header has a scrolling ancestor to stick to.
+       With align-items:stretch in ops-layout, both panels match heights. */
+    --panel-max-height: 360px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-page: #0f0f0e;
+      --bg-surface: #1a1a17;
+      --bg-secondary: #232320;
+      --bg-tertiary: #2c2c29;
+      --bg-info: #0c447c;
+      --bg-success: #27500a;
+      --bg-warning: #633806;
+      --bg-danger: #791f1f;
+      --bg-intercompany: #3a2a5e;
+      --bg-patrimonio: #4d3a0a;
+      --text-primary: #f4f3ed;
+      --text-secondary: #b4b2a9;
+      --text-tertiary: #888780;
+      --text-quaternary: #5f5e5a;
+      --text-info: #85b7eb;
+      --text-success: #97c459;
+      --text-warning: #fac775;
+      --text-danger: #f09595;
+      --text-intercompany: #c8b4ec;
+      --text-patrimonio: #f0c970;
+      --border-tertiary: rgba(255, 255, 255, 0.1);
+      --border-secondary: rgba(255, 255, 255, 0.2);
+      --accent-soft: rgba(29, 158, 117, 0.15);
+      --soc-hp-bg: #1a2944;
+      --soc-cp-bg: #3d2812;
+      --soc-asc-bg: #143329;
+      --soc-av-bg: #2f1a44;
+      --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.25);
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg-page);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  body {
+    background-image:
+      radial-gradient(at 20% 0%, rgba(29, 158, 117, 0.04) 0%, transparent 50%),
+      radial-gradient(at 80% 100%, rgba(55, 138, 221, 0.04) 0%, transparent 50%);
+  }
+
+  .num, .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  /* === CUSTOM SCROLLBAR === */
+  .scroll-area {
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--text-quaternary) transparent;
+    /* Reserve gutter for the scrollbar even when not visible, so right-aligned
+       header content (e.g. MONTO) isn't covered by macOS overlay scrollbars
+       when the panel becomes scrollable. */
+    scrollbar-gutter: stable;
+  }
+  .scroll-area::-webkit-scrollbar { width: 8px; }
+  .scroll-area::-webkit-scrollbar-track { background: transparent; }
+  .scroll-area::-webkit-scrollbar-thumb {
+    background-color: var(--text-quaternary);
+    border-radius: var(--radius-full);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  .scroll-area::-webkit-scrollbar-thumb:hover { background-color: var(--text-tertiary); background-clip: padding-box; border: 2px solid transparent; }
+
+  .app-shell { max-width: 1280px; margin: 0 auto; padding: var(--space-8) var(--space-6); }
+
+  .app-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: var(--space-8); padding-bottom: var(--space-6);
+    border-bottom: 1px solid var(--border-tertiary);
+    gap: var(--space-8); flex-wrap: wrap;
+  }
+
+  .brand { display: flex; align-items: center; gap: var(--space-3); }
+  .brand-mark {
+    width: 40px; height: 40px;
+    border-radius: var(--radius-md);
+    background: var(--accent); color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 16px;
+    letter-spacing: -0.02em;
+    box-shadow: var(--shadow-sm);
+  }
+  .brand-meta { display: flex; flex-direction: column; gap: 2px; }
+  .brand-title { font-size: 15px; font-weight: 500; letter-spacing: -0.01em; }
+  .brand-sub { font-size: 12px; color: var(--text-secondary); }
+
+  .breadcrumb { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; color: var(--text-secondary); }
+  .breadcrumb-arrow { opacity: 0.4; }
+  .breadcrumb-current { color: var(--text-primary); font-weight: 500; }
+
+  .page-title-section {
+    margin-bottom: var(--space-8);
+    display: flex; justify-content: space-between; align-items: flex-end;
+    gap: var(--space-8); flex-wrap: wrap;
+  }
+  .page-title-block { flex: 1; min-width: 280px; }
+  .page-title {
+    font-size: 28px; font-weight: 600;
+    letter-spacing: -0.02em; line-height: 1.2;
+    margin-bottom: var(--space-1);
+    background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-dark) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .page-subtitle { font-size: 14px; color: var(--text-secondary); max-width: 620px; }
+
+  .controls-bar { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-6); }
+
+  .btn {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    color: var(--text-primary);
+    padding: 8px 14px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s var(--transition);
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    box-shadow: var(--shadow-sm);
+  }
+  .btn:hover:not(:disabled) {
+    background: var(--bg-secondary);
+    border-color: var(--border-secondary);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+  .btn:active:not(:disabled) { transform: translateY(0); box-shadow: var(--shadow-sm); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); color: white; border-color: var(--accent); }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-dark); border-color: var(--accent-dark); }
+  .btn-icon { display: inline-block; width: 14px; height: 14px; }
+
+  .step-indicator {
+    margin-left: auto;
+    display: flex; align-items: center; gap: var(--space-3);
+    padding: 8px 14px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-md);
+    font-size: 12px; color: var(--text-secondary);
+    box-shadow: var(--shadow-sm);
+  }
+  .step-pill {
+    background: var(--accent); color: white;
+    padding: 2px 8px; border-radius: 10px;
+    font-weight: 600; font-size: 11px;
+    letter-spacing: 0.02em;
+  }
+
+  .progress-track { display: flex; gap: var(--space-1); margin-bottom: var(--space-6); }
+  .progress-dot {
+    flex: 1; height: 4px;
+    background: var(--bg-tertiary);
+    border-radius: 2px;
+    transition: background 0.3s var(--transition);
+  }
+  .progress-dot.done { background: var(--accent); }
+  .progress-dot.current {
+    background: var(--accent);
+    box-shadow: var(--shadow-glow);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.15); }
+    50% { box-shadow: 0 0 0 5px rgba(29, 158, 117, 0.05); }
+  }
+
+  .event-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5) var(--space-6);
+    margin-bottom: var(--space-6);
+    box-shadow: var(--shadow-md);
+    position: relative; overflow: hidden;
+    transition: all 0.4s var(--transition);
+  }
+  .event-card::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--accent) 0%, var(--accent-dark) 100%);
+  }
+  .event-label {
+    font-size: 11px; color: var(--text-tertiary);
+    letter-spacing: 0.08em; text-transform: uppercase;
+    margin-bottom: var(--space-1); font-weight: 600;
+  }
+  .event-title {
+    font-size: 18px; font-weight: 600;
+    letter-spacing: -0.01em; line-height: 1.3;
+    margin-bottom: var(--space-1);
+  }
+  .event-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+  .section-label {
+    font-size: 11px; color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    font-weight: 600; margin-bottom: var(--space-3);
+  }
+
+  .dim-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-3); margin-bottom: var(--space-8);
+  }
+  .dim-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4) var(--space-5);
+    box-shadow: var(--shadow-sm);
+    position: relative; overflow: hidden;
+    transition: all 0.3s var(--transition);
+  }
+  .dim-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+  .dim-card::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px;
+  }
+  .dim-card.dim-fisico::before { background: var(--text-primary); }
+  .dim-card.dim-oblig::before { background: var(--text-info); }
+  .dim-card.dim-pend::before { background: var(--text-warning); }
+  .dim-card.dim-capop::before { background: var(--accent); }
+
+  .dim-card-header {
+    display: flex; align-items: center; gap: var(--space-2);
+    margin-bottom: var(--space-3);
+  }
+  .dim-card-icon {
+    width: 28px; height: 28px;
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .dim-card.dim-fisico .dim-card-icon { background: var(--bg-secondary); color: var(--text-primary); }
+  .dim-card.dim-oblig .dim-card-icon { background: var(--bg-info); color: var(--text-info); }
+  .dim-card.dim-pend .dim-card-icon { background: var(--bg-warning); color: var(--text-warning); }
+  .dim-card.dim-capop .dim-card-icon { background: var(--bg-success); color: var(--accent-dark); }
+
+  .dim-card-label { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
+
+  .dim-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: var(--space-1) 0; font-size: 13px;
+    border-bottom: 1px dashed var(--border-tertiary);
+  }
+  .dim-row:last-child { border-bottom: none; }
+
+  .dim-mon {
+    color: var(--text-tertiary);
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .dim-val-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .dim-val { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 14px; }
+  .dim-delta { font-size: 11px; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+  .totals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-3); margin-bottom: var(--space-5);
+  }
+  .total-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4) var(--space-5);
+    box-shadow: var(--shadow-sm);
+    position: relative; overflow: hidden;
+    transition: all 0.3s var(--transition);
+  }
+  .total-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+  .total-card-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: var(--space-2);
+  }
+  .total-card-label {
+    font-size: 11px; color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+  .total-card-sublabel {
+    font-size: 10px; color: var(--text-tertiary);
+    font-weight: 400; margin-left: var(--space-1);
+  }
+  .total-card-tag {
+    background: var(--bg-info); color: var(--text-info);
+    padding: 2px 8px; border-radius: 8px;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  .total-card-value {
+    font-size: 22px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em; line-height: 1.2;
+    color: var(--text-info);
+  }
+  .total-card-currency {
+    font-size: 12px; color: var(--text-tertiary);
+    font-weight: 500; margin-left: var(--space-1);
+    letter-spacing: 0.04em;
+  }
+  .total-card-delta {
+    font-size: 12px; font-variant-numeric: tabular-nums;
+    font-weight: 600; margin-top: var(--space-2);
+    padding-top: var(--space-2);
+    border-top: 1px dashed var(--border-tertiary);
+    display: flex; align-items: center; gap: var(--space-1);
+  }
+  .total-card-delta-empty {
+    font-size: 11px; color: var(--text-tertiary);
+    margin-top: var(--space-2); padding-top: var(--space-2);
+    border-top: 1px dashed var(--border-tertiary);
+    font-style: italic;
+  }
+
+  .con-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: var(--space-3); margin-bottom: var(--space-6);
+  }
+  .con-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4) var(--space-5);
+    box-shadow: var(--shadow-sm);
+    position: relative; overflow: hidden;
+    transition: all 0.3s var(--transition);
+  }
+  .con-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+  .con-card::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px;
+  }
+  .con-card.con-activo::before { background: var(--text-success); }
+  .con-card.con-pasivo::before { background: var(--text-info); }
+  .con-card.con-pasivo-warn::before { background: var(--text-warning); }
+  .con-card.con-tecnica::before { background: var(--text-tertiary); }
+  .con-card.con-intercompany::before { background: var(--text-intercompany); }
+  .con-card.con-patrimonio::before { background: var(--text-patrimonio); }
+  .con-card.con-ingreso::before { background: var(--text-success); }
+  .con-card.con-egreso::before { background: var(--text-danger); }
+
+  .con-card-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: var(--space-3);
+  }
+  .con-card-label { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
+  .con-card-tag {
+    font-size: 9px;
+    padding: 3px 8px;
+    border-radius: 8px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .con-card.con-activo .con-card-tag { background: var(--bg-success); color: var(--text-success); }
+  .con-card.con-pasivo .con-card-tag { background: var(--bg-info); color: var(--text-info); }
+  .con-card.con-pasivo-warn .con-card-tag { background: var(--bg-warning); color: var(--text-warning); }
+  .con-card.con-tecnica .con-card-tag { background: var(--bg-secondary); color: var(--text-tertiary); }
+  .con-card.con-intercompany .con-card-tag { background: var(--bg-intercompany); color: var(--text-intercompany); }
+  .con-card.con-patrimonio .con-card-tag { background: var(--bg-patrimonio); color: var(--text-patrimonio); }
+  .con-card.con-ingreso .con-card-tag { background: var(--bg-success); color: var(--text-success); }
+  .con-card.con-egreso .con-card-tag { background: var(--bg-danger); color: var(--text-danger); }
+
+  .section {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-5);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .section-header {
+    padding: var(--space-3) var(--space-5);
+    border-bottom: 1px solid var(--border-tertiary);
+    background: var(--bg-secondary);
+    display: flex; justify-content: space-between; align-items: center;
+    flex-shrink: 0;
+  }
+  .section-title {
+    font-size: 11px; color: var(--text-tertiary);
+    letter-spacing: 0.08em; text-transform: uppercase;
+    font-weight: 600;
+  }
+  .section-badge {
+    background: var(--bg-tertiary); color: var(--text-secondary);
+    padding: 2px 10px; border-radius: 10px;
+    font-size: 11px; font-weight: 500;
+  }
+  .section-badge.affected {
+    background: var(--accent-soft); color: var(--accent-dark);
+  }
+  .section-body { flex: 1; min-height: 0; }
+  .section-body.scrollable { max-height: var(--panel-max-height); }
+
+  /* Variant of section-body that holds a fixed header on top of a scrollable
+     rows area. Both share the same max-height budget via flexbox: header takes
+     its natural size, scroll-area fills the rest and scrolls when overflowing.
+     Robust replacement for position:sticky on the row-header. */
+  .section-body.with-fixed-header {
+    display: flex;
+    flex-direction: column;
+    max-height: var(--panel-max-height);
+  }
+  .section-body.with-fixed-header > .table-grid:first-child {
+    flex-shrink: 0;
+  }
+  .section-body.with-fixed-header > .scroll-area {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  /* === ADAPTIVE LAYOUT for Operaciones === */
+  .ops-layout {
+    display: grid;
+    gap: var(--space-4);
+    align-items: stretch;
+    margin-bottom: var(--space-5);
+    transition: grid-template-columns 0.3s var(--transition);
+  }
+  .ops-layout[data-mode="full"] { grid-template-columns: 1fr; }
+  .ops-layout[data-mode="balanced"] { grid-template-columns: 6fr 4fr; }
+  .ops-layout[data-mode="split"] { grid-template-columns: 1fr 1fr; }
+  .ops-layout .section { margin-bottom: 0; height: 100%; }
+
+  /* === CLIENT CARDS === */
+  .clients-list {
+    padding: var(--space-2);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .client-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4);
+    position: relative;
+    transition: all 0.2s var(--transition);
+    cursor: default;
+    flex-shrink: 0;
+  }
+  .client-card:hover {
+    border-color: var(--border-secondary);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+  }
+  .client-card.affected {
+    border-color: rgba(29, 158, 117, 0.35);
+    background: linear-gradient(180deg, var(--accent-soft) 0%, var(--bg-surface) 80%);
+    box-shadow: 0 0 0 1px rgba(29, 158, 117, 0.15);
+  }
+  .client-card.affected::before {
+    content: '';
+    position: absolute; left: -1px; top: 12px; bottom: 12px;
+    width: 3px;
+    background: var(--accent);
+    border-radius: 0 2px 2px 0;
+  }
+
+  .client-card-top {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+
+  .client-avatar {
+    width: 36px; height: 36px;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: -0.02em;
+    flex-shrink: 0;
+    position: relative;
+    box-shadow: var(--shadow-xs);
+  }
+  .client-avatar::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; right: -1px;
+    width: 11px; height: 11px;
+    border-radius: var(--radius-full);
+    background: var(--text-quaternary);
+    border: 2px solid var(--bg-surface);
+    transition: background 0.2s var(--transition);
+  }
+  .client-card.affected .client-avatar::after {
+    background: var(--accent);
+    box-shadow: 0 0 0 0 var(--accent);
+    animation: avatarDotPulse 2s infinite;
+  }
+  @keyframes avatarDotPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(29, 158, 117, 0.5); }
+    50% { box-shadow: 0 0 0 4px rgba(29, 158, 117, 0); }
+  }
+
+  .client-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .client-name {
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .client-meta {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    line-height: 1.4;
+  }
+  .client-meta-dot {
+    display: inline-block;
+    margin: 0 var(--space-1);
+    opacity: 0.5;
+  }
+
+  .client-delta-summary {
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .client-delta-summary-value {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .client-delta-summary-label {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: 2px;
+  }
+
+  .client-balances {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-2);
+  }
+  .balance-cell {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    padding: var(--space-2) var(--space-3);
+    transition: all 0.2s var(--transition);
+    position: relative;
+    overflow: hidden;
+  }
+  .balance-cell.affected {
+    background: linear-gradient(135deg, var(--bg-info) 0%, rgba(232, 241, 251, 0.5) 100%);
+    box-shadow: inset 0 0 0 1px rgba(55, 138, 221, 0.3);
+  }
+  .balance-cell.zero {
+    opacity: 0.35;
+    background: var(--bg-secondary);
+  }
+  .balance-cell-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2px;
+  }
+  .balance-cell-currency {
+    font-size: 9px;
+    color: var(--text-tertiary);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .balance-cell-bar {
+    width: 24px;
+    height: 3px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    position: relative;
+  }
+  .balance-cell-bar-fill {
+    height: 100%;
+    background: var(--text-info);
+    border-radius: var(--radius-full);
+    transition: width 0.4s var(--ease-spring);
+  }
+  .balance-cell.zero .balance-cell-bar-fill { background: transparent; }
+  .balance-cell-value {
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+  .balance-cell.zero .balance-cell-value { color: var(--text-tertiary); }
+  .balance-cell-delta {
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    margin-top: 2px;
+    line-height: 1;
+  }
+
+  /* === SOCIETY COLLAPSIBLE GROUPS (Tesorería) === */
+  .society-groups { padding: var(--space-2); display: flex; flex-direction: column; gap: var(--space-2); }
+  .society-group {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition: all 0.2s var(--transition);
+  }
+  .society-group:hover { border-color: var(--border-secondary); }
+
+  .society-group-header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--space-4);
+    align-items: center;
+    padding: var(--space-3) var(--space-4);
+    cursor: pointer;
+    user-select: none;
+    background: var(--bg-surface);
+    transition: background 0.15s var(--transition);
+  }
+  .society-group-header:hover { background: var(--bg-secondary); }
+
+  .society-group-title-block {
+    display: flex; align-items: center; gap: var(--space-3);
+    min-width: 0;
+  }
+  .society-chevron {
+    width: 16px; height: 16px;
+    color: var(--text-tertiary);
+    transition: transform 0.25s var(--ease-spring);
+    flex-shrink: 0;
+  }
+  .society-group.expanded .society-chevron { transform: rotate(90deg); }
+
+  .society-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .society-name {
+    font-weight: 600; font-size: 14px;
+    letter-spacing: -0.01em; line-height: 1.2;
+    color: var(--text-primary);
+  }
+  .society-sub {
+    font-size: 11px; color: var(--text-tertiary);
+    line-height: 1.3;
+  }
+  .society-totals {
+    display: flex; gap: var(--space-2);
+    flex-wrap: wrap; justify-content: flex-end;
+  }
+  .society-total-pill {
+    display: inline-flex; align-items: center;
+    gap: var(--space-2);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-tertiary);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+  .society-total-pill-mon {
+    color: var(--text-tertiary);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .society-total-pill-val {
+    color: var(--text-primary);
+    font-weight: 700;
+  }
+
+  .society-group-body {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s var(--transition);
+  }
+  .society-group.expanded .society-group-body { max-height: 800px; }
+
+  .society-group-table {
+    border-top: 1px solid var(--border-tertiary);
+  }
+  .society-group-table > * {
+    display: grid;
+    grid-template-columns: 130px 1fr 70px 110px 130px;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-4);
+    font-size: 12px;
+    align-items: center;
+    border-bottom: 1px solid var(--border-tertiary);
+  }
+  .society-group-table > *:last-child { border-bottom: none; }
+  .society-group-table .row-header {
+    background: var(--bg-secondary);
+    color: var(--text-tertiary);
+    font-size: 10px !important;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    font-weight: 600;
+    padding: var(--space-2) var(--space-4) !important;
+  }
+
+  /* Soc tag colors (for header pill + asiento card tag) */
+  .soc-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .soc-tag-HP  { background: var(--soc-hp-bg);  color: var(--soc-hp); }
+  .soc-tag-CP  { background: var(--soc-cp-bg);  color: var(--soc-cp); }
+  .soc-tag-ASC { background: var(--soc-asc-bg); color: var(--soc-asc); }
+  .soc-tag-AV  { background: var(--soc-av-bg);  color: var(--soc-av); }
+  .soc-tag-NA  { background: var(--bg-secondary); color: var(--text-tertiary); font-style: italic; }
+
+  /* === MOVEMENT TABLE === */
+  .table-grid { display: grid; }
+  /* padding-right is intentionally larger than padding-left to leave room for
+     the scrollbar (8px) when it appears as overlay on macOS — without this,
+     right-aligned content (e.g. MONTO in the header, amounts in rows) would
+     be covered by the scrollbar thumb. Applies uniformly to header + data
+     rows so columns stay aligned. */
+  .table-grid > * { padding: var(--space-3) var(--space-6) var(--space-3) var(--space-4); font-size: 13px; align-items: center; border-bottom: 1px solid var(--border-tertiary); }
+  .table-grid > *:last-child { border-bottom: none; }
+
+  .ops-mov-grid > * { display: grid; grid-template-columns: 180px 1fr 130px; gap: var(--space-2); }
+  .tes-grid > * { display: grid; grid-template-columns: 220px 1fr 150px; gap: var(--space-3); }
+
+  /* Row-header: pure visual styling. NOT sticky-positioned — sticky has too many
+     edge cases (overlay scrollbars, overflow:hidden ancestors, scroll-context
+     indeterminacy). Instead, the header is rendered as a sibling above the
+     scroll-area (see .section-body.with-fixed-header) which is the approach
+     used by Notion, Linear, Ant Design, Material UI, etc. */
+  .row-header {
+    background: var(--bg-secondary); color: var(--text-tertiary);
+    font-size: 10px !important;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+
+  /* Variant applied when the row-header is rendered OUTSIDE the scroll-area.
+     The extra padding-right (8px = scrollbar width) compensates for the
+     scrollbar gutter inside the scroll-area below, so right-aligned content
+     lines up vertically with the right-aligned content in the data rows. */
+  .row-header-floating {
+    padding-right: calc(var(--space-6) + 8px) !important;
+    border-bottom: 1px solid var(--border-tertiary);
+  }
+  .row-new {
+    background: linear-gradient(90deg, var(--bg-info) 0%, transparent 100%);
+    animation: highlight 0.6s var(--transition);
+  }
+  @keyframes highlight {
+    from { background: var(--bg-info); transform: translateX(-2px); }
+    to { background: linear-gradient(90deg, var(--bg-info) 0%, transparent 100%); transform: translateX(0); }
+  }
+  .row-affected { background: linear-gradient(90deg, rgba(232, 241, 251, 0.4) 0%, transparent 100%); }
+
+  .num { font-variant-numeric: tabular-nums; text-align: right; font-weight: 400; }
+  .num-strong { font-weight: 600; }
+  .text-info { color: var(--text-info); }
+  .text-success { color: var(--text-success); }
+  .text-warning { color: var(--text-warning); }
+  .text-secondary { color: var(--text-secondary); }
+  .text-tertiary { color: var(--text-tertiary); }
+
+  .delta-pos { color: var(--text-success) !important; font-weight: 700; }
+  .delta-neg { color: var(--text-danger) !important; font-weight: 700; }
+  .delta-zero { color: var(--text-tertiary); }
+  .delta-inline { font-size: 11px; opacity: 0.9; margin-left: var(--space-1); }
+
+  .pill {
+    display: inline-block; padding: 2px 8px;
+    border-radius: var(--radius-full);
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .pill-pending { background: var(--bg-warning); color: var(--text-warning); }
+  .pill-intercompany { background: var(--bg-intercompany); color: var(--text-intercompany); }
+  .pill-adjust { background: var(--bg-tertiary); color: var(--text-secondary); }
+  .pill-finanzas { background: var(--bg-danger); color: var(--text-danger); }
+  .pill-patrimonio { background: var(--bg-patrimonio); color: var(--text-patrimonio); }
+  .pill-noclient {
+    background: var(--bg-secondary);
+    color: var(--text-tertiary);
+    font-style: italic;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .pill-noop { color: var(--text-tertiary); font-style: italic; font-size: 11px; }
+
+  .tabs-bar {
+    display: flex; gap: var(--space-1);
+    margin-bottom: var(--space-5);
+    border-bottom: 1px solid var(--border-tertiary);
+    padding-bottom: 1px;
+  }
+  .tab {
+    padding: 10px 18px;
+    font-size: 13px;
+    background: none; border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-secondary);
+    font-family: inherit; font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s var(--transition);
+    margin-bottom: -1px;
+    display: inline-flex; align-items: center; gap: var(--space-2);
+  }
+  .tab:hover { color: var(--text-primary); }
+  .tab.active {
+    color: var(--text-primary);
+    border-bottom-color: var(--accent);
+    font-weight: 600;
+  }
+  .tab-count {
+    background: var(--bg-tertiary); color: var(--text-secondary);
+    padding: 1px 7px; border-radius: 10px;
+    font-size: 10px; font-weight: 600;
+  }
+  .tab.active .tab-count { background: var(--accent); color: white; }
+
+  .tab-panel { animation: fadeIn 0.3s var(--transition); }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .empty-state {
+    padding: var(--space-8) var(--space-5);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    min-height: 240px;
+  }
+  .empty-state-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-full);
+    background: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-tertiary);
+    margin-bottom: var(--space-2);
+  }
+  .empty-state-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: -0.01em;
+  }
+  .empty-state-desc {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    max-width: 280px;
+    line-height: 1.5;
+  }
+
+  .asiento-card {
+    margin: var(--space-3) 0;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition: all 0.3s var(--transition);
+  }
+  .asiento-card.new { border-color: var(--border-info); box-shadow: 0 0 0 3px rgba(55, 138, 221, 0.1); }
+  .asiento-header {
+    padding: var(--space-2) var(--space-4);
+    background: var(--bg-secondary);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--space-2);
+    border-bottom: 1px solid var(--border-tertiary);
+  }
+  .asiento-id {
+    font-size: 11px; color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+  .asiento-id.new { color: var(--text-info); }
+  .asiento-grid > * {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-4);
+    font-size: 12px;
+    border-bottom: 1px solid var(--border-tertiary);
+  }
+  .asiento-grid > *:last-child { border-bottom: none; }
+
+  .footer-note {
+    margin-top: var(--space-8); padding-top: var(--space-6);
+    border-top: 1px solid var(--border-tertiary);
+    color: var(--text-tertiary); font-size: 12px;
+    text-align: center;
+  }
+
+  @media (max-width: 960px) {
+    .ops-layout[data-mode="balanced"],
+    .ops-layout[data-mode="split"] {
+      grid-template-columns: 1fr;
+    }
+    .society-group-header { grid-template-columns: 1fr; gap: var(--space-2); }
+    .society-totals { justify-content: flex-start; }
+  }
+
+  @media (max-width: 768px) {
+    .app-shell { padding: var(--space-4); }
+    .page-title { font-size: 22px; }
+    .dim-cards-grid, .totals-grid, .con-cards-grid { grid-template-columns: 1fr 1fr; }
+    .society-group-table > * { grid-template-columns: 90px 1fr 50px 90px 110px; gap: 6px; font-size: 11px; padding: var(--space-2); }
+    .ops-mov-grid > * { grid-template-columns: 140px 1fr 100px; gap: 6px; font-size: 11px; }
+    .tes-grid > * { grid-template-columns: 160px 1fr 100px; gap: 6px; font-size: 11px; }
+    .client-balances { gap: 6px; }
+    .balance-cell { padding: 6px 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-mark">A</div>
+      <div class="brand-meta">
+        <div class="brand-title">Ardua · FIN</div>
+        <div class="brand-sub">Finanzas y Contabilidad</div>
+      </div>
+    </div>
+    <div class="breadcrumb">
+      <span>Tesorería</span>
+      <span class="breadcrumb-arrow">›</span>
+      <span class="breadcrumb-current">Disponibilidades · Simulador</span>
+    </div>
+  </header>
+
+  <section class="page-title-section">
+    <div class="page-title-block">
+      <h1 class="page-title">Disponibilidades</h1>
+      <p class="page-subtitle">Simulador de eventos sobre el modelo conceptual del módulo. Visualizá cómo cada operación impacta simultáneamente las perspectivas de Operaciones, Tesorería y Contabilidad, manteniendo la ecuación maestra cuadrada en todo momento.</p>
+    </div>
+  </section>
+
+  <div class="progress-track" id="progress-track"></div>
+
+  <div class="controls-bar">
+    <button class="btn" id="prev-btn">
+      <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      Anterior
+    </button>
+    <button class="btn btn-primary" id="next-btn">
+      Siguiente
+      <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </button>
+    <button class="btn" id="reset-btn">
+      <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+      Reiniciar
+    </button>
+    <div class="step-indicator">
+      Paso <span class="step-pill" id="step-pill">T0</span>
+      <span id="step-total" style="color: var(--text-tertiary);">de T15</span>
+    </div>
+  </div>
+
+  <div class="event-card" id="event-card">
+    <div class="event-label" id="event-num">T0 · Estado inicial</div>
+    <div class="event-title" id="event-title">Setup del sistema antes de cualquier movimiento</div>
+    <div class="event-desc" id="event-desc">Cuatro sociedades, ocho cuentas activas, seis clientes con saldo.</div>
+  </div>
+
+  <div class="section-label">Posición consolidada · gestión de fondos</div>
+  <div class="dim-cards-grid" id="dim-cards"></div>
+
+  <div class="tabs-bar">
+    <button class="tab active" data-tab="ops">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+      Operaciones
+      <span class="tab-count" id="count-ops">0</span>
+    </button>
+    <button class="tab" data-tab="tes">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"></rect><circle cx="12" cy="12.5" r="2.5"></circle><path d="M3 10h18"></path></svg>
+      Tesorería
+      <span class="tab-count" id="count-tes">0</span>
+    </button>
+    <button class="tab" data-tab="con">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="15" y2="17"></line></svg>
+      Contabilidad
+      <span class="tab-count" id="count-con">0</span>
+    </button>
+  </div>
+
+  <div id="tab-content" style="min-height: 320px;"></div>
+
+  <div class="footer-note">
+    Demo conceptual del módulo Disponibilidades · Ardua Solutions · 2026
+  </div>
+</div>
+
+<script>
+const fmt = (n) => n === null || n === undefined ? '—' : Math.round(n).toLocaleString('en-US');
+const fmtCompact = (n) => {
+  if (n === null || n === undefined) return '—';
+  const abs = Math.abs(n);
+  if (abs >= 1e9) return (n/1e9).toFixed(2) + 'B';
+  if (abs >= 1e6) return (n/1e6).toFixed(2) + 'M';
+  if (abs >= 1e3) return (n/1e3).toFixed(1) + 'K';
+  return Math.round(n).toString();
+};
+const fmtSigned = (n) => {
+  if (n === null || n === undefined || n === 0) return '';
+  const rounded = Math.round(n);
+  if (rounded === 0) return '';
+  return (rounded > 0 ? '+' : '') + rounded.toLocaleString('en-US');
+};
+const fmtSignedCompact = (n) => {
+  if (!n || Math.round(n) === 0) return '';
+  const sign = n > 0 ? '+' : '−';
+  const abs = Math.abs(n);
+  let val;
+  if (abs >= 1e9) val = (abs/1e9).toFixed(2) + 'B';
+  else if (abs >= 1e6) val = (abs/1e6).toFixed(2) + 'M';
+  else if (abs >= 1e3) val = (abs/1e3).toFixed(1) + 'K';
+  else val = Math.round(abs).toString();
+  return sign + val;
+};
+const deltaClass = (n) => {
+  if (!n || Math.round(n) === 0) return 'delta-zero';
+  return n > 0 ? 'delta-pos' : 'delta-neg';
+};
+
+function hashCode(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+function avatarColor(name) {
+  const palette = ['var(--avatar-1)', 'var(--avatar-2)', 'var(--avatar-3)', 'var(--avatar-4)', 'var(--avatar-5)', 'var(--avatar-6)', 'var(--avatar-7)', 'var(--avatar-8)'];
+  return palette[hashCode(name) % palette.length];
+}
+function clientInitials(name) {
+  const cleaned = name.replace(/^cli-/, '');
+  const parts = cleaned.split('-');
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return cleaned.substring(0, 2).toUpperCase();
+}
+
+const MONEDAS = ['ARS', 'USDC', 'EURC'];
+
+// Society codes and metadata
+const SOCIEDADES_META = {
+  'Haz Pagos':               { code: 'HP',  estructura: 'PSP',  jurisdiccion: 'Argentina', monedas: 'ARS' },
+  'Circuit Pay':             { code: 'CP',  estructura: 'PSAV', jurisdiccion: 'Argentina', monedas: 'USDC' },
+  'Ardua Solutions Corp':    { code: 'ASC', estructura: 'MSB',  jurisdiccion: 'Canadá',    monedas: 'USDC' },
+  'Astra Ventures':          { code: 'AV',  estructura: 'VASP', jurisdiccion: 'Polonia',   monedas: 'EURC' }
+};
+
+// Initial physical balances inflated so that Capacidad Operativa
+// stays positive at T0 in every currency (target ~5-10% of Físico).
+// ARS: 1,110M total · Oblig 1,042M · CapOp ~67M (6.1%)
+// USDC: 5.7M total · Oblig 5.25M · CapOp 450K (7.9%)
+// EURC: 3.7M total · Oblig 3.43M · CapOp 270K (7.3%)
+const INITIAL_ACCOUNTS = [
+  { id: 'hp-coinag-cbu', sociedad: 'Haz Pagos', estructura: 'COINAG', cuenta: 'CBU Cta 10.049', moneda: 'ARS', saldo: 920000000 },
+  { id: 'hp-coinag-cvu', sociedad: 'Haz Pagos', estructura: 'COINAG', cuenta: 'CVU Cliente Pool', moneda: 'ARS', saldo: 142500000 },
+  { id: 'hp-brubank',    sociedad: 'Haz Pagos', estructura: 'BRUBANK', cuenta: 'Cta 2504679505001', moneda: 'ARS', saldo: 22500000 },
+  { id: 'hp-bind',       sociedad: 'Haz Pagos', estructura: 'BIND', cuenta: 'Cta 4403443/1', moneda: 'ARS', saldo: 25000000 },
+  { id: 'cp-bitgo-usdc', sociedad: 'Circuit Pay', estructura: 'BITGO', cuenta: 'Wallet 0xBG..A8C2', moneda: 'USDC', saldo: 4200000 },
+  { id: 'asc-coinbase',  sociedad: 'Ardua Solutions Corp', estructura: 'COINBASE', cuenta: 'Wallet 0xCBA..', moneda: 'USDC', saldo: 1500000 },
+  { id: 'av-revolut',    sociedad: 'Astra Ventures', estructura: 'REVOLUT', cuenta: 'EURC-PL-4421', moneda: 'EURC', saldo: 2700000 },
+  { id: 'av-kraken',     sociedad: 'Astra Ventures', estructura: 'KRAKEN', cuenta: 'Wallet KRK-EURC', moneda: 'EURC', saldo: 1000000 }
+];
+
+const INITIAL_OBLIG = {
+  'cli-tecno-sa':         { ARS: 450460500, USDC: 1500000, EURC: 0 },
+  'cli-inversiones-norte':{ ARS: 150000000, USDC: 2000000, EURC: 980000 },
+  'cli-flynet-llc':       { ARS: 67000000, USDC: 580000, EURC: 800000 },
+  'cli-agropampa-srl':    { ARS: 280000000, USDC: 0, EURC: 0 },
+  'cli-stellartrade-ltd': { ARS: 0, USDC: 850000, EURC: 1200000 },
+  'cli-globalshipping-sa':{ ARS: 95000000, USDC: 320000, EURC: 450000 }
+};
+
+// Each accounting entry now carries a `sociedad` field (society code) for filtering.
+// Intercompany loans split into TWO entries (one per society) instead of one mirror entry.
+const EVENTS = [
+  { id: 'T0', label: 'T0 · Estado inicial', title: 'Setup con cuatro sociedades, ocho cuentas y seis clientes', desc: 'Saldos iniciales sobre ARS, USDC y EURC. Seis clientes con obligaciones multimoneda y perfiles operativos distintos. Capacidad operativa positiva en las tres monedas.', ops: null, tes: null, con: null },
+  {
+    id: 'T1', label: 'T1 · Depósito ARS', title: 'cli-tecno-sa deposita 18.500.000 ARS en COINAG CBU',
+    desc: 'Entra dinero a la CBU principal de Haz Pagos. Movimiento con plano físico y plano contable. Registra Operaciones.',
+    ops: { tipo: 'DEPÓSITO', cuenta: 'hp-coinag-cbu', cliente: 'cli-tecno-sa', monto: 18500000, moneda: 'ARS', signo: '+', registra: 'OPS' },
+    tes: { fisico: [{ cuenta: 'hp-coinag-cbu', delta: 18500000 }] },
+    con: [{ sociedad: 'HP', db: 'Disponibilidades — COINAG CBU ARS', cr: 'Obligaciones — cli-tecno-sa ARS', monto: 18500000, moneda: 'ARS' }]
+  },
+  {
+    id: 'T2', label: 'T2 · Fee sobre depósito', title: 'Ardua cobra 12.500 ARS de fee a cli-tecno-sa',
+    desc: 'Movimiento sin plano físico. Reconfigura etiqueta de pasivo a resultado. Registra Operaciones. El fee se imputa a Haz Pagos (donde está custodiado el saldo ARS del cliente).',
+    ops: { tipo: 'FEE', cuenta: '—', cliente: 'cli-tecno-sa', monto: 12500, moneda: 'ARS', signo: '−', registra: 'OPS' },
+    tes: { fisico: [] },
+    con: [{ sociedad: 'HP', db: 'Obligaciones — cli-tecno-sa ARS', cr: 'Ingresos por fees — depósito (ARS)', monto: 12500, moneda: 'ARS' }]
+  },
+  {
+    id: 'T3', label: 'T3 · SWAP USDC/EURC', title: 'cli-inversiones-norte vende 100.000 USDC contra EURC a TC 0.92',
+    desc: 'Tres asientos atómicos sin flujo físico. SWAP cruza dos stablecoins. Spread de 500 EURC para Ardua. Lo ejecuta Operaciones a través de Circuit Pay — todos los asientos se registran en CP (decisión pendiente con Finanzas).',
+    ops: [
+      { tipo: 'SWAP_OUT', cuenta: '—', cliente: 'cli-inversiones-norte', monto: 100000, moneda: 'USDC', signo: '−', registra: 'OPS' },
+      { tipo: 'SWAP_IN', cuenta: '—', cliente: 'cli-inversiones-norte', monto: 91500, moneda: 'EURC', signo: '+', registra: 'OPS' },
+      { tipo: 'SPREAD', cuenta: '—', cliente: '—', monto: 500, moneda: 'EURC', signo: '+', registra: 'OPS' }
+    ],
+    tes: { fisico: [] },
+    con: [
+      { sociedad: 'CP', db: 'Obligaciones — cli-inversiones-norte USDC', cr: 'Cuenta puente FX USDC/EURC', monto: 100000, moneda: 'USDC' },
+      { sociedad: 'CP', db: 'Cuenta puente FX USDC/EURC', cr: 'Obligaciones — cli-inversiones-norte EURC', monto: 91500, moneda: 'EURC' },
+      { sociedad: 'CP', db: 'Cuenta puente FX USDC/EURC', cr: 'Ingresos por spread — SWAP USDC/EURC', monto: 500, moneda: 'EURC' }
+    ]
+  },
+  {
+    id: 'T4', label: 'T4 · Solicitud de retiro', title: 'cli-tecno-sa solicita retiro de 9.200.000 ARS — PENDING',
+    desc: 'Solo reserva contra capacidad. No hay asiento ni movimiento físico hasta que Operaciones ejecute.',
+    ops: { tipo: 'SOLICITUD_RETIRO', cuenta: 'Por asignar', cliente: 'cli-tecno-sa', monto: 9200000, moneda: 'ARS', signo: '−', registra: 'OPS', estado: 'PENDING' },
+    tes: { fisico: [] },
+    con: []
+  },
+  {
+    id: 'T5', label: 'T5 · Ejecución del retiro', title: 'Operaciones ejecuta el retiro desde COINAG CBU de Haz Pagos',
+    desc: 'Tesorería elige cuenta origen. La solicitud pasa a EXECUTED. Sale plata real.',
+    ops: { tipo: 'RETIRO', cuenta: 'hp-coinag-cbu', cliente: 'cli-tecno-sa', monto: 9200000, moneda: 'ARS', signo: '−', registra: 'OPS', estado: 'EXECUTED' },
+    tes: { fisico: [{ cuenta: 'hp-coinag-cbu', delta: -9200000 }] },
+    con: [{ sociedad: 'HP', db: 'Obligaciones — cli-tecno-sa ARS', cr: 'Disponibilidades — COINAG CBU ARS', monto: 9200000, moneda: 'ARS' }]
+  },
+  {
+    id: 'T6', label: 'T6 · Pendiente de asignar', title: 'Llegan 250.000 USDC a BITGO Pool sin identificar cliente',
+    desc: 'Entrada física real pero sin cliente. Se imputa a cuenta técnica Pendientes de asignación.',
+    ops: { tipo: 'DEPÓSITO_PENDIENTE', cuenta: 'cp-bitgo-usdc', cliente: 'NO IDENTIFICADO', monto: 250000, moneda: 'USDC', signo: '+', registra: 'OPS' },
+    tes: { fisico: [{ cuenta: 'cp-bitgo-usdc', delta: 250000 }] },
+    con: [{ sociedad: 'CP', db: 'Disponibilidades — BITGO USDC', cr: 'Pendientes de asignación USDC', monto: 250000, moneda: 'USDC' }]
+  },
+  {
+    id: 'T7', label: 'T7 · Asignación del pendiente', title: 'Operaciones identifica que los 250.000 USDC son de cli-flynet-llc',
+    desc: 'Reclasificación contable pura. Sin movimiento físico. El pendiente pasa a ser obligación con el cliente.',
+    ops: { tipo: 'ASIGNACIÓN_PENDIENTE', cuenta: 'cp-bitgo-usdc', cliente: 'cli-flynet-llc', monto: 250000, moneda: 'USDC', signo: '+', registra: 'OPS', refPendiente: true },
+    tes: { fisico: [] },
+    con: [{ sociedad: 'CP', db: 'Pendientes de asignación USDC', cr: 'Obligaciones — cli-flynet-llc USDC', monto: 250000, moneda: 'USDC' }]
+  },
+  {
+    id: 'T8', label: 'T8 · Movimiento entre cuentas propias', title: 'Tesorería mueve 200.000 EURC de REVOLUT a KRAKEN',
+    desc: 'Reubicación física dentro de Astra Ventures. Sin cliente. Registra Tesorería, no Operaciones.',
+    ops: null,
+    tes: { fisico: [{ cuenta: 'av-revolut', delta: -200000 }, { cuenta: 'av-kraken', delta: 200000 }], registra: 'FIN', tipo: 'MOV_ENTRE_CUENTAS_PROPIAS' },
+    con: [{ sociedad: 'AV', db: 'Disponibilidades — KRAKEN EURC', cr: 'Disponibilidades — REVOLUT EURC', monto: 200000, moneda: 'EURC' }]
+  },
+  {
+    id: 'T9', label: 'T9 · Sweeping de capacidad operativa', title: 'Tesorería barre 500.000 USDC de BITGO Pool a COINBASE',
+    desc: 'Movimiento físico de USDC entre cuentas de sociedades distintas (CP → ASC). Aunque el monto sea de Ardua, son entidades legales separadas. Se modela como mini-intercompany — 2 asientos espejo en sociedades distintas.',
+    ops: null,
+    tes: { fisico: [{ cuenta: 'cp-bitgo-usdc', delta: -500000 }, { cuenta: 'asc-coinbase', delta: 500000 }], registra: 'FIN', tipo: 'SWEEPING' },
+    con: [
+      { sociedad: 'CP',  db: 'Cta a cobrar intercompany — Ardua Solutions Corp USDC', cr: 'Disponibilidades — BITGO USDC', monto: 500000, moneda: 'USDC' },
+      { sociedad: 'ASC', db: 'Disponibilidades — COINBASE USDC', cr: 'Cta a pagar intercompany — Circuit Pay USDC', monto: 500000, moneda: 'USDC' }
+    ]
+  },
+  {
+    id: 'T10', label: 'T10 · Préstamo intercompany', title: 'Circuit Pay presta 100.000 USDC a Ardua Solutions Corp',
+    desc: 'Transferencia física entre cuentas de sociedades distintas. Son entidades legales separadas con balance propio. Se desdobla en 2 asientos contables, uno por cada sociedad — cada uno auditable por separado.',
+    ops: null,
+    tes: { fisico: [{ cuenta: 'cp-bitgo-usdc', delta: -100000 }, { cuenta: 'asc-coinbase', delta: 100000 }], registra: 'FIN', tipo: 'PRESTAMO_INTERCOMPANY' },
+    con: [
+      { sociedad: 'CP',  db: 'Cta a cobrar intercompany — Ardua Solutions Corp USDC', cr: 'Disponibilidades — BITGO USDC', monto: 100000, moneda: 'USDC' },
+      { sociedad: 'ASC', db: 'Disponibilidades — COINBASE USDC', cr: 'Cta a pagar intercompany — Circuit Pay USDC', monto: 100000, moneda: 'USDC' }
+    ]
+  },
+  {
+    id: 'T11', label: 'T11 · Ajuste de Crédito a favor del cliente', title: 'Devolución de 2.500 ARS de fee cobrado de más a cli-tecno-sa',
+    desc: 'Operaciones detecta que se cobró un fee de más en T2. Sin plano físico — corrige la imputación contable en Haz Pagos (misma sociedad que el fee original).',
+    ops: { tipo: 'AJUSTE_CREDITO', cuenta: '—', cliente: 'cli-tecno-sa', monto: 2500, moneda: 'ARS', signo: '+', registra: 'OPS' },
+    tes: { fisico: [] },
+    con: [{ sociedad: 'HP', db: 'Ingresos por fees — depósito (ARS)', cr: 'Obligaciones — cli-tecno-sa ARS', monto: 2500, moneda: 'ARS' }]
+  },
+  {
+    id: 'T12', label: 'T12 · Ajuste de Débito a favor de Ardua', title: 'Cobro de 800 EURC de fee no registrado a cli-flynet-llc',
+    desc: 'Operaciones detecta que olvidó cobrar un fee. Sin plano físico — corrige la imputación contable en Astra Ventures (sociedad que custodia el saldo EURC).',
+    ops: { tipo: 'AJUSTE_DEBITO', cuenta: '—', cliente: 'cli-flynet-llc', monto: 800, moneda: 'EURC', signo: '−', registra: 'OPS' },
+    tes: { fisico: [] },
+    con: [{ sociedad: 'AV', db: 'Obligaciones — cli-flynet-llc EURC', cr: 'Ingresos por fees — operativos (EURC)', monto: 800, moneda: 'EURC' }]
+  },
+  {
+    id: 'T13', label: 'T13 · Pago a proveedor', title: 'Finanzas paga 4.500.000 ARS al proveedor de servicios cloud desde BRUBANK',
+    desc: 'Egreso real desde una cuenta operativa de Haz Pagos. Sin cliente. Capacidad Operativa baja por el monto del egreso.',
+    ops: null,
+    tes: { fisico: [{ cuenta: 'hp-brubank', delta: -4500000 }], registra: 'FIN', tipo: 'PAGO_PROVEEDOR' },
+    con: [{ sociedad: 'HP', db: 'Gastos — servicios cloud (ARS)', cr: 'Disponibilidades — BRUBANK ARS', monto: 4500000, moneda: 'ARS' }]
+  },
+  {
+    id: 'T14', label: 'T14 · Pago de salarios', title: 'Finanzas paga 85.000 USDC en salarios desde COINBASE',
+    desc: 'Egreso real en stablecoin a empleados internacionales. Sin cliente. El gasto se imputa a Ardua Solutions Corp (donde está la cuenta).',
+    ops: null,
+    tes: { fisico: [{ cuenta: 'asc-coinbase', delta: -85000 }], registra: 'FIN', tipo: 'PAGO_SALARIO' },
+    con: [{ sociedad: 'ASC', db: 'Gastos — sueldos y jornales (USDC)', cr: 'Disponibilidades — COINBASE USDC', monto: 85000, moneda: 'USDC' }]
+  },
+  {
+    id: 'T15', label: 'T15 · Aporte de capital propio', title: 'Ardua aporta 500.000 USDC a Ardua Solutions Corp (COINBASE)',
+    desc: 'Entrada de fondos propios desde afuera del grupo (socios / capital social). Aumenta el Físico sin generar Obligaciones con clientes — la Capacidad Operativa sube exactamente por el monto del aporte. Contrapartida contable: Patrimonio operativo. Registra Tesorería.',
+    ops: null,
+    tes: { fisico: [{ cuenta: 'asc-coinbase', delta: 500000 }], registra: 'FIN', tipo: 'APORTE_CAPITAL' },
+    con: [{ sociedad: 'ASC', db: 'Disponibilidades — COINBASE USDC', cr: 'Aportes de Ardua — capital operativo USDC', monto: 500000, moneda: 'USDC' }]
+  }
+];
+
+function groupOfAccount(name) {
+  if (!name) return 'Otros';
+  const n = name.toLowerCase();
+  if (n.startsWith('disponibilidades')) return 'Disponibilidades';
+  if (n.startsWith('obligaciones')) return 'Obligaciones';
+  if (n.startsWith('pendientes')) return 'Pendientes';
+  if (n.startsWith('cuenta puente')) return 'Puente FX';
+  if (n.startsWith('cta a cobrar intercompany') || n.startsWith('cta a pagar intercompany')) return 'Intercompany';
+  if (n.startsWith('aportes') || n.startsWith('patrimonio operativo')) return 'Patrimonio operativo';
+  if (n.startsWith('ingresos')) return 'Ingresos';
+  if (n.startsWith('gastos') || n.startsWith('egresos')) return 'Egresos';
+  return 'Otros';
+}
+
+const GRUPOS_CONTABLES = [
+  { key: 'Disponibilidades', cssClass: 'con-activo',       naturaleza: 'Activo',      sign: { db: +1, cr: -1 } },
+  { key: 'Obligaciones',     cssClass: 'con-pasivo',       naturaleza: 'Pasivo',      sign: { db: -1, cr: +1 } },
+  { key: 'Pendientes',       cssClass: 'con-pasivo-warn',  naturaleza: 'Pasivo',      sign: { db: -1, cr: +1 } },
+  { key: 'Puente FX',        cssClass: 'con-tecnica',      naturaleza: 'Técnica',     sign: { db: +1, cr: -1 } },
+  { key: 'Intercompany',     cssClass: 'con-intercompany', naturaleza: 'Intercompany',sign: { db: +1, cr: -1 } },
+  { key: 'Patrimonio operativo', cssClass: 'con-patrimonio', naturaleza: 'Patrimonio', sign: { db: -1, cr: +1 } },
+  { key: 'Ingresos',         cssClass: 'con-ingreso',      naturaleza: 'Ingreso',     sign: { db: -1, cr: +1 } },
+  { key: 'Egresos',          cssClass: 'con-egreso',       naturaleza: 'Egreso',      sign: { db: +1, cr: -1 } }
+];
+
+let currentStep = 0;
+let allMovements = [];
+let allAsientos = [];
+let accounts, obligaciones, pendientes, deltas;
+let activeTab = 'ops';
+let collapsedSocieties = new Set(); // tracks which society groups are collapsed
+
+function emptyDeltas() {
+  return { accounts: {}, obligaciones: {}, pendientes: { ARS:0, USDC:0, EURC:0 }, physicalByCurrency: { ARS:0, USDC:0, EURC:0 }, obligByCurrency: { ARS:0, USDC:0, EURC:0 } };
+}
+
+function rebuildState() {
+  allMovements = []; allAsientos = [];
+  accounts = JSON.parse(JSON.stringify(INITIAL_ACCOUNTS));
+  obligaciones = JSON.parse(JSON.stringify(INITIAL_OBLIG));
+  pendientes = { ARS:0, USDC:0, EURC:0 };
+  deltas = emptyDeltas();
+  for (let i = 1; i <= currentStep; i++) applyEvent(EVENTS[i], i, i === currentStep);
+}
+
+function applyEvent(ev, idx, isCurrent) {
+  const localDeltas = isCurrent ? deltas : null;
+  if (ev.ops) {
+    const opsArr = Array.isArray(ev.ops) ? ev.ops : [ev.ops];
+    opsArr.forEach(o => {
+      allMovements.push({ ...o, eventId: ev.id, eventIdx: idx });
+      if (o.refPendiente) {
+        pendientes[o.moneda] -= o.monto;
+        if (!obligaciones[o.cliente]) obligaciones[o.cliente] = { ARS:0, USDC:0, EURC:0 };
+        obligaciones[o.cliente][o.moneda] += o.monto;
+        if (localDeltas) {
+          localDeltas.pendientes[o.moneda] -= o.monto;
+          localDeltas.obligaciones[o.cliente] = localDeltas.obligaciones[o.cliente] || { ARS:0, USDC:0, EURC:0 };
+          localDeltas.obligaciones[o.cliente][o.moneda] += o.monto;
+          localDeltas.obligByCurrency[o.moneda] += o.monto;
+        }
+        return;
+      }
+      if (o.cliente && o.cliente !== '—' && o.cliente !== 'NO IDENTIFICADO' && o.cliente !== 'Por asignar' && o.tipo !== 'SOLICITUD_RETIRO') {
+        if (!obligaciones[o.cliente]) obligaciones[o.cliente] = { ARS:0, USDC:0, EURC:0 };
+        const delta = o.signo === '+' ? o.monto : -o.monto;
+        obligaciones[o.cliente][o.moneda] += delta;
+        if (localDeltas) {
+          localDeltas.obligaciones[o.cliente] = localDeltas.obligaciones[o.cliente] || { ARS:0, USDC:0, EURC:0 };
+          localDeltas.obligaciones[o.cliente][o.moneda] += delta;
+          localDeltas.obligByCurrency[o.moneda] += delta;
+        }
+      }
+      if (o.cliente === 'NO IDENTIFICADO') {
+        pendientes[o.moneda] += o.monto;
+        if (localDeltas) localDeltas.pendientes[o.moneda] += o.monto;
+      }
+    });
+  }
+  if (ev.tes && ev.tes.fisico) {
+    ev.tes.fisico.forEach(f => {
+      const cuenta = accounts.find(a => a.id === f.cuenta);
+      if (cuenta) {
+        cuenta.saldo += f.delta;
+        if (localDeltas) {
+          localDeltas.accounts[f.cuenta] = (localDeltas.accounts[f.cuenta] || 0) + f.delta;
+          localDeltas.physicalByCurrency[cuenta.moneda] += f.delta;
+        }
+      }
+    });
+    if (ev.tes.registra === 'FIN') {
+      const cuentasAfectadas = ev.tes.fisico.map(f => accounts.find(a => a.id === f.cuenta)?.cuenta || f.cuenta).join(' → ');
+      const monedaPrim = accounts.find(a => a.id === ev.tes.fisico[0].cuenta)?.moneda || '';
+      const montoPrim = Math.abs(ev.tes.fisico[0].delta);
+      allMovements.push({ tipo: ev.tes.tipo || 'MOV_ENTRE_CUENTAS', cuenta: cuentasAfectadas, cliente: '—', monto: montoPrim, moneda: monedaPrim, signo: 'TX', registra: 'FIN', eventId: ev.id, eventIdx: idx });
+    }
+  }
+  if (ev.con && ev.con.length) ev.con.forEach(a => allAsientos.push({ ...a, eventId: ev.id, eventIdx: idx }));
+}
+
+function getPositionByDimension() {
+  const out = { fisico: {}, oblig: {}, pend: {}, capop: {} };
+  const dDim = { fisico: {}, oblig: {}, pend: {}, capop: {} };
+  MONEDAS.forEach(m => {
+    const fisico = accounts.filter(a => a.moneda === m).reduce((s,a) => s + a.saldo, 0);
+    const oblig = Object.values(obligaciones).reduce((s,c) => s + (c[m] || 0), 0);
+    const pend = pendientes[m] || 0;
+    const capop = fisico - oblig - pend;
+    out.fisico[m] = fisico;
+    out.oblig[m] = oblig;
+    out.pend[m] = pend;
+    out.capop[m] = capop;
+    const dF = deltas.physicalByCurrency[m] || 0;
+    const dO = deltas.obligByCurrency[m] || 0;
+    const dP = deltas.pendientes[m] || 0;
+    dDim.fisico[m] = dF;
+    dDim.oblig[m] = dO;
+    dDim.pend[m] = dP;
+    dDim.capop[m] = dF - dO - dP;
+  });
+  return { values: out, deltas: dDim };
+}
+
+function renderProgress() {
+  let html = '';
+  for (let i = 0; i < EVENTS.length; i++) {
+    let cls = '';
+    if (i < currentStep) cls = 'done';
+    if (i === currentStep) cls = 'current';
+    html += `<div class="progress-dot ${cls}"></div>`;
+  }
+  document.getElementById('progress-track').innerHTML = html;
+}
+
+function renderDimensionCards() {
+  const { values, deltas: dDim } = getPositionByDimension();
+  const dims = [
+    { key: 'fisico', label: 'Físico',              cssClass: 'dim-fisico', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"></rect><circle cx="12" cy="12.5" r="2.5"></circle><path d="M3 10h18"></path></svg>' },
+    { key: 'oblig',  label: 'Obligaciones',        cssClass: 'dim-oblig',  icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>' },
+    { key: 'pend',   label: 'Pendientes',          cssClass: 'dim-pend',   icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>' },
+    { key: 'capop',  label: 'Capacidad operativa', cssClass: 'dim-capop',  icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>' }
+  ];
+  let html = '';
+  dims.forEach(d => {
+    html += `<div class="dim-card ${d.cssClass}">`;
+    html += '<div class="dim-card-header">';
+    html += `<div class="dim-card-icon">${d.icon}</div>`;
+    html += `<div class="dim-card-label">${d.label}</div>`;
+    html += '</div>';
+    MONEDAS.forEach(m => {
+      const v = values[d.key][m];
+      const delta = dDim[d.key][m];
+      html += '<div class="dim-row">';
+      html += `<span class="dim-mon">${m}</span>`;
+      html += '<span class="dim-val-wrap">';
+      html += `<span class="dim-val">${fmtCompact(v)}</span>`;
+      if (delta) html += `<span class="dim-delta ${deltaClass(delta)}">${fmtSignedCompact(delta)}</span>`;
+      html += '</span></div>';
+    });
+    html += '</div>';
+  });
+  document.getElementById('dim-cards').innerHTML = html;
+}
+
+function maxBalanceByCurrency() {
+  const maxes = { ARS: 0, USDC: 0, EURC: 0 };
+  Object.values(obligaciones).forEach(o => {
+    MONEDAS.forEach(m => {
+      const v = Math.abs(o[m] || 0);
+      if (v > maxes[m]) maxes[m] = v;
+    });
+  });
+  return maxes;
+}
+
+function renderClientsList() {
+  const maxes = maxBalanceByCurrency();
+  let html = '<div class="clients-list">';
+  Object.keys(obligaciones).forEach(c => {
+    const o = obligaciones[c];
+    const cd = deltas.obligaciones[c] || { ARS: 0, USDC: 0, EURC: 0 };
+    const dActiveCount = MONEDAS.filter(m => cd[m]).length;
+    const isAffected = dActiveCount > 0;
+    const activeMonedas = MONEDAS.filter(m => (o[m] || 0) !== 0).length;
+
+    let deltaHtml = '';
+    if (dActiveCount === 1) {
+      const activeM = MONEDAS.find(m => cd[m]);
+      const dCls = deltaClass(cd[activeM]);
+      deltaHtml = `<div class="client-delta-summary">
+        <div class="client-delta-summary-value ${dCls}">${fmtSignedCompact(cd[activeM])} ${activeM}</div>
+        <div class="client-delta-summary-label">este paso</div>
+      </div>`;
+    } else if (dActiveCount > 1) {
+      deltaHtml = `<div class="client-delta-summary">
+        <div class="client-delta-summary-value text-info">${dActiveCount} monedas</div>
+        <div class="client-delta-summary-label">afectadas</div>
+      </div>`;
+    }
+
+    const initials = clientInitials(c);
+    const color = avatarColor(c);
+
+    html += `<div class="client-card ${isAffected ? 'affected' : ''}">`;
+    html += '<div class="client-card-top">';
+    html += `<div class="client-avatar" style="background: ${color};">${initials}</div>`;
+    html += '<div class="client-info">';
+    html += `<div class="client-name">${c}</div>`;
+    html += `<div class="client-meta">${activeMonedas} ${activeMonedas === 1 ? 'moneda activa' : 'monedas activas'}<span class="client-meta-dot">·</span>Cliente operativo</div>`;
+    html += '</div>';
+    html += deltaHtml;
+    html += '</div>';
+
+    html += '<div class="client-balances">';
+    MONEDAS.forEach(mon => {
+      const v = o[mon] || 0;
+      const d = cd[mon] || 0;
+      const cellAffected = d !== 0;
+      const cellZero = v === 0 && d === 0;
+      const max = maxes[mon] || 1;
+      const pct = Math.min(100, Math.round((Math.abs(v) / max) * 100));
+      html += `<div class="balance-cell ${cellAffected ? 'affected' : ''} ${cellZero ? 'zero' : ''}">`;
+      html += '<div class="balance-cell-header">';
+      html += `<span class="balance-cell-currency">${mon}</span>`;
+      html += '<div class="balance-cell-bar">';
+      html += `<div class="balance-cell-bar-fill" style="width: ${pct}%;"></div>`;
+      html += '</div>';
+      html += '</div>';
+      html += `<div class="balance-cell-value">${cellZero ? '0' : fmtCompact(v)}</div>`;
+      if (d) html += `<div class="balance-cell-delta ${deltaClass(d)}">${fmtSignedCompact(d)}</div>`;
+      html += '</div>';
+    });
+    html += '</div>';
+
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function renderOpsLayoutMode(movsCount) {
+  if (movsCount === 0) return 'full';
+  if (movsCount <= 3) return 'balanced';
+  return 'split';
+}
+
+function renderOps() {
+  let html = '';
+
+  const tot = { ARS: 0, USDC: 0, EURC: 0 };
+  const totD = { ARS: 0, USDC: 0, EURC: 0 };
+  Object.keys(obligaciones).forEach(c => {
+    MONEDAS.forEach(m => {
+      tot[m] += obligaciones[c][m] || 0;
+      const cd = deltas.obligaciones[c] || {};
+      totD[m] += cd[m] || 0;
+    });
+  });
+
+  html += '<div class="section-label">Obligaciones por cliente · totales por moneda</div>';
+  html += '<div class="totals-grid">';
+  MONEDAS.forEach(m => {
+    html += '<div class="total-card">';
+    html += '<div class="total-card-header">';
+    html += '<div class="total-card-label">Total obligaciones</div>';
+    html += `<div class="total-card-tag">${m}</div>`;
+    html += '</div>';
+    html += `<div class="total-card-value">${fmtCompact(tot[m])}<span class="total-card-currency">${m}</span></div>`;
+    if (totD[m]) {
+      html += `<div class="total-card-delta ${deltaClass(totD[m])}">`;
+      html += totD[m] > 0
+        ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>'
+        : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>';
+      html += `${fmtSignedCompact(totD[m])} ${m} en este paso`;
+      html += '</div>';
+    } else {
+      html += '<div class="total-card-delta-empty">sin cambios en este paso</div>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+
+  const movs = allMovements.filter(m => m.registra === 'OPS' || !m.registra);
+  const affectedClients = Object.keys(obligaciones).filter(c => {
+    const cd = deltas.obligaciones[c] || {};
+    return MONEDAS.some(m => cd[m]);
+  }).length;
+
+  const layoutMode = renderOpsLayoutMode(movs.length);
+
+  html += `<div class="ops-layout" data-mode="${layoutMode}">`;
+
+  html += '<div class="section">';
+  html += '<div class="section-header">';
+  html += `<div class="section-title">Saldos por cliente</div>`;
+  const badgeCls = affectedClients > 0 ? 'affected' : '';
+  const badgeText = affectedClients > 0
+    ? `${Object.keys(obligaciones).length} clientes · ${affectedClients} afectado${affectedClients > 1 ? 's' : ''}`
+    : `${Object.keys(obligaciones).length} clientes`;
+  html += `<div class="section-badge ${badgeCls}">${badgeText}</div>`;
+  html += '</div>';
+  html += '<div class="section-body scrollable scroll-area">';
+  html += renderClientsList();
+  html += '</div>';
+  html += '</div>';
+
+  if (layoutMode !== 'full') {
+    html += '<div class="section">';
+    html += '<div class="section-header"><div class="section-title">Movimientos en Operaciones</div>';
+    html += `<div class="section-badge">${movs.length} registros</div></div>`;
+    if (!movs.length) {
+      html += '<div class="section-body">' + renderEmptyState('movements') + '</div>';
+    } else {
+      html += '<div class="section-body with-fixed-header">';
+      html += '<div class="table-grid ops-mov-grid">';
+      html += '<div class="row-header row-header-floating"><span>Tipo</span><span>Cliente</span><span class="num">Monto</span></div>';
+      html += '</div>';
+      html += '<div class="scroll-area">';
+      html += '<div class="table-grid ops-mov-grid">';
+      movs.forEach(m => {
+        const isNew = m.eventIdx === currentStep;
+        const monto = m.signo === '+' ? '+' : m.signo === '−' ? '−' : '';
+        const estado = m.estado === 'PENDING' ? ' <span class="pill pill-pending">PEND</span>' : '';
+        const ajuste = (m.tipo === 'AJUSTE_CREDITO' || m.tipo === 'AJUSTE_DEBITO') ? ' <span class="pill pill-adjust">AJUSTE</span>' : '';
+        let clienteDisplay;
+        if (m.cliente === '—') clienteDisplay = '<span class="pill pill-noclient">sin cliente</span>';
+        else if (m.cliente === 'NO IDENTIFICADO') clienteDisplay = '<span class="pill pill-pending">no identif.</span>';
+        else if (m.cliente === 'Por asignar') clienteDisplay = '<span class="pill pill-noclient">por asignar</span>';
+        else clienteDisplay = `<span style="font-size: 12px;">${m.cliente}</span>`;
+        html += `<div class="${isNew ? 'row-new' : ''}">`;
+        html += `<span class="num-strong" style="text-align:left; font-size: 12px;">${m.tipo}${estado}${ajuste}</span>`;
+        html += `<span>${clienteDisplay}</span>`;
+        html += `<span class="num" style="font-size: 12px;">${monto} ${fmt(m.monto)} ${m.moneda}</span>`;
+        html += '</div>';
+      });
+      html += '</div>';
+      html += '</div>';
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  html += '</div>';
+
+  if (layoutMode === 'full') {
+    html += '<div class="section">';
+    html += '<div class="section-header"><div class="section-title">Movimientos en Operaciones</div>';
+    html += `<div class="section-badge">0 registros</div></div>`;
+    html += renderEmptyState('movements');
+    html += '</div>';
+  }
+
+  return html;
+}
+
+function renderEmptyState(kind) {
+  if (kind === 'movements') {
+    return `<div class="empty-state">
+      <div class="empty-state-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2v6m0 12v2M2 12h6m12 0h2m-2.93-7.07l-4.24 4.24m-5.66 5.66l-4.24 4.24m12.02 0l-4.24-4.24m-5.66-5.66L4.93 4.93"></path>
+        </svg>
+      </div>
+      <div class="empty-state-title">Esperando el primer movimiento</div>
+      <div class="empty-state-desc">Avanzá al siguiente paso para registrar la primera operación.</div>
+    </div>`;
+  }
+  if (kind === 'tesoreria') {
+    return `<div class="empty-state">
+      <div class="empty-state-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="6" width="18" height="13" rx="2"></rect><circle cx="12" cy="12.5" r="2.5"></circle><path d="M3 10h18"></path>
+        </svg>
+      </div>
+      <div class="empty-state-title">Tesorería aún no registró movimientos</div>
+      <div class="empty-state-desc">Los cambios de saldo en cuentas hasta ahora provienen únicamente de movimientos de Operaciones.</div>
+    </div>`;
+  }
+  return '';
+}
+
+function renderSocietyGroups() {
+  const sociedades = [...new Set(accounts.map(a => a.sociedad))];
+  let html = '<div class="society-groups">';
+  sociedades.forEach(soc => {
+    const meta = SOCIEDADES_META[soc] || { code: '—', estructura: '—', jurisdiccion: '—', monedas: '—' };
+    const ctas = accounts.filter(a => a.sociedad === soc);
+    const totalsByMon = {};
+    ctas.forEach(a => {
+      totalsByMon[a.moneda] = (totalsByMon[a.moneda] || 0) + a.saldo;
+    });
+    const hasChangedAccount = ctas.some(a => deltas.accounts[a.id]);
+    const isCollapsed = collapsedSocieties.has(soc);
+    const expandedCls = isCollapsed ? '' : 'expanded';
+
+    html += `<div class="society-group ${expandedCls}" data-soc="${soc}">`;
+    html += `<div class="society-group-header" onclick="toggleSociety('${soc}')">`;
+    html += '<div class="society-group-title-block">';
+    html += '<svg class="society-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+    html += '<div class="society-info">';
+    html += `<div class="society-name">${soc} <span class="soc-tag soc-tag-${meta.code}" style="margin-left: var(--space-2); font-size: 9px; padding: 1px 6px;">${meta.code}</span></div>`;
+    html += `<div class="society-sub">${meta.estructura} · ${meta.jurisdiccion} · ${meta.monedas}</div>`;
+    html += '</div></div>';
+
+    html += '<div class="society-totals">';
+    Object.keys(totalsByMon).forEach(mon => {
+      html += `<div class="society-total-pill"><span class="society-total-pill-mon">${mon}</span><span class="society-total-pill-val">${fmt(totalsByMon[mon])}</span></div>`;
+    });
+    html += '</div></div>';
+
+    html += '<div class="society-group-body">';
+    html += '<div class="society-group-table">';
+    html += '<div class="row-header"><span>Banco</span><span>Cuenta</span><span>Mon.</span><span class="num">Parcial</span><span class="num">Saldo</span></div>';
+    ctas.forEach(a => {
+      const d = deltas.accounts[a.id] || 0;
+      const isChanged = d !== 0;
+      html += `<div class="${isChanged ? 'row-affected' : ''}">`;
+      html += `<span class="num-strong" style="text-align:left;">${a.estructura}</span>`;
+      html += `<span class="text-secondary">${a.cuenta}</span>`;
+      html += `<span class="text-secondary">${a.moneda}</span>`;
+      html += `<span class="num ${deltaClass(d)}">${fmtSigned(d)}</span>`;
+      html += `<span class="num ${isChanged ? 'num-strong' : ''}">${fmt(a.saldo)}</span>`;
+      html += '</div>';
+    });
+    html += '</div></div></div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+window.toggleSociety = function(soc) {
+  if (collapsedSocieties.has(soc)) {
+    collapsedSocieties.delete(soc);
+  } else {
+    collapsedSocieties.add(soc);
+  }
+  // Just toggle the class to avoid re-render
+  const el = document.querySelector(`.society-group[data-soc="${soc.replace(/"/g, '\\"')}"]`);
+  if (el) el.classList.toggle('expanded');
+};
+
+function renderTes() {
+  let html = '';
+  const fisicoTot = { ARS: 0, USDC: 0, EURC: 0 };
+  const fisicoTotD = { ARS: 0, USDC: 0, EURC: 0 };
+  const accCountByMoneda = {};
+  accounts.forEach(a => {
+    fisicoTot[a.moneda] += a.saldo;
+    accCountByMoneda[a.moneda] = (accCountByMoneda[a.moneda] || 0) + 1;
+  });
+  MONEDAS.forEach(m => { fisicoTotD[m] = deltas.physicalByCurrency[m] || 0; });
+
+  html += '<div class="section-label">Disponibilidad física · totales por moneda</div>';
+  html += '<div class="totals-grid">';
+  MONEDAS.forEach(m => {
+    html += '<div class="total-card">';
+    html += '<div class="total-card-header">';
+    html += `<div class="total-card-label">Total físico<span class="total-card-sublabel">· ${accCountByMoneda[m] || 0} ctas</span></div>`;
+    html += `<div class="total-card-tag">${m}</div>`;
+    html += '</div>';
+    html += `<div class="total-card-value">${fmtCompact(fisicoTot[m])}<span class="total-card-currency">${m}</span></div>`;
+    if (fisicoTotD[m]) {
+      html += `<div class="total-card-delta ${deltaClass(fisicoTotD[m])}">`;
+      html += fisicoTotD[m] > 0
+        ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>'
+        : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>';
+      html += `${fmtSignedCompact(fisicoTotD[m])} ${m} en este paso`;
+      html += '</div>';
+    } else {
+      html += '<div class="total-card-delta-empty">sin cambios en este paso</div>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+
+  html += '<div class="section-label" style="margin-top: var(--space-4);">Saldos por cuenta agrupados por sociedad</div>';
+  html += '<div class="section"><div class="section-body scrollable scroll-area">';
+  html += renderSocietyGroups();
+  html += '</div></div>';
+
+  const finMovs = allMovements.filter(m => m.registra === 'FIN');
+  html += '<div class="section-label" style="margin-top: var(--space-4);">Movimientos registrados por Tesorería</div>';
+  if (!finMovs.length) {
+    html += '<div class="section">';
+    html += `<div class="section-header"><div class="section-title">Movimientos · perspectiva cuenta</div><div class="section-badge">0 registros</div></div>`;
+    html += renderEmptyState('tesoreria');
+    html += '</div>';
+  } else {
+    html += '<div class="section">';
+    html += '<div class="section-header"><div class="section-title">Movimientos · perspectiva cuenta</div><div class="section-badge">' + finMovs.length + ' registros</div></div>';
+    html += '<div class="section-body with-fixed-header">';
+    html += '<div class="table-grid tes-grid">';
+    html += '<div class="row-header row-header-floating"><span>Tipo</span><span>Cuentas afectadas</span><span class="num">Monto</span></div>';
+    html += '</div>';
+    html += '<div class="scroll-area">';
+    html += '<div class="table-grid tes-grid">';
+    finMovs.forEach(m => {
+      const isNew = m.eventIdx === currentStep;
+      const intercompanyPill = m.tipo === 'PRESTAMO_INTERCOMPANY' ? ' <span class="pill pill-intercompany">INTERCOMPANY</span>' : '';
+      const finanzasPill = (m.tipo === 'PAGO_PROVEEDOR' || m.tipo === 'PAGO_SALARIO') ? ' <span class="pill pill-finanzas">FINANZAS</span>' : '';
+      const aportePill = m.tipo === 'APORTE_CAPITAL' ? ' <span class="pill pill-patrimonio">APORTE</span>' : '';
+      html += `<div class="${isNew ? 'row-new' : ''}">`;
+      html += `<span class="num-strong" style="text-align:left; font-size: 12px;">${m.tipo}${intercompanyPill}${finanzasPill}${aportePill}</span>`;
+      html += `<span style="font-size: 12px;">${m.cuenta}</span>`;
+      html += `<span class="num" style="font-size: 12px;">− ${fmt(m.monto)} ${m.moneda}</span>`;
+      html += '</div>';
+    });
+    html += '</div></div></div></div>';
+  }
+  return html;
+}
+
+function computeAccountingBalances() {
+  const balances = {};
+  GRUPOS_CONTABLES.forEach(g => { balances[g.key] = { ARS: 0, USDC: 0, EURC: 0 }; });
+  balances['Otros'] = { ARS: 0, USDC: 0, EURC: 0 };
+
+  allAsientos.forEach(a => {
+    const grpDb = groupOfAccount(a.db);
+    const grpCr = groupOfAccount(a.cr);
+    const m = a.moneda;
+    const gDb = GRUPOS_CONTABLES.find(g => g.key === grpDb);
+    if (gDb) balances[grpDb][m] += a.monto * gDb.sign.db;
+    else balances['Otros'][m] += a.monto;
+    const gCr = GRUPOS_CONTABLES.find(g => g.key === grpCr);
+    if (gCr) balances[grpCr][m] += a.monto * gCr.sign.cr;
+    else balances['Otros'][m] -= a.monto;
+  });
+
+  MONEDAS.forEach(m => {
+    const initFisico = INITIAL_ACCOUNTS.filter(a => a.moneda === m).reduce((s, a) => s + a.saldo, 0);
+    balances['Disponibilidades'][m] += initFisico;
+    const initOblig = Object.values(INITIAL_OBLIG).reduce((s, c) => s + (c[m] || 0), 0);
+    balances['Obligaciones'][m] += initOblig;
+    // Saldo de apertura de Patrimonio operativo = CapOp inicial calculada (Físico - Obligaciones - Pendientes)
+    // Pendientes en T0 son 0, entonces Patrimonio inicial = Físico - Obligaciones
+    balances['Patrimonio operativo'][m] += initFisico - initOblig;
+  });
+
+  return balances;
+}
+
+function computeAccountingDeltas() {
+  const evMatch = currentStep > 0 ? EVENTS[currentStep].id : null;
+  const dBalances = {};
+  GRUPOS_CONTABLES.forEach(g => { dBalances[g.key] = { ARS: 0, USDC: 0, EURC: 0 }; });
+  if (!evMatch) return dBalances;
+
+  allAsientos.filter(a => a.eventId === evMatch).forEach(a => {
+    const grpDb = groupOfAccount(a.db);
+    const grpCr = groupOfAccount(a.cr);
+    const m = a.moneda;
+    const gDb = GRUPOS_CONTABLES.find(g => g.key === grpDb);
+    if (gDb) dBalances[grpDb][m] += a.monto * gDb.sign.db;
+    const gCr = GRUPOS_CONTABLES.find(g => g.key === grpCr);
+    if (gCr) dBalances[grpCr][m] += a.monto * gCr.sign.cr;
+  });
+  return dBalances;
+}
+
+function renderCon() {
+  let html = '';
+  const balances = computeAccountingBalances();
+  const dBalances = computeAccountingDeltas();
+
+  html += '<div class="section-label">Saldos por grupo de cuentas contables</div>';
+  html += '<div class="con-cards-grid">';
+  GRUPOS_CONTABLES.forEach(g => {
+    const b = balances[g.key];
+    const db = dBalances[g.key];
+    const hasActivity = MONEDAS.some(m => b[m] !== 0);
+    if (!hasActivity) return;
+
+    html += `<div class="con-card ${g.cssClass}">`;
+    html += '<div class="con-card-header">';
+    html += `<span class="con-card-label">${g.key}</span>`;
+    html += `<span class="con-card-tag">${g.naturaleza}</span>`;
+    html += '</div>';
+    MONEDAS.forEach(m => {
+      const v = b[m];
+      const d = db[m];
+      if (v === 0 && !d) return;
+      html += '<div class="dim-row">';
+      html += `<span class="dim-mon">${m}</span>`;
+      html += '<span class="dim-val-wrap">';
+      html += `<span class="dim-val">${fmtCompact(v)}</span>`;
+      if (d) html += `<span class="dim-delta ${deltaClass(d)}">${fmtSignedCompact(d)}</span>`;
+      html += '</span></div>';
+    });
+    html += '</div>';
+  });
+  html += '</div>';
+
+  html += '<div class="section-label" style="margin-top: var(--space-4);">Asientos contables · partida doble · 1 asiento por sociedad</div>';
+  if (!allAsientos.length) {
+    html += '<div class="section">';
+    html += '<div class="section-header"><div class="section-title">Libro de asientos</div><div class="section-badge">0 asientos</div></div>';
+    html += `<div class="empty-state">
+      <div class="empty-state-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline>
+        </svg>
+      </div>
+      <div class="empty-state-title">Sin asientos registrados</div>
+      <div class="empty-state-desc">Cuando avancés al primer evento se generarán los asientos contables de partida doble, etiquetados por sociedad.</div>
+    </div>`;
+    html += '</div>';
+    return html;
+  }
+
+  html += '<div class="section">';
+  html += `<div class="section-header"><div class="section-title">Libro de asientos</div><div class="section-badge">${allAsientos.length} asientos</div></div>`;
+  html += '<div class="section-body scrollable scroll-area" style="padding: 0 var(--space-4);">';
+
+  // Render one asiento card per entry — each entry IS one asiento now
+  allAsientos.forEach((a, i) => {
+    const isNew = a.eventIdx === currentStep;
+    const soc = a.sociedad || 'NA';
+    const seqNum = i + 1;
+    html += `<div class="asiento-card ${isNew ? 'new' : ''}">`;
+    html += `<div class="asiento-header">`;
+    html += `<span class="asiento-id ${isNew ? 'new' : ''}">${a.eventId} · #${seqNum.toString().padStart(3, '0')}${isNew ? ' · nuevo' : ''}</span>`;
+    html += `<span class="soc-tag soc-tag-${soc}">${soc}</span>`;
+    html += `</div>`;
+    html += '<div class="asiento-grid">';
+    html += '<div class="row-header"><span>Cuenta</span><span class="num">Db</span><span class="num">Cr</span></div>';
+    html += `<div><span>${a.db}</span><span class="num num-strong">${fmt(a.monto)} ${a.moneda}</span><span class="num text-tertiary">—</span></div>`;
+    html += `<div><span style="padding-left: 12px;" class="text-secondary">${a.cr}</span><span class="num text-tertiary">—</span><span class="num num-strong">${fmt(a.monto)} ${a.moneda}</span></div>`;
+    html += '</div></div>';
+  });
+  html += '</div></div>';
+  return html;
+}
+
+function updateCounts() {
+  document.getElementById('count-ops').textContent = allMovements.filter(m => m.registra === 'OPS' || !m.registra).length;
+  document.getElementById('count-tes').textContent = allMovements.filter(m => m.registra === 'FIN').length;
+  document.getElementById('count-con').textContent = allAsientos.length;
+}
+
+function render() {
+  const ev = EVENTS[currentStep];
+  document.getElementById('event-num').textContent = ev.label;
+  document.getElementById('event-title').textContent = ev.title;
+  document.getElementById('event-desc').textContent = ev.desc;
+  document.getElementById('step-pill').textContent = 'T' + currentStep;
+  document.getElementById('step-total').textContent = 'de T' + (EVENTS.length - 1);
+  document.getElementById('prev-btn').disabled = currentStep === 0;
+  document.getElementById('next-btn').disabled = currentStep === EVENTS.length - 1;
+  renderProgress();
+  renderDimensionCards();
+  updateCounts();
+  const c = document.getElementById('tab-content');
+  c.innerHTML = '<div class="tab-panel">' + (activeTab === 'ops' ? renderOps() : activeTab === 'tes' ? renderTes() : renderCon()) + '</div>';
+}
+
+document.getElementById('prev-btn').addEventListener('click', () => { if (currentStep > 0) { currentStep--; rebuildState(); render(); } });
+document.getElementById('next-btn').addEventListener('click', () => { if (currentStep < EVENTS.length - 1) { currentStep++; rebuildState(); render(); } });
+document.getElementById('reset-btn').addEventListener('click', () => { currentStep = 0; rebuildState(); render(); });
+
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeTab = btn.dataset.tab;
+    render();
+  });
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); document.getElementById('next-btn').click(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); document.getElementById('prev-btn').click(); }
+  if (e.key === 'r' || e.key === 'R') { document.getElementById('reset-btn').click(); }
+  if (e.key === '1') document.querySelector('[data-tab="ops"]').click();
+  if (e.key === '2') document.querySelector('[data-tab="tes"]').click();
+  if (e.key === '3') document.querySelector('[data-tab="con"]').click();
+});
+
+rebuildState();
+render();
+</script>
+</body>
+</html>

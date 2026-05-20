@@ -2,7 +2,7 @@
 
 > Catálogo navegable de los discoveries existentes. Para entender la convención de naming, los estados y el ciclo de vida, ver [`README.md`](./README.md).
 >
-> Última actualización: **2026-05-19** · **22 discoveries** + **1 artefacto de soporte**
+> Última actualización: **2026-05-19** · **23 discoveries** + **2 artefactos de soporte**
 
 ---
 
@@ -29,6 +29,7 @@ Hipótesis focalizadas en un módulo específico dentro de una aplicación.
 
 | Archivo | Nombre | Estado | Owner | Última act. |
 |---|---|---|---|---|
+| [`fin-tesoreria-disponibilidades-discovery.md`](./fin-tesoreria-disponibilidades-discovery.md) | FIN · Tesorería · Disponibilidades — modelo conceptual del módulo | En investigación | Yasmani Rodriguez | 2026-05-19 |
 | [`lex-alertas-discovery.md`](./lex-alertas-discovery.md) | LEX — Módulo Alertas · Discovery Document | En investigación | Yasmani Rodriguez | 2026-04-24 |
 | [`lex-limites-discovery.md`](./lex-limites-discovery.md) | LEX — Límites · Discovery Document | En investigación | Yasmani Rodriguez | 2026-04-23 |
 | [`trd-proveedores-de-liquidez-discovery.md`](./trd-proveedores-de-liquidez-discovery.md) | TRD — Proveedores de Liquidez · Discovery Document | Concluida | Yasmani Rodriguez | 2026-04-10 |
@@ -95,10 +96,11 @@ Hipótesis sobre cómo trabajamos: automatizaciones de gestión, SLAs, herramien
 
 ## Artefactos de soporte
 
-Archivos que viven en `discoveries/` pero **no son discoveries** — son insumos o salidas auxiliares de un discovery (briefings, transcripts, drafts intermedios). Se nombran con un sufijo distinto a `-discovery.md` para hacerlo evidente.
+Archivos que viven en `discoveries/` pero **no son discoveries** — son insumos o salidas auxiliares de un discovery (briefings, transcripts, drafts intermedios, artefactos de validación). Se nombran con un sufijo distinto a `-discovery.md` para hacerlo evidente.
 
 | Archivo | Propósito | Discovery asociado |
 |---|---|---|
+| [`fin-tesoreria-disponibilidades.html`](./fin-tesoreria-disponibilidades.html) | Simulador interactivo del modelo conceptual de Disponibilidades — 16 eventos T0→T15 con tres perspectivas sincronizadas, asientos contables adscriptos a sociedad, collapsibles por sociedad en la lente de Tesorería, y 8vo grupo contable Patrimonio operativo con saldo de apertura. HTML standalone para validación con stakeholders. **No es el prototipo del módulo** | [`fin-tesoreria-disponibilidades-discovery.md`](./fin-tesoreria-disponibilidades-discovery.md) |
 | [`core-modulos-transversales-briefing-tech.md`](./core-modulos-transversales-briefing-tech.md) | Briefing técnico para Claude Design — Refinamiento del set transversal del core | [`core-modulos-transversales-discovery.md`](./core-modulos-transversales-discovery.md) |
 
 ---
