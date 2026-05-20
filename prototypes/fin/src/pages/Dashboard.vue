@@ -119,13 +119,15 @@ const trendDelta = computed<{ pct: number; positive: boolean } | null>(() => {
 const sociedadCount = computed(() => POSICION_TREE.length);
 
 // Axis tick formatters for the trend chart. X is a unix-ms timestamp →
-// short DD/MM display; Y is USD millions → compact "USD XXM" display.
-const TREND_X_FORMATTER = new Intl.DateTimeFormat('es-AR', {
-  day: '2-digit',
-  month: '2-digit',
-});
+// days-from-today (`-Nd` for past days, `Hoy` for today); Y is USD
+// millions → compact "USD XXM" display. The relative-day labeling makes
+// the selected period (7d / 30d) obvious at a glance.
+const TREND_TODAY_MS = new Date('2026-04-24T00:00:00Z').getTime();
+const MS_PER_DAY = 86_400_000;
 function formatTrendX(value: number): string {
-  return TREND_X_FORMATTER.format(new Date(value));
+  const daysFromToday = Math.round((value - TREND_TODAY_MS) / MS_PER_DAY);
+  if (daysFromToday === 0) return 'Hoy';
+  return `${daysFromToday}d`;
 }
 function formatTrendY(value: number): string {
   return `USD ${value.toFixed(1)}M`;
