@@ -113,6 +113,48 @@ export type GrupoContable =
   | 'egresos';
 
 /**
+ * Canonical set of rails recognized by FIN.Disponibilidades. Every
+ * `movimiento` carries one of these as `ops.rail` — the field is a
+ * closed contract, not an open string. Adding a new rail SHALL go
+ * through an OpenSpec change.
+ */
+export type MovimientoRail =
+  | 'WIRE'
+  | 'VCURRENCY USDT'
+  | 'VCURRENCY USDC'
+  | 'VCURRENCY'
+  | 'SWIFT'
+  | 'SPEI'
+  | 'SPE'
+  | 'SEPA'
+  | 'PIX'
+  | 'INTERNAL'
+  | 'FX'
+  | 'FEDWIRE'
+  | 'Faster Payments'
+  | 'ARDUA'
+  | 'ACH';
+
+/** Canonical display order for the Rail filter dropdown. */
+export const RAIL_OPTIONS: readonly MovimientoRail[] = [
+  'WIRE',
+  'VCURRENCY USDT',
+  'VCURRENCY USDC',
+  'VCURRENCY',
+  'SWIFT',
+  'SPEI',
+  'SPE',
+  'SEPA',
+  'PIX',
+  'INTERNAL',
+  'FX',
+  'FEDWIRE',
+  'Faster Payments',
+  'ARDUA',
+  'ACH',
+];
+
+/**
  * Origin of a recorded movement — which app registered it.
  *   - `'OPS'` — events flowing from `core-ops-backend` (vostro: depósitos,
  *     retiros, fees, swaps, pendientes, ajustes, etc.).
@@ -258,7 +300,7 @@ export interface Movimiento {
 
 /** OPS-native namespace nested inside a `movimiento` record. */
 export interface MovimientoOps {
-  rail: string;
+  rail: MovimientoRail;
   account: string;
   client: string | null;
   counterparty: string | null;

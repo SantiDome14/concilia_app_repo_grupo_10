@@ -238,6 +238,24 @@ describe('Disponibilidades page · FIN (REQ-50)', () => {
     expect(labels).not.toContain('Partner ·');
   });
 
+  it('Rail filter options come from the canonical RAIL_OPTIONS constant (15 entries)', async () => {
+    const { RAIL_OPTIONS } = await import('@/types/fin');
+    expect(RAIL_OPTIONS).toHaveLength(15);
+    expect(RAIL_OPTIONS).toContain('WIRE');
+    expect(RAIL_OPTIONS).toContain('VCURRENCY USDT');
+    expect(RAIL_OPTIONS).toContain('VCURRENCY USDC');
+    expect(RAIL_OPTIONS).toContain('SWIFT');
+    expect(RAIL_OPTIONS).toContain('SPE');
+    expect(RAIL_OPTIONS).toContain('SEPA');
+    expect(RAIL_OPTIONS).toContain('PIX');
+    expect(RAIL_OPTIONS).toContain('INTERNAL');
+    expect(RAIL_OPTIONS).toContain('FX');
+    expect(RAIL_OPTIONS).toContain('FEDWIRE');
+    expect(RAIL_OPTIONS).toContain('Faster Payments');
+    expect(RAIL_OPTIONS).toContain('ARDUA');
+    expect(RAIL_OPTIONS).toContain('ACH');
+  });
+
   it('Movimientos Lista view exposes columns Rail / Banco-Cuenta (no Partner column — redundant)', async () => {
     const { wrapper } = await mountPage(
       `${ROUTE_PATHS.DISPONIBILIDADES}?tab=movimientos`,

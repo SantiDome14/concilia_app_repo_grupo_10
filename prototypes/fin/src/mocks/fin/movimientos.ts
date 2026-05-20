@@ -51,7 +51,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     asiento_id: 'AS-12840-ASC',
     evento_id: null,
     ops: {
-      rail: 'Bridge USD',
+      rail: 'WIRE',
       account: 'BR-7733',
       client: 'Tecno SA',
       counterparty: null,
@@ -80,7 +80,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     asiento_id: 'AS-12841-CP',
     evento_id: null,
     ops: {
-      rail: 'Pool BitGo USDC',
+      rail: 'VCURRENCY USDC',
       account: '0xBG...A8C2',
       client: 'Inversiones Norte',
       counterparty: 'Cliente externo',
@@ -114,7 +114,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     asiento_id: 'AS-12839-HP',
     evento_id: null,
     ops: {
-      rail: 'CBU Coinag',
+      rail: 'SPE',
       account: '0170-4521',
       client: 'ACME Corp',
       counterparty: null,
@@ -143,7 +143,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     asiento_id: 'AS-12831-CP',
     evento_id: null,
     ops: {
-      rail: 'Pool BitGo USDC',
+      rail: 'VCURRENCY USDC',
       account: '0xBG...A8C2',
       client: null,
       counterparty: 'BitGo',
@@ -172,7 +172,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     asiento_id: 'AS-12838-CP',
     evento_id: 'EV-99021',
     ops: {
-      rail: 'Pool BitGo USDT',
+      rail: 'VCURRENCY USDT',
       account: '0xBG...USDT',
       client: 'Inversiones Norte',
       counterparty: null,
@@ -200,7 +200,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     asiento_id: 'AS-12837-CP',
     evento_id: 'EV-99021',
     ops: {
-      rail: 'Pool BitGo USDC',
+      rail: 'VCURRENCY USDC',
       account: '0xBG...A8C2',
       client: 'Inversiones Norte',
       counterparty: null,
@@ -228,7 +228,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     asiento_id: 'AS-12831A-HP',
     evento_id: null,
     ops: {
-      rail: 'BIND',
+      rail: 'SPE',
       account: '4403443/1',
       client: 'ACME Corp',
       counterparty: 'BIND',
@@ -258,7 +258,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     asiento_id: 'AS-12830-ASC',
     evento_id: null,
     ops: {
-      rail: 'Bridge USD',
+      rail: 'WIRE',
       account: 'BR-7733',
       client: 'Tecno SA',
       counterparty: null,
@@ -291,7 +291,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     asiento_id: 'AS-12842-HP',
     evento_id: null,
     ops: {
-      rail: 'CBU Coinag',
+      rail: 'SPE',
       account: '0170-4521',
       client: null,
       counterparty: null,
@@ -319,7 +319,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     asiento_id: 'AS-12829-AV',
     evento_id: null,
     ops: {
-      rail: 'Pool BitGo USDC (Astra)',
+      rail: 'VCURRENCY USDC',
       account: '0xBG...AS',
       client: null,
       counterparty: null,
@@ -351,7 +351,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     asiento_id: 'AS-12836-ASC',
     evento_id: 'EV-99012',
     ops: {
-      rail: 'Bridge USD → Convera USD',
+      rail: 'INTERNAL',
       account: 'BR-7733',
       client: null,
       counterparty: 'Convera',
@@ -380,7 +380,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     asiento_id: 'AS-12824-HP',
     evento_id: null,
     ops: {
-      rail: 'BIND',
+      rail: 'SPE',
       account: '4403443/1',
       client: null,
       counterparty: 'BIND',
@@ -408,7 +408,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     asiento_id: 'AS-12820-ASC',
     evento_id: null,
     ops: {
-      rail: 'Bridge USD',
+      rail: 'WIRE',
       account: 'BR-7733',
       client: null,
       counterparty: 'Bridge',
@@ -436,7 +436,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     asiento_id: 'AS-12822-HP',
     evento_id: null,
     ops: {
-      rail: 'BIND',
+      rail: 'SPE',
       account: '4403443/1',
       client: null,
       counterparty: 'AFIP',
@@ -464,7 +464,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     asiento_id: 'AS-12819-HP',
     evento_id: null,
     ops: {
-      rail: 'BIND',
+      rail: 'SPE',
       account: '4403443/1',
       client: null,
       counterparty: 'Nómina interna',
@@ -492,7 +492,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     asiento_id: 'AS-12818-ASC',
     evento_id: null,
     ops: {
-      rail: 'Bridge USD',
+      rail: 'WIRE',
       account: 'BR-7733',
       client: null,
       counterparty: null,
@@ -525,7 +525,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     asiento_id: 'AS-99001-HP',
     evento_id: 'EV-99001',
     ops: {
-      rail: 'COINAG → Bridge',
+      rail: 'ARDUA',
       account: '0170-4521',
       client: null,
       counterparty: 'ASC',
@@ -556,7 +556,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     asiento_id: 'AS-99001-ASC',
     evento_id: 'EV-99001',
     ops: {
-      rail: 'COINAG → Bridge',
+      rail: 'ARDUA',
       account: 'BR-7733',
       client: null,
       counterparty: 'HP',
@@ -587,7 +587,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     asiento_id: 'AS-99002-HP',
     evento_id: 'EV-99002',
     ops: {
-      rail: 'BitGo HP → BitGo CP',
+      rail: 'ARDUA',
       account: '0xBG...HP',
       client: null,
       counterparty: 'CP',
@@ -618,7 +618,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     asiento_id: 'AS-99002-CP',
     evento_id: 'EV-99002',
     ops: {
-      rail: 'BitGo HP → BitGo CP',
+      rail: 'ARDUA',
       account: '0xBG...A8C2',
       client: null,
       counterparty: 'HP',
@@ -653,7 +653,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     asiento_id: 'AS-99021-CP',
     evento_id: 'EV-99021',
     ops: {
-      rail: 'Pool BitGo (SWAP)',
+      rail: 'INTERNAL',
       account: '0xBG...A8C2',
       client: null,
       counterparty: null,
@@ -681,7 +681,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     asiento_id: 'AS-12823-ASC',
     evento_id: null,
     ops: {
-      rail: 'Bridge USD',
+      rail: 'WIRE',
       account: 'BR-7733',
       client: null,
       counterparty: null,
@@ -709,7 +709,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     asiento_id: 'AS-12832-HP',
     evento_id: null,
     ops: {
-      rail: 'CVU Cliente Pool',
+      rail: 'SPE',
       account: 'CV-9999',
       client: null,
       counterparty: 'AFIP',

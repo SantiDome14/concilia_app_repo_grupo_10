@@ -55,15 +55,16 @@ import {
 import { categoriaOf } from '@/lib/movimientos/categoria';
 import { formatCompact } from '@/lib/format';
 import { useDisponibilidadesCatalogStore } from '@/stores/disponibilidadesCatalog';
-import type {
-  CuentaBanco,
-  EstructuraBanco,
-  EstructuraTipo,
-  Moneda,
-  Movimiento,
-  MovimientoCategoria,
-  MovimientoTipo,
-  PerMoneda,
+import {
+  RAIL_OPTIONS,
+  type CuentaBanco,
+  type EstructuraBanco,
+  type EstructuraTipo,
+  type Moneda,
+  type Movimiento,
+  type MovimientoCategoria,
+  type MovimientoTipo,
+  type PerMoneda,
 } from '@/types/fin';
 import type { ModuleCTA } from '@/types/manifest';
 import type { KanbanAxis } from '@/types/kanban';
@@ -264,10 +265,12 @@ function withinPeriodo(fecha: string, periodo: Periodo): boolean {
   return new Date(`${fecha}T00:00:00Z`).getTime() >= cutoff;
 }
 
-/** Distinct sorted rail labels present in the ledger — drives the Rail filter. */
-const railOptions = computed<string[]>(() =>
-  Array.from(new Set(MOVIMIENTOS.map((m) => m.ops.rail).filter(Boolean))).sort(),
-);
+/**
+ * Rail filter options come from the canonical `RAIL_OPTIONS` constant —
+ * we expose the full set, not just rails present in the current mock, so
+ * the filter shape is stable across data states.
+ */
+const railOptions = RAIL_OPTIONS;
 
 /** Cuenta options pulled from the catalog store (active only). */
 const cuentaOptions = computed<Array<{ value: string; label: string }>>(() =>

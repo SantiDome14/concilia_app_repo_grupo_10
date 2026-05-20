@@ -45,6 +45,21 @@ V1 does NOT apply cross-currency conversions: every KPI and saldo SHALL be prese
 - **THEN** the confirmation is blocked
 - **AND** an inline error reads "Ecuación maestra desbalanceada en HP / ARS — investigar antes de confirmar"
 
+### Requirement: The 15 canonical rails MUST be the closed contract of MovimientoRail
+
+The `MovimientoRail` literal union SHALL contain exactly the 15 values exposed by the `RAIL_OPTIONS` constant — `WIRE`, `VCURRENCY USDT`, `VCURRENCY USDC`, `VCURRENCY`, `SWIFT`, `SPEI`, `SPE`, `SEPA`, `PIX`, `INTERNAL`, `FX`, `FEDWIRE`, `Faster Payments`, `ARDUA`, `ACH`. Every `Movimiento.ops.rail` SHALL be one of these — `ops.rail: string` was tightened to `ops.rail: MovimientoRail`. Adding or renaming a rail SHALL go through an OpenSpec change that extends both the type and this Requirement.
+
+#### Scenario: Type system rejects unknown rails
+
+- **WHEN** a mock or a manual load assigns `ops.rail: 'foo'`
+- **THEN** the TypeScript build fails with a literal-union mismatch on `MovimientoRail`
+
+#### Scenario: Rail filter renders the 15 canonical values
+
+- **WHEN** the Movimientos sub-tab's Rail filter is opened
+- **THEN** the dropdown lists 15 entries (one per rail of `RAIL_OPTIONS`) plus the `Todos` default
+- **AND** the entries are rendered in the canonical display order
+
 ### Requirement: The 18-row matriz de tipos MUST be the closed contract of MovimientoTipo
 
 The `MovimientoTipo` union SHALL contain exactly the 18 values enumerated below. The matriz is the closed contract; tipos that look "pending" (e.g. a deposit awaiting client identification) are NOT separate tipos — they are records of an existing tipo with `fin.cliente_id == null`. The simulator-only pending tipos (`SOLICITUD_RETIRO_PENDING`, `DEPOSITO_PENDIENTE`, `ASIGNACION_PENDIENTE`) are NOT part of the union.
@@ -381,7 +396,7 @@ The `Categoría` axis SHALL be the default lens for predicate evaluation (replac
 - **Search input** — placeholder "Buscar por nombre de cliente o ID…". Searches case-insensitively against `ops.client` and `id`.
 - **Período** — values `Todo` (default) / `Día` / `Semana` / `Mes` relative to the page's reference "today".
 - **Tipo** — values `Todos` (default) + one entry per tipo of the matriz (18 entries).
-- **Rail** — values `Todos` (default) + each distinct `ops.rail` present in the ledger.
+- **Rail** — values `Todos` (default) + the 15 canonical rails exposed by `RAIL_OPTIONS` (WIRE / VCURRENCY USDT / VCURRENCY USDC / VCURRENCY / SWIFT / SPEI / SPE / SEPA / PIX / INTERNAL / FX / FEDWIRE / Faster Payments / ARDUA / ACH). The set is rendered in full regardless of the rails present in the current data — the filter shape stays stable across data states.
 - **Estructura / Cuenta** — values `Todas` (default) + each active cuenta from the catalog (label: `banco · moneda · numero`). This filter SHALL also subsume the Partner discriminator — `ops.partner` is the bank / structure of the cuenta, so a separate Partner filter would be redundant.
 
 A "Limpiar" button SHALL appear when any filter is active and SHALL reset all filters to their default value. Native `<select>` SHALL NOT be used.
