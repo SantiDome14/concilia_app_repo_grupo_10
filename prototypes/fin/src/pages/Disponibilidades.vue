@@ -926,7 +926,7 @@ function supervisionBadgeVariant(
               <td class="px-3.5 py-2.5 text-right text-xs font-mono text-t-2">{{ m.monto }}</td>
               <td class="px-3.5 py-2.5">
                 <Badge
-                  :variant="m.origen === 'OPS' ? 'info' : m.origen === 'TRD' ? 'neutral' : 'warning'"
+                  :variant="m.origen === 'OPS' ? 'info' : 'warning'"
                   class="text-[10px]"
                 >
                   {{ m.origen }}
@@ -998,7 +998,7 @@ function supervisionBadgeVariant(
               <span class="truncate text-sm font-semibold text-t-1">{{ m.tipo }}</span>
             </div>
             <Badge
-              :variant="m.origen === 'OPS' ? 'info' : m.origen === 'TRD' ? 'neutral' : 'warning'"
+              :variant="m.origen === 'OPS' ? 'info' : 'warning'"
               class="text-[10px]"
             >
               {{ m.origen }}
@@ -1050,13 +1050,7 @@ function supervisionBadgeVariant(
                   </span>
                 </div>
                 <Badge
-                  :variant="
-                    (record as unknown as Movimiento).origen === 'OPS'
-                      ? 'info'
-                      : (record as unknown as Movimiento).origen === 'TRD'
-                      ? 'neutral'
-                      : 'warning'
-                  "
+                  :variant="(record as unknown as Movimiento).origen === 'OPS' ? 'info' : 'warning'"
                   class="text-[10px]"
                 >
                   {{ (record as unknown as Movimiento).origen }}

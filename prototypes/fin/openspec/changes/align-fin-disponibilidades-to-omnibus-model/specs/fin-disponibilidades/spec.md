@@ -333,7 +333,7 @@ The dialog SHALL validate required fields and apply the lookups cascade (Socieda
 
 ### Requirement: Movimientos sub-tab MUST list the global ledger with three views and 7 reconfigurable axes including Categoría
 
-The Movimientos sub-tab SHALL render the global ledger of FIN, including movements originating from OPS, TRD, and Manual sources, with no filter pre-applied by origin. The L2 KPI strip SHALL expose:
+The Movimientos sub-tab SHALL render the global ledger of FIN, including movements registered by either app (`origen ∈ {'OPS', 'FIN'}` — `'TRD'` no aplica al ledger de Disponibilidades, and the legacy `'Manual'` collapses into `'FIN'`). The view SHALL NOT apply any filter by origin at mount; the operator MAY filter via the L3 toolbar. The L2 KPI strip SHALL expose:
 
 | KPI | Body |
 |---|---|

@@ -18,15 +18,18 @@
 // `cliente_id: null` (no synthetic placeholder).
 //
 // Supervisión state mix: pendiente_de_supervision (×3), confirmado
-// (×2), rechazado (×1), no_aplica (rest). Manuals authored by
+// (×2), rechazado (×1), no_aplica (rest). FIN-side records authored by
 // `dev-yasmani-2` are supervisable by `dev-yasmani` per the
 // `created_by !== current_user` predicate.
+//
+// `origen` enumeration: `'OPS'` (vostros + pendientes registrados en OPS)
+// vs `'FIN'` (nostros, no-operativos, intercompany, ajustes manuales).
+// `'TRD'` no aplica al ledger de Disponibilidades.
 // ════════════════════════════════════════════════════════════════════
 
 import type { Movimiento, PerMoneda } from '@/types/fin';
 
 const SYSTEM_OPS = 'system-ops';
-const SYSTEM_TRD = 'system-trd';
 const USER_1 = 'dev-yasmani';
 const USER_2 = 'dev-yasmani-2';
 
@@ -139,7 +142,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     },
   },
 
-  // ─── B · REBATE — Manual, confirmado (cliente externo) ──────────
+  // ─── B · REBATE — FIN, confirmado (cliente externo) ──────────
   {
     id: 'M-2026-12831',
     tipo: 'REBATE',
@@ -147,7 +150,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '+ USDC 1.200',
     moneda: 'USDC',
     status: 'COMPLETED',
-    origen: 'Manual',
+    origen: 'FIN',
     requires_supervision: true,
     supervised_by: USER_2,
     supervised_at: '2026-04-22T15:30:00Z',
@@ -236,7 +239,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     },
   },
 
-  // ─── B · AJUSTE_CREDITO — Manual, pendiente_de_supervision ──────
+  // ─── B · AJUSTE_CREDITO — FIN, pendiente_de_supervision ──────
   {
     id: 'M-2026-12831A',
     tipo: 'AJUSTE_CREDITO',
@@ -244,7 +247,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '+ ARS 8.500',
     moneda: 'ARS',
     status: 'COMPLETED',
-    origen: 'Manual',
+    origen: 'FIN',
     requires_supervision: true,
     supervised_by: null,
     supervised_at: null,
@@ -270,7 +273,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     },
   },
 
-  // ─── B · AJUSTE_DEBITO — Manual, confirmado ─────────────────────
+  // ─── B · AJUSTE_DEBITO — FIN, confirmado ─────────────────────
   {
     id: 'M-2026-12830',
     tipo: 'AJUSTE_DEBITO',
@@ -278,7 +281,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '- USD 50.000',
     moneda: 'USD',
     status: 'COMPLETED',
-    origen: 'Manual',
+    origen: 'FIN',
     requires_supervision: true,
     supervised_by: USER_2,
     supervised_at: '2026-04-22T12:00:00Z',
@@ -450,7 +453,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '- USD 250.000',
     moneda: 'USD',
     status: 'COMPLETED',
-    origen: 'Manual',
+    origen: 'FIN',
     requires_supervision: true,
     supervised_by: USER_2,
     supervised_at: '2026-04-23T14:10:00Z',
@@ -475,7 +478,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     },
   },
 
-  // ─── C · COMISION_BANCARIA — Manual, pendiente_de_supervision ───
+  // ─── C · COMISION_BANCARIA — FIN, pendiente_de_supervision ───
   {
     id: 'M-2026-12824',
     tipo: 'COMISION_BANCARIA',
@@ -483,7 +486,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '- ARS 8.500',
     moneda: 'ARS',
     status: 'COMPLETED',
-    origen: 'Manual',
+    origen: 'FIN',
     requires_supervision: true,
     supervised_by: null,
     supervised_at: null,
@@ -507,7 +510,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     },
   },
 
-  // ─── C · INTERES_BANCARIO — Manual, confirmado ──────────────────
+  // ─── C · INTERES_BANCARIO — FIN, confirmado ──────────────────
   {
     id: 'M-2026-12820',
     tipo: 'INTERES_BANCARIO',
@@ -515,7 +518,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '+ USD 1.250',
     moneda: 'USD',
     status: 'COMPLETED',
-    origen: 'Manual',
+    origen: 'FIN',
     requires_supervision: true,
     supervised_by: USER_2,
     supervised_at: '2026-04-18T17:00:00Z',
@@ -539,7 +542,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     },
   },
 
-  // ─── C · PAGO_PROVEEDOR — Manual, pendiente_de_supervision ──────
+  // ─── C · PAGO_PROVEEDOR — FIN, pendiente_de_supervision ──────
   {
     id: 'M-2026-12822',
     tipo: 'PAGO_PROVEEDOR',
@@ -547,7 +550,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '- ARS 3.200.000',
     moneda: 'ARS',
     status: 'COMPLETED',
-    origen: 'Manual',
+    origen: 'FIN',
     requires_supervision: true,
     supervised_by: null,
     supervised_at: null,
@@ -571,7 +574,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     },
   },
 
-  // ─── C · PAGO_SALARIOS — Manual, pendiente_de_supervision ───────
+  // ─── C · PAGO_SALARIOS — FIN, pendiente_de_supervision ───────
   {
     id: 'M-2026-12819',
     tipo: 'PAGO_SALARIOS',
@@ -579,7 +582,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '- ARS 18.000.000',
     moneda: 'ARS',
     status: 'COMPLETED',
-    origen: 'Manual',
+    origen: 'FIN',
     requires_supervision: true,
     supervised_by: null,
     supervised_at: null,
@@ -603,7 +606,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     },
   },
 
-  // ─── C · APORTE_CAPITAL — Manual, confirmado ────────────────────
+  // ─── C · APORTE_CAPITAL — FIN, confirmado ────────────────────
   {
     id: 'M-2026-12818',
     tipo: 'APORTE_CAPITAL',
@@ -611,7 +614,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '+ USD 500.000',
     moneda: 'USD',
     status: 'COMPLETED',
-    origen: 'Manual',
+    origen: 'FIN',
     requires_supervision: true,
     supervised_by: USER_2,
     supervised_at: '2026-04-15T10:00:00Z',
@@ -648,7 +651,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '- USD 300.000',
     moneda: 'USD',
     status: 'COMPLETED',
-    origen: 'Manual',
+    origen: 'FIN',
     requires_supervision: true,
     supervised_by: USER_2,
     supervised_at: '2026-04-14T16:00:00Z',
@@ -683,7 +686,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '+ USD 300.000',
     moneda: 'USD',
     status: 'COMPLETED',
-    origen: 'Manual',
+    origen: 'FIN',
     requires_supervision: true,
     supervised_by: USER_2,
     supervised_at: '2026-04-14T16:00:00Z',
@@ -718,7 +721,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '- USDC 100.000',
     moneda: 'USDC',
     status: 'COMPLETED',
-    origen: 'Manual',
+    origen: 'FIN',
     requires_supervision: true,
     supervised_by: USER_1,
     supervised_at: '2026-04-13T11:30:00Z',
@@ -753,7 +756,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '+ USDC 100.000',
     moneda: 'USDC',
     status: 'COMPLETED',
-    origen: 'Manual',
+    origen: 'FIN',
     requires_supervision: true,
     supervised_by: USER_1,
     supervised_at: '2026-04-13T11:30:00Z',
@@ -816,7 +819,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     },
   },
 
-  // ─── E · AJUSTE_MANUAL — Manual, rechazado (válvula de escape) ──
+  // ─── E · AJUSTE_MANUAL — FIN, rechazado (válvula de escape) ──
   {
     id: 'M-2026-12823',
     tipo: 'AJUSTE_MANUAL',
@@ -824,7 +827,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '+ USD 12.000',
     moneda: 'USD',
     status: 'COMPLETED',
-    origen: 'Manual',
+    origen: 'FIN',
     requires_supervision: true,
     supervised_by: USER_2,
     supervised_at: '2026-04-19T18:42:00Z',
@@ -848,7 +851,7 @@ export const MOVIMIENTOS: Movimiento[] = [
     },
   },
 
-  // ─── TRD · TAX-style movement (now PAGO_PROVEEDOR with AFIP) ────
+  // ─── FIN · PAGO_PROVEEDOR a AFIP (impuesto recurrente) ──────────
   {
     id: 'M-2026-12832',
     tipo: 'PAGO_PROVEEDOR',
@@ -856,12 +859,12 @@ export const MOVIMIENTOS: Movimiento[] = [
     monto: '- ARS 145.000',
     moneda: 'ARS',
     status: 'COMPLETED',
-    origen: 'TRD',
+    origen: 'FIN',
     requires_supervision: false,
     supervised_by: null,
     supervised_at: null,
     estado_de_supervision: 'no_aplica',
-    created_by: SYSTEM_TRD,
+    created_by: 'system-fin',
     asiento_id: 'AS-12832-HP',
     evento_id: null,
     ops: {

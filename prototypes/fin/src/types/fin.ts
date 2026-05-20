@@ -17,7 +17,7 @@
 //      surfaces.
 //
 // Per REQ-50 (`add-fin-disponibilidades`):
-//   - `Movimiento.origen` is now top-level with values `'OPS' | 'TRD' | 'Manual'`.
+//   - `Movimiento.origen` is now top-level with values `'OPS' | 'FIN'`.
 //   - `Movimiento.requires_supervision`, `supervised_by`, `supervised_at`,
 //     `estado_de_supervision` are top-level fields for manual loads.
 //   - `RetiroCola` and the Cola sub-tab are eliminated; the queue
@@ -109,12 +109,16 @@ export type GrupoContable =
   | 'egresos';
 
 /**
- * Origin of a recorded movement (REQ-50 §5.1).
- *   - `'OPS'` — events from `core-ops-backend` (vostro movements).
- *   - `'TRD'` — events from `core-trd-backend` (roadmap; not v1.0).
- *   - `'Manual'` — manual loads from FIN.Disponibilidades.
+ * Origin of a recorded movement — which app registered it.
+ *   - `'OPS'` — events flowing from `core-ops-backend` (vostro: depósitos,
+ *     retiros, fees, swaps, pendientes, ajustes, etc.).
+ *   - `'FIN'` — events registered from FIN.Disponibilidades (nostros y
+ *     no-operativos: comisiones bancarias, intereses, pagos a proveedores,
+ *     salarios, intercompany, sweeping, aportes de capital, ajustes
+ *     manuales). Sustituye los antiguos `'Manual'` y `'TRD'` —
+ *     `'TRD'` no aplica al ledger de Disponibilidades.
  */
-export type MovimientoOrigen = 'OPS' | 'TRD' | 'Manual';
+export type MovimientoOrigen = 'OPS' | 'FIN';
 
 /** Display state of a movement in the Tesorería ledger view (display-only). */
 export type MovimientoEstado = 'CONF' | 'COLA' | 'PEND';
