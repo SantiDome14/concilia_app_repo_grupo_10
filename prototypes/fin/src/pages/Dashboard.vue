@@ -7,13 +7,12 @@ import {
   Calendar,
   Check,
   Clock,
-  Download,
   FileText,
+  Inbox as InboxIcon,
   Plus,
   TrendingUp,
 } from 'lucide-vue-next';
 import { Badge, type BadgeVariants } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { LineChart } from '@/components/data-display';
 import {
   Select,
@@ -29,6 +28,7 @@ import { REPORTS_CATALOG } from '@/mocks/genericos/reportes';
 import { POSICION_TREE } from '@/mocks/fin/disponibilidades';
 import { DASHBOARD_ACTIVITY } from '@/mocks/fin/dashboard-activity';
 import {
+  latestPosicionPoint,
   slicePosicionTrend,
   type DashboardPeriod,
   type PosicionTrendPoint,
@@ -40,10 +40,10 @@ import { cn } from '@/lib/cn';
 // Dashboard — vista consolidada FIN
 // ────────────────────────────────────────────────────────────────────
 // Replicates the legacy `prototypes/fin-old/fin-prototype.html` layout:
-//   · L1 header: title + period chip + "Exportar resumen" CTA
-//   · L2 KPIs: 4 FIN-specific tiles
-//   · Row A: "Posición por sociedad" (2/3) + "Alertas activas" (1/3)
-//   · Row B: "Próximos vencimientos · Reportes" (2/3) + "Actividad reciente" (1/3)
+//   · L1 header: title + period chip
+//   · L2 KPIs: 4 canonical tiles (Posición consolidada / Alertas / Inbox / Reportes)
+//   · Row A: Trend Posición consolidada (2/3) + Alertas activas (1/3)
+//   · Row B: Próximos vencimientos · Reportes (2/3) + Actividad reciente (1/3)
 // Data is derived from existing FIN mocks where possible; the rest is
 // surfaced via small dashboard-specific seed files.
 // ════════════════════════════════════════════════════════════════════
@@ -94,13 +94,9 @@ const reportesVencidos = computed(() => {
  * Placeholder USD-eq value for the Posición consolidada KPI. V1 does NOT
  * apply cross-currency conversions; this requires the Tipos de Cambio
  * (FX rates) catalog which is a follow-up change. Until then we surface
- * the static seed from the trend series' last point (latest day, regardless
- * of the chart period selected).
+ * the latest seed value, independent of the chart's period selector.
  */
-const posicionConsolidadaUsdM = computed<number>(() => {
-  const trend = slicePosicionTrend('dia');
-  return trend.length > 0 ? (trend[trend.length - 1]?.value ?? 28.4) : 28.4;
-});
+const posicionConsolidadaUsdM = computed<number>(() => latestPosicionPoint().value);
 
 // ─── Trend de Posición consolidada (USD-eq) ──────────────────────────
 // Driven by the L1 period selector — canonical 5-value period set
@@ -131,11 +127,9 @@ const MS_PER_DAY = 86_400_000;
 
 /** Days between adjacent X-axis labels per period. */
 const X_LABEL_EVERY: Record<DashboardPeriod, number> = {
-  dia: 1,
-  mes: 5,
-  trimestre: 15,
-  semestre: 30,
-  año: 30,
+  '7': 1,
+  '30': 5,
+  '90': 15,
 };
 
 function formatTrendX(value: number): string {
@@ -282,22 +276,15 @@ const ACTIVITY_ICON: Record<'success' | 'info' | 'warning', typeof Check> = {
   warning: Clock,
 };
 
-// ─── L1 · Period selector + Export CTA ───────────────────────────────
-// Canonical period set: Día (Hoy) / Mes / Trimestre / Semestre / Año.
-// The trend chart renders one X-axis tick per day in the selected range.
-const period = ref<DashboardPeriod>('mes');
+// ─── L1 · Period selector ────────────────────────────────────────────
+// Standard "Últimos N días" set — 7 / 30 / 90. Drives the trend chart
+// (1 X-axis tick per day) and any other surfaces that consume `period`.
+const period = ref<DashboardPeriod>('30');
 const PERIOD_OPTIONS: Array<{ value: DashboardPeriod; label: string }> = [
-  { value: 'dia', label: 'Hoy' },
-  { value: 'mes', label: 'Mes' },
-  { value: 'trimestre', label: 'Trimestre' },
-  { value: 'semestre', label: 'Semestre' },
-  { value: 'año', label: 'Año' },
+  { value: '7', label: 'Últimos 7 días' },
+  { value: '30', label: 'Últimos 30 días' },
+  { value: '90', label: 'Últimos 90 días' },
 ];
-
-function exportSummary(): void {
-  // Real export would target a backend endpoint per `core-api-layer`.
-  // For the prototype, the toast suffices.
-}
 
 function navigateTo(href: string): void {
   void router.push(href);
@@ -337,14 +324,6 @@ function onCardKeydown(event: KeyboardEvent, href: string): void {
             </SelectItem>
           </SelectContent>
         </Select>
-        <Button
-          variant="primary"
-          data-testid="dashboard-export"
-          @click="exportSummary"
-        >
-          <Download class="mr-1.5 h-3.5 w-3.5" />
-          Exportar resumen
-        </Button>
       </div>
     </header>
 
@@ -361,9 +340,12 @@ function onCardKeydown(event: KeyboardEvent, href: string): void {
         class="flex flex-col gap-1.5 rounded-xl border border-b-2 bg-card-2 p-5"
         data-testid="kpi-posicion-consolidada"
       >
-        <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
-          Posición consolidada
-        </span>
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
+            Posición consolidada
+          </span>
+          <TrendingUp class="h-4 w-4 text-success" aria-hidden="true" />
+        </div>
         <div
           class="font-mono text-2xl font-extrabold leading-none tracking-tight text-t-1"
           data-testid="kpi-posicion-consolidada-value"
@@ -383,9 +365,12 @@ function onCardKeydown(event: KeyboardEvent, href: string): void {
         @click="navigateTo(ROUTE_PATHS.ALERTAS)"
         @keydown="onCardKeydown($event, ROUTE_PATHS.ALERTAS)"
       >
-        <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
-          Alertas activas
-        </span>
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
+            Alertas activas
+          </span>
+          <BellRing class="h-4 w-4 text-danger" aria-hidden="true" />
+        </div>
         <div
           class="text-2xl font-extrabold leading-none tracking-tight text-danger"
           data-testid="kpi-alertas-activas-value"
@@ -403,9 +388,12 @@ function onCardKeydown(event: KeyboardEvent, href: string): void {
         @click="navigateTo(ROUTE_PATHS.INBOX)"
         @keydown="onCardKeydown($event, ROUTE_PATHS.INBOX)"
       >
-        <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
-          Inbox pendientes
-        </span>
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
+            Inbox pendientes
+          </span>
+          <InboxIcon class="h-4 w-4 text-warning" aria-hidden="true" />
+        </div>
         <div
           class="text-2xl font-extrabold leading-none tracking-tight text-warning"
           data-testid="kpi-inbox-pendientes-value"
@@ -423,9 +411,12 @@ function onCardKeydown(event: KeyboardEvent, href: string): void {
         @click="navigateTo(ROUTE_PATHS.REPORTES)"
         @keydown="onCardKeydown($event, ROUTE_PATHS.REPORTES)"
       >
-        <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
-          Reportes próx. a vencer
-        </span>
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
+            Reportes próx. a vencer
+          </span>
+          <FileText class="h-4 w-4 text-info" aria-hidden="true" />
+        </div>
         <div
           class="text-2xl font-extrabold leading-none tracking-tight text-info"
           data-testid="kpi-reportes-prox-vencer-value"

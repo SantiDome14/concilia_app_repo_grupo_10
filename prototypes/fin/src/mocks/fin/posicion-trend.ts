@@ -19,15 +19,13 @@ export interface PosicionTrendPoint {
 }
 
 /** Canonical periods supported by the dashboard period selector. */
-export type DashboardPeriod = 'dia' | 'mes' | 'trimestre' | 'semestre' | 'año';
+export type DashboardPeriod = '7' | '30' | '90';
 
 /** Days-back covered by each period. */
 const PERIOD_DAYS: Record<DashboardPeriod, number> = {
-  dia: 1,
-  mes: 30,
-  trimestre: 90,
-  semestre: 180,
-  año: 365,
+  '7': 7,
+  '30': 30,
+  '90': 90,
 };
 
 const TODAY = new Date('2026-04-24T00:00:00Z').getTime();
@@ -59,11 +57,16 @@ export const POSICION_TREND_365D: PosicionTrendPoint[] = Array.from(
 );
 
 /**
- * Slice the trend by the dashboard period selector. The number of points
- * returned equals the days covered by the period — `dia` returns 1
- * point, `mes` returns 30, etc. The Dashboard's X axis renders one
- * tick per point.
+ * Slice the trend by the dashboard period selector. Returns the last
+ * N daily points where N matches the period's day count. The
+ * Dashboard's X axis renders one tick per point.
  */
 export function slicePosicionTrend(period: DashboardPeriod): PosicionTrendPoint[] {
   return POSICION_TREND_365D.slice(-PERIOD_DAYS[period]);
+}
+
+/** Latest snapshot — independent of the current period selector. */
+export function latestPosicionPoint(): PosicionTrendPoint {
+  const last = POSICION_TREND_365D[POSICION_TREND_365D.length - 1];
+  return last ?? { date: '2026-04-24', value: 28.4 };
 }

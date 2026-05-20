@@ -1,8 +1,8 @@
 # FIN — Tesorería — Disponibilidades
 
 > Bloque: Tesorería
-> Estado: IN ANALYSIS (REQ-50) · Modelo conceptual cerrado
-> Última actualización: 2026-05-20
+> Estado: IN ANALYSIS (REQ-50) · Modelo conceptual cerrado · Prototipo iterado
+> Última actualización: 2026-05-20 (post-iteración de prototipo en `prototypes/fin/`)
 
 ---
 
@@ -13,7 +13,7 @@ Disponibilidades es el módulo de FIN que responde a la pregunta operativa
 
 Es el surface principal del bloque Tesorería: resume la posición financiera del grupo sobre la base de la **ecuación maestra**, expone el **ledger global de movimientos** que la sustenta, y permite operar sobre el **catálogo de Bancos / Cuentas** con lente de Finanzas.
 
-Reemplaza la planilla manual actual (saldos sin trazabilidad, sin distinción operativa/contable) con un registro auditable, posición en tiempo real y mecanismos formales de imputación y supervisión.
+Reemplaza la planilla manual actual (saldos sin trazabilidad, sin distinción operativa/contable) con un registro auditable, posición en tiempo real y mecanismos formales de imputación. La supervisión de cargas manuales fue diferida a un cambio futuro (vía capabilities) — V1 carga directa.
 
 ---
 
@@ -47,7 +47,7 @@ Es la métrica que responde "¿cuánto puede operar Ardua sin tocar fondos de cl
 |---|---|---|
 | **Bancos** | Saldo físico real en todas las cuentas activas del grupo | Catálogo de Bancos / Cuentas (REQ-42) |
 | **Obligaciones** | Total adeudado por Ardua a clientes | Cuenta contable "Obligaciones con clientes" del ledger — construida principalmente por imputaciones de OPS |
-| **Pendientes** | Fondos ingresados físicamente sin identificar cliente al momento del registro | Cuenta técnica "Pendientes de asignación" — incrementada por DEPÓSITO_PENDIENTE (OPS), decrementada por ASIGNACIÓN_PENDIENTE (OPS) |
+| **Pendientes** | Fondos ingresados físicamente sin identificar cliente al momento del registro | Cuenta técnica "Pendientes de asignación" — incrementada por `DEPOSIT`s con `cliente_id == null`, decrementada cuando OPS asigna el cliente vía la acción `Asignar Cliente` (movimiento queda imputado a Obligaciones del cliente) |
 | **Capacidad Operativa** | Capacidad propia del grupo para operar sin tocar fondos de clientes | Residual: `Bancos − Obligaciones − Pendientes` |
 
 ---
@@ -73,32 +73,30 @@ Cada movimiento se clasifica según dos dimensiones ortogonales: **presencia de 
 | Categoría | Tipos representativos | Cliente | Físico | Contrapartida cuando no hay cliente |
 |---|---|---|---|---|
 | **A. Con cliente + físico** | Depósito, Retiro | Sí | Sí | — |
-| **B. Con cliente, sin físico** | Fee, Rebate, SWAP cliente, Ajuste Cr/Db, Asignación de pendiente | Sí | No | — |
+| **B. Con cliente, sin físico** | Fee, Rebate, SWAP cliente, Ajuste Cr/Db | Sí | No | — |
 | **C. Sin cliente + físico (interno)** | Comisión bancaria, Interés bancario, Pago a proveedor, Pago de salarios, Mov. entre cuentas propias, Aporte de capital | No | Sí | Ingresos / Egresos / Patrimonio operativo |
 | **D. Sin cliente + físico (cross-sociedad)** | Préstamo intercompany, Sweeping cross-sociedad | No | Sí (en ambas sociedades) | Intercompany (2 asientos espejo, uno por sociedad) |
 | **E. Sin cliente, sin físico** | SPREAD del SWAP, Ajuste manual sin cliente | No | No | Puente FX, Ingresos por spread, otras técnicas |
-| **F. Cliente NO IDENTIFICADO** | Depósito pendiente de asignar | Pendiente | Sí | — (cuenta técnica Pendientes de asignación) |
 
 Para las categorías C, D y E el Lado Cliente **no aplica** — no es "vacío" ni "sin asignar" ni "imputado a un sintético". La contrapartida económica es una cuenta contable formal del ledger.
+
+Una **categoría F (Cliente NO IDENTIFICADO)** fue considerada para depósitos pendientes de asignar al cliente, pero finalmente se modela como un `DEPOSIT` (categoría A) con `cliente_id == null` — el discriminador es la presencia del cliente en el campo, no un tipo separado. El KPI "Pendientes" de la ecuación maestra se computa a partir de esos records, independiente del tipo.
 
 ---
 
 ## Matriz de tipos de movimiento
 
-Contrato cerrado del sistema entre Operaciones, Tesorería y Contabilidad. Cualquier evento real debe encajar en una fila — si no encaja, falta tipificar el evento.
+Contrato cerrado del sistema entre Operaciones, Tesorería y Contabilidad — **18 tipos**. Cualquier evento real debe encajar en una fila; si no encaja, falta tipificar el evento. Los eventos "pendientes" (depósito sin cliente, solicitud de retiro pre-ejecución, asignación de pendiente) NO son tipos separados — se modelan como estados de los tipos existentes (`DEPOSIT` con `cliente_id == null`, etc.) y se resuelven mediante las acciones de imputación del manifest.
 
 | Tipo | Banco origen | Banco destino | Cliente | Plano físico | Asientos | Plano contable | Registra |
 |---|---|---|---|---|---|---|---|
-| Depósito | — | Sí | Sí | Ingreso | 1 (soc. cuenta) | Db Disp · Cr Oblig cliente | OPS |
+| Depósito | — | Sí | Sí (o `null` si pendiente) | Ingreso | 1 (soc. cuenta) | Db Disp · Cr Oblig cliente (o Pendientes asignación si cliente null) | OPS |
 | Retiro | Sí | — | Sí | Egreso | 1 (soc. cuenta) | Db Oblig cliente · Cr Disp | OPS |
 | Fee | — | — | Sí | — | 1 (soc. del saldo) | Db Oblig cliente · Cr Ingresos fees | OPS |
 | Rebate | — | — | Sí | — | 1 (soc. del saldo) | Db Gastos rebates · Cr Oblig cliente | OPS |
 | SWAP_OUT (cliente) | — | — | Sí | — | 1 (soc. ejecutora) | Db Oblig cliente M1 · Cr Puente FX | OPS |
 | SWAP_IN (cliente) | — | — | Sí | — | 1 (soc. ejecutora) | Db Puente FX · Cr Oblig cliente M2 | OPS |
 | SPREAD (SWAP) | — | — | — | — | 1 (soc. ejecutora) | Db Puente FX · Cr Ingresos por spread | OPS |
-| Solicitud de retiro (PENDING) | — | — | Sí | — | 0 | — (solo reserva, sin asiento) | OPS |
-| Depósito pendiente | — | Sí | NO IDENT. | Ingreso | 1 (soc. cuenta) | Db Disp · Cr Pendientes asignación | OPS |
-| Asignación de pendiente | — | — | Sí | — | 1 (soc. cuenta original) | Db Pendientes asignación · Cr Oblig cliente | OPS |
 | Ajuste de Crédito | — | — | Sí | — | 1 (soc. del saldo) | Db Ingresos/Egresos · Cr Oblig cliente | OPS |
 | Ajuste de Débito | — | — | Sí | — | 1 (soc. del saldo) | Db Oblig cliente · Cr Ingresos/Egresos | OPS |
 | Mov. entre cuentas propias (misma sociedad) | Sí | Sí | — | Reubicación | 1 (soc. única) | Db Disp destino · Cr Disp origen | FIN |
@@ -110,6 +108,22 @@ Contrato cerrado del sistema entre Operaciones, Tesorería y Contabilidad. Cualq
 | Pago de salarios | Sí | — | — | Egreso | 1 (soc. cuenta) | Db Gastos sueldos · Cr Disp | FIN |
 | **Aporte de capital propio** | — | Sí | — | Ingreso | 1 (soc. cuenta) | Db Disp · Cr Patrimonio operativo | FIN |
 | Ajuste manual | Depende | Depende | Depende | Depende | Configurable | Configurable con justificación obligatoria | FIN |
+
+### Origen del registro
+
+Cada movimiento carga un `origen` cerrado: `'OPS'` (vostros + ajustes que entran al ledger desde core-ops-backend) o `'FIN'` (nostros, no-operativos, intercompany, ajustes manuales). El antiguo `'Manual'` colapsa en `'FIN'`; `'TRD'` no aplica al ledger de Disponibilidades.
+
+### Rails canónicos
+
+Cada movimiento carga un `rail` (en el namespace `ops.*`) tomado del conjunto cerrado de **15 rails canónicos**, fuera del cual cualquier valor es rechazado:
+
+```
+WIRE · VCURRENCY USDT · VCURRENCY USDC · VCURRENCY · SWIFT ·
+SPEI · SPE · SEPA · PIX · INTERNAL · FX · FEDWIRE ·
+Faster Payments · ARDUA · ACH
+```
+
+Sumar un rail nuevo requiere un cambio formal — no es un campo abierto.
 
 ---
 
@@ -125,9 +139,11 @@ Tres sub-tabs en orden fijo:
 
 Detalle completo de UI, criterios de aceptación, capabilities, dialogs y predicados: **REQ-50**.
 
-### Carga manual con supervisión obligatoria
+### Carga manual (V1 — sin supervisión)
 
-La carga manual cubre tipos que no nacen en OPS ni en TRD (los registrados por FIN en la matriz de tipos). Toda carga manual requiere supervisión: **ningún movimiento manual impacta saldos hasta que un usuario distinto del creador la confirme**.
+La carga manual cubre los 9 tipos registrados por FIN en la matriz: Comisión / Interés bancario · Pago a proveedor · Pago de salarios · Mov. entre cuentas propias · Aporte de capital · Préstamo intercompany · Sweeping cross-sociedad · Ajuste manual. **V1 carga directa**: el movimiento impacta los saldos en el momento de la carga.
+
+La supervisión (dual control: ningún movimiento manual impacta saldos hasta que un segundo usuario lo confirme) fue **deferida a un cambio futuro vía capabilities**. El área primero valida los flujos con la carga directa; cuando se introduzca la supervisión se hará via la capability `cargar_con_supervision` (que coexistirá con `cargar_directo`) y el role asignado al creador determinará cuál se invoca.
 
 ---
 
@@ -168,7 +184,7 @@ OPS y FIN operan sobre el **mismo ledger** — son lentes distintas sobre el mis
 
 | Surface | Imputa |
 |---|---|
-| OPS.Movimientos | Movimientos **vostro** (originados por clientes — categorías A, B y F) |
+| OPS.Movimientos | Movimientos **vostro** (originados por clientes — categorías A y B) |
 | FIN.Disponibilidades.Movimientos | Movimientos **nostro y manuales no operativos** (categorías C, D y E) |
 
 La separación se materializa vía manifest engine: cada app declara su propio set de acciones (terna `(app, módulo, registro)`). El registro físico es el mismo en ambos lados; las acciones disponibles dependen de la app desde donde se accede.
@@ -187,7 +203,8 @@ La separación se materializa vía manifest engine: cada app declara su propio s
 * **Caja Chica** · **Inversiones** — sub-módulos futuros del bloque Tesorería.
 * **Monedas y tipos de cambio** — gestión del catálogo y tasas. V1 no aplica conversiones cross-moneda: cada KPI y saldo se presenta en su moneda nativa.
 * **Cierre operativo del día / cierre contable de período** — depende de FIN.Contabilidad.
-* **Integración del módulo Inbox** — no disponible en V1; supervisión local.
+* **Integración del módulo Inbox** — no disponible en V1.
+* **Supervisión de cargas manuales** — diferida a un cambio futuro vía capabilities (`cargar_con_supervision` + `supervisar_carga`). V1 carga directa.
 
 ---
 
