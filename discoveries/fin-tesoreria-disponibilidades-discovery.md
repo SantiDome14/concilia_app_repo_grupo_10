@@ -4,8 +4,9 @@ features: [FIN]
 status: En investigación
 owner: Yasmani Rodriguez
 created_at: 2026-05-19
-updated_at: 2026-05-19
-propagates_to: []
+updated_at: 2026-05-20
+propagates_to:
+  - features/fin/fin-tesoreria-disponibilidades.md
 ---
 
 # FIN · Tesorería · Disponibilidades — modelo conceptual del módulo
