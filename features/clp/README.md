@@ -1,6 +1,6 @@
 # CLP — Client Portal
 
-> Última actualización: 2026-05-04
+> Última actualización: 2026-05-19
 > Estado: En definición progresiva
 
 ---
@@ -13,11 +13,9 @@
 
 ## Módulos
 
-> Por completar. Listar los módulos de CLP con su estado actual (construido / en construcción / en discovery / pendiente).
-
 | Módulo | Estado | Feature file | Referencias |
 |---|---|---|---|
-| _Por completar_ | _—_ | _—_ | _—_ |
+| Comunicaciones — Mail de bienvenida | SENT TO DEV | [`clp-mail-bienvenida.md`](./clp-mail-bienvenida.md) | [REQ-109](https://arduasolutions.atlassian.net/browse/REQ-109) · `discoveries/portal-clientes-mail-bienvenida-discovery.md` |
 
 ---
 

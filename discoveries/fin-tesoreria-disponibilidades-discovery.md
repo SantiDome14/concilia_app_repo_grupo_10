@@ -2,7 +2,7 @@
 name: FIN · Tesorería · Disponibilidades — modelo conceptual del módulo
 features: [FIN]
 status: En investigación
-owner: Yasmani Salbidrez
+owner: Yasmani Rodriguez
 created_at: 2026-05-19
 updated_at: 2026-05-19
 propagates_to: []

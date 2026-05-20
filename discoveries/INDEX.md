@@ -2,7 +2,7 @@
 
 > Catálogo navegable de los discoveries existentes. Para entender la convención de naming, los estados y el ciclo de vida, ver [`README.md`](./README.md).
 >
-> Última actualización: **2026-05-19** · **21 discoveries** + **2 artefactos de soporte**
+> Última actualización: **2026-05-19** · **23 discoveries** + **2 artefactos de soporte**
 
 ---
 
@@ -15,7 +15,7 @@ Hipótesis product-wide sobre una aplicación del financial-core. Pueden coexist
 | [`ops-discovery.md`](./ops-discovery.md) | Módulo de Ops — Session Context | En investigación | Yasmani Rodriguez | 2026-05-14 |
 | [`clp-discovery.md`](./clp-discovery.md) | Client Portal (CLP) — Session Context | En investigación | Yasmani Rodriguez | 2026-04-10 |
 | [`fin-discovery.md`](./fin-discovery.md) | Aplicación de Finanzas (FIN) — Session Context | En investigación | Yasmani Rodriguez | 2026-04-27 |
-| [`lex-discovery.md`](./lex-discovery.md) | LEX — Legal File Management · Discovery Document | En investigación | Yasmani Rodriguez | 2026-04-24 |
+| [`lex-discovery.md`](./lex-discovery.md) | LEX — Legal File Management · Discovery Document | En investigación | Yasmani Rodriguez | 2026-05-19 |
 | [`trd-discovery.md`](./trd-discovery.md) | Aplicación TRD — Discovery Document | Concluida | Yasmani Rodriguez | 2026-04-10 |
 | [`com-discovery.md`](./com-discovery.md) | COM — Living Discovery Document | Descartada | Yasmani Rodriguez | 2026-04-07 |
 
@@ -29,7 +29,7 @@ Hipótesis focalizadas en un módulo específico dentro de una aplicación.
 
 | Archivo | Nombre | Estado | Owner | Última act. |
 |---|---|---|---|---|
-| [`fin-tesoreria-disponibilidades-discovery.md`](./fin-tesoreria-disponibilidades-discovery.md) | FIN · Tesorería · Disponibilidades — modelo conceptual del módulo | En investigación | Yasmani Salbidrez | 2026-05-19 |
+| [`fin-tesoreria-disponibilidades-discovery.md`](./fin-tesoreria-disponibilidades-discovery.md) | FIN · Tesorería · Disponibilidades — modelo conceptual del módulo | En investigación | Yasmani Rodriguez | 2026-05-19 |
 | [`lex-alertas-discovery.md`](./lex-alertas-discovery.md) | LEX — Módulo Alertas · Discovery Document | En investigación | Yasmani Rodriguez | 2026-04-24 |
 | [`lex-limites-discovery.md`](./lex-limites-discovery.md) | LEX — Límites · Discovery Document | En investigación | Yasmani Rodriguez | 2026-04-23 |
 | [`trd-proveedores-de-liquidez-discovery.md`](./trd-proveedores-de-liquidez-discovery.md) | TRD — Proveedores de Liquidez · Discovery Document | Concluida | Yasmani Rodriguez | 2026-04-10 |
@@ -42,6 +42,8 @@ Hipótesis sobre una funcionalidad específica dentro de un módulo.
 
 | Archivo | Nombre | Estado | Owner | Última act. | Propaga a |
 |---|---|---|---|---|---|
+| [`lex-clientes-export-altas-legales-discovery.md`](./lex-clientes-export-altas-legales-discovery.md) | LEX — Export automático de clientes onboardeados a planillas de Altas Legales | Concluida | Santino Domeniconi | 2026-05-19 | `features/lex/lex-clientes-export-altas-legales.md` · `features/lex/README.md` |
+| [`portal-clientes-mail-bienvenida-discovery.md`](./portal-clientes-mail-bienvenida-discovery.md) | CLP — Actualización del mail de bienvenida al nuevo branding | Concluida | Santino Domeniconi | 2026-05-19 | `features/clp/clp-mail-bienvenida.md` · `features/clp/README.md` |
 | [`fin-reporteria-pnl-discovery.md`](./fin-reporteria-pnl-discovery.md) | Reporte de P&L (FIN · PnL Skill) — Session Context | Concluida | Yasmani Rodriguez | 2026-05-17 | `skills/ardua-pnl-report/SKILL.md` |
 
 ---
@@ -117,4 +119,3 @@ Marcados acá para que un humano (HoP) los confirme o ajuste en una sesión futu
 - **`core-template-frontend-discovery.md`** está categorizado como **Arquitectura cross-core** por su prefijo `core-`, pero su contenido podría caber mejor en **Infraestructura interna** (es tooling de scaffolding para frontends, no una decisión arquitectural cross-app). Decidir y mover si corresponde.
 - **`prime-desk-rfq-gateway-discovery.md`** tiene `features: [TRD, CLP]` (lo trata como producto), pero su naming no sigue el patrón `[aplicacion]-...` (parece infraestructura). Está acá en **Infraestructura interna** por consistencia con el naming, pero podría ser un caso de feature transversal mal nombrado.
 - **`release-awareness-discovery.md`** tiene `features: [TRD, OPS, LEX, CLP, FIN]` (enumera las 5 apps) en lugar del token `[COMMON]` que abrevia exactamente eso. Normalizar a `[COMMON]` para consistencia.
-- **`fin-tesoreria-disponibilidades-discovery.md`** tiene owner registrado como `Yasmani Salbidrez` mientras el resto de los discoveries usan `Yasmani Rodriguez`. Confirmar cuál apellido es el canónico y normalizar el resto si corresponde.
