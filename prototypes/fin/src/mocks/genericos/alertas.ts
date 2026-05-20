@@ -42,7 +42,7 @@ export const ALERTS: Alerta[] = [
     severity: 'high',
     detected_at: '2026-04-29T09:10:00Z',
     title: 'Movimiento sin imputar > 48 hs',
-    summary: 'M-2026-12842 (COLLECTOR_IN ARS 18.5M) sin estructura asignada',
+    summary: 'M-2026-12842 (DEPOSIT ARS 8.5M) sin asignar cliente · pendiente de imputación',
     timeline: [
       {
         id: 'altevt-002-1',

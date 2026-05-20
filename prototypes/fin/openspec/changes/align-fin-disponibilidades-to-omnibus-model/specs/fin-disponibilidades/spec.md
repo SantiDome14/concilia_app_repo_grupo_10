@@ -1,0 +1,565 @@
+# fin-disponibilidades — Spec deltas (align-fin-disponibilidades-to-omnibus-model)
+
+## ADDED Requirements
+
+### Requirement: The ecuación maestra MUST hold per moneda for every sociedad and the consolidated group
+
+The system SHALL maintain the invariant
+
+```
+Σ Bancos (físico) = Σ Obligaciones + Σ Pendientes + Σ Capacidad Operativa
+```
+
+valid in every moment, for every moneda M, and for every aggregation level (per sociedad and consolidated across all sociedades). The four dimensions SHALL be defined as:
+
+| Dimensión | Definición | Fuente |
+|---|---|---|
+| Bancos | Saldo físico real en todas las cuentas activas | Catálogo de Bancos / Cuentas |
+| Obligaciones | Total adeudado por Ardua a clientes | Cuenta contable "Obligaciones con clientes" del ledger |
+| Pendientes | Fondos ingresados físicamente sin identificar cliente | Cuenta técnica "Pendientes de asignación" |
+| Capacidad Operativa | Residual `Bancos − Obligaciones − Pendientes` | Computado |
+
+Capacidad Operativa SHALL be computed as the residual; it is never a directly observable saldo. The invariant SHALL fail-closed: if any moneda-sociedad pair violates the equation by more than the configured tolerance, the system SHALL flag a **break** and prevent confirmation of further manual loads in that sociedad until investigated.
+
+V1 does NOT apply cross-currency conversions: every KPI and saldo SHALL be presented in its moneda nativa.
+
+#### Scenario: Capacidad Operativa is the residual per moneda
+
+- **GIVEN** Sociedad `HP` holds in ARS: Bancos 1_000_000, Obligaciones 600_000, Pendientes 50_000
+- **WHEN** the Posición sub-tab renders
+- **THEN** the Capacidad Operativa for `HP / ARS` is `350_000` (residual)
+- **AND** the value is NOT read from a stored field — it is computed at render
+
+#### Scenario: No cross-currency conversion in V1
+
+- **GIVEN** Sociedad `ASC` holds Bancos in USD (10_000_000), CAD (1_000_000), and USDC (500_000)
+- **WHEN** the Posición sub-tab renders the Bancos KPI for `ASC`
+- **THEN** the KPI card shows three rows: `USD 10_000_000`, `CAD 1_000_000`, `USDC 500_000`
+- **AND** NO row shows a consolidated USD-equivalent figure
+- **AND** NO conversion is applied between monedas
+
+#### Scenario: Break detection prevents further confirmations
+
+- **GIVEN** the ecuación maestra for `HP / ARS` is violated by 1_000 ARS (above tolerance)
+- **WHEN** a supervisor attempts to confirm a manual movement in `HP`
+- **THEN** the confirmation is blocked
+- **AND** an inline error reads "Ecuación maestra desbalanceada en HP / ARS — investigar antes de confirmar"
+
+### Requirement: The 15 canonical rails MUST be the closed contract of MovimientoRail
+
+The `MovimientoRail` literal union SHALL contain exactly the 15 values exposed by the `RAIL_OPTIONS` constant — `WIRE`, `VCURRENCY USDT`, `VCURRENCY USDC`, `VCURRENCY`, `SWIFT`, `SPEI`, `SPE`, `SEPA`, `PIX`, `INTERNAL`, `FX`, `FEDWIRE`, `Faster Payments`, `ARDUA`, `ACH`. Every `Movimiento.ops.rail` SHALL be one of these — `ops.rail: string` was tightened to `ops.rail: MovimientoRail`. Adding or renaming a rail SHALL go through an OpenSpec change that extends both the type and this Requirement.
+
+#### Scenario: Type system rejects unknown rails
+
+- **WHEN** a mock or a manual load assigns `ops.rail: 'foo'`
+- **THEN** the TypeScript build fails with a literal-union mismatch on `MovimientoRail`
+
+#### Scenario: Rail filter renders the 15 canonical values
+
+- **WHEN** the Movimientos sub-tab's Rail filter is opened
+- **THEN** the dropdown lists 15 entries (one per rail of `RAIL_OPTIONS`) plus the `Todos` default
+- **AND** the entries are rendered in the canonical display order
+
+### Requirement: The 18-row matriz de tipos MUST be the closed contract of MovimientoTipo
+
+The `MovimientoTipo` union SHALL contain exactly the 18 values enumerated below. The matriz is the closed contract; tipos that look "pending" (e.g. a deposit awaiting client identification) are NOT separate tipos — they are records of an existing tipo with `fin.cliente_id == null`. The simulator-only pending tipos (`SOLICITUD_RETIRO_PENDING`, `DEPOSITO_PENDIENTE`, `ASIGNACION_PENDIENTE`) are NOT part of the union.
+
+| Tipo | Registra |
+|---|---|
+| `DEPOSIT` | OPS |
+| `WITHDRAWAL` | OPS |
+| `FEE` | OPS |
+| `REBATE` | OPS |
+| `SWAP_OUT` | OPS |
+| `SWAP_IN` | OPS |
+| `SPREAD` | OPS |
+| `AJUSTE_CREDITO` | OPS |
+| `AJUSTE_DEBITO` | OPS |
+| `MOV_ENTRE_CUENTAS_PROPIAS` | FIN |
+| `PRESTAMO_INTERCOMPANY` | FIN |
+| `SWEEPING_CROSS_SOCIEDAD` | FIN |
+| `COMISION_BANCARIA` | FIN |
+| `INTERES_BANCARIO` | FIN |
+| `PAGO_PROVEEDOR` | FIN |
+| `PAGO_SALARIOS` | FIN |
+| `APORTE_CAPITAL` | FIN |
+| `AJUSTE_MANUAL` | FIN |
+
+Any event that does not fit one of these rows SHALL be treated as a missing tipo in the matriz, not as a manifest gap. Adding a new tipo SHALL require an OpenSpec change that extends both this Requirement and the `MovimientoTipo` union.
+
+#### Scenario: Type system rejects unknown tipos
+
+- **WHEN** a mock or a manual load tries to declare a `Movimiento` with `tipo: 'FOO_BAR'`
+- **THEN** the TypeScript build fails with a discriminated-union mismatch
+- **AND** no runtime check is needed — the type system enforces closure
+
+#### Scenario: Exhaustiveness checked in categoría derivation
+
+- **GIVEN** `categoriaOf(tipo: MovimientoTipo): MovimientoCategoria` is a pure switch on every tipo
+- **WHEN** a new tipo is added to the union without a matching branch in `categoriaOf`
+- **THEN** the TypeScript compiler reports `Type 'never' is not assignable to type 'MovimientoCategoria'` on the default branch
+
+### Requirement: Movimientos MUST be classified by Categoría (A-E) derived from tipo + cliente + flujo físico
+
+Every `Movimiento` SHALL be classified by a derived `Categoria: 'A' | 'B' | 'C' | 'D' | 'E'` computed from `(tipo, has_cliente, has_physical_flow)`:
+
+| Categoría | Descripción | Tipos representativos |
+|---|---|---|
+| A | Con cliente + físico | `DEPOSIT`, `WITHDRAWAL` |
+| B | Con cliente, sin físico | `FEE`, `REBATE`, `SWAP_OUT/IN` (cliente), `AJUSTE_CREDITO`, `AJUSTE_DEBITO` |
+| C | Sin cliente + físico (interno) | `COMISION_BANCARIA`, `INTERES_BANCARIO`, `PAGO_PROVEEDOR`, `PAGO_SALARIOS`, `MOV_ENTRE_CUENTAS_PROPIAS`, `APORTE_CAPITAL` |
+| D | Sin cliente + físico (cross-sociedad) | `PRESTAMO_INTERCOMPANY`, `SWEEPING_CROSS_SOCIEDAD` |
+| E | Sin cliente, sin físico | `SPREAD`, `AJUSTE_MANUAL` (sin cliente) |
+
+The categoría SHALL be derived, NOT stored. The page SHALL project records through `categoriaOf(tipo)` and expose `_categoria` as a derived field on the projected shape (same pattern as `_imp_ardua`, `_imp_cliente`, `_sociedad`).
+
+For categorías **C, D, and E**, the Lado Cliente field SHALL NOT apply — it is not "vacío", not "sin asignar", not imputable to a synthetic placeholder. The contrapartida económica is a formal cuenta contable (Ingresos / Egresos / Patrimonio operativo / Intercompany / Puente FX).
+
+A categoría F for "Cliente NO IDENTIFICADO" was considered and removed alongside the pending tipos: a depósito sin cliente identificado es un `DEPOSIT` con `fin.cliente_id == null` (categoría A en estado de imputación parcial), no un tipo separado. The KPI "Pendientes" is computed from records with `fin.cliente_id == null`, independent of the tipo.
+
+#### Scenario: Categoría drives axis selection on Tablero
+
+- **GIVEN** the Movimientos sub-tab is in Tablero view with axis `Categoría`
+- **WHEN** the Tablero renders
+- **THEN** the columns are `A`, `B`, `C`, `D`, `E` in that fixed order
+- **AND** each movimiento card lands in the column matching `categoriaOf(m.tipo)`
+
+#### Scenario: Asignar Cliente is hidden for C/D/E categorías
+
+- **GIVEN** a movimiento has `tipo: 'COMISION_BANCARIA'` (categoría C)
+- **WHEN** the operator opens the kebab menu of that row
+- **THEN** the actions "Asignar Cliente" and "Editar Cliente" are NOT present
+- **AND** the actions "Asignar Banco y Cuenta" and "Editar Banco y Cuenta" remain available
+
+#### Scenario: Asignar Cliente visible for A/B categorías
+
+- **GIVEN** a movimiento has `tipo: 'FEE'` (categoría B)
+- **WHEN** the operator opens the kebab menu of that row
+- **THEN** the action "Asignar Cliente" is present when `fin.cliente_id === null`
+- **AND** is enabled subject to the standard capability check
+
+### Requirement: The plan de cuentas MUST organise into 8 grupos contables including Patrimonio operativo
+
+The system SHALL operate over 8 grupos de cuentas contables (no plan de cuentas formal — that arrives with the Motor Contable in V2):
+
+| Grupo | Naturaleza |
+|---|---|
+| Disponibilidades | Activo · única cuenta con realidad física |
+| Obligaciones con clientes | Pasivo |
+| Pendientes de asignación | Pasivo · cuenta técnica |
+| Puente FX | Técnica multimoneda |
+| Intercompany | Técnica entre sociedades del grupo |
+| Patrimonio operativo | Pasivo / Patrimonio |
+| Ingresos | Resultado |
+| Egresos | Resultado |
+
+In V1, **Patrimonio operativo** SHALL be modelled as a single aggregated technical account with a T0 opening balance equal to the initial Capacidad Operativa (`Bancos inicial − Obligaciones inicial − Pendientes inicial`). The formal patrimonial split (Capital social, Aportes irrevocables, Reservas, Resultados Acumulados) is OUT of scope for V1 and arrives with the Motor Contable in V2.
+
+`APORTE_CAPITAL` movements SHALL credit Patrimonio operativo and debit Disponibilidades (the cuenta receiving the aporte).
+
+#### Scenario: Patrimonio operativo opens at T0 = initial Capacidad Operativa
+
+- **GIVEN** at T0 the group has consolidated Bancos `2_000_000 USD`, Obligaciones `1_400_000 USD`, Pendientes `100_000 USD`
+- **WHEN** the system computes the T0 opening balance of Patrimonio operativo
+- **THEN** the value is `500_000 USD` (= 2_000_000 − 1_400_000 − 100_000)
+
+#### Scenario: APORTE_CAPITAL increments Patrimonio operativo
+
+- **GIVEN** a new `APORTE_CAPITAL` of `100_000 USD` is loaded and confirmed
+- **WHEN** the Posición sub-tab re-renders
+- **THEN** Bancos in USD increases by 100_000 (the cuenta receiving the aporte)
+- **AND** Capacidad Operativa in USD increases by 100_000 (since Obligaciones and Pendientes are unchanged)
+- **AND** the ledger entry credits Patrimonio operativo
+
+### Requirement: Asientos contables MUST be society-scoped; cross-sociedad events MUST generate two mirrored asientos linked by evento_id
+
+Every `Movimiento` SHALL carry exactly one `sociedad_id` (via `fin.sociedad_id`) and exactly one `asiento_id`. The asiento represents the Db/Cr pair captured in the matriz row.
+
+When an operative event affects two sociedades (`PRESTAMO_INTERCOMPANY` or `SWEEPING_CROSS_SOCIEDAD`), the system SHALL generate **two distinct `Movimiento` records**, each with:
+
+- A distinct `id`.
+- A distinct `asiento_id`.
+- A different `sociedad_id` (one for the origen sociedad, one for the destino sociedad).
+- The same `tipo`.
+- The same `evento_id` — a shared correlation id linking the two halves.
+
+Each half SHALL be fully accountable on its own sociedad's ledger. The ecuación maestra SHALL hold independently per sociedad after the two asientos are persisted.
+
+#### Scenario: Préstamo intercompany generates two records sharing evento_id
+
+- **GIVEN** the operator loads a `PRESTAMO_INTERCOMPANY` of `500_000 USD` from `HP` to `ASC`
+- **WHEN** the carga manual dialog is confirmed
+- **THEN** two Movimiento records are persisted:
+  - One with `fin.sociedad_id: 'hp'`, `asiento_id: 'AS-99001-HP'`, `evento_id: 'EV-99001'`
+  - One with `fin.sociedad_id: 'asc'`, `asiento_id: 'AS-99001-ASC'`, `evento_id: 'EV-99001'`
+- **AND** both records share `tipo: 'PRESTAMO_INTERCOMPANY'` and `evento_id: 'EV-99001'`
+
+#### Scenario: Per-sociedad ledger filter shows only that sociedad's half
+
+- **GIVEN** the Movimientos sub-tab has a filter `sociedad_id = 'hp'` applied
+- **WHEN** the table renders the two halves of a Préstamo intercompany
+- **THEN** ONLY the `HP` half is visible
+- **AND** the `ASC` half is filtered out
+
+### Requirement: Movimientos MUST be inmutables; corrections MUST be registered via Ajuste de Crédito / Débito / Manual
+
+Once persisted, a `Movimiento` SHALL be inmutable. The system SHALL NOT expose any action to edit or delete a `Movimiento`. Errors SHALL be corrected by registering a compensating movement of the appropriate type:
+
+| Compensación | Aplica cuando |
+|---|---|
+| `AJUSTE_CREDITO` | Corrección a favor del cliente (devolución de fee cobrado de más, etc.) |
+| `AJUSTE_DEBITO` | Corrección a favor de Ardua (fee no cobrado, crédito incorrecto, etc.) |
+| `AJUSTE_MANUAL` | Casos no contemplados, con justificación textual obligatoria |
+
+Ajustes SHALL be loaded manually with a mandatory justification field; they SHALL NOT be generated automatically by the system. The original `Movimiento` SHALL remain visible in the ledger.
+
+The Detail modal of any `Movimiento` SHALL NOT expose an "Editar" or "Eliminar" button. The only modifications available SHALL be the imputation actions (Asignar / Editar Banco y Cuenta, Asignar / Editar Cliente) which write metadata fields (`fin.sociedad_id`, `fin.cuenta_id`, `fin.cliente_id`, `fin.cuenta_operativa_cliente_id`) — they SHALL NOT modify amount, fecha, tipo, or any field that carries economic content.
+
+#### Scenario: Detail modal exposes no Edit or Delete action
+
+- **GIVEN** the operator opens the Detail modal of any `Movimiento`
+- **WHEN** the modal renders
+- **THEN** the footer exposes only "Cerrar"
+- **AND** NO "Editar" or "Eliminar" button is present
+
+#### Scenario: Ajuste de Crédito requires justification
+
+- **GIVEN** the operator opens "Cargar movimiento manual" and selects `tipo: 'AJUSTE_CREDITO'`
+- **WHEN** the operator submits without filling "Motivo"
+- **THEN** the dialog blocks submission with an inline error on Motivo
+
+## MODIFIED Requirements
+
+### Requirement: Posición sub-tab MUST render the ecuación maestra per moneda and a hierarchical tree Sociedad → Cuenta
+
+The Posición sub-tab SHALL render two surfaces:
+
+**L2 KPI strip — 4 cards, one per dimensión de la ecuación maestra:**
+
+| Card | Body |
+|---|---|
+| Bancos | Rows per moneda held by the group, value in moneda nativa |
+| Obligaciones | Rows per moneda held by the group, value in moneda nativa |
+| Pendientes | Rows per moneda held by the group, value in moneda nativa |
+| Capacidad Operativa | Rows per moneda — value is the residual `Bancos − Obligaciones − Pendientes` per moneda |
+
+Each card SHALL render every moneda where any of the four dimensions is non-zero. The card SHALL NOT collapse to a USD-equivalent or to any other consolidated figure. The 4 KPIs SHALL satisfy the ecuación maestra at every render.
+
+**L3 Tree Sociedad → Cuenta:**
+
+The tree SHALL render top-level nodes per Sociedad, with the active Cuentas of that Sociedad as children. Each node SHALL expose:
+
+- For Sociedad: per-moneda totals (one chip per moneda held) reading the physical saldo of the cuentas of that sociedad. NO Propio / Cliente split.
+- For Cuenta: a single saldo in moneda nativa.
+
+Inactive Cuentas (`status === 'Inactiva'`) SHALL NOT appear in Posición.
+
+The previous `saldo_propio` / `saldo_cliente` segmentation per cuenta is removed (see "Propio / Cliente segmentation removal" below in REMOVED). The omnibus model declares that the per-cuenta segmentation is malformed — the system does not answer the question "¿de qué cliente es la plata que está en esta cuenta?".
+
+#### Scenario: KPI strip renders 4 cards with per-moneda rows
+
+- **GIVEN** the group holds positions in ARS, USD, EUR, USDC, USDT, CAD
+- **WHEN** the Posición L2 KPI strip renders
+- **THEN** the strip has exactly 4 cards: Bancos, Obligaciones, Pendientes, Capacidad Operativa
+- **AND** each card body shows one row per moneda
+- **AND** every Capacidad Operativa row equals `Bancos.row − Obligaciones.row − Pendientes.row` for that moneda
+
+#### Scenario: Tree exposes only physical saldo per cuenta
+
+- **GIVEN** the mock data exposes 4 sociedades and 12 active cuentas
+- **WHEN** the Posición tree expands a sociedad
+- **THEN** each cuenta row shows: name, detail, saldo (moneda nativa), moneda
+- **AND** NO Propio column is present
+- **AND** NO Cliente column is present
+
+#### Scenario: Inactive cuentas excluded
+
+- **GIVEN** a Cuenta has `status: 'Inactiva'` in the catalogue
+- **WHEN** the Posición sub-tab renders
+- **THEN** that Cuenta is NOT in the tree
+- **AND** the Sociedad node's per-moneda totals exclude that Cuenta's saldo
+
+### Requirement: Bancos / Cuentas sub-tab MUST list the catalogue with FIN-specific columns and the canonical search + filters strip
+
+The Bancos / Cuentas sub-tab SHALL list the same catalogue of cuentas as REQ-42 §8.1, with the columns inherited from REQ-42 plus the FIN-specific column **Cuenta contable**. The Cuenta contable column SHALL render either the configured accounting metadata or a "Sin configurar" badge in the warning / ámbar tone.
+
+The sub-tab SHALL render the canonical L3 search + filters strip (per `core-template-frontend`) above the table, using the shadcn-vue `<Input>` and `<Select>` primitives. Native `<select>` SHALL NOT be used.
+
+- **Search input** — placeholder "Buscar por banco, número o cuenta contable…". Searches case-insensitively against `banco`, `numero`, and `cuenta_contable`.
+- **Sociedad** — values `Todas` (default) + one entry per distinct `sociedad_id`.
+- **Estructura** — values `Todas` (default) + one entry per distinct `tipo_estructura` (REQ-42 §8.1 values).
+- **Cuenta** — values `Todas` (default) + one entry per distinct `tipo_cuenta` (REQ-42 §8.1 values).
+- **Moneda** — values `Todas` (default) + one entry per distinct `moneda`.
+- **Estado** — values `Todos` (default) / `Activa` / `Inactiva`.
+
+A standalone "Configuración contable" filter is NOT rendered — the "Cuenta contable" column already exposes the per-row state (configured vs "Sin configurar" badge), and the search input covers free-text lookup against the metadata field.
+
+A "Limpiar" button SHALL appear when any filter is active and SHALL reset all filters to their default value.
+
+The L2 KPI strip SHALL expose: Estructuras totales, Cuentas totales activas, Cuentas con configuración contable, Cuentas sin configuración contable.
+
+#### Scenario: Filter strip exposes search + 5 filters using canonical components
+
+- **WHEN** the Bancos / Cuentas sub-tab is active
+- **THEN** a `[data-testid="bancos-cuentas-filters"]` strip is rendered with a search input and 5 `<Select>` filters (Sociedad / Estructura / Cuenta / Moneda / Estado)
+- **AND** the search input is a shadcn-vue `<Input>` (NOT a native `<input>`)
+- **AND** each filter is a shadcn-vue `<Select>` (NOT a native `<select>`)
+- **AND** no standalone Configuración contable filter is rendered (the column + search cover that need)
+
+#### Scenario: Limpiar clears all active filters
+
+- **GIVEN** the operator has the Estado filter set to `Inactiva` and a search query "BIND"
+- **WHEN** the operator clicks "Limpiar"
+- **THEN** all filters return to their default `Todas` / `Todos` value
+- **AND** the search input is emptied
+
+### Requirement: Cargar movimiento manual dialog MUST expose only FIN-registered tipos and support cross-sociedad pair generation
+
+The dialog opened by the "Cargar movimiento manual" Main CTA SHALL expose, in its `tipo` select field, only the FIN-registered tipos of the matriz:
+
+| Tipo | Categoría |
+|---|---|
+| `COMISION_BANCARIA` | C |
+| `INTERES_BANCARIO` | C |
+| `PAGO_PROVEEDOR` | C |
+| `PAGO_SALARIOS` | C |
+| `MOV_ENTRE_CUENTAS_PROPIAS` | C |
+| `APORTE_CAPITAL` | C |
+| `PRESTAMO_INTERCOMPANY` | D |
+| `SWEEPING_CROSS_SOCIEDAD` | D |
+| `AJUSTE_MANUAL` | E |
+
+OPS-registered tipos (DEPOSIT / WITHDRAWAL / FEE / REBATE / SWAP_* / SPREAD / AJUSTE_CREDITO / AJUSTE_DEBITO) SHALL NOT appear in the dialog. They are loaded through OPS, not through FIN.
+
+The dialog SHALL be context-aware on the tipo:
+
+- For `PRESTAMO_INTERCOMPANY` and `SWEEPING_CROSS_SOCIEDAD`: the dialog SHALL render two Sociedad fields (`sociedad_origen_id` and `sociedad_destino_id`), two Cuenta fields (one filtered by each sociedad), and a single Monto. On confirm, the engine SHALL generate two `Movimiento` records sharing `evento_id` (per the society-scoped asientos Requirement).
+- For all other FIN-side tipos: the dialog renders a single Sociedad + single Cuenta.
+
+The dialog SHALL validate required fields and apply the lookups cascade (Sociedad → Cuenta, Cliente → Cuenta Operativa where applicable) as before. The "Cliente" field SHALL be hidden when the chosen tipo is in categoría C/D/E.
+
+#### Scenario: Tipo select exposes only the 9 FIN-side tipos
+
+- **GIVEN** the operator opens "Cargar movimiento manual"
+- **WHEN** the `tipo` select opens
+- **THEN** the options listed are exactly: `COMISION_BANCARIA`, `INTERES_BANCARIO`, `PAGO_PROVEEDOR`, `PAGO_SALARIOS`, `MOV_ENTRE_CUENTAS_PROPIAS`, `APORTE_CAPITAL`, `PRESTAMO_INTERCOMPANY`, `SWEEPING_CROSS_SOCIEDAD`, `AJUSTE_MANUAL`
+- **AND** no OPS-registered tipo appears
+
+#### Scenario: Préstamo intercompany dialog renders two-sociedad fields
+
+- **GIVEN** the operator selects `tipo: 'PRESTAMO_INTERCOMPANY'`
+- **WHEN** the dialog re-renders for the chosen tipo
+- **THEN** the dialog exposes `sociedad_origen_id`, `cuenta_origen_id`, `sociedad_destino_id`, `cuenta_destino_id`, `monto`, `moneda`, `fecha`, `motivo`
+- **AND** the cuenta_origen and cuenta_destino lookups are filtered each by their sociedad
+
+#### Scenario: Confirm of cross-sociedad generates two records sharing evento_id
+
+- **GIVEN** the operator fills `sociedad_origen: 'hp'`, `cuenta_origen: 'cu-hp-bind-1'`, `sociedad_destino: 'asc'`, `cuenta_destino: 'cu-asc-bridge-1'`, `monto: 500_000`, `moneda: 'USD'`
+- **WHEN** the operator confirms
+- **THEN** two `Movimiento` records are created, each with its own `id`, `asiento_id`, and `sociedad_id`
+- **AND** both records share the same `evento_id`
+- **AND** both records share `tipo: 'PRESTAMO_INTERCOMPANY'`
+
+#### Scenario: Cliente field hidden for categoría C tipos
+
+- **GIVEN** the operator selects `tipo: 'COMISION_BANCARIA'` (categoría C)
+- **WHEN** the dialog re-renders
+- **THEN** no `cliente_id` field is present in the dialog
+- **AND** no `cuenta_operativa_cliente_id` field is present
+- **AND** the dialog accepts only Sociedad + Cuenta + amount + Motivo
+
+### Requirement: Movimientos sub-tab MUST list the global ledger with three views and 6 reconfigurable axes including Categoría
+
+The Movimientos sub-tab SHALL render the global ledger of FIN, including movements registered by either app (`origen ∈ {'OPS', 'FIN'}` — `'TRD'` no aplica al ledger de Disponibilidades, and the legacy `'Manual'` collapses into `'FIN'`). The view SHALL NOT apply any filter by origin at mount; the operator MAY filter via the L3 toolbar. The L2 KPI strip SHALL expose:
+
+| KPI | Body |
+|---|---|
+| Movimientos del día | Count |
+| Volumen ingresado | Per-moneda rows (no USD-equivalent in V1) |
+| Volumen egresado | Per-moneda rows (no USD-equivalent in V1) |
+| Pendientes de imputación | Count of records with `fin.cuenta_id == null` (Lado Ardua pending) |
+| Pendientes de asignación | Count of DEPOSIT / WITHDRAWAL records with `fin.cliente_id == null` (Lado Cliente pending — feeds the Pendientes KPI of the ecuación maestra) |
+
+The sub-tab SHALL expose three views via `<ViewToggle>`: **Lista** (default), **Tarjetas**, **Tablero**. The Tablero view SHALL be state-driven by an axis selector that allows switching between **six** axes:
+
+| Axis | Values |
+| --- | --- |
+| Estado operativo (default) | Pending / Processing / Completed / Failed |
+| Estado de imputación Lado Ardua | Sin asignar / Asignado |
+| Estado de imputación Lado Cliente | Sin asignar / Asignado / No aplica |
+| Tipo de movimiento | One column per tipo of the matriz (18 columns) |
+| Sociedad | One column per active Sociedad |
+| **Categoría** | A / B / C / D / E |
+
+The `Categoría` axis SHALL be the default lens for predicate evaluation (replacing the `origen`-based discrimination of the previous Requirement). The `origen` field SHALL remain visible as a column / badge in Lista and Tarjetas views but SHALL NOT be the primary categorisation.
+
+**L3 search + filters (canonical template pattern, per `core-template-frontend`).** The Movimientos sub-tab SHALL render the standard search + filter strip above the data surface, using the shadcn-vue `<Select>` and `<Input>` primitives:
+
+- **Search input** — placeholder "Buscar por nombre de cliente o ID…". Searches case-insensitively against `ops.client` and `id`.
+- **Período** — values `Todo` (default) / `Día` / `Semana` / `Mes` relative to the page's reference "today".
+- **Tipo** — values `Todos` (default) + one entry per tipo of the matriz (18 entries).
+- **Rail** — values `Todos` (default) + the 15 canonical rails exposed by `RAIL_OPTIONS` (WIRE / VCURRENCY USDT / VCURRENCY USDC / VCURRENCY / SWIFT / SPEI / SPE / SEPA / PIX / INTERNAL / FX / FEDWIRE / Faster Payments / ARDUA / ACH). The set is rendered in full regardless of the rails present in the current data — the filter shape stays stable across data states.
+- **Estructura / Cuenta** — values `Todas` (default) + each active cuenta from the catalog (label: `banco · moneda · numero`). This filter SHALL also subsume the Partner discriminator — `ops.partner` is the bank / structure of the cuenta, so a separate Partner filter would be redundant.
+- **Estado** — values `Todos` (default) / `Completed` / `Pending` / `Failed`. Maps directly to `Movimiento.status`.
+
+A "Limpiar" button SHALL appear when any filter is active and SHALL reset all filters to their default value. Native `<select>` SHALL NOT be used.
+
+**Lista view columns** (left to right): `ID · Fecha · Cliente · Rail · Tipo · Monto · Origen · Estado op. · Banco / Cuenta · Acciones`. The `Banco / Cuenta` column SHALL resolve `fin.cuenta_id` against the disponibilidadesCatalog store and render banco on the top line + `moneda · numero` on the secondary line; an unassigned `fin.cuenta_id` SHALL render a "Sin asignar" warning badge. The `Monto` cell SHALL render green when the displayed string starts with `+` and red when it starts with `-`. A standalone Partner column is NOT rendered — the same information lives in the `Banco / Cuenta` column.
+
+#### Scenario: Categoría axis renders 5 columns
+
+- **GIVEN** the Movimientos sub-tab is in Tablero view
+- **WHEN** the operator selects axis `Categoría`
+- **THEN** the Tablero renders 5 columns: A, B, C, D, E in that fixed order
+- **AND** each card lands in the column matching `categoriaOf(card.tipo)`
+
+#### Scenario: Lista view exposes 18 distinct tipos
+
+- **GIVEN** the mock data covers every tipo of the matriz
+- **WHEN** the Lista view renders
+- **THEN** at least one row exists per tipo across the data set
+- **AND** the Tipo column displays the tipo string (uppercase snake case)
+
+#### Scenario: KPI strip volumes are per-moneda
+
+- **GIVEN** the day's movements include ingresos in ARS, USD, and USDC
+- **WHEN** the "Volumen ingresado" KPI renders
+- **THEN** the card body shows three rows, one per moneda, each with the moneda nativa total
+- **AND** NO USD-equivalent consolidated figure is shown
+
+#### Scenario: Search + filters surface canonical L3 controls
+
+- **WHEN** the Movimientos sub-tab is active
+- **THEN** a `[data-testid="movimientos-filters"]` strip is rendered with a search input and five `<Select>` filters (Período / Tipo / Rail / Estructura · Cuenta / Estado)
+- **AND** the search input is a shadcn-vue `<Input>` (NOT a native `<input>`)
+- **AND** each filter is a shadcn-vue `<Select>` (NOT a native `<select>`)
+- **AND** no separate Partner filter is rendered (redundant with Estructura · Cuenta)
+
+#### Scenario: Lista view exposes Rail / Banco-Cuenta columns (no Partner)
+
+- **WHEN** the Lista view renders
+- **THEN** the column headers contain `Rail` and `Banco / Cuenta` but NOT `Partner`
+- **AND** for each row, the `Banco / Cuenta` cell either renders the banco label + moneda·numero (when `fin.cuenta_id` resolves) or a "Sin asignar" warning badge
+
+### Requirement: Movimientos MUST expose four contextual row-level actions gated by categoría (not by origen)
+
+Each row of the Movimientos table SHALL expose a `⋯` kebab menu via `<ManifestActionsMenu :manifest-key="fin.disponibilidades.movimientos">` with up to four actions, each gated by its `enable_when` predicate. The predicate base SHALL switch from `origen` to `categoría`:
+
+| Action | Capability | `show_when` | `enable_when` |
+|---|---|---|---|
+| Asignar Banco y Cuenta | `imputar_ardua` | always | `fin.cuenta_id === null` AND `categoría ∈ {C, D, E}` |
+| Editar Banco y Cuenta | `imputar_ardua` | always | `fin.cuenta_id !== null` AND `categoría ∈ {C, D, E}` |
+| Asignar Cliente | `imputar_cliente` | `categoría ∈ {A, B}` (cliente applies) | `fin.cliente_id === null` |
+| Editar Cliente | `imputar_cliente` | idem | `fin.cliente_id !== null` |
+
+For movimientos en categoría A (DEPOSIT, WITHDRAWAL) and B (FEE, REBATE, SWAP cliente, AJUSTE_*) the imputación de Banco y Cuenta is realised by OPS, not by FIN — the action SHALL show but stay disabled with `disable_reason: 'Lado Ardua imputado por OPS'` and `disable_tag: 'Solo OPS'`.
+
+Supervisión actions (`Confirmar carga manual`, `Rechazar carga manual`) were removed from this Requirement set in V1 — see the corresponding REMOVED Requirement below. Reintroduction (via capabilities) is a follow-up change.
+
+#### Scenario: Asignar Banco y Cuenta shown but disabled for categoría A
+
+- **GIVEN** a movimiento has `tipo: 'DEPOSIT'` (categoría A) and `fin.cuenta_id !== null` (OPS already imputed)
+- **WHEN** the operator opens the kebab menu
+- **THEN** "Editar Banco y Cuenta" is present but disabled
+- **AND** the disabled tag reads "Solo OPS"
+- **AND** the disable_reason tooltip reads "Lado Ardua imputado por OPS"
+
+#### Scenario: Asignar Banco y Cuenta enabled for categoría C
+
+- **GIVEN** a movimiento has `tipo: 'COMISION_BANCARIA'` (categoría C) and `fin.cuenta_id === null`
+- **WHEN** the operator opens the kebab menu
+- **THEN** "Asignar Banco y Cuenta" is enabled
+- **AND** clicking it opens the dialog
+
+#### Scenario: Asignar Cliente hidden for categoría C/D/E
+
+- **GIVEN** a movimiento has `tipo: 'INTERES_BANCARIO'` (categoría C)
+- **WHEN** the operator opens the kebab menu
+- **THEN** neither "Asignar Cliente" nor "Editar Cliente" is present (predicate `categoría ∈ {A, B}` fails)
+
+### Requirement: Carga manual dialog MUST validate required fields and route to direct-or-supervised flow per creator capability
+
+The "Cargar movimiento manual" CTA SHALL open a dialog that validates required fields depending on the chosen tipo. The field set SHALL be:
+
+| Field | Required when |
+|---|---|
+| `tipo` | Always |
+| `sociedad_id` | Always for single-sociedad tipos |
+| `cuenta_id` | Always for single-sociedad tipos |
+| `sociedad_origen_id` | Tipo ∈ {PRESTAMO_INTERCOMPANY, SWEEPING_CROSS_SOCIEDAD} |
+| `cuenta_origen_id` | idem |
+| `sociedad_destino_id` | idem |
+| `cuenta_destino_id` | idem |
+| `fecha` | Always |
+| `monto` | Always |
+| `moneda` | Always |
+| `cliente_id` | NEVER for FIN-side tipos (all are categoría C/D/E) |
+| `motivo` | Always (text ≥ 10 chars) |
+| `referencia` | Optional |
+
+On confirm:
+
+- The creator MUST hold `fin.disponibilidades.movimientos.cargar_directo`. The movement SHALL be persisted and SHALL impact saldos immediately — the Posición sub-tab SHALL include its amount on next render. Supervision was removed in V1; a future change MAY reintroduce a `cargar_con_supervision` capability that defers saldo impact until a supervisor confirms.
+- For cross-sociedad tipos (PRESTAMO_INTERCOMPANY, SWEEPING_CROSS_SOCIEDAD), the engine SHALL create two `Movimiento` records sharing `evento_id` (per the society-scoped asientos Requirement).
+
+#### Scenario: Required-field validation blocks submission
+
+- **GIVEN** the operator leaves "Motivo" empty
+- **WHEN** the operator clicks "Cargar movimiento"
+- **THEN** the dialog displays an inline error under "Motivo" reading "Motivo es obligatorio (≥ 10 caracteres)"
+- **AND** the submit button is disabled
+
+#### Scenario: Direct flow with cargar_directo impacts saldos immediately
+
+- **GIVEN** the operator holds `cargar_directo`
+- **WHEN** the operator fills all required fields and confirms with a single-sociedad tipo (e.g. `COMISION_BANCARIA`)
+- **THEN** one movement is persisted
+- **AND** the Posición sub-tab includes its amount on the next render
+- **AND** no supervision queue or "Pendiente de supervisión" badge appears
+
+#### Scenario: Cross-sociedad cargar_directo persists two records
+
+- **GIVEN** the operator holds `cargar_directo`
+- **WHEN** the operator fills the cross-sociedad fields and confirms a `PRESTAMO_INTERCOMPANY`
+- **THEN** two records are persisted with distinct `id` and `asiento_id` but the same `evento_id`
+- **AND** both halves impact their sociedad's saldo on the next render
+
+## REMOVED Requirements
+
+### Requirement: Movimientos MUST allow imputing Lado Cliente to a Cuenta de Cliente de Ardua for nostros and manual non-operative movements
+
+**Reason:** The omnibus model declares that for movimientos sin cliente externo (categorías C, D, E), the contrapartida económica is a **formal cuenta contable** (Ingresos / Egresos / Patrimonio operativo / Intercompany / Puente FX), not a synthetic placeholder cliente. The `AS00000` "Cuenta de Cliente de Ardua" device was an implementation workaround that contradicts the conceptual model. With the new categoría system, the `Asignar Cliente` action is hidden via `show_when` for categorías C/D/E — there is no "imputable" Lado Cliente to fill on those records.
+
+**Migration:**
+- Mocks that previously imputed `cliente_id: 'AS00000'` on movimientos manuales no operativos SHALL be rewritten with `cliente_id: null`. The categoría of those records (derived from tipo) ensures the "Asignar Cliente" action does not surface, so `null` is the correct, final state.
+- The `clp.clientes` catalog resolver SHALL stop including the synthetic `AS00000` entry in its results.
+- Any spec scenario that exercises the AS00000 search flow is removed (this Requirement and its 2 scenarios).
+- Capability `fin.disponibilidades.movimientos.imputar_cliente` retains its semantics — it gates the action; the action is just no longer surfaced for C/D/E records.
+
+### Requirement: Posición MUST exclude movements pending supervision from saldo aggregation
+
+**Reason:** Supervisión as a first-class concept was removed in V1. Manual movements impact saldos immediately on confirm; there is no "pendiente de supervisión" intermediate state. The team will validate the operational flows with the area first and may reintroduce supervision (likely via capabilities) in a follow-up change.
+
+**Migration:**
+- The fields `requires_supervision`, `supervised_by`, `supervised_at`, `estado_de_supervision` SHALL be removed from `Movimiento`.
+- The type `EstadoDeSupervision` SHALL be removed.
+- Mocks SHALL drop these fields from every record.
+- Posición saldo aggregation SHALL include every confirmed movement on every render — no supervision-based exclusion.
+
+### Requirement: Rechazar carga manual MUST require a justification closure ≥ 10 characters and the rejected movement MUST never impact saldos
+
+**Reason:** With the supervision flow removed, the `Rechazar carga manual` action no longer exists. The action and its dialog are removed from the `fin.disponibilidades.movimientos` manifest.
+
+**Migration:**
+- The action `fin.disponibilidades.movimientos.supervisar.rechazar` SHALL be removed from the manifest.
+- The companion action `fin.disponibilidades.movimientos.supervisar.confirmar` SHALL also be removed.
+- The kanban axis `estado_de_supervision` SHALL be removed from the manifest's `kanban_axes`.
+
+### Requirement: The eight capabilities of fin-disponibilidades MUST be declared and evaluated by the manifest engine
+
+**Reason:** Two of the eight capabilities pertained to supervisión (`cargar_con_supervision`, `supervisar_carga`) which was removed in V1. The capability set tightens to six: `ver`, `bancos_cuentas.crear`, `bancos_cuentas.configurar_contable`, `movimientos.imputar_ardua`, `movimientos.imputar_cliente`, `movimientos.cargar_directo`.
+
+**Migration:**
+- The DEV seed `DEV_FALLBACK_CAPABILITIES` SHALL drop `fin.disponibilidades.movimientos.cargar_con_supervision` and `fin.disponibilidades.movimientos.supervisar_carga`.
+- The `Cargar movimiento manual` CTA's `capabilities.required_role_any_of` SHALL be `['fin.disponibilidades.movimientos.cargar_directo']` (single-capability gate).
+- A future change MAY reintroduce supervision capabilities; the framework's wildcard rule (`'*'` grants all) keeps dev unblocked.

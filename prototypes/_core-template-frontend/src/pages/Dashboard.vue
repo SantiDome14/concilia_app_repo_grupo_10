@@ -33,7 +33,10 @@ import { cn } from '@/lib/cn';
 // ────────────────────────────────────────────────────────────────────
 // Mirrors the prototype layout:
 //   · Header with period selector ("Últimos 30 días")
-//   · Row 1: 4 KPI counters (Alertas / Inbox / Reportes / placeholder)
+//   · Row 1: 4 KPI counters (placeholder / Alertas / Inbox / Reportes).
+//             The app-specific "main card" (placeholder) goes FIRST per
+//             the Dashboard convention — see CLAUDE.md "Dashboard KPI
+//             tile order".
 //   · Row 2: Evolución (placeholder chart) + Alertas activas widget
 //   · Row 3: Próximos vencimientos (reportes)
 // No filters, no sub-tabs, no batch CTAs.
@@ -268,11 +271,42 @@ const TREND_CLASSES: Record<'up' | 'down' | 'flat', string> = {
       </Select>
     </header>
 
-    <!-- Row 1 · KPI counters (4 cards: 3 generics + 1 placeholder) -->
+    <!-- Row 1 · KPI counters (4 cards: 1 app-specific main + 3 generics).
+         Convention: the app-specific KPI ("main card") goes FIRST — it
+         is the read-out the user cares about most. The 3 cross-cutting
+         counters (Alertas / Inbox / Reportes) follow. -->
     <section
       class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
       data-testid="dashboard-kpis"
     >
+      <!-- 1st slot — KPI placeholder (app-provided trend metric) -->
+      <div
+        v-if="placeholderKpi"
+        role="button"
+        tabindex="0"
+        :data-testid="`kpi-${placeholderKpi.id}`"
+        class="flex cursor-pointer flex-col gap-2 rounded-xl border border-b-2 bg-card-2 p-5 transition-colors hover:border-b-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        @click="navigateTo(placeholderKpi.href)"
+        @keydown="onCardKeydown($event, placeholderKpi.href)"
+      >
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
+            {{ placeholderKpi.label }}
+          </span>
+          <component
+            :is="TREND_ICON[placeholderKpi.trend ?? 'flat']"
+            :class="cn('h-3.5 w-3.5', TREND_CLASSES[placeholderKpi.trend ?? 'flat'])"
+            aria-hidden="true"
+          />
+        </div>
+        <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">
+          {{ placeholderKpi.value }}
+        </div>
+        <div v-if="placeholderKpi.hint" class="text-[11px] text-t-4">
+          {{ placeholderKpi.hint }}
+        </div>
+      </div>
+
       <div
         v-for="card in counterCards"
         :key="card.id"
@@ -309,34 +343,6 @@ const TREND_CLASSES: Record<'up' | 'down' | 'flat', string> = {
           {{ card.value }}
         </div>
         <div class="text-[11px] text-t-4">{{ card.hint }}</div>
-      </div>
-
-      <!-- 4th slot — KPI placeholder (app-provided trend metric) -->
-      <div
-        v-if="placeholderKpi"
-        role="button"
-        tabindex="0"
-        :data-testid="`kpi-${placeholderKpi.id}`"
-        class="flex cursor-pointer flex-col gap-2 rounded-xl border border-b-2 bg-card-2 p-5 transition-colors hover:border-b-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        @click="navigateTo(placeholderKpi.href)"
-        @keydown="onCardKeydown($event, placeholderKpi.href)"
-      >
-        <div class="flex items-center justify-between gap-2">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
-            {{ placeholderKpi.label }}
-          </span>
-          <component
-            :is="TREND_ICON[placeholderKpi.trend ?? 'flat']"
-            :class="cn('h-3.5 w-3.5', TREND_CLASSES[placeholderKpi.trend ?? 'flat'])"
-            aria-hidden="true"
-          />
-        </div>
-        <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">
-          {{ placeholderKpi.value }}
-        </div>
-        <div v-if="placeholderKpi.hint" class="text-[11px] text-t-4">
-          {{ placeholderKpi.hint }}
-        </div>
       </div>
     </section>
 

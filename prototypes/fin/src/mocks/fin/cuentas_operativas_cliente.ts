@@ -6,23 +6,19 @@
 // the Docket de Ardua Solutions Corp. The id format is
 // `<docket-digits><moneda><suffix>` (e.g. `005516EURC739`).
 //
-// The synthetic `AS00000` records are the "Cuenta de Cliente de Ardua"
-// placeholders (REQ-50 §5.7) used by FIN to maintain symmetric
-// bidirectional imputation on nostros and manual non-operative
-// movements that have no external client counterpart.
+// Per `align-fin-disponibilidades-to-omnibus-model`: the synthetic
+// `AS00000` placeholder is removed. Under the closed conceptual model,
+// movements without an external client (categorías C, D, E) have a
+// formal contrapartida contable (Ingresos / Egresos / Patrimonio
+// operativo / Intercompany / Puente FX) — never a synthetic cliente.
+// The `Asignar Cliente` action is hidden for those categorías via
+// manifest `show_when`.
 // ════════════════════════════════════════════════════════════════════
 
 import type { CuentaOperativaCliente } from '@/types/fin';
 
 export const CUENTAS_OPERATIVAS_CLIENTE: CuentaOperativaCliente[] = [
-  // ─── Synthetic Cuenta de Cliente de Ardua (one per moneda) ─────────
-  { id: 'AS00000ARS001', cliente_id: 'AS00000', moneda: 'ARS', estado: 'Activa', label: 'Cuenta interna · ARS' },
-  { id: 'AS00000USD001', cliente_id: 'AS00000', moneda: 'USD', estado: 'Activa', label: 'Cuenta interna · USD' },
-  { id: 'AS00000USDC001', cliente_id: 'AS00000', moneda: 'USDC', estado: 'Activa', label: 'Cuenta interna · USDC' },
-  { id: 'AS00000USDT001', cliente_id: 'AS00000', moneda: 'USDT', estado: 'Activa', label: 'Cuenta interna · USDT' },
-  { id: 'AS00000EUR001', cliente_id: 'AS00000', moneda: 'EUR', estado: 'Activa', label: 'Cuenta interna · EUR' },
-  { id: 'AS00000CAD001', cliente_id: 'AS00000', moneda: 'CAD', estado: 'Activa', label: 'Cuenta interna · CAD' },
-  // ─── Cuentas Operativas de clientes externos (sample) ──────────────
+  // ─── Cuentas Operativas de clientes externos ───────────────────────
   { id: '005516USD001', cliente_id: 'cli-acme', moneda: 'USD', estado: 'Activa', label: 'ACME · Docket 005516 · USD' },
   { id: '005516ARS001', cliente_id: 'cli-acme', moneda: 'ARS', estado: 'Activa', label: 'ACME · Docket 005516 · ARS' },
   { id: '005517USD001', cliente_id: 'cli-tecno-sa', moneda: 'USD', estado: 'Activa', label: 'Tecno SA · Docket 005517 · USD' },

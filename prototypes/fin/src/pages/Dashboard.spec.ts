@@ -4,10 +4,26 @@ import { setActivePinia, createPinia } from 'pinia';
 import { createRouter, createMemoryHistory } from 'vue-router';
 import Dashboard from './Dashboard.vue';
 import { ROUTE_PATHS } from '@/config/routes';
+import type * as DataDisplayModule from '@/components/data-display';
 
 vi.mock('vue-sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
+
+// Unovis uses ResizeObserver which JSDOM does not implement. We stub
+// the LineChart wrapper to a no-op so the page renders deterministically
+// without pulling the SVG canvas into the test environment.
+vi.mock('@/components/data-display', async () => {
+  const actual =
+    await vi.importActual<typeof DataDisplayModule>('@/components/data-display');
+  return {
+    ...actual,
+    LineChart: {
+      name: 'LineChartStub',
+      template: '<div data-testid="line-chart-stub" />',
+    },
+  };
+});
 
 function makeRouter() {
   return createRouter({
@@ -39,21 +55,21 @@ describe('Dashboard page · FIN', () => {
     setActivePinia(createPinia());
   });
 
-  it('renders the four FIN-specific KPIs', async () => {
+  it('renders the 4 canonical KPI tiles (Alertas / Inbox / Reportes / Posición consolidada)', async () => {
     const { wrapper } = await mountDashboard();
     expect(wrapper.find('[data-testid="dashboard-kpis"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="kpi-mov-pendientes"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="kpi-quotes-pend"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="kpi-reportes-vencidos"]').exists()).toBe(true);
-    expect(wrapper.text()).toContain('Posición consolidada');
+    expect(wrapper.find('[data-testid="kpi-alertas-activas"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="kpi-inbox-pendientes"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="kpi-reportes-prox-vencer"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="kpi-posicion-consolidada"]').exists()).toBe(true);
   });
 
-  it('KPI counter values are non-negative integers', async () => {
+  it('Alertas / Inbox / Reportes KPI values are non-negative integers', async () => {
     const { wrapper } = await mountDashboard();
     for (const id of [
-      'kpi-mov-pendientes-value',
-      'kpi-quotes-pend-value',
-      'kpi-reportes-vencidos-value',
+      'kpi-alertas-activas-value',
+      'kpi-inbox-pendientes-value',
+      'kpi-reportes-prox-vencer-value',
     ]) {
       const el = wrapper.find(`[data-testid="${id}"]`);
       const n = Number(el.text());
@@ -62,23 +78,36 @@ describe('Dashboard page · FIN', () => {
     }
   });
 
-  it('clicking the Movimientos KPI navigates to Disponibilidades with movimientos sub-tab', async () => {
-    const { wrapper, router } = await mountDashboard();
-    await wrapper.find('[data-testid="kpi-mov-pendientes"]').trigger('click');
-    await flushPromises();
-    // Post-REQ-50: top-level Movimientos is eliminated; the KPI links to
-    // /disponibilidades?tab=movimientos so the operator lands in the
-    // Movimientos sub-tab of Disponibilidades.
-    expect(router.currentRoute.value.path).toBe(ROUTE_PATHS.DISPONIBILIDADES);
-    expect(router.currentRoute.value.query.tab).toBe('movimientos');
+  it('Posición consolidada KPI renders an USD figure annotated with the FX pendiente note', async () => {
+    const { wrapper } = await mountDashboard();
+    const tile = wrapper.find('[data-testid="kpi-posicion-consolidada"]');
+    expect(tile.exists()).toBe(true);
+    expect(tile.text()).toMatch(/USD\s+\d+/);
+    expect(tile.text()).toContain('FX pendiente');
   });
 
-  it('renders Posición por sociedad with a card per sociedad in POSICION_TREE', async () => {
+  it('clicking the Alertas KPI navigates to /alertas', async () => {
+    const { wrapper, router } = await mountDashboard();
+    await wrapper.find('[data-testid="kpi-alertas-activas"]').trigger('click');
+    await flushPromises();
+    expect(router.currentRoute.value.path).toBe(ROUTE_PATHS.ALERTAS);
+  });
+
+  it('clicking the Inbox KPI navigates to /inbox', async () => {
+    const { wrapper, router } = await mountDashboard();
+    await wrapper.find('[data-testid="kpi-inbox-pendientes"]').trigger('click');
+    await flushPromises();
+    expect(router.currentRoute.value.path).toBe(ROUTE_PATHS.INBOX);
+  });
+
+  it('renders the Posición consolidada trend chart panel in Row A', async () => {
     const { wrapper } = await mountDashboard();
-    const panel = wrapper.find('[data-testid="dashboard-posicion-sociedad"]');
+    const panel = wrapper.find('[data-testid="dashboard-posicion-trend"]');
     expect(panel.exists()).toBe(true);
-    const cells = panel.findAll('[data-testid^="dashboard-soc-"]');
-    expect(cells.length).toBeGreaterThan(0);
+    expect(panel.text()).toContain('USD-equivalente');
+    expect(panel.find('[data-testid="dashboard-posicion-trend-chart"]').exists()).toBe(true);
+    // The chart is stubbed in this test env.
+    expect(panel.find('[data-testid="line-chart-stub"]').exists()).toBe(true);
   });
 
   it('renders Alertas activas + Próximos vencimientos + Actividad reciente panels', async () => {

@@ -45,8 +45,6 @@ const DEV_FALLBACK_CAPABILITIES = [
   'fin.disponibilidades.movimientos.imputar_ardua',
   'fin.disponibilidades.movimientos.imputar_cliente',
   'fin.disponibilidades.movimientos.cargar_directo',
-  'fin.disponibilidades.movimientos.cargar_con_supervision',
-  'fin.disponibilidades.movimientos.supervisar_carga',
 ];
 
 export function setupAuth0(app: App): void {

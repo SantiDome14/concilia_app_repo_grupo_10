@@ -7,12 +7,13 @@ import {
   Calendar,
   Check,
   Clock,
-  Download,
   FileText,
+  Inbox as InboxIcon,
   Plus,
+  TrendingUp,
 } from 'lucide-vue-next';
 import { Badge, type BadgeVariants } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { LineChart } from '@/components/data-display';
 import {
   Select,
   SelectContent,
@@ -22,11 +23,16 @@ import {
 } from '@/components/ui/select';
 import { ROUTE_PATHS } from '@/config/routes';
 import { ALERTS } from '@/mocks/genericos/alertas';
+import { INBOX_SOLICITUDES } from '@/mocks/genericos/inbox';
 import { REPORTS_CATALOG } from '@/mocks/genericos/reportes';
-import { MOVIMIENTOS } from '@/mocks/fin/movimientos';
-import { QUOTES } from '@/mocks/fin/quotes';
 import { POSICION_TREE } from '@/mocks/fin/disponibilidades';
 import { DASHBOARD_ACTIVITY } from '@/mocks/fin/dashboard-activity';
+import {
+  latestPosicionPoint,
+  slicePosicionTrend,
+  type DashboardPeriod,
+  type PosicionTrendPoint,
+} from '@/mocks/fin/posicion-trend';
 import type { Alerta, AlertaState, Severity } from '@/types/genericos';
 import { cn } from '@/lib/cn';
 
@@ -34,10 +40,10 @@ import { cn } from '@/lib/cn';
 // Dashboard — vista consolidada FIN
 // ────────────────────────────────────────────────────────────────────
 // Replicates the legacy `prototypes/fin-old/fin-prototype.html` layout:
-//   · L1 header: title + period chip + "Exportar resumen" CTA
-//   · L2 KPIs: 4 FIN-specific tiles
-//   · Row A: "Posición por sociedad" (2/3) + "Alertas activas" (1/3)
-//   · Row B: "Próximos vencimientos · Reportes" (2/3) + "Actividad reciente" (1/3)
+//   · L1 header: title + period chip
+//   · L2 KPIs: 4 canonical tiles (Posición consolidada / Alertas / Inbox / Reportes)
+//   · Row A: Trend Posición consolidada (2/3) + Alertas activas (1/3)
+//   · Row B: Próximos vencimientos · Reportes (2/3) + Actividad reciente (1/3)
 // Data is derived from existing FIN mocks where possible; the rest is
 // surfaced via small dashboard-specific seed files.
 // ════════════════════════════════════════════════════════════════════
@@ -47,29 +53,22 @@ const router = useRouter();
 const NOW = Date.now();
 const MS_DAY = 86_400_000;
 
-// ─── L2 · KPIs ───────────────────────────────────────────────────────
-const movPendientes = computed(
-  () => MOVIMIENTOS.filter((m) => m.fin.imput !== 'IMP').length,
+// ─── L2 · KPIs (4 canonical tiles per `core-modulo-genericos`) ───────
+// Standard 3 (cross-cutting): Alertas activas · Inbox pendientes ·
+// Reportes próx. a vencer. FIN-specific 4th: Posición consolidada.
+
+const ACTIVE_ALERT_STATES: AlertaState[] = ['new', 'in_review'];
+
+const alertasActivasCount = computed(
+  () => ALERTS.filter((a) => ACTIVE_ALERT_STATES.includes(a.state)).length,
 );
 
-const quotesPendFactura = computed(
+const inboxPendientesCount = computed(
   () =>
-    QUOTES.filter(
-      (q) =>
-        q.fin.facturaState === 'pendiente' &&
-        (q.status === 'executed' || q.status === 'settled'),
+    INBOX_SOLICITUDES.filter(
+      (s) => s.state === 'pendiente' || s.state === 'en_proceso',
     ).length,
 );
-
-const reportesVencidos = computed(() => {
-  let n = 0;
-  for (const r of REPORTS_CATALOG) {
-    if (!r.next) continue;
-    const d = daysUntilDate(r.next);
-    if (d !== null && d < 0) n++;
-  }
-  return n;
-});
 
 const reportesProxVencer = computed(() => {
   let n = 0;
@@ -81,48 +80,76 @@ const reportesProxVencer = computed(() => {
   return n;
 });
 
-// ─── Posición por sociedad — derived from POSICION_TREE ─────────────────
-// Map each POSICION_TREE entry to a single dashboard cell. The legacy
-// prototype hardcoded the canonical 4 sociedades; we surface whatever
-// POSICION_TREE declares so the dashboard tracks the live mock dataset.
-interface SociedadCell {
-  id: string;
-  name: string;
-  sub: string;
-  primaryAmount: string;
-  secondary?: string;
-  detail: string;
-  accent: string;
-}
+const reportesVencidos = computed(() => {
+  let n = 0;
+  for (const r of REPORTS_CATALOG) {
+    if (!r.next) continue;
+    const d = daysUntilDate(r.next);
+    if (d !== null && d < 0) n++;
+  }
+  return n;
+});
 
-const SOC_ACCENTS: Record<string, string> = {
-  hp: 'bg-success',
-  cp: 'bg-info',
-  asc: 'bg-[#A78BFA]',
-  av: 'bg-warning',
+/**
+ * Placeholder USD-eq value for the Posición consolidada KPI. V1 does NOT
+ * apply cross-currency conversions; this requires the Tipos de Cambio
+ * (FX rates) catalog which is a follow-up change. Until then we surface
+ * the latest seed value, independent of the chart's period selector.
+ */
+const posicionConsolidadaUsdM = computed<number>(() => latestPosicionPoint().value);
+
+// ─── Trend de Posición consolidada (USD-eq) ──────────────────────────
+// Driven by the L1 period selector — canonical 5-value period set
+// (Día / Mes / Trimestre / Semestre / Año). `dia` falls back to last
+// 7d so the line stays readable.
+const posicionTrend = computed<PosicionTrendPoint[]>(() =>
+  slicePosicionTrend(period.value),
+);
+
+const trendDelta = computed<{ pct: number; positive: boolean } | null>(() => {
+  const series = posicionTrend.value;
+  if (series.length < 2) return null;
+  const first = series[0]?.value;
+  const last = series[series.length - 1]?.value;
+  if (first === undefined || last === undefined || first === 0) return null;
+  const pct = ((last - first) / first) * 100;
+  return { pct, positive: pct >= 0 };
+});
+
+const sociedadCount = computed(() => POSICION_TREE.length);
+
+// Axis tick formatters for the trend chart. X exposes one tick per day
+// in the selected period (`xTickValues` below). To keep labels readable
+// we render text only every Nth tick — the rest stays as visible marks
+// without a label. Y is USD millions → compact "USD XX.XM" display.
+const TREND_TODAY_MS = new Date('2026-04-24T00:00:00Z').getTime();
+const MS_PER_DAY = 86_400_000;
+
+/** Days between adjacent X-axis labels per period. */
+const X_LABEL_EVERY: Record<DashboardPeriod, number> = {
+  '7': 1,
+  '30': 5,
+  '90': 15,
 };
 
-const sociedadCells = computed<SociedadCell[]>(() =>
-  POSICION_TREE.map((s) => {
-    const totals = s.totals ?? [];
-    const [primary, ...rest] = totals;
-    const primaryAmount = primary ? `${primary.lbl} ${primary.val}` : '—';
-    const secondary = rest.map((t) => `${t.lbl} ${t.val}`).join(' · ') || undefined;
-    const cuentasCount = s.cuentas.length;
-    return {
-      id: s.id,
-      name: s.name,
-      sub: s.sub,
-      primaryAmount,
-      secondary,
-      detail: `${cuentasCount} cuenta${cuentasCount === 1 ? '' : 's'}`,
-      accent: SOC_ACCENTS[s.id] ?? 'bg-t-3',
-    };
-  }),
+function formatTrendX(value: number): string {
+  const daysFromToday = Math.round((value - TREND_TODAY_MS) / MS_PER_DAY);
+  const stride = X_LABEL_EVERY[period.value];
+  if (daysFromToday !== 0 && daysFromToday % stride !== 0) return '';
+  if (daysFromToday === 0) return 'Hoy';
+  return `${daysFromToday}d`;
+}
+
+function formatTrendY(value: number): string {
+  return `USD ${value.toFixed(1)}M`;
+}
+
+/** One tick per data point — drives "30 secciones" / "90 secciones" etc. */
+const trendXTickValues = computed<number[]>(() =>
+  posicionTrend.value.map((p) => Date.parse(p.date)),
 );
 
 // ─── Alertas activas widget ──────────────────────────────────────────
-const ACTIVE_ALERT_STATES: AlertaState[] = ['new', 'in_review'];
 const SEVERITY_RANK: Record<Severity, number> = {
   critical: 0,
   high: 1,
@@ -249,19 +276,15 @@ const ACTIVITY_ICON: Record<'success' | 'info' | 'warning', typeof Check> = {
   warning: Clock,
 };
 
-// ─── L1 · Period selector + Export CTA ───────────────────────────────
-const period = ref<string>('30');
-const PERIOD_OPTIONS = [
+// ─── L1 · Period selector ────────────────────────────────────────────
+// Standard "Últimos N días" set — 7 / 30 / 90. Drives the trend chart
+// (1 X-axis tick per day) and any other surfaces that consume `period`.
+const period = ref<DashboardPeriod>('30');
+const PERIOD_OPTIONS: Array<{ value: DashboardPeriod; label: string }> = [
   { value: '7', label: 'Últimos 7 días' },
   { value: '30', label: 'Últimos 30 días' },
   { value: '90', label: 'Últimos 90 días' },
-  { value: 'today', label: 'Hoy · 24 abr 2026' },
 ];
-
-function exportSummary(): void {
-  // Real export would target a backend endpoint per `core-api-layer`.
-  // For the prototype, the toast suffices.
-}
 
 function navigateTo(href: string): void {
   void router.push(href);
@@ -301,106 +324,134 @@ function onCardKeydown(event: KeyboardEvent, href: string): void {
             </SelectItem>
           </SelectContent>
         </Select>
-        <Button
-          variant="primary"
-          data-testid="dashboard-export"
-          @click="exportSummary"
-        >
-          <Download class="mr-1.5 h-3.5 w-3.5" />
-          Exportar resumen
-        </Button>
       </div>
     </header>
 
-    <!-- L2 · KPIs (4 FIN-specific tiles) -->
+    <!-- L2 · KPIs · canonical 4 tiles per core-modulo-genericos.
+         Convention: the app-specific "main card" goes FIRST — for FIN
+         that's Posición consolidada, the most relevant single read-out
+         for the operator. The 3 cross-cutting tiles (Alertas / Inbox /
+         Reportes) follow. -->
     <section
       class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
       data-testid="dashboard-kpis"
     >
-      <div class="flex flex-col gap-1.5 rounded-xl border border-b-2 bg-card-2 p-5">
-        <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
-          Posición consolidada
-        </span>
-        <div class="font-mono text-2xl font-extrabold leading-none tracking-tight text-t-1">
-          USD 28.4M
+      <div
+        class="flex flex-col gap-1.5 rounded-xl border border-b-2 bg-card-2 p-5"
+        data-testid="kpi-posicion-consolidada"
+      >
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
+            Posición consolidada
+          </span>
+          <TrendingUp class="h-4 w-4 text-success" aria-hidden="true" />
         </div>
-        <div class="text-[11px] text-t-4">equivalente · 4 sociedades</div>
+        <div
+          class="font-mono text-2xl font-extrabold leading-none tracking-tight text-t-1"
+          data-testid="kpi-posicion-consolidada-value"
+        >
+          USD {{ posicionConsolidadaUsdM.toFixed(1) }}M
+        </div>
+        <div class="text-[11px] text-t-4">
+          equivalente · {{ sociedadCount }} sociedades · FX pendiente
+        </div>
       </div>
 
       <div
         role="button"
         tabindex="0"
-        data-testid="kpi-mov-pendientes"
+        data-testid="kpi-alertas-activas"
         class="flex cursor-pointer flex-col gap-1.5 rounded-xl border border-b-2 bg-card-2 p-5 hover:border-b-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        @click="navigateTo(ROUTE_PATHS.DISPONIBILIDADES + '?tab=movimientos')"
-        @keydown="onCardKeydown($event, ROUTE_PATHS.DISPONIBILIDADES + '?tab=movimientos')"
+        @click="navigateTo(ROUTE_PATHS.ALERTAS)"
+        @keydown="onCardKeydown($event, ROUTE_PATHS.ALERTAS)"
       >
-        <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
-          Mov. pendientes de imputar
-        </span>
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
+            Alertas activas
+          </span>
+          <BellRing class="h-4 w-4 text-danger" aria-hidden="true" />
+        </div>
+        <div
+          class="text-2xl font-extrabold leading-none tracking-tight text-danger"
+          data-testid="kpi-alertas-activas-value"
+        >
+          {{ alertasActivasCount }}
+        </div>
+        <div class="text-[11px] text-t-4">Nuevas y en revisión</div>
+      </div>
+
+      <div
+        role="button"
+        tabindex="0"
+        data-testid="kpi-inbox-pendientes"
+        class="flex cursor-pointer flex-col gap-1.5 rounded-xl border border-b-2 bg-card-2 p-5 hover:border-b-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        @click="navigateTo(ROUTE_PATHS.INBOX)"
+        @keydown="onCardKeydown($event, ROUTE_PATHS.INBOX)"
+      >
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
+            Inbox pendientes
+          </span>
+          <InboxIcon class="h-4 w-4 text-warning" aria-hidden="true" />
+        </div>
         <div
           class="text-2xl font-extrabold leading-none tracking-tight text-warning"
-          data-testid="kpi-mov-pendientes-value"
+          data-testid="kpi-inbox-pendientes-value"
         >
-          {{ movPendientes }}
+          {{ inboxPendientesCount }}
         </div>
-        <div class="text-[11px] text-t-4">Movimientos OPS sin contabilizar</div>
+        <div class="text-[11px] text-t-4">Solicitudes pendientes o en proceso</div>
       </div>
 
       <div
         role="button"
         tabindex="0"
-        data-testid="kpi-quotes-pend"
-        class="flex cursor-pointer flex-col gap-1.5 rounded-xl border border-b-2 bg-card-2 p-5 hover:border-b-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        @click="navigateTo(ROUTE_PATHS.VENTAS)"
-        @keydown="onCardKeydown($event, ROUTE_PATHS.VENTAS)"
-      >
-        <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
-          Quotes pend. facturación
-        </span>
-        <div
-          class="text-2xl font-extrabold leading-none tracking-tight text-info"
-          data-testid="kpi-quotes-pend-value"
-        >
-          {{ quotesPendFactura }}
-        </div>
-        <div class="text-[11px] text-t-4">Quotes ejecutadas sin factura</div>
-      </div>
-
-      <div
-        role="button"
-        tabindex="0"
-        data-testid="kpi-reportes-vencidos"
+        data-testid="kpi-reportes-prox-vencer"
         class="flex cursor-pointer flex-col gap-1.5 rounded-xl border border-b-2 bg-card-2 p-5 hover:border-b-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         @click="navigateTo(ROUTE_PATHS.REPORTES)"
         @keydown="onCardKeydown($event, ROUTE_PATHS.REPORTES)"
       >
-        <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
-          Reportes vencidos
-        </span>
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
+            Reportes próx. a vencer
+          </span>
+          <FileText class="h-4 w-4 text-info" aria-hidden="true" />
+        </div>
         <div
-          class="text-2xl font-extrabold leading-none tracking-tight text-danger"
-          data-testid="kpi-reportes-vencidos-value"
+          class="text-2xl font-extrabold leading-none tracking-tight text-info"
+          data-testid="kpi-reportes-prox-vencer-value"
         >
-          {{ reportesVencidos }}
+          {{ reportesProxVencer }}
         </div>
         <div class="text-[11px] text-t-4">
-          {{ reportesProxVencer }} próximos a vencer
+          {{ reportesVencidos }} vencido<span v-if="reportesVencidos !== 1">s</span>
         </div>
       </div>
     </section>
 
-    <!-- Row A · Posición por sociedad (2/3) + Alertas activas (1/3) -->
+    <!-- Row A · Tendencia Posición consolidada (2/3) + Alertas activas (1/3) -->
     <section class="grid grid-cols-1 gap-4 lg:grid-cols-3" data-testid="dashboard-row-a">
-      <!-- Posición por sociedad -->
+      <!-- Tendencia Posición consolidada -->
       <div
         class="flex flex-col gap-3 rounded-xl border border-b-2 bg-card-2 p-5 lg:col-span-2"
-        data-testid="dashboard-posicion-sociedad"
+        data-testid="dashboard-posicion-trend"
       >
         <div class="flex items-center justify-between">
           <div class="flex flex-col gap-0.5">
-            <h2 class="text-sm font-bold text-t-1">Posición por sociedad</h2>
-            <span class="text-[11px] text-t-4">Saldos vivos · al cierre del día</span>
+            <div class="flex items-center gap-2">
+              <TrendingUp class="h-4 w-4 text-brand" />
+              <h2 class="text-sm font-bold text-t-1">Posición consolidada</h2>
+              <Badge
+                v-if="trendDelta"
+                :variant="trendDelta.positive ? 'success' : 'danger'"
+                class="font-mono text-[10px]"
+              >
+                {{ trendDelta.positive ? '+' : '' }}{{ trendDelta.pct.toFixed(1) }}%
+              </Badge>
+            </div>
+            <span class="text-[11px] text-t-4">
+              USD-equivalente · serie diaria · FX rates pendientes
+            </span>
           </div>
           <button
             type="button"
@@ -410,24 +461,20 @@ function onCardKeydown(event: KeyboardEvent, href: string): void {
             Ir a Tesorería →
           </button>
         </div>
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div
-            v-for="cell in sociedadCells"
-            :key="cell.id"
-            :data-testid="`dashboard-soc-${cell.id}`"
-            class="flex cursor-pointer flex-col gap-1.5 rounded-lg border border-b-1 bg-card p-3 transition-colors hover:border-b-2"
-            @click="navigateTo(ROUTE_PATHS.DISPONIBILIDADES)"
-          >
-            <div class="flex items-center gap-2">
-              <span :class="cn('h-2 w-2 rounded-full', cell.accent)" aria-hidden="true" />
-              <span class="text-[13px] font-semibold text-t-1">{{ cell.name }}</span>
-            </div>
-            <div class="font-mono text-base font-bold text-t-1">{{ cell.primaryAmount }}</div>
-            <div class="text-[11px] text-t-4">
-              <span v-if="cell.secondary">{{ cell.secondary }} · </span>
-              {{ cell.detail }}
-            </div>
-          </div>
+        <div class="h-[220px] w-full" data-testid="dashboard-posicion-trend-chart">
+          <LineChart
+            :data="posicionTrend as unknown as Array<Record<string, unknown>>"
+            :x-accessor="(d) => Date.parse((d as unknown as PosicionTrendPoint).date)"
+            :y-accessor="(d) => (d as unknown as PosicionTrendPoint).value"
+            :x-tick-values="trendXTickValues"
+            :x-tick-format="formatTrendX"
+            :y-tick-format="formatTrendY"
+            :y-num-ticks="4"
+            :colors="['info']"
+            title="Posición consolidada USD-equivalente"
+            description="Serie diaria de la posición consolidada del grupo, convertida a USD vía Tipos de Cambio (catálogo pendiente)."
+            empty-message="Sin datos en el período seleccionado"
+          />
         </div>
       </div>
 

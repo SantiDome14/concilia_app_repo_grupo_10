@@ -104,16 +104,42 @@ describe('Disponibilidades page · FIN (REQ-50)', () => {
     expect(wrapper.find('[data-testid="posicion-tree"]').exists()).toBe(false);
   });
 
-  it('exposes the Posición KPI strip with Posición consolidada / Propio / Cliente / Sociedades / Cuentas', async () => {
+  it('exposes the Posición KPI strip with the 4 ecuación-maestra cards (Bancos / Obligaciones / Pendientes / Capacidad Operativa)', async () => {
     const { wrapper } = await mountPage();
     const kpis = wrapper.find('[data-testid="posicion-kpis"]');
     expect(kpis.exists()).toBe(true);
     const text = kpis.text();
-    expect(text).toContain('Posición consolidada');
-    expect(text).toContain('Total Propio');
-    expect(text).toContain('Total Cliente');
-    expect(text).toContain('Sociedades activas');
-    expect(text).toContain('Cuentas activas');
+    expect(text).toContain('Bancos');
+    expect(text).toContain('Obligaciones');
+    expect(text).toContain('Pendientes');
+    expect(text).toContain('Capacidad operativa');
+    // Per-moneda rows are present in moneda nativa (no USD-equivalent in V1).
+    expect(wrapper.find('[data-testid="posicion-kpi-bancos"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="posicion-kpi-obligaciones"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="posicion-kpi-pendientes"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="posicion-kpi-capacidad-operativa"]').exists()).toBe(true);
+  });
+
+  it('Posición tree does NOT expose Propio / Cliente columns or badges', async () => {
+    const { wrapper } = await mountPage();
+    const tree = wrapper.find('[data-testid="posicion-tree"]');
+    expect(tree.exists()).toBe(true);
+    const text = tree.text();
+    // Per the omnibus model, the "¿de qué cliente es la plata?" question is
+    // malformed — the columns/badges that materialised that question are gone.
+    expect(text).not.toContain('Propio');
+    expect(text).not.toContain('Total Propio');
+    expect(text).not.toContain('Total Cliente');
+  });
+
+  it('Posición tree exposes BANCO / CUENTA / MONEDA / SALDO columns and the agrupación title', async () => {
+    const { wrapper } = await mountPage();
+    const title = wrapper.find('[data-testid="posicion-tree-title"]');
+    expect(title.exists()).toBe(true);
+    expect(title.text().toLowerCase()).toContain('saldos por cuentas');
+    const tree = wrapper.find('[data-testid="posicion-tree"]');
+    const headers = tree.findAll('th').map((th) => th.text());
+    expect(headers).toEqual(['Banco', 'Cuenta', 'Moneda', 'Saldo']);
   });
 
   it('renders one Sociedad node per entry of POSICION_TREE in the Posición tree', async () => {
@@ -146,7 +172,7 @@ describe('Disponibilidades page · FIN (REQ-50)', () => {
     expect(banner.text()).toContain('Limpiar filtro');
   });
 
-  it('exposes the Movimientos KPI strip with the five REQ-50 §5.2 KPIs', async () => {
+  it('exposes the Movimientos KPI strip with 5 omnibus-model KPIs (per-moneda volumes + pendientes de imputación / asignación; no supervisión card)', async () => {
     const { wrapper } = await mountPage(
       `${ROUTE_PATHS.DISPONIBILIDADES}?tab=movimientos`,
     );
@@ -157,7 +183,11 @@ describe('Disponibilidades page · FIN (REQ-50)', () => {
     expect(text).toContain('Volumen ingresado');
     expect(text).toContain('Volumen egresado');
     expect(text).toContain('Pendientes de imputación');
-    expect(text).toContain('Pendientes de supervisión');
+    expect(text).toContain('Pendientes de asignación');
+    expect(text).not.toContain('Pendientes de supervisión');
+    // Per-moneda rows in volume cards.
+    expect(wrapper.find('[data-testid="movimientos-kpi-ingresado"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="movimientos-kpi-egresado"]').exists()).toBe(true);
   });
 
   it('exposes the Bancos / Cuentas KPI strip with the four REQ-50 §4.2 KPIs', async () => {
@@ -182,14 +212,77 @@ describe('Disponibilidades page · FIN (REQ-50)', () => {
     expect(html).toContain('Sin configurar');
   });
 
-  it('Movimientos table includes a row per movimiento and a Supervisión column with badge when applicable', async () => {
+  it('Movimientos table renders one row per movimiento with no Supervisión column (supervisión removed in V1)', async () => {
     const { wrapper } = await mountPage(
       `${ROUTE_PATHS.DISPONIBILIDADES}?tab=movimientos`,
     );
     const rows = wrapper.findAll('[data-testid^="movimientos-row-"]');
     expect(rows.length).toBeGreaterThan(0);
-    // At least one row shows the "pendiente_de_supervision" badge.
     const allHtml = wrapper.html();
-    expect(allHtml).toContain('pendiente_de_supervision');
+    expect(allHtml).not.toContain('pendiente_de_supervision');
+    expect(allHtml).not.toContain('estado_de_supervision');
+  });
+
+  it('Movimientos exposes search + Período / Tipo / Rail / Estructura·Cuenta / Estado filters', async () => {
+    const { wrapper } = await mountPage(
+      `${ROUTE_PATHS.DISPONIBILIDADES}?tab=movimientos`,
+    );
+    const filters = wrapper.find('[data-testid="movimientos-filters"]');
+    expect(filters.exists()).toBe(true);
+    expect(filters.find('[data-testid="movimientos-search"]').exists()).toBe(true);
+    const labels = filters.text();
+    expect(labels).toContain('Ledger');
+    expect(labels).toContain('Período');
+    expect(labels).toContain('Tipo');
+    expect(labels).toContain('Rail');
+    expect(labels).toContain('Estructura / Cuenta');
+    expect(labels).toContain('Estado');
+    expect(labels).not.toContain('Partner ·');
+  });
+
+  it('Rail filter options come from the canonical RAIL_OPTIONS constant (15 entries)', async () => {
+    const { RAIL_OPTIONS } = await import('@/types/fin');
+    expect(RAIL_OPTIONS).toHaveLength(15);
+    expect(RAIL_OPTIONS).toContain('WIRE');
+    expect(RAIL_OPTIONS).toContain('VCURRENCY USDT');
+    expect(RAIL_OPTIONS).toContain('VCURRENCY USDC');
+    expect(RAIL_OPTIONS).toContain('SWIFT');
+    expect(RAIL_OPTIONS).toContain('SPE');
+    expect(RAIL_OPTIONS).toContain('SEPA');
+    expect(RAIL_OPTIONS).toContain('PIX');
+    expect(RAIL_OPTIONS).toContain('INTERNAL');
+    expect(RAIL_OPTIONS).toContain('FX');
+    expect(RAIL_OPTIONS).toContain('FEDWIRE');
+    expect(RAIL_OPTIONS).toContain('Faster Payments');
+    expect(RAIL_OPTIONS).toContain('ARDUA');
+    expect(RAIL_OPTIONS).toContain('ACH');
+  });
+
+  it('Movimientos Lista view exposes columns Rail / Banco-Cuenta (no Partner column — redundant)', async () => {
+    const { wrapper } = await mountPage(
+      `${ROUTE_PATHS.DISPONIBILIDADES}?tab=movimientos`,
+    );
+    const table = wrapper.find('[data-testid="movimientos-table"]');
+    expect(table.exists()).toBe(true);
+    const headers = table.findAll('th').map((th) => th.text());
+    expect(headers).toContain('Rail');
+    expect(headers).toContain('Banco / Cuenta');
+    expect(headers).not.toContain('Partner');
+  });
+
+  it('Bancos / Cuentas exposes search + Sociedad / Estructura / Cuenta / Moneda / Estado filters (no Config filter)', async () => {
+    const { wrapper } = await mountPage(
+      `${ROUTE_PATHS.DISPONIBILIDADES}?tab=bancos_cuentas`,
+    );
+    const filters = wrapper.find('[data-testid="bancos-cuentas-filters"]');
+    expect(filters.exists()).toBe(true);
+    expect(filters.find('[data-testid="bancos-cuentas-search"]').exists()).toBe(true);
+    const text = filters.text();
+    expect(text).toContain('Catalogo');
+    expect(text).toContain('Sociedad');
+    expect(text).toContain('Estructura');
+    expect(text).toContain('Moneda');
+    expect(text).toContain('Estado');
+    expect(text).not.toContain('Config. ·');
   });
 });

@@ -16,10 +16,10 @@
 //      canonical record is `Movimiento`; display shapes are derivable
 //      surfaces.
 //
-// Per REQ-50 (`add-fin-disponibilidades`):
-//   - `Movimiento.origen` is now top-level with values `'OPS' | 'TRD' | 'Manual'`.
-//   - `Movimiento.requires_supervision`, `supervised_by`, `supervised_at`,
-//     `estado_de_supervision` are top-level fields for manual loads.
+// Per `align-fin-disponibilidades-to-omnibus-model`:
+//   - `Movimiento.origen` is top-level with values `'OPS' | 'FIN'`.
+//   - The supervision flow was removed in V1 — manual loads impact saldos
+//     directly. Reintroduction (via capabilities) is a follow-up change.
 //   - `RetiroCola` and the Cola sub-tab are eliminated; the queue
 //     surfaces as the Sub-tab Movimientos with `enable_when` predicates.
 // ════════════════════════════════════════════════════════════════════
@@ -33,28 +33,138 @@ export type CuentaIcon = 'bank' | 'wallet';
 /** Currency code displayed next to balances (open string union). */
 export type Moneda = 'ARS' | 'USD' | 'USDC' | 'USDT' | 'CAD' | 'EUR' | string;
 
-/** Movement type discriminator carried by every `movimiento` record. */
+/**
+ * Movement type discriminator carried by every `movimiento` record. The 18
+ * values are the closed contract of the matriz cerrada — version after
+ * `align-fin-disponibilidades-to-omnibus-model` removed the simulator-only
+ * pending tipos (`SOLICITUD_RETIRO_PENDING`, `DEPOSITO_PENDIENTE`,
+ * `ASIGNACION_PENDIENTE`). Pendientes de asignación remain as a contable
+ * grupo (Pasivo técnico) — they are computed from records with
+ * `fin.cliente_id == null`, not modelled as separate tipos.
+ *
+ * Tipo registered by OPS (vostro flow + ajustes):
+ *   DEPOSIT, WITHDRAWAL, FEE, REBATE, SWAP_OUT, SWAP_IN, SPREAD,
+ *   AJUSTE_CREDITO, AJUSTE_DEBITO.
+ *
+ * Tipo registered by FIN (nostros + manual non-operativos + intercompany):
+ *   MOV_ENTRE_CUENTAS_PROPIAS, PRESTAMO_INTERCOMPANY, SWEEPING_CROSS_SOCIEDAD,
+ *   COMISION_BANCARIA, INTERES_BANCARIO, PAGO_PROVEEDOR, PAGO_SALARIOS,
+ *   APORTE_CAPITAL, AJUSTE_MANUAL.
+ *
+ * Adding a new tipo SHALL go through an OpenSpec change.
+ */
 export type MovimientoTipo =
-  | 'COLLECTOR_IN'
-  | 'COLLECTOR_OUT'
-  | 'WITHDRAWAL'
   | 'DEPOSIT'
-  | 'TRANSFER_IN'
-  | 'TRANSFER_OUT'
-  | 'SWAP_IN'
-  | 'SWAP_OUT'
+  | 'WITHDRAWAL'
   | 'FEE'
-  | 'TAX'
   | 'REBATE'
-  | 'ADDITION';
+  | 'SWAP_OUT'
+  | 'SWAP_IN'
+  | 'SPREAD'
+  | 'AJUSTE_CREDITO'
+  | 'AJUSTE_DEBITO'
+  | 'MOV_ENTRE_CUENTAS_PROPIAS'
+  | 'PRESTAMO_INTERCOMPANY'
+  | 'SWEEPING_CROSS_SOCIEDAD'
+  | 'COMISION_BANCARIA'
+  | 'INTERES_BANCARIO'
+  | 'PAGO_PROVEEDOR'
+  | 'PAGO_SALARIOS'
+  | 'APORTE_CAPITAL'
+  | 'AJUSTE_MANUAL';
 
 /**
- * Origin of a recorded movement (REQ-50 §5.1).
- *   - `'OPS'` — events from `core-ops-backend` (vostro movements).
- *   - `'TRD'` — events from `core-trd-backend` (roadmap; not v1.0).
- *   - `'Manual'` — manual loads from FIN.Disponibilidades.
+ * Categoría derivada del tipo según la dimensión (presencia de cliente ×
+ * presencia de flujo físico) del feature.
+ *   A — Con cliente + físico (DEPOSIT, WITHDRAWAL).
+ *   B — Con cliente, sin físico (FEE, REBATE, SWAP_*, AJUSTE_CR/DB).
+ *   C — Sin cliente + físico (interno): COMISION_BANCARIA, INTERES_BANCARIO,
+ *       PAGO_PROVEEDOR, PAGO_SALARIOS, MOV_ENTRE_CUENTAS_PROPIAS, APORTE_CAPITAL.
+ *   D — Sin cliente + físico (cross-sociedad): PRESTAMO_INTERCOMPANY,
+ *       SWEEPING_CROSS_SOCIEDAD.
+ *   E — Sin cliente, sin físico: SPREAD, AJUSTE_MANUAL.
+ *
+ * Derived from `tipo` via `categoriaOf()` in `@/lib/movimientos/categoria`.
+ * Never stored on the record — see Decision 1 of the change's design.md.
+ *
+ * Categoría F (Cliente NO IDENTIFICADO) was removed alongside the pending
+ * tipos: a depósito sin cliente identificado es un `DEPOSIT` con
+ * `fin.cliente_id == null` (categoría A en estado de imputación parcial),
+ * no un tipo separado.
  */
-export type MovimientoOrigen = 'OPS' | 'TRD' | 'Manual';
+export type MovimientoCategoria = 'A' | 'B' | 'C' | 'D' | 'E';
+
+/**
+ * Grupos contables del módulo Disponibilidades (no plan de cuentas formal —
+ * eso llega con el Motor Contable en V2). Patrimonio operativo es la cuenta
+ * técnica que captura aportes propios y residual operativo de Ardua; su
+ * saldo de apertura en T0 = Capacidad Operativa inicial (`Bancos − Obligaciones
+ * − Pendientes`). Subtipos formales (Capital social, Aportes irrevocables,
+ * Reservas, Resultados Acumulados) se introducen en V2.
+ */
+export type GrupoContable =
+  | 'disponibilidades'
+  | 'obligaciones_clientes'
+  | 'pendientes_asignacion'
+  | 'puente_fx'
+  | 'intercompany'
+  | 'patrimonio_operativo'
+  | 'ingresos'
+  | 'egresos';
+
+/**
+ * Canonical set of rails recognized by FIN.Disponibilidades. Every
+ * `movimiento` carries one of these as `ops.rail` — the field is a
+ * closed contract, not an open string. Adding a new rail SHALL go
+ * through an OpenSpec change.
+ */
+export type MovimientoRail =
+  | 'WIRE'
+  | 'VCURRENCY USDT'
+  | 'VCURRENCY USDC'
+  | 'VCURRENCY'
+  | 'SWIFT'
+  | 'SPEI'
+  | 'SPE'
+  | 'SEPA'
+  | 'PIX'
+  | 'INTERNAL'
+  | 'FX'
+  | 'FEDWIRE'
+  | 'Faster Payments'
+  | 'ARDUA'
+  | 'ACH';
+
+/** Canonical display order for the Rail filter dropdown. */
+export const RAIL_OPTIONS: readonly MovimientoRail[] = [
+  'WIRE',
+  'VCURRENCY USDT',
+  'VCURRENCY USDC',
+  'VCURRENCY',
+  'SWIFT',
+  'SPEI',
+  'SPE',
+  'SEPA',
+  'PIX',
+  'INTERNAL',
+  'FX',
+  'FEDWIRE',
+  'Faster Payments',
+  'ARDUA',
+  'ACH',
+];
+
+/**
+ * Origin of a recorded movement — which app registered it.
+ *   - `'OPS'` — events flowing from `core-ops-backend` (vostro: depósitos,
+ *     retiros, fees, swaps, pendientes, ajustes, etc.).
+ *   - `'FIN'` — events registered from FIN.Disponibilidades (nostros y
+ *     no-operativos: comisiones bancarias, intereses, pagos a proveedores,
+ *     salarios, intercompany, sweeping, aportes de capital, ajustes
+ *     manuales). Sustituye los antiguos `'Manual'` y `'TRD'` —
+ *     `'TRD'` no aplica al ledger de Disponibilidades.
+ */
+export type MovimientoOrigen = 'OPS' | 'FIN';
 
 /** Display state of a movement in the Tesorería ledger view (display-only). */
 export type MovimientoEstado = 'CONF' | 'COLA' | 'PEND';
@@ -64,20 +174,6 @@ export type ImputacionState = 'PEND' | 'PARC' | 'IMP';
 
 /** Conciliación lifecycle (legacy — not in REQ-50 v1, retained for archived fields). */
 export type ConciliacionState = 'PEND' | 'CONC' | 'DIFF';
-
-/**
- * Supervision state for manual movements (REQ-50 §6.3). Orthogonal to
- * the operational state inherited from REQ-42.
- *   - `'no_aplica'` — origen is OPS or TRD; supervision is not relevant.
- *   - `'pendiente_de_supervision'` — manual load awaiting confirmation.
- *   - `'confirmado'` — confirmed by a supervisor (≠ creator). Impacts saldos.
- *   - `'rechazado'` — rejected by a supervisor. Never impacts saldos.
- */
-export type EstadoDeSupervision =
-  | 'no_aplica'
-  | 'pendiente_de_supervision'
-  | 'confirmado'
-  | 'rechazado';
 
 /** Documentación lifecycle for a `quote` (Cotizaciones kanban axis). */
 export type FacturaState = 'pendiente' | 'facturada' | 'no-req';
@@ -136,9 +232,14 @@ export interface MovimientoFin {
   /** Cuenta Operativa del Cliente (REQ-42 §6). */
   cuenta_operativa_cliente_id?: string | null;
   cliente_imputation_note?: string | null;
-  /** Transfer flow — reference to the destination account (TRANSFER_OUT). */
+  /**
+   * Counterparty account for movements that reference a second cuenta on the
+   * same sociedad: `MOV_ENTRE_CUENTAS_PROPIAS`. Cross-sociedad events
+   * (`PRESTAMO_INTERCOMPANY`, `SWEEPING_CROSS_SOCIEDAD`) do NOT use these
+   * fields — they generate two distinct Movimiento records linked by
+   * `evento_id` (one per sociedad), each carrying its own `fin.cuenta_id`.
+   */
   cuenta_destino_id?: string | null;
-  /** Transfer flow — reference to the origin account (TRANSFER_IN). */
   cuenta_origen_id?: string | null;
   // Legacy fields preserved for archived migration compatibility.
   proveedor_id?: string | null;
@@ -156,13 +257,9 @@ export interface MovimientoFin {
 
 /**
  * `movimiento` record consumed by the `fin.disponibilidades.movimientos`
- * manifest. Per REQ-50, five top-level fields drive the supervision
- * flow and the lens / origin discriminators:
- *   - `origen` — OPS / TRD / Manual (REQ-50 §5.1).
- *   - `requires_supervision`, `supervised_by`, `supervised_at`,
- *     `estado_de_supervision` — local supervision flags (REQ-50 §6).
- *   - `created_by` — the user that created the manual load, used by
- *     the `Confirmar carga manual` predicate (creator ≠ supervisor).
+ * manifest. Per the omnibus alignment change, the supervision flow was
+ * removed in V1 — the area will validate the flows first and supervision
+ * may be reintroduced via capabilities in a follow-up change.
  *
  * Two namespaces are nested at runtime:
  *   - `ops.*` — read-only OPS-native data (rail, account, counterparty,
@@ -178,25 +275,31 @@ export interface Movimiento {
   monto: string;
   moneda: Moneda;
   status: 'COMPLETED' | 'PENDING' | 'FAILED';
-  /** Origin of the movement — drives manifest predicates (REQ-50 §5.1). */
+  /** Origin of the movement — which app registered it. */
   origen: MovimientoOrigen;
-  /** True when the movement is a manual load awaiting confirmation (REQ-50 §6.2). */
-  requires_supervision: boolean;
-  /** Supervisor user id, set on `Confirmar carga manual` (REQ-50 §6.2). */
-  supervised_by: string | null;
-  /** Supervision timestamp (ISO), set on `Confirmar carga manual` (REQ-50 §6.2). */
-  supervised_at: string | null;
-  /** Supervision state — orthogonal to `status` (REQ-50 §6.3). */
-  estado_de_supervision: EstadoDeSupervision;
-  /** Creator user id — used by the `created_by !== current_user` predicate. */
+  /** Creator user id — audit metadata; the human or system that registered the movement. */
   created_by: string | null;
+  /**
+   * Asiento contable identifier. V1 modela el asiento a nivel grupo
+   * contable (no plan de cuentas formal). Cross-sociedad events generate
+   * two distinct Movimientos with two distinct `asiento_id`s sharing
+   * `evento_id` (see Decision 2 of the omnibus alignment change).
+   */
+  asiento_id?: string | null;
+  /**
+   * Operative event correlation id. Two Movimientos belong to the same
+   * operative event iff they share `evento_id`. Used for:
+   *   - Cross-sociedad pairs (`PRESTAMO_INTERCOMPANY`, `SWEEPING_CROSS_SOCIEDAD`).
+   *   - SWAP triples (`SWAP_OUT` + `SWAP_IN` + `SPREAD` from a single ejecución).
+   */
+  evento_id?: string | null;
   ops: MovimientoOps;
   fin: MovimientoFin;
 }
 
 /** OPS-native namespace nested inside a `movimiento` record. */
 export interface MovimientoOps {
-  rail: string;
+  rail: MovimientoRail;
   account: string;
   client: string | null;
   counterparty: string | null;
@@ -238,10 +341,10 @@ export interface Quote {
 
 /**
  * `carga_manual_solicitud` payload created by the
- * `fin.disponibilidades.movimientos.cargar_*` action. Per REQ-50 §6.5,
- * the dialog accepts the fields below; on confirm, the engine creates
- * a `Movimiento` record with `requires_supervision` derived from the
- * creator's capability.
+ * `fin.disponibilidades.movimientos.cargar_manual` CTA. On confirm, the
+ * engine creates a `Movimiento` record (or a pair of mirrored records
+ * sharing `evento_id` for cross-sociedad tipos). Supervision was removed
+ * in V1; reintroduction is a follow-up change.
  */
 export interface CargaManualSolicitud {
   sociedad_id: string;
@@ -348,22 +451,29 @@ export interface SociedadTotal {
   val: string;
 }
 
-/** Single account row inside a Sociedad. Numeric fields are
- *  pre-formatted strings (display-ready values straight from the
- *  seed data). */
+/**
+ * Single account row inside a Sociedad. Under the omnibus accounting model
+ * each Cuenta carries only its physical saldo in moneda nativa — the previous
+ * `saldo_propio` / `saldo_cliente` segmentation is malformed (the question
+ * "¿de qué cliente es la plata que está en esta cuenta?" is not answerable
+ * per the closed conceptual model).
+ *
+ * Pre-formatted strings are display-ready values from the seed data. The
+ * tree renders 4 columns Banco / Cuenta / Moneda / Saldo; `det` is an
+ * optional sub-line shown under the cuenta number.
+ */
 export interface CuentaPos {
   icon: CuentaIcon;
   /** Account id from the catalogue (used by drill-down `cuenta_id`). */
   id: string;
-  name: string;
-  /** Detail line under the name (e.g. CBU, wallet hash). */
-  det: string;
-  /** Pre-formatted balance, no currency symbol. */
+  /** Bank / Estructura name (e.g., 'BIND', 'COINAG', 'BITGO'). */
+  banco: string;
+  /** Account number / wallet hash (e.g., 'Cta 4403443/1', '0xBG...A8C2'). */
+  numero: string;
+  /** Optional sub-line under the cuenta (e.g., 'CBU principal · pool de CVUs'). */
+  det?: string;
+  /** Pre-formatted physical balance in moneda nativa, no currency symbol. */
   saldo: string;
-  /** Saldo Propio (the part of the saldo attributable to Ardua's own funds). */
-  saldo_propio: string;
-  /** Saldo Cliente (the part attributable to client funds via Cuentas Operativas). */
-  saldo_cliente: string;
   moneda: Moneda;
 }
 
@@ -373,12 +483,35 @@ export interface SociedadPos {
   /** Subtitle under the name (e.g. "PSP · Argentina · ARS"). */
   sub: string;
   open: boolean;
+  /** Per-moneda total chips (one per moneda held by this sociedad). */
   totals: SociedadTotal[];
-  /** Aggregate saldo propio of every cuenta in this sociedad. */
-  total_propio: string;
-  /** Aggregate saldo cliente of every cuenta in this sociedad. */
-  total_cliente: string;
   cuentas: CuentaPos[];
+}
+
+/**
+ * Pre-formatted display strings per moneda. The key is the Moneda code
+ * (`'ARS' | 'USD' | 'USDC' | 'USDT' | 'EUR' | 'CAD' | ...`), the value is
+ * the display string with thousands separators but no currency symbol
+ * (the moneda code is rendered as a separate column in the KPI card body).
+ */
+export type PerMoneda = Partial<Record<Moneda, string>>;
+
+/**
+ * The 4 dimensions of the ecuación maestra:
+ *   Σ Bancos = Σ Obligaciones + Σ Pendientes + Σ Capacidad Operativa
+ * valid per moneda M, for each sociedad and the consolidated group. Each
+ * dimension is rendered per-moneda — V1 does NOT apply cross-currency
+ * conversions.
+ */
+export interface PosicionEcuacionMaestra {
+  /** Σ Bancos — saldo físico real en cuentas activas, por moneda. */
+  bancos: PerMoneda;
+  /** Σ Obligaciones — total adeudado por Ardua a clientes, por moneda. */
+  obligaciones: PerMoneda;
+  /** Σ Pendientes — fondos ingresados sin identificar cliente, por moneda. */
+  pendientes: PerMoneda;
+  /** Capacidad Operativa — residual `Bancos − Obligaciones − Pendientes`, por moneda. */
+  capacidadOperativa: PerMoneda;
 }
 
 /**
