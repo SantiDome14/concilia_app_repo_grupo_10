@@ -82,14 +82,12 @@ En validación presencial con Camila (2026-05-20), la vista B (tabla transaccion
 | Fecha | Fecha del quote |
 | Tipo de trade | Compra / Venta |
 | Tipo de TC | MEP / CCL |
-| Número de TC | Número del tipo de cambio aplicado por Mesa al cerrar la operación |
-| Moneda fiat | Moneda fiat de la operación |
-| Monto fiat | Monto en moneda fiat |
-| Tipo de crypto | Tipo de criptomoneda |
-| Monto crypto | Monto en criptomoneda |
+| Valor del TC | Valor numérico del tipo de cambio aplicado por Mesa al cerrar la operación |
+| Monto fiat (ARS) | Monto en pesos argentinos. El rulo opera exclusivamente en ARS |
+| Monto crypto | Monto en criptomoneda con el tipo de crypto como prefijo inline (ej. USDT 36.420,00, BTC 0,4218) |
 | Comitente | Docket del cliente como badge (AS en violeta / CIR en azul) |
 
-"Tipo de TC" y "Número de TC" son dos columnas separadas — ambas provenientes de TRD.
+"Tipo de TC" y "Valor del TC" son dos columnas separadas — ambas provenientes de TRD. La columna "Moneda fiat" fue eliminada dado que el rulo opera exclusivamente en ARS. La columna "Tipo de crypto" fue eliminada e integrada como prefijo inline dentro de la columna "Monto crypto". La tabla quedó con 7 columnas.
 
 **Fuente:** validación presencial con Camila Cattaneo (2026-05-20).
 
@@ -124,7 +122,8 @@ _Ninguna. Todas las hipótesis fueron resueltas al 2026-05-20._
 | Archivo | Descripción | Estado |
 |---|---|---|
 | `Rulo_A_-_Totalizadores.html` | Vista con métricas agregadas y breakdown por tipo de trade | Descartada en validación con Camila (2026-05-20) |
-| `Rulo_B_-_Historial_de_quotes.html` | Vista con tabla transaccional quote a quote (9 columnas) | Base de la solución — aprobada por Camila (2026-05-20) |
+| `Rulo_B_-_Historial_de_quotes.html` | Vista con tabla transaccional quote a quote (base de la solución) | Aprobada por Camila (2026-05-20) |
+| `LEX_-_Operatoria_Rulo.html` | Wireframe final aprobado — columna "Valor del TC" con valores numéricos, selector de rango, footer de totales | Aprobado · en `prototypes/lex/wireframes/` |
 
 Ambos prototipos están en la rama `feat/lex-rulo-quotes-operatoria-rulo`.
 
@@ -133,7 +132,7 @@ Ambos prototipos están en la rama `feat/lex-rulo-quotes-operatoria-rulo`.
 ## Dependencias
 
 - **REQ-53 (Tab Operatoria):** la sección "Rulo" vive dentro de la tab Operatoria. REQ-53 está en `SENT TO DEV`. Si REQ-53 no está desplegado cuando este REQ avance, se evalúa si la sección puede lanzarse de forma independiente o debe esperar.
-- **TRD:** fuente de todos los campos de la tabla. Pendiente mapear qué endpoint/servicio de TRD expone los quotes del rulo con los 9 campos requeridos.
+- **TRD:** fuente de todos los campos de la tabla. Pendiente mapear qué endpoint/servicio de TRD expone los quotes del rulo con los 7 campos requeridos.
 
 ---
 
@@ -154,3 +153,5 @@ Ambos prototipos están en la rama `feat/lex-rulo-quotes-operatoria-rulo`.
 | 2026-05-20 | D-05 y D-06 agregadas con patrones UX del prototipo REQ-53. Prototipos A y B preparados para validación con Camila. |
 | 2026-05-20 | Validación presencial con Camila completada. D-06 a D-09 cerradas. Prototipo B elegido. 9 columnas definidas. Footer y selector de rango libre confirmados. Dockets como badges confirmados. |
 | 2026-05-20 | D-10 cerrada: criterio de identificación de cliente del rulo resuelto por decisión de producto (presencia de límites en LEX). Discovery concluido. Status → Concluida. |
+| 2026-05-20 | Columna renombrada de "Número de TC" a "Valor del TC". Wireframe final `LEX_-_Operatoria_Rulo.html` generado y aprobado. Disponible en `prototypes/lex/wireframes/`. |
+| 2026-05-20 | Tabla reducida a 7 columnas: "Moneda fiat" eliminada (rulo opera solo en ARS → renombrada a "Monto fiat (ARS)"). "Tipo de crypto" eliminada e integrada como prefijo inline en "Monto crypto". |
