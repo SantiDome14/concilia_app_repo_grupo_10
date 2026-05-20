@@ -51,6 +51,19 @@ Shipping any further FIN work on top of the current model would propagate the co
 - **ADDED Requirements**: ecuación maestra invariant (Bancos = Obligaciones + Pendientes + Capacidad Operativa per moneda y por sociedad/consolidado); 21-row matriz de tipos (closed contract — any tipo outside the matriz is rejected); 6-category dimension (A-F) derived from `(tipo, has_cliente, has_physical_flow)`; 8-group plan de cuentas incl. Patrimonio operativo; asientos society-scoped (cross-sociedad events generate 2 asientos espejo); inmutabilidad del ledger + corrección via Ajuste de Crédito / Débito / Manual.
 - **REMOVED Requirements**: Propio/Cliente segmentation of saldos (replaced by the omnibus framing); the supervision/Posición exclusion Requirement is kept (still aligned with the feature's supervision rules).
 
+### Dashboard alignment (`src/pages/Dashboard.vue`)
+
+- Replace the 4 L2 KPI tiles with the canonical set per `core-modulo-genericos`:
+  **Alertas activas** (cross-cutting) · **Inbox pendientes** (cross-cutting) ·
+  **Reportes próx. a vencer** (cross-cutting) · **Posición consolidada** (FIN-specific,
+  USD-equivalente; pending the Tipos de Cambio table for live conversion).
+- Drop the legacy tiles `Mov. pendientes de imputar` and `Quotes pend. facturación`.
+- Replace the Row A card "Posición por sociedad" (which only surfaced one of the 4
+  dimensions of the ecuación maestra) with a **trend line of the Posición consolidada
+  KPI** over time. Port `@unovis/vue` + `LineChart.vue` + `chart-colors.ts` from
+  `_core-template-frontend` and seed `mocks/fin/posicion-trend.ts` with a 90-day
+  daily series tied to the L1 period selector.
+
 ### Out of scope (explicit, per the feature's "Restricciones" section)
 
 - Generación de asientos contables formales — V1 modela asientos a nivel grupo contable, no por cuenta individual del plan formal.

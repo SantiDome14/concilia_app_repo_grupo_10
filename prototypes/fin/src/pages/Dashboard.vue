@@ -10,9 +10,11 @@ import {
   Download,
   FileText,
   Plus,
+  TrendingUp,
 } from 'lucide-vue-next';
 import { Badge, type BadgeVariants } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { LineChart } from '@/components/data-display';
 import {
   Select,
   SelectContent,
@@ -22,11 +24,11 @@ import {
 } from '@/components/ui/select';
 import { ROUTE_PATHS } from '@/config/routes';
 import { ALERTS } from '@/mocks/genericos/alertas';
+import { INBOX_SOLICITUDES } from '@/mocks/genericos/inbox';
 import { REPORTS_CATALOG } from '@/mocks/genericos/reportes';
-import { MOVIMIENTOS } from '@/mocks/fin/movimientos';
-import { QUOTES } from '@/mocks/fin/quotes';
 import { POSICION_TREE } from '@/mocks/fin/disponibilidades';
 import { DASHBOARD_ACTIVITY } from '@/mocks/fin/dashboard-activity';
+import { slicePosicionTrend, type PosicionTrendPoint } from '@/mocks/fin/posicion-trend';
 import type { Alerta, AlertaState, Severity } from '@/types/genericos';
 import { cn } from '@/lib/cn';
 
@@ -47,29 +49,22 @@ const router = useRouter();
 const NOW = Date.now();
 const MS_DAY = 86_400_000;
 
-// ─── L2 · KPIs ───────────────────────────────────────────────────────
-const movPendientes = computed(
-  () => MOVIMIENTOS.filter((m) => m.fin.imput !== 'IMP').length,
+// ─── L2 · KPIs (4 canonical tiles per `core-modulo-genericos`) ───────
+// Standard 3 (cross-cutting): Alertas activas · Inbox pendientes ·
+// Reportes próx. a vencer. FIN-specific 4th: Posición consolidada.
+
+const ACTIVE_ALERT_STATES: AlertaState[] = ['new', 'in_review'];
+
+const alertasActivasCount = computed(
+  () => ALERTS.filter((a) => ACTIVE_ALERT_STATES.includes(a.state)).length,
 );
 
-const quotesPendFactura = computed(
+const inboxPendientesCount = computed(
   () =>
-    QUOTES.filter(
-      (q) =>
-        q.fin.facturaState === 'pendiente' &&
-        (q.status === 'executed' || q.status === 'settled'),
+    INBOX_SOLICITUDES.filter(
+      (s) => s.state === 'pendiente' || s.state === 'en_proceso',
     ).length,
 );
-
-const reportesVencidos = computed(() => {
-  let n = 0;
-  for (const r of REPORTS_CATALOG) {
-    if (!r.next) continue;
-    const d = daysUntilDate(r.next);
-    if (d !== null && d < 0) n++;
-  }
-  return n;
-});
 
 const reportesProxVencer = computed(() => {
   let n = 0;
@@ -81,48 +76,49 @@ const reportesProxVencer = computed(() => {
   return n;
 });
 
-// ─── Posición por sociedad — derived from POSICION_TREE ─────────────────
-// Map each POSICION_TREE entry to a single dashboard cell. The legacy
-// prototype hardcoded the canonical 4 sociedades; we surface whatever
-// POSICION_TREE declares so the dashboard tracks the live mock dataset.
-interface SociedadCell {
-  id: string;
-  name: string;
-  sub: string;
-  primaryAmount: string;
-  secondary?: string;
-  detail: string;
-  accent: string;
-}
+const reportesVencidos = computed(() => {
+  let n = 0;
+  for (const r of REPORTS_CATALOG) {
+    if (!r.next) continue;
+    const d = daysUntilDate(r.next);
+    if (d !== null && d < 0) n++;
+  }
+  return n;
+});
 
-const SOC_ACCENTS: Record<string, string> = {
-  hp: 'bg-success',
-  cp: 'bg-info',
-  asc: 'bg-[#A78BFA]',
-  av: 'bg-warning',
-};
+/**
+ * Placeholder USD-eq value for the Posición consolidada KPI. V1 does NOT
+ * apply cross-currency conversions; this requires the Tipos de Cambio
+ * (FX rates) catalog which is a follow-up change. Until then we surface
+ * the static seed from the trend series' last point.
+ */
+const posicionConsolidadaUsdM = computed<number>(() => {
+  const trend = slicePosicionTrend('today');
+  return trend.length > 0 ? (trend[trend.length - 1]?.value ?? 28.4) : 28.4;
+});
 
-const sociedadCells = computed<SociedadCell[]>(() =>
-  POSICION_TREE.map((s) => {
-    const totals = s.totals ?? [];
-    const [primary, ...rest] = totals;
-    const primaryAmount = primary ? `${primary.lbl} ${primary.val}` : '—';
-    const secondary = rest.map((t) => `${t.lbl} ${t.val}`).join(' · ') || undefined;
-    const cuentasCount = s.cuentas.length;
-    return {
-      id: s.id,
-      name: s.name,
-      sub: s.sub,
-      primaryAmount,
-      secondary,
-      detail: `${cuentasCount} cuenta${cuentasCount === 1 ? '' : 's'}`,
-      accent: SOC_ACCENTS[s.id] ?? 'bg-t-3',
-    };
-  }),
-);
+// ─── Trend de Posición consolidada (USD-eq) ──────────────────────────
+// Driven by the L1 period selector. The chart accepts only periods that
+// map to a date range; on the 'today' selector we still show last 7d as
+// fallback so the line stays visible.
+const posicionTrend = computed<PosicionTrendPoint[]>(() => {
+  const p = period.value === 'today' ? '7' : (period.value as '7' | '30' | '90');
+  return slicePosicionTrend(p);
+});
+
+const trendDelta = computed<{ pct: number; positive: boolean } | null>(() => {
+  const series = posicionTrend.value;
+  if (series.length < 2) return null;
+  const first = series[0]?.value;
+  const last = series[series.length - 1]?.value;
+  if (first === undefined || last === undefined || first === 0) return null;
+  const pct = ((last - first) / first) * 100;
+  return { pct, positive: pct >= 0 };
+});
+
+const sociedadCount = computed(() => POSICION_TREE.length);
 
 // ─── Alertas activas widget ──────────────────────────────────────────
-const ACTIVE_ALERT_STATES: AlertaState[] = ['new', 'in_review'];
 const SEVERITY_RANK: Record<Severity, number> = {
   critical: 0,
   high: 1,
@@ -312,95 +308,117 @@ function onCardKeydown(event: KeyboardEvent, href: string): void {
       </div>
     </header>
 
-    <!-- L2 · KPIs (4 FIN-specific tiles) -->
+    <!-- L2 · KPIs · canonical 4 tiles per core-modulo-genericos
+         (Alertas activas / Inbox pendientes / Reportes próx. a vencer)
+         + FIN-specific Posición consolidada. -->
     <section
       class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
       data-testid="dashboard-kpis"
     >
-      <div class="flex flex-col gap-1.5 rounded-xl border border-b-2 bg-card-2 p-5">
+      <div
+        role="button"
+        tabindex="0"
+        data-testid="kpi-alertas-activas"
+        class="flex cursor-pointer flex-col gap-1.5 rounded-xl border border-b-2 bg-card-2 p-5 hover:border-b-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        @click="navigateTo(ROUTE_PATHS.ALERTAS)"
+        @keydown="onCardKeydown($event, ROUTE_PATHS.ALERTAS)"
+      >
         <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
-          Posición consolidada
+          Alertas activas
         </span>
-        <div class="font-mono text-2xl font-extrabold leading-none tracking-tight text-t-1">
-          USD 28.4M
+        <div
+          class="text-2xl font-extrabold leading-none tracking-tight text-danger"
+          data-testid="kpi-alertas-activas-value"
+        >
+          {{ alertasActivasCount }}
         </div>
-        <div class="text-[11px] text-t-4">equivalente · 4 sociedades</div>
+        <div class="text-[11px] text-t-4">Nuevas y en revisión</div>
       </div>
 
       <div
         role="button"
         tabindex="0"
-        data-testid="kpi-mov-pendientes"
+        data-testid="kpi-inbox-pendientes"
         class="flex cursor-pointer flex-col gap-1.5 rounded-xl border border-b-2 bg-card-2 p-5 hover:border-b-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        @click="navigateTo(ROUTE_PATHS.DISPONIBILIDADES + '?tab=movimientos')"
-        @keydown="onCardKeydown($event, ROUTE_PATHS.DISPONIBILIDADES + '?tab=movimientos')"
+        @click="navigateTo(ROUTE_PATHS.INBOX)"
+        @keydown="onCardKeydown($event, ROUTE_PATHS.INBOX)"
       >
         <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
-          Mov. pendientes de imputar
+          Inbox pendientes
         </span>
         <div
           class="text-2xl font-extrabold leading-none tracking-tight text-warning"
-          data-testid="kpi-mov-pendientes-value"
+          data-testid="kpi-inbox-pendientes-value"
         >
-          {{ movPendientes }}
+          {{ inboxPendientesCount }}
         </div>
-        <div class="text-[11px] text-t-4">Movimientos OPS sin contabilizar</div>
+        <div class="text-[11px] text-t-4">Solicitudes pendientes o en proceso</div>
       </div>
 
       <div
         role="button"
         tabindex="0"
-        data-testid="kpi-quotes-pend"
-        class="flex cursor-pointer flex-col gap-1.5 rounded-xl border border-b-2 bg-card-2 p-5 hover:border-b-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        @click="navigateTo(ROUTE_PATHS.VENTAS)"
-        @keydown="onCardKeydown($event, ROUTE_PATHS.VENTAS)"
-      >
-        <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
-          Quotes pend. facturación
-        </span>
-        <div
-          class="text-2xl font-extrabold leading-none tracking-tight text-info"
-          data-testid="kpi-quotes-pend-value"
-        >
-          {{ quotesPendFactura }}
-        </div>
-        <div class="text-[11px] text-t-4">Quotes ejecutadas sin factura</div>
-      </div>
-
-      <div
-        role="button"
-        tabindex="0"
-        data-testid="kpi-reportes-vencidos"
+        data-testid="kpi-reportes-prox-vencer"
         class="flex cursor-pointer flex-col gap-1.5 rounded-xl border border-b-2 bg-card-2 p-5 hover:border-b-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         @click="navigateTo(ROUTE_PATHS.REPORTES)"
         @keydown="onCardKeydown($event, ROUTE_PATHS.REPORTES)"
       >
         <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
-          Reportes vencidos
+          Reportes próx. a vencer
         </span>
         <div
-          class="text-2xl font-extrabold leading-none tracking-tight text-danger"
-          data-testid="kpi-reportes-vencidos-value"
+          class="text-2xl font-extrabold leading-none tracking-tight text-info"
+          data-testid="kpi-reportes-prox-vencer-value"
         >
-          {{ reportesVencidos }}
+          {{ reportesProxVencer }}
         </div>
         <div class="text-[11px] text-t-4">
-          {{ reportesProxVencer }} próximos a vencer
+          {{ reportesVencidos }} vencido<span v-if="reportesVencidos !== 1">s</span>
+        </div>
+      </div>
+
+      <div
+        class="flex flex-col gap-1.5 rounded-xl border border-b-2 bg-card-2 p-5"
+        data-testid="kpi-posicion-consolidada"
+      >
+        <span class="text-[10px] font-bold uppercase tracking-wider text-t-4">
+          Posición consolidada
+        </span>
+        <div
+          class="font-mono text-2xl font-extrabold leading-none tracking-tight text-t-1"
+          data-testid="kpi-posicion-consolidada-value"
+        >
+          USD {{ posicionConsolidadaUsdM.toFixed(1) }}M
+        </div>
+        <div class="text-[11px] text-t-4">
+          equivalente · {{ sociedadCount }} sociedades · FX pendiente
         </div>
       </div>
     </section>
 
-    <!-- Row A · Posición por sociedad (2/3) + Alertas activas (1/3) -->
+    <!-- Row A · Tendencia Posición consolidada (2/3) + Alertas activas (1/3) -->
     <section class="grid grid-cols-1 gap-4 lg:grid-cols-3" data-testid="dashboard-row-a">
-      <!-- Posición por sociedad -->
+      <!-- Tendencia Posición consolidada -->
       <div
         class="flex flex-col gap-3 rounded-xl border border-b-2 bg-card-2 p-5 lg:col-span-2"
-        data-testid="dashboard-posicion-sociedad"
+        data-testid="dashboard-posicion-trend"
       >
         <div class="flex items-center justify-between">
           <div class="flex flex-col gap-0.5">
-            <h2 class="text-sm font-bold text-t-1">Posición por sociedad</h2>
-            <span class="text-[11px] text-t-4">Saldos vivos · al cierre del día</span>
+            <div class="flex items-center gap-2">
+              <TrendingUp class="h-4 w-4 text-brand" />
+              <h2 class="text-sm font-bold text-t-1">Posición consolidada</h2>
+              <Badge
+                v-if="trendDelta"
+                :variant="trendDelta.positive ? 'success' : 'danger'"
+                class="font-mono text-[10px]"
+              >
+                {{ trendDelta.positive ? '+' : '' }}{{ trendDelta.pct.toFixed(1) }}%
+              </Badge>
+            </div>
+            <span class="text-[11px] text-t-4">
+              USD-equivalente · serie diaria · FX rates pendientes
+            </span>
           </div>
           <button
             type="button"
@@ -410,24 +428,16 @@ function onCardKeydown(event: KeyboardEvent, href: string): void {
             Ir a Tesorería →
           </button>
         </div>
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div
-            v-for="cell in sociedadCells"
-            :key="cell.id"
-            :data-testid="`dashboard-soc-${cell.id}`"
-            class="flex cursor-pointer flex-col gap-1.5 rounded-lg border border-b-1 bg-card p-3 transition-colors hover:border-b-2"
-            @click="navigateTo(ROUTE_PATHS.DISPONIBILIDADES)"
-          >
-            <div class="flex items-center gap-2">
-              <span :class="cn('h-2 w-2 rounded-full', cell.accent)" aria-hidden="true" />
-              <span class="text-[13px] font-semibold text-t-1">{{ cell.name }}</span>
-            </div>
-            <div class="font-mono text-base font-bold text-t-1">{{ cell.primaryAmount }}</div>
-            <div class="text-[11px] text-t-4">
-              <span v-if="cell.secondary">{{ cell.secondary }} · </span>
-              {{ cell.detail }}
-            </div>
-          </div>
+        <div class="h-[220px] w-full" data-testid="dashboard-posicion-trend-chart">
+          <LineChart
+            :data="posicionTrend as unknown as Array<Record<string, unknown>>"
+            :x-accessor="(d) => Date.parse((d as unknown as PosicionTrendPoint).date)"
+            :y-accessor="(d) => (d as unknown as PosicionTrendPoint).value"
+            :colors="['info']"
+            title="Posición consolidada USD-equivalente"
+            description="Serie diaria de la posición consolidada del grupo, convertida a USD vía Tipos de Cambio (catálogo pendiente)."
+            empty-message="Sin datos en el período seleccionado"
+          />
         </div>
       </div>
 
