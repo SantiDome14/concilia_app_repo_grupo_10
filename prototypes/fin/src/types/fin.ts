@@ -291,7 +291,6 @@ export interface Movimiento {
    * operative event iff they share `evento_id`. Used for:
    *   - Cross-sociedad pairs (`PRESTAMO_INTERCOMPANY`, `SWEEPING_CROSS_SOCIEDAD`).
    *   - SWAP triples (`SWAP_OUT` + `SWAP_IN` + `SPREAD` from a single ejecución).
-   *   - `DEPOSITO_PENDIENTE` followed by its `ASIGNACION_PENDIENTE`.
    */
   evento_id?: string | null;
   ops: MovimientoOps;
