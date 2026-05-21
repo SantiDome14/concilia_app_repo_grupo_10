@@ -4,21 +4,31 @@ import { computeImputation } from './computeImputation';
 import type { ApplyDeps } from './applyTypes';
 import type { Action, AuditEntry, Manifest } from '@/types/manifest';
 
+type DispatchCall = {
+  recordId: string;
+  patch: Record<string, unknown>;
+};
+
 function makeDeps(): {
   deps: ApplyDeps;
   audit: AuditEntry[];
   warns: { ch: string; m: string }[];
+  dispatched: DispatchCall[];
 } {
   const audit: AuditEntry[] = [];
   const warns: { ch: string; m: string }[] = [];
+  const dispatched: DispatchCall[] = [];
   const deps: ApplyDeps = {
     auditAppend: (e) => audit.push(e),
     toast: { success: () => {}, error: () => {} },
-    afterMutation: () => {},
+    dispatch: {
+      update: (recordId, patch) => dispatched.push({ recordId, patch }),
+      create: () => {},
+    },
     recompute: (token) => (token === 'imputacion' ? computeImputation : undefined),
     devWarn: (ch, m) => warns.push({ ch, m }),
   };
-  return { deps, audit, warns };
+  return { deps, audit, warns, dispatched };
 }
 
 const manifest: Manifest = {
@@ -42,7 +52,7 @@ describe('applyComposite', () => {
       on_confirm: { update_fields: ['cuenta_id'], set_fields: { 'aux.flag': true } },
     };
     const record: Record<string, unknown> = { id: 'R-1' };
-    const { deps } = makeDeps();
+    const { deps, dispatched } = makeDeps();
     applyComposite(
       {
         manifestKey: 'demo.test',
@@ -55,9 +65,15 @@ describe('applyComposite', () => {
       },
       deps,
     );
-    expect(record.cliente_id).toBe('C-1');
-    expect(record.cuenta_id).toBe('CU-9');
-    expect((record.aux as Record<string, unknown>).flag).toBe(true);
+    // Engine doesn't mutate the input record.
+    expect(record.cliente_id).toBeUndefined();
+    expect(record.cuenta_id).toBeUndefined();
+    // The dispatched patch reflects every action's writes.
+    expect(dispatched).toHaveLength(1);
+    expect(dispatched[0]?.recordId).toBe('R-1');
+    expect(dispatched[0]?.patch.cliente_id).toBe('C-1');
+    expect(dispatched[0]?.patch.cuenta_id).toBe('CU-9');
+    expect(dispatched[0]?.patch['aux.flag']).toBe(true);
   });
 
   it('substitutes "$current_user" in composite set_fields with the invoker userId', () => {
@@ -68,7 +84,7 @@ describe('applyComposite', () => {
       on_confirm: { set_fields: { taken_by: '$current_user' } },
     };
     const record: Record<string, unknown> = { id: 'R-1' };
-    const { deps } = makeDeps();
+    const { deps, dispatched } = makeDeps();
     applyComposite(
       {
         manifestKey: 'demo.test',
@@ -81,7 +97,7 @@ describe('applyComposite', () => {
       },
       deps,
     );
-    expect(record.taken_by).toBe('U-42');
+    expect(dispatched[0]?.patch.taken_by).toBe('U-42');
   });
 
   it('runs ONE recompute even when multiple actions declare it', () => {
@@ -105,10 +121,14 @@ describe('applyComposite', () => {
     };
     const record: Record<string, unknown> = { id: 'R-1' };
     const captured = { count: 0 };
+    const dispatched: DispatchCall[] = [];
     const deps: ApplyDeps = {
       auditAppend: () => {},
       toast: { success: () => {}, error: () => {} },
-      afterMutation: () => {},
+      dispatch: {
+        update: (recordId, patch) => dispatched.push({ recordId, patch }),
+        create: () => {},
+      },
       recompute: (token) =>
         token === 'imputacion'
           ? (rec, m) => {
@@ -131,7 +151,7 @@ describe('applyComposite', () => {
       deps,
     );
     expect(captured.count).toBe(1);
-    expect(record._imputacion_state).toBe('imputado');
+    expect(dispatched[0]?.patch._imputacion_state).toBe('imputado');
   });
 
   it('emits ONE audit entry with kind:"composite" and child_action_ids[]', () => {
@@ -157,7 +177,7 @@ describe('applyComposite', () => {
     const deps: ApplyDeps = {
       auditAppend: (e) => audit.push(e),
       toast: { success: () => {}, error: () => {} },
-      afterMutation: () => {},
+      dispatch: { update: () => {}, create: () => {} },
       recompute: () => undefined,
       devWarn: () => {},
     };
@@ -195,7 +215,7 @@ describe('applyComposite', () => {
     const deps: ApplyDeps = {
       auditAppend: () => {},
       toast: { success: () => {}, error: () => {} },
-      afterMutation: () => {},
+      dispatch: { update: () => {}, create: () => {} },
       recompute: () => undefined,
       devWarn: (ch, m) => warns.push({ ch, m }),
     };

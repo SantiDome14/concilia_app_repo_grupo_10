@@ -4,11 +4,18 @@ import { computeImputation } from './computeImputation';
 import type { ApplyDeps } from './applyTypes';
 import type { Action, AuditEntry, Manifest } from '@/types/manifest';
 
+type DispatchCall = {
+  kind: 'update' | 'create';
+  recordId?: string;
+  patch?: Record<string, unknown>;
+  record?: Record<string, unknown>;
+};
+
 function makeDeps(over: Partial<ApplyDeps> = {}): {
   deps: ApplyDeps;
   audit: AuditEntry[];
   toasts: { success: { title: string; description?: string }[]; error: { title: string; description?: string }[] };
-  afterMutationCount: { n: number };
+  dispatched: DispatchCall[];
   warns: { ch: string; m: string }[];
 } {
   const audit: AuditEntry[] = [];
@@ -16,7 +23,7 @@ function makeDeps(over: Partial<ApplyDeps> = {}): {
     success: [] as { title: string; description?: string }[],
     error: [] as { title: string; description?: string }[],
   };
-  const afterMutationCount = { n: 0 };
+  const dispatched: DispatchCall[] = [];
   const warns: { ch: string; m: string }[] = [];
   const deps: ApplyDeps = {
     auditAppend: (e) => audit.push(e),
@@ -24,8 +31,10 @@ function makeDeps(over: Partial<ApplyDeps> = {}): {
       success: (title, description) => toasts.success.push({ title, description }),
       error: (title, description) => toasts.error.push({ title, description }),
     },
-    afterMutation: () => {
-      afterMutationCount.n += 1;
+    dispatch: {
+      update: (recordId, patch) =>
+        dispatched.push({ kind: 'update', recordId, patch }),
+      create: (record) => dispatched.push({ kind: 'create', record }),
     },
     recompute: (token) => {
       if (token === 'imputacion') return computeImputation;
@@ -34,7 +43,12 @@ function makeDeps(over: Partial<ApplyDeps> = {}): {
     devWarn: (ch, m) => warns.push({ ch, m }),
     ...over,
   };
-  return { deps, audit, toasts, afterMutationCount, warns };
+  return { deps, audit, toasts, dispatched, warns };
+}
+
+function patchFor(dispatched: DispatchCall[], recordId: string): Record<string, unknown> {
+  const found = dispatched.find((d) => d.kind === 'update' && d.recordId === recordId);
+  return (found?.patch ?? {}) as Record<string, unknown>;
 }
 
 const baseManifest: Manifest = {
@@ -56,7 +70,7 @@ describe('applyAction', () => {
       on_confirm: { update_fields: ['cliente_id'] },
     };
     const record: Record<string, unknown> = { id: 'R-1' };
-    const { deps } = makeDeps();
+    const { deps, dispatched } = makeDeps();
     applyAction(
       {
         action,
@@ -69,8 +83,11 @@ describe('applyAction', () => {
       },
       deps,
     );
-    expect(record.cliente_id).toBe('C-1');
-    expect(record.other_field).toBeUndefined();
+    // Engine does NOT mutate the input record.
+    expect(record.cliente_id).toBeUndefined();
+    // The dispatched patch contains only the declared update_field.
+    const patch = patchFor(dispatched, 'R-1');
+    expect(patch).toEqual({ cliente_id: 'C-1' });
   });
 
   it('substitutes "$now" in set_fields with Date.now()', () => {
@@ -85,7 +102,7 @@ describe('applyAction', () => {
       },
     };
     const record: Record<string, unknown> = { id: 'R-1' };
-    const { deps } = makeDeps();
+    const { deps, dispatched } = makeDeps();
     applyAction(
       {
         action,
@@ -98,9 +115,9 @@ describe('applyAction', () => {
       },
       deps,
     );
-    const fin = record.fin as Record<string, unknown>;
-    expect(fin.intercompany).toBe(true);
-    expect(fin.intercompany_at).toBe(1_700_000_000_000);
+    const patch = patchFor(dispatched, 'R-1');
+    expect(patch['fin.intercompany']).toBe(true);
+    expect(patch['fin.intercompany_at']).toBe(1_700_000_000_000);
   });
 
   it('substitutes "$current_user" in set_fields with the invoker userId', () => {
@@ -113,7 +130,7 @@ describe('applyAction', () => {
       },
     };
     const record: Record<string, unknown> = { id: 'R-1', state: 'pendiente', owner: null };
-    const { deps } = makeDeps();
+    const { deps, dispatched } = makeDeps();
     applyAction(
       {
         action,
@@ -126,11 +143,12 @@ describe('applyAction', () => {
       },
       deps,
     );
-    expect(record.state).toBe('en_proceso');
-    expect(record.owner).toBe('U-42');
+    const patch = patchFor(dispatched, 'R-1');
+    expect(patch.state).toBe('en_proceso');
+    expect(patch.owner).toBe('U-42');
   });
 
-  it('runs the imputacion recompute and stores the result on the record', () => {
+  it('runs the imputacion recompute and stores the result in the patch', () => {
     const action: Action = {
       id: 'demo.test.imp.assign',
       dimension: 'imputacion',
@@ -141,7 +159,7 @@ describe('applyAction', () => {
       },
     };
     const record: Record<string, unknown> = { id: 'R-1' };
-    const { deps } = makeDeps();
+    const { deps, dispatched } = makeDeps();
     applyAction(
       {
         action,
@@ -154,7 +172,8 @@ describe('applyAction', () => {
       },
       deps,
     );
-    expect(record._imputacion_state).toBe('imputado');
+    const patch = patchFor(dispatched, 'R-1');
+    expect(patch._imputacion_state).toBe('imputado');
   });
 
   it('warns and skips unknown recompute tokens', () => {
@@ -167,7 +186,7 @@ describe('applyAction', () => {
       },
     };
     const record: Record<string, unknown> = { id: 'R-1' };
-    const { deps, warns } = makeDeps();
+    const { deps, warns, dispatched } = makeDeps();
     applyAction(
       {
         action,
@@ -183,7 +202,8 @@ describe('applyAction', () => {
     expect(warns).toEqual([
       { ch: 'MANIFEST', m: 'unknown recompute token: inexistente' },
     ]);
-    expect(record._imputacion_state).toBeDefined();
+    const patch = patchFor(dispatched, 'R-1');
+    expect(patch._imputacion_state).toBeDefined();
   });
 
   it('emits a single audit entry with kind:"single" and changes', () => {
@@ -253,7 +273,7 @@ describe('applyAction', () => {
       { id: 'R-2' } as Record<string, unknown>,
       { id: 'R-3' } as Record<string, unknown>,
     ];
-    const { deps, audit } = makeDeps();
+    const { deps, audit, dispatched } = makeDeps();
     applyAction(
       {
         action,
@@ -272,9 +292,11 @@ describe('applyAction', () => {
       action_id: 'demo.test.imp.assign',
       record_ids: ['R-1', 'R-2', 'R-3'],
     });
+    // One dispatch call per record.
+    expect(dispatched.filter((d) => d.kind === 'update')).toHaveLength(3);
   });
 
-  it('toasts on success and runs afterMutation', () => {
+  it('toasts on success and dispatches the patch', () => {
     const action: Action = {
       id: 'demo.test.imp.assign',
       dimension: 'imputacion',
@@ -282,7 +304,7 @@ describe('applyAction', () => {
       on_confirm: { update_fields: ['cliente_id'], toast: 'Cliente asignado' },
     };
     const record: Record<string, unknown> = { id: 'R-9', nombre: 'Mov 9' };
-    const { deps, toasts, afterMutationCount } = makeDeps();
+    const { deps, toasts, dispatched } = makeDeps();
     applyAction(
       {
         action,
@@ -298,6 +320,6 @@ describe('applyAction', () => {
     expect(toasts.success).toEqual([
       { title: 'Cliente asignado', description: 'R-9 — Mov 9' },
     ]);
-    expect(afterMutationCount.n).toBe(1);
+    expect(dispatched.filter((d) => d.kind === 'update')).toHaveLength(1);
   });
 });

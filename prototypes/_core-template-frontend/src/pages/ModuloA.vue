@@ -251,8 +251,9 @@ const filterResultsLabel = computed(() => {
 // ─── Manifest engine wiring ─────────────────────────────────────────
 // Row actions are sourced from `framework.template.modulo_a` — predicate
 // + capability evaluation, dialogs, on_confirm, audit, and toast all
-// live in the manifest. The page only registers a record resolver so
-// the engine can mutate records in place via `set_fields`.
+// live in the manifest. The engine is pure: it dispatches a patch which
+// we apply to the local `rawData` ref. (This page uses an inline mock
+// dataset, not vue-query.)
 const moduloA = useManifestModule(MODULO_A_MANIFEST_KEY);
 
 onMounted(() => {
@@ -269,9 +270,17 @@ onMounted(() => {
     }
     return undefined;
   });
-  moduloA.registerAfterMutation(() => {
-    // Records are mutated in place by the engine — Vue reactivity
-    // re-runs the period/filter/KPI computeds automatically.
+  moduloA.registerDispatcher({
+    update: (recordId, patch) => {
+      const idx = rawData.value.findIndex((r) => r.id === recordId);
+      if (idx === -1) return;
+      const current = rawData.value[idx];
+      if (!current) return;
+      rawData.value[idx] = { ...current, ...(patch as Partial<ExampleRecord>) };
+    },
+    create: () => {
+      // Module-A manifest doesn't declare module CTAs that create records.
+    },
   });
 });
 

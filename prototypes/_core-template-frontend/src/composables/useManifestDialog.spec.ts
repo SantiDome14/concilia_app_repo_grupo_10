@@ -3,6 +3,7 @@ import { setActivePinia, createPinia } from 'pinia';
 import {
   useManifestDialog,
   _clearModuleRegistries,
+  _registerDispatcher,
   _resetManifestDialogState,
   dedupCompositeFields,
   resolveConfirmLabel,
@@ -124,13 +125,20 @@ describe('useManifestDialog', () => {
   });
 
   it('confirm applies and closes; appends one audit entry', async () => {
+    const dispatched: { id: string; patch: Record<string, unknown> }[] = [];
+    _registerDispatcher('demo.test', {
+      update: (id, patch) => dispatched.push({ id, patch }),
+      create: () => {},
+    });
+
     const d = useManifestDialog();
     const record: Record<string, unknown> = { id: 'R-1' };
     d.openSingle('demo.test.imp.assign', 'demo.test', record);
     d.setFieldValue('cliente_id', 'C-9');
     await d.confirm();
     expect(d.state.value).toBeNull();
-    expect(record.cliente_id).toBe('C-9');
+    // The engine dispatched the patch — the page's mutation would persist it.
+    expect(dispatched).toEqual([{ id: 'R-1', patch: { cliente_id: 'C-9' } }]);
     expect(useAuditLogStore().entries).toHaveLength(1);
     expect(useAuditLogStore().entries[0]).toMatchObject({
       kind: 'single',

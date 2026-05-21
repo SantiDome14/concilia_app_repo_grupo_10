@@ -5,6 +5,11 @@
 //   - When `creates_record_concept` is declared, the engine MUST look up
 //     a registered creator. Missing creator → throw ManifestError.
 //   - On success, append an audit entry with kind:"cta".
+//
+// The engine is pure: the creator returns a fresh record, the engine
+// composes the final shape (applying set_fields/update_fields) and
+// dispatches it via `deps.dispatch.create`. The page's `useMutation`
+// implementation persists it (POST), updates the query cache, etc.
 // ════════════════════════════════════════════════════════════════════
 
 import {
@@ -46,9 +51,11 @@ export function applyCTA(input: ApplyCTAInput, deps: ApplyDeps): ApplyCTAResult 
     if (creator === null) {
       throw new ManifestError(`no creator registered for ${manifestKey}`);
     }
+    // The creator returns a fresh object the engine is free to compose
+    // onto — it has not been published anywhere yet, so writing to it
+    // here is local-only (NOT a record-in-cache mutation).
     created = creator(cta, formValues);
 
-    // Apply on_confirm.set_fields / update_fields to the new record.
     const oc = cta.on_confirm ?? {};
     if (Array.isArray(oc.update_fields)) {
       for (const path of oc.update_fields) {
@@ -95,7 +102,10 @@ export function applyCTA(input: ApplyCTAInput, deps: ApplyDeps): ApplyCTAResult 
     deps.toast.success(oc.toast, subtitle);
   }
 
-  deps.afterMutation();
+  // Dispatch the create to the page's mutation.
+  if (created !== null) {
+    deps.dispatch.create(created);
+  }
 
   return { created };
 }

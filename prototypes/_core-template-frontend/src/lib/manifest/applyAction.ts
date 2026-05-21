@@ -2,12 +2,17 @@
 // Apply path — single & batch single-action confirms
 // ────────────────────────────────────────────────────────────────────
 // Pure, framework-agnostic. The Vue composable owns reactivity and
-// passes in concrete deps (audit append, toast, recompute lookup, etc).
+// passes in concrete deps (audit append, toast, dispatch, recompute).
+//
+// The engine NEVER mutates `records`. For each record it computes a
+// patch (update_fields + set_fields + recompute results), then calls
+// `deps.dispatch.update(recordId, patch)`. The page's `useMutation`
+// implementation owns optimistic update + rollback + refetch.
 //
 // Order (per Requirement 11):
-//   validate required fields → write update_fields → write set_fields
-//   → run recompute → emit audit (unless audit:false) → fire toast
-//   → run afterMutation → return.
+//   validate required fields → compute patch (update_fields, set_fields,
+//   recompute against projected record) → emit audit (unless audit:false)
+//   → fire toast → dispatch every patch → return.
 // ════════════════════════════════════════════════════════════════════
 
 import type {
@@ -30,14 +35,22 @@ export type ApplyActionInput = {
   userId: string;
 };
 
+export type ApplyActionPatch = {
+  recordId: string;
+  patch: Record<string, unknown>;
+};
+
 export type ApplyActionResult = {
-  applied: Record<string, unknown>[];
+  /** Per-record patches that were dispatched, in input order. */
+  patches: ApplyActionPatch[];
+  /** Aggregate of declared changes (used for audit and tests). */
   changes: Record<string, unknown>;
 };
 
 /**
- * Walks update_fields → set_fields → recompute → audit → toast →
- * afterMutation in canonical order. Mutates the records in place.
+ * Walks compute-patch → recompute → audit → toast → dispatch in canonical
+ * order. Does NOT mutate the records — patches are dispatched and the
+ * page's mutation implementation persists them.
  */
 export function applyAction(
   input: ApplyActionInput,
@@ -49,40 +62,49 @@ export function applyAction(
   const onConfirm: OnConfirm = action.on_confirm ?? {};
   const changes = computeChanges(onConfirm, formValues, userId);
 
-  // 1. update_fields → cherry-pick declared formValues into each record.
+  const patches: ApplyActionPatch[] = [];
+
   for (const record of records) {
+    const patch: Record<string, unknown> = {};
+
+    // 1. update_fields → cherry-pick declared formValues.
     if (Array.isArray(onConfirm.update_fields)) {
       for (const path of onConfirm.update_fields) {
         if (Object.prototype.hasOwnProperty.call(formValues, path)) {
-          setField(record, path, formValues[path]);
+          patch[path] = formValues[path];
         }
       }
     }
+
     // 2. set_fields → literal writes; '$now' + '$current_user' magic.
     if (onConfirm.set_fields) {
       const now = Date.now();
       for (const [path, raw] of Object.entries(onConfirm.set_fields)) {
-        const value =
+        patch[path] =
           raw === '$now' ? now : raw === '$current_user' ? userId : raw;
-        setField(record, path, value);
       }
     }
-    // 3. recompute → resolved per-record (the engine does NOT special-case
-    // batch — every record gets every recompute, terminal-state included).
+
+    // 3. recompute → projected = {...record, ...patch} so derived fields
+    // see the new state before the dispatcher applies it.
     if (Array.isArray(onConfirm.recompute)) {
+      const projected: Record<string, unknown> = { ...record };
+      for (const [path, value] of Object.entries(patch)) {
+        setField(projected, path, value);
+      }
       for (const token of onConfirm.recompute) {
         const fn = deps.recompute(token);
         if (fn === undefined) {
           deps.devWarn('MANIFEST', `unknown recompute token: ${token}`);
           continue;
         }
-        const next = fn(record, manifest);
-        // The convention: imputacion writes into `_imputacion_state`. For
-        // unknown tokens we skip (already devWarn'd). For known tokens we
-        // store under `_${token}_state`, mirroring the prototype.
-        record[`_${token}_state`] = next;
+        const next = fn(projected, manifest);
+        patch[`_${token}_state`] = next;
       }
     }
+
+    const recordId = typeof record.id === 'string' ? record.id : '';
+    patches.push({ recordId, patch });
   }
 
   // 4. audit (unless audit:false). Single batch entry vs single entry.
@@ -126,10 +148,12 @@ export function applyAction(
     deps.toast.success(onConfirm.toast, subtitle);
   }
 
-  // 6. afterMutation hook.
-  deps.afterMutation();
+  // 6. dispatch every patch.
+  for (const { recordId, patch } of patches) {
+    if (recordId) deps.dispatch.update(recordId, patch);
+  }
 
-  return { applied: records, changes };
+  return { patches, changes };
 }
 
 function computeChanges(

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { Search } from 'lucide-vue-next';
-import { useQuery } from '@tanstack/vue-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
+import { toast } from 'vue-sonner';
 import { Input } from '@/components/ui/input';
 import { Badge, type BadgeVariants } from '@/components/ui/badge';
 import EmptyState from '@/components/feedback/EmptyState.vue';
@@ -91,16 +92,20 @@ const filterStatusModel = computed<string>({
   },
 });
 
-// ─── Data — via vue-query against MSW / real backend ─────────────────
-const reportsQuery = useQuery({ queryKey: ['reports'], queryFn: listReports });
-const runsQuery = useQuery({ queryKey: ['reportRuns'], queryFn: listReportRuns });
+// ─── Data — vue-query is the source of truth ─────────────────────────
+const REPORTS_KEY = ['reports'] as const;
+const RUNS_KEY = ['reportRuns'] as const;
+const queryClient = useQueryClient();
+
+const reportsQuery = useQuery({ queryKey: REPORTS_KEY, queryFn: listReports });
+const runsQuery = useQuery({ queryKey: RUNS_KEY, queryFn: listReportRuns });
 const categoriesQuery = useQuery({
   queryKey: ['reportCategories'],
   queryFn: listReportCategories,
 });
 
-const reports = ref<Report[]>([]);
-const runs = ref<ReportRun[]>([]);
+const reports = computed<Report[]>(() => reportsQuery.data.value ?? []);
+const runs = computed<ReportRun[]>(() => runsQuery.data.value ?? []);
 const reportCategories = computed<ReportCategoryDef[]>(
   () => categoriesQuery.data.value ?? [],
 );
@@ -108,27 +113,28 @@ const reportCategoryByKey = computed<Record<string, ReportCategoryDef>>(() =>
   Object.fromEntries(reportCategories.value.map((c) => [c.key, c])),
 );
 
-watch(
-  () => reportsQuery.data.value,
-  (data) => {
-    if (data) reports.value = data.map((r) => ({ ...r }));
+const updateMutation = useMutation({
+  mutationFn: (vars: { id: string; patch: Partial<Report> }) => {
+    const current = reports.value.find((r) => r.id === vars.id);
+    const merged = { ...(current ?? {}), ...vars.patch } as Report;
+    return updateReport(vars.id, merged);
   },
-  { immediate: true },
-);
-watch(
-  () => runsQuery.data.value,
-  (data) => {
-    if (data) runs.value = data.map((r) => ({ ...r }));
+  onMutate: async ({ id, patch }) => {
+    await queryClient.cancelQueries({ queryKey: REPORTS_KEY });
+    const snapshot = queryClient.getQueryData<Report[]>(REPORTS_KEY);
+    queryClient.setQueryData<Report[]>(REPORTS_KEY, (old) =>
+      (old ?? []).map((r) => (r.id === id ? ({ ...r, ...patch } as Report) : r)),
+    );
+    return { snapshot };
   },
-  { immediate: true },
-);
-
-function persistReport(r: Report): void {
-  void updateReport(r.id, r).catch((error) => {
-
-    console.error('[reportes] persist failed', error);
-  });
-}
+  onError: (_err, _vars, ctx) => {
+    if (ctx?.snapshot) queryClient.setQueryData(REPORTS_KEY, ctx.snapshot);
+    toast.error('No se pudo guardar el cambio. Se revirtió y resincronizó.');
+  },
+  onSettled: () => {
+    void queryClient.invalidateQueries({ queryKey: REPORTS_KEY });
+  },
+});
 
 // ─── Detail modal ────────────────────────────────────────────────────
 const detailOpen = ref(false);
@@ -310,16 +316,18 @@ onMounted(() => {
     }
     return undefined;
   });
-  reportesMod.registerAfterMutation(() => {
-    const id = lastActedReportId.value;
-    if (!id) return;
-    const r = reports.value.find((rep) => rep.id === id);
-    if (r) persistReport(r);
-    lastActedReportId.value = null;
+  reportesMod.registerDispatcher({
+    update: (recordId, patch) => {
+      updateMutation.mutate({
+        id: recordId,
+        patch: patch as Partial<Report>,
+      });
+    },
+    create: () => {
+      // Reportes manifest doesn't declare CTAs that create records.
+    },
   });
 });
-
-const lastActedReportId = ref<string | null>(null);
 
 // ─── Card actions ────────────────────────────────────────────────────
 function generar(r: Report): void {
@@ -344,7 +352,6 @@ function generar(r: Report): void {
     }
     if (status.blocked) return;
   }
-  lastActedReportId.value = r.id;
   reportesMod.openDialog(
     'reportes.generar_report',
     r as unknown as Record<string, unknown>,

@@ -68,8 +68,8 @@ async function mountReportes() {
   });
   // Drain pending microtasks so vue-query data hydrates before assertions.
   // Three queries (reports / runs / categories) each need a fetch → MSW
-  // response → vue-query update → watch effect → re-render cycle.
-  for (let i = 0; i < 5; i += 1) await flushPromises();
+  // response → vue-query update → reactive re-render cycle.
+  for (let i = 0; i < 10; i += 1) await flushPromises();
   return { wrapper, router };
 }
 

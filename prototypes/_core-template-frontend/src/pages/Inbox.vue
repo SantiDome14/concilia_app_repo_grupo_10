@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { Clock, Search } from 'lucide-vue-next';
-import { useQuery } from '@tanstack/vue-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
+import { toast } from 'vue-sonner';
 import { Input } from '@/components/ui/input';
 import { Badge, type BadgeVariants } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -138,30 +139,71 @@ const ASSIGNEE_FILTER_USERS = computed(() =>
   usersList.value.filter((u) => u.role !== 'system'),
 );
 
-// ─── Reactive dataset — fetched via vue-query, mirrored locally so the
-//    manifest engine can mutate records in place. Each user-initiated
-//    mutation also calls the MSW handler so a refresh preserves state.
+// ─── Reactive dataset — vue-query is the source of truth ─────────────
+// The page never holds a local ref mirror; every read goes through
+// `solicitudes`, and every write through `updateMutation` / `createMutation`
+// with optimistic update + rollback on error + refetch on settled.
+const SOLICITUDES_KEY = ['solicitudes'] as const;
+const queryClient = useQueryClient();
+
 const solicitudesQuery = useQuery({
-  queryKey: ['solicitudes'],
+  queryKey: SOLICITUDES_KEY,
   queryFn: listSolicitudes,
 });
 
-const solicitudes = ref<Solicitud[]>([]);
-
-watch(
-  () => solicitudesQuery.data.value,
-  (data) => {
-    if (data) solicitudes.value = data.map((s) => ({ ...s }));
-  },
-  { immediate: true },
+const solicitudes = computed<Solicitud[]>(
+  () => solicitudesQuery.data.value ?? [],
 );
 
-function persistSolicitud(s: Solicitud): void {
-  void updateSolicitud(s.id, s).catch((error) => {
+const updateMutation = useMutation({
+  mutationFn: (vars: { id: string; patch: Partial<Solicitud> }) => {
+    // Send the full record so MSW (and any backend that expects a PUT-like
+    // payload) sees the complete shape. We re-read from the cache so the
+    // payload reflects the most recent optimistic state.
+    const current = solicitudes.value.find((s) => s.id === vars.id);
+    const merged = { ...(current ?? {}), ...vars.patch } as Solicitud;
+    return updateSolicitud(vars.id, merged);
+  },
+  onMutate: async ({ id, patch }) => {
+    await queryClient.cancelQueries({ queryKey: SOLICITUDES_KEY });
+    const snapshot = queryClient.getQueryData<Solicitud[]>(SOLICITUDES_KEY);
+    queryClient.setQueryData<Solicitud[]>(SOLICITUDES_KEY, (old) =>
+      (old ?? []).map((s) => (s.id === id ? ({ ...s, ...patch } as Solicitud) : s)),
+    );
+    return { snapshot };
+  },
+  onError: (_err, _vars, ctx) => {
+    if (ctx?.snapshot) {
+      queryClient.setQueryData(SOLICITUDES_KEY, ctx.snapshot);
+    }
+    toast.error('No se pudo guardar el cambio. Se revirtió y resincronizó.');
+  },
+  onSettled: () => {
+    void queryClient.invalidateQueries({ queryKey: SOLICITUDES_KEY });
+  },
+});
 
-    console.error('[inbox] persist failed', error);
-  });
-}
+const createMutation = useMutation({
+  mutationFn: (s: Solicitud) => createSolicitud(s),
+  onMutate: async (s) => {
+    await queryClient.cancelQueries({ queryKey: SOLICITUDES_KEY });
+    const snapshot = queryClient.getQueryData<Solicitud[]>(SOLICITUDES_KEY);
+    queryClient.setQueryData<Solicitud[]>(SOLICITUDES_KEY, (old) => [
+      ...(old ?? []),
+      s,
+    ]);
+    return { snapshot };
+  },
+  onError: (_err, _s, ctx) => {
+    if (ctx?.snapshot) {
+      queryClient.setQueryData(SOLICITUDES_KEY, ctx.snapshot);
+    }
+    toast.error('No se pudo crear la Solicitud. Se revirtió.');
+  },
+  onSettled: () => {
+    void queryClient.invalidateQueries({ queryKey: SOLICITUDES_KEY });
+  },
+});
 
 const fallbackUser = { id: 'u-1', name: '—' };
 function actor(): { id: string; name: string } {
@@ -220,33 +262,35 @@ function isInSla(s: Solicitud): boolean {
   return Date.now() <= deadline;
 }
 
-// ─── Drawer state ────────────────────────────────────────────────────
+// ─── Drawer state — track id only, derive the record from query data ──
+// Computed lookup means optimistic-update writes to the cache flow into
+// the drawer for free (no second source of truth to keep in sync).
 const drawerOpen = ref(false);
-const drawerSolicitud = ref<Solicitud | null>(null);
+const drawerSolicitudId = ref<string | null>(null);
+const drawerSolicitud = computed<Solicitud | null>(() =>
+  drawerSolicitudId.value
+    ? (solicitudes.value.find((s) => s.id === drawerSolicitudId.value) ?? null)
+    : null,
+);
 
 function openDrawer(s: Solicitud): void {
-  drawerSolicitud.value = s;
+  drawerSolicitudId.value = s.id;
   drawerOpen.value = true;
 }
 
 // ─── Main CTA wiring ──────────────────────────────────────────────────
-// `<InboxCreateCTA>` emits the newly-created Solicitud; we push it into
-// the local mirror AND POST to the MSW handler so refresh preserves it.
-// The audit entry was already emitted by `<InboxCreateDialog>` (single
-// source for `AuditEntryCTA`).
+// `<InboxCreateCTA>` emits the newly-created Solicitud; `createMutation`
+// owns the optimistic insert + POST + invalidation. The audit entry was
+// already emitted by `<InboxCreateDialog>`.
 function handleCreatedSolicitud(s: Solicitud): void {
-  solicitudes.value.push(s);
-  drawerSolicitud.value = s;
+  drawerSolicitudId.value = s.id;
   drawerOpen.value = true;
-  void createSolicitud(s).catch((error) => {
-
-    console.error('[inbox] create failed', error);
-  });
+  createMutation.mutate(s);
 }
 
 function closeDrawer(): void {
   drawerOpen.value = false;
-  drawerSolicitud.value = null;
+  drawerSolicitudId.value = null;
 }
 
 function statusVariant(state: SolicitudState): BadgeVariants['variant'] {
@@ -270,18 +314,19 @@ function stateLabel(state: SolicitudState): string {
 
 // ─── Comments ────────────────────────────────────────────────────────
 function addComment(payload: { body: string; parent_id?: string | null }): void {
-  if (!drawerSolicitud.value) return;
-  const id = `cmt-${drawerSolicitud.value.id}-${Date.now()}`;
+  const s = drawerSolicitud.value;
+  if (!s) return;
+  const id = `cmt-${s.id}-${Date.now()}`;
   const a = actor();
-  drawerSolicitud.value.comments.push({
+  const newComment = {
     id,
     at: new Date().toISOString(),
     author_id: a.id,
     author_name: a.name,
     body: payload.body,
     parent_id: payload.parent_id ?? null,
-  });
-  const evt: TimelineEvent = {
+  };
+  const newEvent: TimelineEvent = {
     id: `evt-${id}`,
     at: new Date().toISOString(),
     actor_id: a.id,
@@ -289,18 +334,19 @@ function addComment(payload: { body: string; parent_id?: string | null }): void 
     kind: 'comment_added',
     label: 'Agregó un comentario',
   };
-  drawerSolicitud.value.timeline.push(evt);
-  persistSolicitud(drawerSolicitud.value);
+  updateMutation.mutate({
+    id: s.id,
+    patch: {
+      comments: [...s.comments, newComment],
+      timeline: [...s.timeline, newEvent],
+    },
+  });
 }
 
-// ─── Manifest wiring (record resolver + after-mutation persist) ──────
-// The manifest engine mutates records in place. Its `afterMutation` hook
-// is called with no arguments, so we stash the record id of the last
-// per-row action invocation and persist that specific record when the
-// hook fires. Module-level CTAs (none today on Inbox) would need a
-// different hook.
-const lastActedSolicitudId = ref<string | null>(null);
-
+// ─── Manifest wiring (record resolver + dispatcher) ──────────────────
+// The engine is pure: it computes a patch and calls `dispatch.update`.
+// We forward that into `updateMutation` so vue-query owns optimistic
+// update + rollback + refetch — even for engine-driven mutations.
 onMounted(() => {
   inbox.registerRecordResolver((ref) => {
     if (typeof ref === 'string') {
@@ -315,12 +361,16 @@ onMounted(() => {
     }
     return undefined;
   });
-  inbox.registerAfterMutation(() => {
-    const id = lastActedSolicitudId.value;
-    if (!id) return;
-    const record = solicitudes.value.find((s) => s.id === id);
-    if (record) persistSolicitud(record);
-    lastActedSolicitudId.value = null;
+  inbox.registerDispatcher({
+    update: (recordId, patch) => {
+      updateMutation.mutate({
+        id: recordId,
+        patch: patch as Partial<Solicitud>,
+      });
+    },
+    create: (record) => {
+      createMutation.mutate(record as Solicitud);
+    },
   });
 });
 
@@ -330,7 +380,6 @@ function rowActions(s: Solicitud): ReturnType<typeof inbox.resolveActionsFor> {
 }
 
 function performAction(actionId: string, s: Solicitud): void {
-  lastActedSolicitudId.value = s.id;
   inbox.openDialog(actionId, s as unknown as Record<string, unknown>);
 }
 
@@ -366,7 +415,6 @@ function handleKanbanTransition(payload: {
   const s = solicitudes.value.find((row) => row.id === payload.recordId);
   if (!s) return;
   if (payload.mode === 'modal') {
-    lastActedSolicitudId.value = s.id;
     if (payload.toState === 'completed') {
       inbox.openDialog(
         'inbox.cerrar_solicitud',
@@ -380,30 +428,33 @@ function handleKanbanTransition(payload: {
     }
     return;
   }
-  // Free transition — write the new state immediately + emit a timeline event.
+  // Free transition — compute the patch and dispatch via the mutation.
   // For `pendiente → en_proceso` we mirror the `inbox.tomar` manifest action:
   // auto-assign owner to the current user (when null) and use the `taken`
   // event kind. Other free transitions emit a generic `state_change`.
   const wasTomar =
-    payload.fromState === 'pendiente'
-    && payload.toState === 'en_proceso';
+    payload.fromState === 'pendiente' && payload.toState === 'en_proceso';
   const a = actor();
-  s.state = payload.toState as SolicitudState;
-  s.updated_at = new Date().toISOString();
-  if (wasTomar && s.owner === null) {
-    s.owner = a.id;
-  }
-  s.timeline.push({
+  const updatedAt = new Date().toISOString();
+  const newEvent: TimelineEvent = {
     id: `evt-${s.id}-${Date.now()}`,
-    at: s.updated_at,
+    at: updatedAt,
     actor_id: a.id,
     actor_name: a.name,
     kind: wasTomar ? 'taken' : 'state_change',
     label: wasTomar
       ? 'Tomada — en proceso'
       : `Estado: ${stateLabel(payload.toState)}`,
-  });
-  persistSolicitud(s);
+  };
+  const patch: Partial<Solicitud> = {
+    state: payload.toState as SolicitudState,
+    updated_at: updatedAt,
+    timeline: [...s.timeline, newEvent],
+  };
+  if (wasTomar && s.owner === null) {
+    patch.owner = a.id;
+  }
+  updateMutation.mutate({ id: s.id, patch });
 }
 
 // ─── State filter options (all states surfaced together) ────────────

@@ -3,14 +3,23 @@ import { applyCTA } from './applyCTA';
 import type { ApplyDeps } from './applyTypes';
 import { ManifestError, type AuditEntry, type ModuleCTA } from '@/types/manifest';
 
-function makeDeps(): { deps: ApplyDeps; audit: AuditEntry[] } {
+function makeDeps(): {
+  deps: ApplyDeps;
+  audit: AuditEntry[];
+  created: Record<string, unknown>[];
+} {
   const audit: AuditEntry[] = [];
+  const created: Record<string, unknown>[] = [];
   return {
     audit,
+    created,
     deps: {
       auditAppend: (e) => audit.push(e),
       toast: { success: () => {}, error: () => {} },
-      afterMutation: () => {},
+      dispatch: {
+        update: () => {},
+        create: (record) => created.push(record),
+      },
       recompute: () => undefined,
       devWarn: () => {},
     },
