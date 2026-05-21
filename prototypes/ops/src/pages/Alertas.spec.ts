@@ -50,6 +50,8 @@ async function mountAlertas() {
   const wrapper = mount(Alertas, {
     global: { plugins: [router], stubs: POPOVER_STUBS },
   });
+  // Drain pending microtasks so vue-query data hydrates before assertions.
+  for (let i = 0; i < 5; i += 1) await flushPromises();
   return { wrapper, router };
 }
 

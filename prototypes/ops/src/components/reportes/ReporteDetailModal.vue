@@ -13,10 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Check, AlertTriangle, Info } from 'lucide-vue-next';
 import { cn } from '@/lib/cn';
 import { depsStatus } from '@/lib/reportes/depsStatus';
-import {
-  REPORT_CATEGORY_BY_KEY,
-  type ReportCategoryDef,
-} from '@/mocks/genericos/reportes';
+import type { ReportCategoryDef } from '@/api/modules/reports';
 import type { Report, ReportRun } from '@/types/genericos';
 
 // ════════════════════════════════════════════════════════════════════
@@ -29,10 +26,16 @@ interface Props {
   report: Report | null;
   /** Full run history; the modal slices the latest 3 by report_id. */
   runs: ReportRun[];
+  /** Category lookup map keyed by `Report.category`. Provided by the
+   *  parent so the modal stays free of any data-source coupling.
+   *  Defaults to `{}` so the badge falls back to the raw category key
+   *  when the parent hasn't wired the lookup yet. */
+  categoryByKey?: Record<string, ReportCategoryDef>;
   now?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  categoryByKey: () => ({}),
   now: () => Date.now(),
 });
 
@@ -41,7 +44,7 @@ const emit = defineEmits<{
 }>();
 
 const cat = computed<ReportCategoryDef | undefined>(
-  () => (props.report ? REPORT_CATEGORY_BY_KEY[props.report.category] : undefined),
+  () => (props.report ? props.categoryByKey[props.report.category] : undefined),
 );
 
 const status = computed(() =>

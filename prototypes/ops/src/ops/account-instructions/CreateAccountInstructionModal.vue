@@ -19,7 +19,7 @@ import {
   getTemplateAttributes,
   listInstructionTemplates,
   listRails,
-} from './api';
+} from '@/api/modules/accountInstructions';
 import { hydrateInitialFormValues } from './interpolation';
 import { saveDraft, loadDraft, clearDraft } from './draft-storage';
 import AccountTemplateStep from './AccountTemplateStep.vue';

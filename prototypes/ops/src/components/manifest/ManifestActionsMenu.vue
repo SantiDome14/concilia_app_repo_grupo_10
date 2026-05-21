@@ -102,7 +102,7 @@ const triggerClass = computed(() =>
            auto-inherited (Vue warns), so we ground them on a real DOM
            node here. -->
       <div data-testid="manifest-actions-menu" @click.stop>
-        <div class="text-t-4 px-3 pt-1.5 pb-1 text-[9px] font-bold tracking-[0.06em] uppercase">
+        <div class="text-t-4 px-3 pb-1 pt-1.5 text-[9px] font-bold uppercase tracking-[0.06em]">
           Acciones del registro
         </div>
         <div
@@ -114,7 +114,7 @@ const triggerClass = computed(() =>
         </div>
         <template v-for="g in grouped" :key="g.dim">
           <div
-            class="text-t-4 px-3 pt-1.5 pb-1 text-[9px] font-bold tracking-[0.06em] uppercase"
+            class="text-t-4 px-3 pb-1 pt-1.5 text-[9px] font-bold uppercase tracking-[0.06em]"
             :data-testid="`manifest-actions-section-${g.dim}`"
           >
             {{ g.label }}
@@ -144,7 +144,7 @@ const triggerClass = computed(() =>
               v-if="!it.enabled && it.tag"
               :class="
                 cn(
-                  'shrink-0 rounded px-1.5 py-px text-[9px] font-bold tracking-wider uppercase',
+                  'shrink-0 rounded px-1.5 py-px text-[9px] font-bold uppercase tracking-wider',
                   it.tag === 'V2' ? 'bg-danger/10 text-danger' : 'text-t-4 bg-white/[0.05]',
                 )
               "

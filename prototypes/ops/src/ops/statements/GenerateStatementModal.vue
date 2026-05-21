@@ -13,12 +13,12 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import ClientFilters from '@/ops/clients/ClientFilters.vue';
-import { listClients, getClient } from '@/ops/clients/api';
+import { listClients, getClient } from '@/api/modules/clients';
 import type { Account, Client } from '@/ops/clients/types';
 import StatementAccountStep from './StatementAccountStep.vue';
 import StatementDateStep from './StatementDateStep.vue';
 import StatementPreviewCard from './StatementPreviewCard.vue';
-import { requestStatement, toApiPayload } from './api';
+import { requestStatement, toApiPayload } from '@/api/modules/statements';
 import { resolveQuickFilter, findChipKeyForRange } from './quick-filters';
 import { loadRange, saveRange } from './range-storage';
 import type { DateRange, StatementQuickFilterKey } from './types';

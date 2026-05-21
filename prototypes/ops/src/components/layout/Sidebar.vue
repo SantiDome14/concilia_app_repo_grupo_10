@@ -73,9 +73,9 @@ const blocks: NavBlock[] = [
         icon: ArrowLeftRight,
       },
       {
-        to: ROUTE_PATHS.COTIZACIONES,
-        name: ROUTE_NAMES.COTIZACIONES,
-        label: 'Cotizaciones',
+        to: ROUTE_PATHS.TRADES,
+        name: ROUTE_NAMES.TRADES,
+        label: 'Trades',
         icon: TrendingUp,
       },
     ],

@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Skeleton from '@/components/feedback/Skeleton.vue';
 import EmptyState from '@/components/feedback/EmptyState.vue';
-import { listSwiftTransactionsForAccount } from './api';
+import { listSwiftTransactionsForAccount } from '@/api/modules/psp';
 import { getSponsorLabel } from './sponsor-catalog';
 import type { PspAccount } from './types';
 

@@ -13,10 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
 import { depsStatus } from '@/lib/reportes/depsStatus';
-import {
-  REPORT_CATEGORY_BY_KEY,
-  type ReportCategoryDef,
-} from '@/mocks/genericos/reportes';
+import type { ReportCategoryDef } from '@/api/modules/reports';
 import type { Report } from '@/types/genericos';
 
 // ════════════════════════════════════════════════════════════════════
@@ -33,11 +30,16 @@ import type { Report } from '@/types/genericos';
 
 interface Props {
   report: Report;
+  /** Category definition for this report — passed by the parent so the
+   *  card stays free of any data-source coupling. `undefined` falls
+   *  back to rendering the raw category key. */
+  category?: ReportCategoryDef;
   /** Optional override for testing the date math. */
   now?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  category: undefined,
   now: () => Date.now(),
 });
 
@@ -48,9 +50,7 @@ const emit = defineEmits<{
   generar: [report: Report];
 }>();
 
-const cat = computed<ReportCategoryDef | undefined>(
-  () => REPORT_CATEGORY_BY_KEY[props.report.category],
-);
+const cat = computed<ReportCategoryDef | undefined>(() => props.category);
 
 const status = computed(() => depsStatus(props.report, props.now));
 

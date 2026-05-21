@@ -20,7 +20,7 @@ vi.mock('vue-sonner', () => ({
   toast: { info: vi.fn(), success: vi.fn(), error: vi.fn() },
 }));
 
-vi.mock('@/ops/psp/api', () => ({
+vi.mock('@/api/modules/psp', () => ({
   getCoinagHealth: vi.fn().mockResolvedValue({
     status: 'healthy',
     message: null,
@@ -32,7 +32,7 @@ vi.mock('@/ops/psp/api', () => ({
   listAccounts: vi.fn().mockResolvedValue({ data: [], total: 0 }),
 }));
 
-vi.mock('@/ops/clients/api', () => ({
+vi.mock('@/api/modules/clients', () => ({
   listCurrencies: vi.fn().mockResolvedValue([]),
 }));
 

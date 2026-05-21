@@ -16,7 +16,7 @@ import Skeleton from '@/components/feedback/Skeleton.vue';
 import ActionsMenu from '@/components/feedback/ActionsMenu.vue';
 import { useTable } from '@/composables/useTable';
 import { useCapabilities } from '@/composables/useCapabilities';
-import { fetchBanksAccounts } from '@/ops/banks-accounts/api';
+import { fetchBanksAccounts } from '@/api/modules/banksAccounts';
 import CreateStructureModal from '@/ops/banks-accounts/CreateStructureModal.vue';
 import CreateAccountModal from '@/ops/banks-accounts/CreateAccountModal.vue';
 import EditAccountModal from '@/ops/banks-accounts/EditAccountModal.vue';

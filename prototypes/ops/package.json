@@ -1,8 +1,8 @@
 {
-  "name": "core-template-frontend",
+  "name": "core-ops",
   "private": true,
   "version": "1.0.0",
-  "description": "Ardua core frontend template — Vue 3 + TypeScript + Vite",
+  "description": "Ardua Operations frontend — Vue 3 + TypeScript + Vite",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -64,6 +64,7 @@
     "husky": "^9.1.7",
     "jsdom": "^26.0.0",
     "lint-staged": "^15.3.0",
+    "msw": "^2.14.6",
     "npm-run-all2": "^7.0.2",
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.6.11",
@@ -84,6 +85,11 @@
     ],
     "*.{json,md,yml,yaml,css,html}": [
       "prettier --write"
+    ]
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
     ]
   }
 }

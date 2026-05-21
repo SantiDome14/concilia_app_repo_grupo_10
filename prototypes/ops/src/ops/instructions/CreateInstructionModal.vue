@@ -14,7 +14,7 @@ import InstructionForm from './InstructionForm.vue';
 import {
   createInstructionWithAttributes,
   retrySaveAttributes,
-} from './api';
+} from '@/api/modules/instructions';
 import type { InstructionFormData, InstructionId } from './types';
 
 // ════════════════════════════════════════════════════════════════════

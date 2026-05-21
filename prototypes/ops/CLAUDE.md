@@ -1,4 +1,4 @@
-# core-template-frontend — Project Memory
+# core-ops — Project Memory
 
 > This file is automatically read by Claude Code (and equivalent by other AI coding assistants) on every session of this project. It is the **single source of truth** for how to work in this codebase.
 >
@@ -8,23 +8,24 @@
 
 ## Project Overview
 
-`core-template-frontend` is Ardua's official frontend template — the foundation every new Ardua core app is built on, and the target architecture that `core-app`, `core-lex`, `core-ops`, and `core-trd` will migrate to.
+`core-ops` is Ardua's Operations frontend — the operational app for Operaciones, derived from `_core-template-frontend` and bound by every capability in `openspec/specs/`. Scope (modules currently shipped on the new stack):
 
-It is **not an application** but a **scaffold**: a complete, pre-wired Vue 3 + TypeScript + Vite project with the Ardua UI patterns (layout, navigation, tables, modals, actions, theming, forms, auth, API, error handling) contractualized via OpenSpec capabilities. Apps derived from this template MUST comply with those capabilities.
+- **Catálogos** — Clientes, Instrucciones, Bancos / Cuentas. Master-list pages with detail surfaces; Instrucciones is the template editor consumed by Clientes' Account-Instructions wizard.
+- **Operaciones** — Movimientos (multi-currency treasury ledger), Trades (FX/crypto quotes whose execution OPS owns once TRD's Mesa de Dinero accepts them — see Branding for the user-facing name).
+- **Custodia** — PSP, the Partner-driven (COINAG / BIND / Banco de Comercio) CBU-padre + CVU-hijos sub-account ledger split across `Movements` and `Accounts` tabs with the cross-partner reconciliation banner.
+- **Cross-cutting standard modules** — Dashboard, Inbox, Alertas, Reportes (OPS-themed instances of `core-modulo-genericos`).
 
-Its purpose is fourfold:
-
-1. **GitHub template repository** — clonable via "Use this template" for every new core app.
-2. **Base commit** for migrating the four existing Ardua core frontends.
-3. **Scaffold for backend-first developers** — the pre-wired architecture plus OpenSpec plus project-specific skills let backend developers implement frontend features via Claude Code without deep frontend expertise.
-4. **Governance layer** — OpenSpec specs are the contract that locks the visual and interaction patterns of the Ardua core across every app.
+OPS is a **consumer** of the 18 template capabilities plus its own 8 archived capabilities (`ops-clients`, `ops-instructions`, `ops-account-instructions`, `ops-banks-accounts`, `ops-movimientos`, `ops-cotizaciones`, `ops-psp`, `ops-statements`). Any UI or behavior change MUST satisfy those contracts; non-trivial changes flow through the OpenSpec workflow described below.
 
 ## Branding
 
-- **Project name:** `core-template-frontend` (all lowercase, kebab-case).
+- **Project name:** `core-ops` (all lowercase, kebab-case).
 - **Parent organization:** Ardua Solutions.
-- **Derived apps:** `core-app`, `core-lex`, `core-ops`, `core-trd`, `core-fin`, `core-com` (naming convention: `core-<module>`).
-- In documentation and code, **always write module names in lowercase** (`ops`, `lex`, `trd`, `clp`, `fin`, `com`). Uppercase is only used in enums and in brand references (e.g. the L1 page header may display the module name in uppercase as a style choice, but the identifier is lowercase).
+- **Module prefix:** OPS (uppercase in enums, headers, and visual brand references; lowercase as the identifier).
+- **Brand color:** `--brand: 0 84% 60%` (OPS canonical red per `core-theming`).
+- **Sibling apps:** `core-app` (CLP), `core-lex`, `core-fin`, `core-trd`. Naming convention: `core-<module>`.
+- **User-facing module rename — Trades:** the `ops-cotizaciones` capability surfaces as **"Trades"** in the Sidebar, page H1, and breadcrumb. Internal identifiers (folder `src/ops/trades/`, ENDPOINTS key `trades`, route `/trades`, file `Trades.vue`) follow the user-facing name. The OpenSpec capability slug stays `ops-cotizaciones` (the archived contract owns the legacy term); the RBAC permission scope stays `cotizaciones:read` for backend compatibility.
+- In documentation and code, **always write module names in lowercase** (`ops`, `lex`, `trd`, `clp`, `fin`). Uppercase is only used in enums and in brand references (e.g. the L1 page header may display the module name in uppercase as a style choice, but the identifier is lowercase).
 - **Exception:** capitalize only at the beginning of a sentence when grammatically required.
 
 ## Tech Stack
@@ -77,23 +78,90 @@ Its purpose is fourfold:
 
 For the full structural contract, see `openspec/specs/core-layout/spec.md`, `openspec/specs/core-navigation/spec.md`, and the other capability specs under `openspec/specs/`.
 
-## Current & Future Core Apps
+## Sibling apps
 
-### Current (legacy, pending migration)
+OPS is one of several apps derived from `_core-template-frontend`. The current set:
 
 | App | Module prefix | Stack today | Migration status |
 |---|---|---|---|
 | `core-app` | CLP | Vue + JS, no TS | Not started |
 | `core-lex` | LEX | Vue + JS, no TS | Not started |
-| `core-ops` | OPS | Vue + JS, no TS | Not started |
+| `core-ops` (this) | OPS | Vue 3 + TS strict | **8 capabilities archived** + reconciled to template patterns (MSW + vue-query + pure manifest engine) |
 | `core-trd` | TRD | React + TS (strict off) | Not started (React → Vue) |
+| `core-fin` | FIN | n/a (new build) | Baseline shipped + `fin-disponibilidades` capability archived |
 
-### Planned / proposed
+Each migration / new build is its own OpenSpec change with a dedicated Jira REQ ticket.
 
-- `core-fin` (FIN) — Finance & accounting operations
-- `core-com` (COM) — Commercial operations
+### Template ↔ OPS relationship (current bootstrap phase)
 
-Each migration is its own OpenSpec change with a dedicated Jira REQ ticket.
+The flow between `_core-template-frontend` and `core-ops` is **bidirectional**, not top-down. Concrete module requirements (e.g. `ops-account-instructions`'s wizard, `ops-psp`'s multi-partner reconciliation) land in OPS FIRST; the template absorbs the new primitive AFTERWARD once it's been validated. Later, when the template stabilizes, the flow reverses.
+
+**Two consequences:**
+
+1. **OPS can diverge from the template legitimately.** Sometimes OPS is *ahead*. Don't assume a divergence means OPS is behind — check `git log` or ask the framework owner before "syncing".
+2. **The contract is "shared patterns, free implementation".** OPS consumes the template's patterns (manifest engine, MSW transport, vue-query mutations, UI primitives, L1/L2/L3 layout, etc.) but ships its own module-specific implementations on top (the 8 archived `ops-*` capabilities, the per-feature folders under `src/ops/`, the centralized api modules under `src/api/modules/`). OPS CANNOT skip a template primitive (use a different transport, bypass the manifest engine).
+
+## Data transport (mocks vs real)
+
+> ### 🔒 Hard rule — every page reads through HTTP, every mock lives in MSW
+>
+> **Pages NEVER import data from `src/mocks/`.** The directory exists for MSW handlers and seeds only — no top-level component is allowed to `import { FOO } from '@/mocks/...'`. Reads go through `useQuery` → `src/api/modules/<domain>.ts` → `apiClient` (axios) → HTTP. Writes go through `useMutation` with optimistic update + rollback on error + refetch on settled.
+
+**Mock interception.** When `VITE_USE_MOCKS=true`, MSW (`src/mocks/browser.ts`) intercepts every outgoing HTTP call and routes matching URLs to handlers in `src/mocks/handlers/`. Handlers mutate seeds in `src/mocks/seed/*.ts` so CRUD round-trips are observable; a refresh resets the seed.
+
+**Promoting to real backend.** `VITE_USE_MOCKS="false"` + `VITE_API_BASE_URL=https://...`. Nothing else.
+
+**Layout.**
+
+```
+src/api/endpoints.ts              all paths grouped by domain
+src/api/modules/<domain>.ts       one typed function per endpoint
+src/mocks/seed/<domain>.ts        mutable in-memory data + reset helper
+src/mocks/handlers/<domain>.ts    HTTP handler array referencing ENDPOINTS
+src/mocks/handlers/index.ts       barrel — order matters for overlapping paths
+src/mocks/browser.ts              setupWorker(...handlers)
+public/mockServiceWorker.js       generated by `npx msw init public/`
+```
+
+**Domain inventory (OPS).** `src/mocks/seed/` ships the eight OPS-specific seeds plus five cross-cutting (template-shared) ones:
+
+| Domain | Seed | Handler | Endpoints owned |
+|---|---|---|---|
+| `clients` | `seed/clients.ts` | `handlers/clients.ts` | `/clients`, `/clients/:id`, `/sign-up`, `/clients/:id/whitelist-account`, `/coinag/account/:cvu`, `/currencies`, `/account-instruction/:id/confirmation-letter` |
+| `instructions` | `seed/instructions.ts` (shared) | `handlers/instructions.ts` | `/instruction`, `/instruction/:id`, `/instruction-attribute/instruction/:id`, `/instruction-attribute/save-all` |
+| `accountInstructions` | shares `seed/instructions.ts` | `handlers/accountInstructions.ts` | `/rails`, `/account-instruction` |
+| `banksAccounts` | `seed/banksAccounts.ts` | `handlers/banksAccounts.ts` | `/banks-accounts`, `/banks-accounts/sociedades`, `/banks-accounts/structures`, `/banks-accounts/:id` |
+| `movimientos` + `psp` (movements) | `seed/movements.ts` (shared) | `handlers/movements.ts` | `/movements`, `/movements/:id`, `/receipt/:id` |
+| `psp` | `seed/psp.ts` | `handlers/psp.ts` | `/coinag/health`, `/balance-reconciliation`, `/accounts`, `/accounts/:id/swift-transactions` |
+| `trades` | `seed/trades.ts` | `handlers/trades.ts` | `/quotes` |
+| `statements` | (stateless) | `handlers/statements.ts` | `/statement` |
+| Cross-cutting (template-shared) | `seed/{users,solicitudes,alertas,reports,dashboardKpis,examples}.ts` | `handlers/{users,solicitudes,alertas,reports,dashboardKpis,examples}.ts` | `/users`, `/users/me`, `/solicitudes*`, `/alertas*`, `/reports*`, `/dashboard-kpis`, `/examples*` |
+
+**Path-overlap note.** Three backend paths are shared by two consumers each and resolved by a single handler:
+
+- `/instruction` — `instructions` (template editor) **and** `accountInstructions.templates` (wizard Step 1).
+- `/instruction-attribute/instruction/:id` — `instructions.attributes` **and** `accountInstructions.templateAttributes`.
+- `/movements` — `movimientos.list` **and** `psp.movements` (PSP passes `?sponsor=...` so the same handler filters per tab).
+
+Handler-array order in `handlers/index.ts` matters: `instructionHandlers` is registered BEFORE `accountInstructionHandlers` so the wizard's GET resolves from the shared seed before the wizard-specific handlers add their narrower routes.
+
+**URL-pattern anchoring (`apiPath` helper).** Every handler builds its MSW URL pattern through `apiPath(ENDPOINTS.<group>.<name>)` from `src/mocks/util.ts`, which prepends `*/api` (the backend prefix mirrored by `VITE_API_BASE_URL=http://localhost:3000/api`). The naive `*${path}` recommended by the cross-app template would otherwise collide with Vite dev-server module requests when an endpoint segment matches a feature-folder name — for example `*/clients/:id` would match `/src/ops/clients/WhitelistAccountModal.vue` with `:id='WhitelistAccountModal.vue'`, route the request into the clients DETAIL handler, fail to find the record, and return a spurious 404 to the browser. Anchoring on `/api` keeps Vite's `/src/...` paths out of every handler's match window. If the live backend is ever rehosted under a different prefix, update `apiPath` in one place.
+
+**Mutation pattern (canonical).** `useMutation` with the three hooks:
+
+- `onMutate` — cancel in-flight queries, snapshot the cache, apply the patch via `queryClient.setQueryData(...)`. Return the snapshot.
+- `onError` — restore the snapshot, `toast.error(...)`. UI rolls back.
+- `onSettled` — `queryClient.invalidateQueries(...)`. Refetch covers concurrent changes by other users.
+
+**Manifest engine ↔ mutations.** The manifest engine is pure — `applyAction` / `applyCTA` / `applyComposite` compute patches and dispatch them via `deps.dispatch.{update,create}`, they never mutate `record`. Pages plug `useMutation` into the engine via `module.registerDispatcher({ update, create })`. Drawer panels watch `query.data` (computed lookup by id) so optimistic patches surface in detail views automatically.
+
+**Antipattern (do not commit):**
+- Importing arrays from `@/mocks/*` in pages or components.
+- Handler URL patterns hardcoded as raw strings instead of referencing `ENDPOINTS`.
+- Mutating a seed from anywhere outside `src/mocks/handlers/` or its `reset...()` helper.
+- Keeping a local `ref<T[]>` mirror of `query.data` + `watch`. The cache IS the source of truth.
+- Fire-and-forget `updateX()` calls outside `useMutation` (no optimistic + rollback wiring).
+- Mutating records inside the manifest engine.
 
 ## Documentation Hierarchy
 

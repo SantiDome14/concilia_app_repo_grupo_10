@@ -42,6 +42,7 @@ describe('validateManifest', () => {
       expect(result.warnings).toEqual([]);
       expect(result.ok).toBe(true);
     });
+
   });
 
   describe('top-level required fields', () => {

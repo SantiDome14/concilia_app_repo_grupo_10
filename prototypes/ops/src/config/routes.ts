@@ -21,7 +21,7 @@ export const ROUTE_PATHS = {
   CLIENT_DETAIL: '/clients/:id',
   PSP: '/psp',
   MOVIMIENTOS: '/movimientos',
-  COTIZACIONES: '/cotizaciones',
+  TRADES: '/trades',
   BANKS_ACCOUNTS: '/banks-accounts',
   NOT_FOUND: '/:pathMatch(.*)*',
 } as const;
@@ -37,7 +37,7 @@ export const ROUTE_NAMES = {
   CLIENT_DETAIL: 'client-detail',
   PSP: 'psp',
   MOVIMIENTOS: 'movimientos',
-  COTIZACIONES: 'cotizaciones',
+  TRADES: 'trades',
   BANKS_ACCOUNTS: 'banks-accounts',
   NOT_FOUND: 'not-found',
 } as const;

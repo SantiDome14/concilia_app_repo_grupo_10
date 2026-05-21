@@ -14,7 +14,7 @@ import {
   listAccounts,
   listMovements,
   listSponsorBalances,
-} from '@/ops/psp/api';
+} from '@/api/modules/psp';
 import ReconciliationBanner from '@/ops/psp/ReconciliationBanner.vue';
 import PosicionKpis from '@/ops/psp/PosicionKpis.vue';
 import PosicionTree from '@/ops/psp/PosicionTree.vue';
@@ -24,7 +24,7 @@ import MovementsTable from '@/ops/psp/MovementsTable.vue';
 import AccountsTable from '@/ops/psp/AccountsTable.vue';
 import SwiftTransactionsDrawer from '@/ops/psp/SwiftTransactionsDrawer.vue';
 import WhitelistAccountModal from '@/ops/clients/WhitelistAccountModal.vue';
-import { listCurrencies } from '@/ops/clients/api';
+import { listCurrencies } from '@/api/modules/clients';
 import {
   MOVEMENT_TYPE_OPTIONS,
   MOVEMENT_STATUS_OPTIONS,

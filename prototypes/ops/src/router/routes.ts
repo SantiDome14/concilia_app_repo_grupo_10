@@ -166,15 +166,15 @@ export const routes: RouteRecordRaw[] = [
       block: 'Operaciones',
     },
   },
-  // ops-cotizaciones: top-level page (split from former ops-financial-dashboard).
+  // ops-cotizaciones (Trades — user-facing): top-level page (split from former ops-financial-dashboard).
   {
-    path: ROUTE_PATHS.COTIZACIONES,
-    name: ROUTE_NAMES.COTIZACIONES,
-    component: () => import('@/pages/Cotizaciones.vue'),
+    path: ROUTE_PATHS.TRADES,
+    name: ROUTE_NAMES.TRADES,
+    component: () => import('@/pages/Trades.vue'),
     meta: {
       requiresAuth: true,
       layout: 'shell',
-      breadcrumb: 'Cotizaciones',
+      breadcrumb: 'Trades',
       block: 'Operaciones',
     },
   },
@@ -200,13 +200,13 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/financial-dashboard',
     redirect: (to) => {
-      // Drop the obsolete `?tab=activity|quotes`; map quotes → /cotizaciones,
+      // Drop the obsolete `?tab=activity|quotes`; map quotes → /trades,
       // anything else → /movimientos.
       const tab = typeof to.query.tab === 'string' ? to.query.tab : '';
       const next = { ...to.query };
       delete next.tab;
       return tab === 'quotes'
-        ? { path: ROUTE_PATHS.COTIZACIONES, query: next }
+        ? { path: ROUTE_PATHS.TRADES, query: next }
         : { path: ROUTE_PATHS.MOVIMIENTOS, query: next };
     },
   },

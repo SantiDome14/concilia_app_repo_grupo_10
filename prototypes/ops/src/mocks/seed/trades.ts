@@ -1,0 +1,291 @@
+// ════════════════════════════════════════════════════════════════════
+// MSW seed — trades (ops-cotizaciones / Trades user-facing rename)
+// ────────────────────────────────────────────────────────────────────
+// Trades are FX/crypto quotes negotiated by TRD's Mesa de Dinero with
+// the client. OPS does NOT originate the quote — it executes the
+// settlement side once the quote is accepted (confirm incoming funds
+// or push outgoing funds from / to client accounts on Ardua platforms).
+//
+// Status flow (informal):
+//   PENDING   — created by TRD, waiting on client/desk confirmation
+//   ACCEPTED  — confirmed; OPS now owns the execution
+//   EXPIRED   — time-window elapsed before acceptance
+//   REJECTED  — client / desk rejected the rate
+//   COMPLETED — OPS finished the settlement (out of scope for v1 UI)
+//
+// The OPS Trades page splits records into Active (ACCEPTED) vs Historic
+// (everything else); the MSW handler filters by `status` query param.
+//
+// Source: OPS-QA `/cotizaciones` Active + Historic tabs captured 2026-05.
+// Currency labels (MEP/JPY/etc.) reflect the legacy free-form codes;
+// the api module uppercases them at the boundary.
+// ════════════════════════════════════════════════════════════════════
+
+import type { Quote } from '@/ops/trades/types';
+
+const initial: Quote[] = [
+  // ─── Active (ACCEPTED) — OPS owns execution ─────────────────────
+  {
+    id: 'q-001',
+    client_id: 'cl-alicia-montez',
+    client_name: 'Alicia Montez',
+    origin_currency: 'BTC',
+    destination_currency: 'ARS',
+    operation: 'BUY',
+    term: 'T0',
+    origin_amount: '100',
+    destination_amount: '149035.95',
+    exchange_rate: '1490.3595',
+    status: 'ACCEPTED',
+    created_at: '2026-05-05T12:59:00Z',
+  },
+  {
+    id: 'q-002',
+    client_id: 'cl-santiago-montero',
+    client_name: 'Santiago Montero',
+    origin_currency: 'USDC',
+    destination_currency: 'ARS',
+    operation: 'BUY',
+    term: 'T0',
+    origin_amount: '2020',
+    destination_amount: '2040200',
+    exchange_rate: '1010.00',
+    status: 'ACCEPTED',
+    created_at: '2026-04-29T12:45:00Z',
+  },
+  {
+    id: 'q-003',
+    client_id: 'cl-santiago-montero',
+    client_name: 'Santiago Montero',
+    origin_currency: 'USDC',
+    destination_currency: 'ARS',
+    operation: 'BUY',
+    term: 'T0',
+    origin_amount: '100',
+    destination_amount: '146810.25',
+    exchange_rate: '1468.1025',
+    status: 'ACCEPTED',
+    created_at: '2026-04-13T16:21:00Z',
+  },
+  {
+    id: 'q-004',
+    client_id: 'cl-santiago-montero',
+    client_name: 'Santiago Montero',
+    origin_currency: 'USDC',
+    destination_currency: 'ARS',
+    operation: 'BUY',
+    term: 'T0',
+    origin_amount: '900',
+    destination_amount: '1321185.87',
+    exchange_rate: '1467.9843',
+    status: 'ACCEPTED',
+    created_at: '2026-04-13T16:14:00Z',
+  },
+  {
+    id: 'q-005',
+    client_id: 'cl-ignacio-ramos',
+    client_name: 'Ignacio Ramos',
+    origin_currency: 'USDC',
+    destination_currency: 'USDT',
+    operation: 'BUY',
+    term: 'T0',
+    origin_amount: '999',
+    destination_amount: '999',
+    exchange_rate: '1.00',
+    status: 'ACCEPTED',
+    created_at: '2026-04-06T15:55:00Z',
+  },
+
+  // ─── Historic (PENDING) — TRD waiting on confirmation ───────────
+  {
+    id: 'q-101',
+    client_id: 'cl-alcantar-camacho',
+    client_name: 'Alcántar-Camacho',
+    origin_currency: 'MEP',
+    destination_currency: 'ARS',
+    operation: 'BUY',
+    term: 'T0',
+    origin_amount: '343434',
+    destination_amount: '4232137182',
+    exchange_rate: '12323.00',
+    status: 'PENDING',
+    created_at: '2026-05-20T17:14:00Z',
+  },
+  {
+    id: 'q-102',
+    client_id: 'cl-ignacio-colon',
+    client_name: 'Dr. Ignacio Colón',
+    origin_currency: 'BTC',
+    destination_currency: 'JPY',
+    operation: 'BUY',
+    term: 'T0',
+    origin_amount: '234',
+    destination_amount: '2883582',
+    exchange_rate: '12323.00',
+    status: 'PENDING',
+    created_at: '2026-05-20T17:04:00Z',
+  },
+  {
+    id: 'q-103',
+    client_id: 'cl-benito-angulo',
+    client_name: 'Benito Ignacio Angulo Angulo',
+    origin_currency: 'USDC',
+    destination_currency: 'ARS',
+    operation: 'BUY',
+    term: 'T0',
+    origin_amount: '2345',
+    destination_amount: '2893730',
+    exchange_rate: '1234.00',
+    status: 'PENDING',
+    created_at: '2026-05-20T16:50:00Z',
+  },
+  {
+    id: 'q-104',
+    client_id: 'cl-ignacio-rendon',
+    client_name: 'Ignacio Evelio Rendón Jasso',
+    origin_currency: 'USDC',
+    destination_currency: 'ARS',
+    operation: 'BUY',
+    term: 'T0',
+    origin_amount: '232323',
+    destination_amount: '28604304729',
+    exchange_rate: '123123.00',
+    status: 'PENDING',
+    created_at: '2026-05-12T15:44:00Z',
+  },
+  {
+    id: 'q-105',
+    client_id: 'cl-ignacio-salas',
+    client_name: 'Dr. Ignacio Salas',
+    origin_currency: 'USDC',
+    destination_currency: 'ARS',
+    operation: 'BUY',
+    term: 'T0',
+    origin_amount: '123',
+    destination_amount: '15129',
+    exchange_rate: '123.00',
+    status: 'PENDING',
+    created_at: '2026-05-12T15:43:00Z',
+  },
+  {
+    id: 'q-106',
+    client_id: 'cl-ignacio-aguilera',
+    client_name: 'Guillermo Ignacio Aguilera',
+    origin_currency: 'USDC',
+    destination_currency: 'ARS',
+    operation: 'BUY',
+    term: 'T0',
+    origin_amount: '23123',
+    destination_amount: '2844129',
+    exchange_rate: '123.00',
+    status: 'PENDING',
+    created_at: '2026-05-12T15:43:00Z',
+  },
+  {
+    id: 'q-107',
+    client_id: 'cl-santiago-montero',
+    client_name: 'Santiago Montero',
+    origin_currency: 'BTC',
+    destination_currency: 'USDC',
+    operation: 'BUY',
+    term: 'T0',
+    origin_amount: '1',
+    destination_amount: '1',
+    exchange_rate: '1.00',
+    status: 'PENDING',
+    created_at: '2026-05-07T12:37:00Z',
+  },
+  {
+    id: 'q-108',
+    client_id: 'cl-carmen-hurtado',
+    client_name: 'Carmen Hurtado Montero',
+    origin_currency: 'USDC',
+    destination_currency: 'ARS',
+    operation: 'BUY',
+    term: 'T0',
+    origin_amount: '200',
+    destination_amount: '294000',
+    exchange_rate: '1470.00',
+    status: 'PENDING',
+    created_at: '2026-05-05T16:02:00Z',
+  },
+  {
+    id: 'q-109',
+    client_id: 'cl-alicia-montez',
+    client_name: 'Alicia Montez',
+    origin_currency: 'USDC',
+    destination_currency: 'ARS',
+    operation: 'BUY',
+    term: 'T0',
+    origin_amount: '100',
+    destination_amount: '148000',
+    exchange_rate: '1480.00',
+    status: 'PENDING',
+    created_at: '2026-05-05T15:59:00Z',
+  },
+  {
+    id: 'q-110',
+    client_id: 'cl-alicia-montez',
+    client_name: 'Alicia Montez',
+    origin_currency: 'USDC',
+    destination_currency: 'ARS',
+    operation: 'BUY',
+    term: 'T0',
+    origin_amount: '10',
+    destination_amount: '14810',
+    exchange_rate: '1481.00',
+    status: 'PENDING',
+    created_at: '2026-05-05T14:45:00Z',
+  },
+
+  // ─── Historic — additional states for filter / chip coverage ────
+  {
+    id: 'q-201',
+    client_id: 'cl-manuel-gonzalez',
+    client_name: 'Manuel Gonzalez Lamensa',
+    origin_currency: 'USDT',
+    destination_currency: 'ARS',
+    operation: 'SELL',
+    term: 'T1',
+    origin_amount: '5000',
+    destination_amount: '7350000',
+    exchange_rate: '1470.00',
+    status: 'EXPIRED',
+    created_at: '2026-05-02T11:20:00Z',
+  },
+  {
+    id: 'q-202',
+    client_id: 'cl-magdalena-dominguez',
+    client_name: 'Magdalena Ivonne Domínguez Esquibel',
+    origin_currency: 'USDC',
+    destination_currency: 'ARS',
+    operation: 'SELL',
+    term: 'T0',
+    origin_amount: '1200',
+    destination_amount: '1776000',
+    exchange_rate: '1480.00',
+    status: 'REJECTED',
+    created_at: '2026-04-28T10:15:00Z',
+  },
+  {
+    id: 'q-203',
+    client_id: 'cl-camila-cattaneo',
+    client_name: 'Camila Nicole Cattaneo',
+    origin_currency: 'BTC',
+    destination_currency: 'USDC',
+    operation: 'SELL',
+    term: 'T1',
+    origin_amount: '0.5',
+    destination_amount: '32500',
+    exchange_rate: '65000.00',
+    status: 'COMPLETED',
+    created_at: '2026-04-20T09:30:00Z',
+  },
+];
+
+export const tradesSeed: Quote[] = initial.map((q) => ({ ...q }));
+
+export function resetTradesSeed(): void {
+  tradesSeed.length = 0;
+  tradesSeed.push(...initial.map((q) => ({ ...q })));
+}

@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getSponsorLabel } from '@/ops/psp/sponsor-catalog';
-import { getReceipt } from './api';
+import { getReceipt } from '@/api/modules/movimientos';
 import type { MovementDetails } from './types';
 
 // ════════════════════════════════════════════════════════════════════

@@ -7,7 +7,7 @@ import { useCapabilities } from '@/composables/useCapabilities';
 import {
   getMovement,
   listMovements,
-} from '@/ops/movimientos/api';
+} from '@/api/modules/movimientos';
 import MovimientosFilters from '@/ops/movimientos/MovimientosFilters.vue';
 import MovimientosTable from '@/ops/movimientos/MovimientosTable.vue';
 import MovementDetailsModal from '@/ops/movimientos/MovementDetailsModal.vue';

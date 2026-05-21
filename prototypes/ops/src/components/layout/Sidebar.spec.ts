@@ -37,11 +37,11 @@ describe('Sidebar — block structure', () => {
     expect(i('Catálogos')).toBeGreaterThan(i('Custodia'));
   });
 
-  it('places Movimientos and Cotizaciones (in that order) under Operaciones', () => {
+  it('places Movimientos and Trades (in that order) under Operaciones', () => {
     const text = mount(Sidebar).text();
     expect(text.indexOf('Movimientos')).toBeGreaterThan(text.indexOf('Operaciones'));
-    expect(text.indexOf('Cotizaciones')).toBeGreaterThan(text.indexOf('Movimientos'));
-    expect(text.indexOf('Cotizaciones')).toBeLessThan(text.indexOf('Custodia'));
+    expect(text.indexOf('Trades')).toBeGreaterThan(text.indexOf('Movimientos'));
+    expect(text.indexOf('Trades')).toBeLessThan(text.indexOf('Custodia'));
   });
 
   it('places PSP as the only entry under Custodia', () => {

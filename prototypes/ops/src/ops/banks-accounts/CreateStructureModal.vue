@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ApiError } from '@/types/api';
-import { createStructure } from './api';
+import { createStructure } from '@/api/modules/banksAccounts';
 import type { EstructuraTipo } from './types';
 
 // ════════════════════════════════════════════════════════════════════

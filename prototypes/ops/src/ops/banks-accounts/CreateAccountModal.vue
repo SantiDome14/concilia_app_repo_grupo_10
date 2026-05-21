@@ -24,7 +24,7 @@ import {
   createAccount,
   fetchEstructuras,
   fetchSociedades,
-} from './api';
+} from '@/api/modules/banksAccounts';
 import {
   defaultCuentaTipoFor,
   type BankAccountRecord,

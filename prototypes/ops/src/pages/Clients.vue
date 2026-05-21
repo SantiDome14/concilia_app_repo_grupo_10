@@ -5,7 +5,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { UserPlus, FileText } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/composables/useCapabilities';
-import { listClients } from '@/ops/clients/api';
+import { listClients } from '@/api/modules/clients';
 import ClientsTable from '@/ops/clients/ClientsTable.vue';
 import ClientFilters from '@/ops/clients/ClientFilters.vue';
 import SignUpUserModal from '@/ops/clients/SignUpUserModal.vue';

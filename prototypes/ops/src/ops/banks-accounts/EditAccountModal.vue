@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ApiError } from '@/types/api';
-import { updateAccount } from './api';
+import { updateAccount } from '@/api/modules/banksAccounts';
 import type {
   BankAccountRecord,
   CuentaTipo,

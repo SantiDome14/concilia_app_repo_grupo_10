@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import Skeleton from '@/components/feedback/Skeleton.vue';
 import { useStepUp } from '@/composables/useStepUp';
 import { StepUpCancelledError } from '@/types/auth-step-up';
-import { listClients, signUpClient } from './api';
+import { listClients, signUpClient } from '@/api/modules/clients';
 import type { Client } from './types';
 
 // ════════════════════════════════════════════════════════════════════

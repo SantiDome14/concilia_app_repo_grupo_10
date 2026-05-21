@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import Skeleton from '@/components/feedback/Skeleton.vue';
 import EmptyState from '@/components/feedback/EmptyState.vue';
 import { useCapabilities } from '@/composables/useCapabilities';
-import { getClient, listCurrencies } from '@/ops/clients/api';
+import { getClient, listCurrencies } from '@/api/modules/clients';
 import AccountCard from '@/ops/clients/AccountCard.vue';
 import RecentMovementsTable from '@/ops/clients/RecentMovementsTable.vue';
 import WhitelistAccountModal from '@/ops/clients/WhitelistAccountModal.vue';

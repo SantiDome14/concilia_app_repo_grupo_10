@@ -57,7 +57,7 @@ function trigger(cta: ModuleCTA): void {
     <Button
       v-for="cta in inline"
       :key="cta.id"
-      variant="primary"
+      :variant="cta.variant ?? 'primary'"
       @click="trigger(cta)"
     >
       {{ cta.label }}

@@ -27,7 +27,7 @@ import {
   validateCvu as validateCvuApi,
   whitelistAccount,
   type WhitelistResult,
-} from './api';
+} from '@/api/modules/clients';
 import ClientFilters from './ClientFilters.vue';
 import type {
   Client,

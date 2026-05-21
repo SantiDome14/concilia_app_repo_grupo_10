@@ -481,12 +481,14 @@ function onSimpleUpdate(value: unknown): void {
           type="button"
           variant="secondary"
           :disabled="props.disabled"
-          class="w-full justify-between"
+          class="w-full min-w-0 justify-between"
         >
-          <span :class="selectedLookupLabel ? 'text-t-1' : 'text-t-4'">
+          <span
+            :class="cn('min-w-0 flex-1 truncate text-left', selectedLookupLabel ? 'text-t-1' : 'text-t-4')"
+          >
             {{ selectedLookupLabel || (props.field.placeholder ?? 'Seleccionar…') }}
           </span>
-          <ChevronDown class="h-4 w-4 opacity-50" />
+          <ChevronDown class="h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent class="w-[--reka-popover-trigger-width] p-0">

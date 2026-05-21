@@ -8,7 +8,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { getConfirmationLetter } from './api';
+import { getConfirmationLetter } from '@/api/modules/clients';
 import type { AccountInstruction } from './types';
 
 // ════════════════════════════════════════════════════════════════════

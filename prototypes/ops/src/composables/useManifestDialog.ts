@@ -81,12 +81,21 @@ export type DialogState =
   | DialogStateCTA;
 
 // ────────────────────────────────────────────────────────────────────
-// Module-scoped factory registries (creator + afterMutation +
+// Module-scoped factory registries (creator + dispatcher +
 // recordResolver). Keyed by manifestKey so multiple modules coexist.
+//
+// `MutationDispatcher` is how the page receives engine-computed patches.
+// Pages implement it with vue-query `useMutation` calls; the engine
+// stays pure and never mutates record objects directly.
 // ────────────────────────────────────────────────────────────────────
 
+export type MutationDispatcher = {
+  update: (recordId: string, patch: Record<string, unknown>) => void;
+  create: (record: Record<string, unknown>) => void;
+};
+
 const CREATORS: Map<ManifestKey, CTACreatorFn> = new Map();
-const AFTER_MUTATION: Map<ManifestKey, () => void> = new Map();
+const DISPATCHERS: Map<ManifestKey, MutationDispatcher> = new Map();
 const RECORD_RESOLVERS: Map<
   ManifestKey,
   (ref: string | Record<string, unknown>) => Record<string, unknown> | undefined
@@ -95,8 +104,11 @@ const RECORD_RESOLVERS: Map<
 export function _registerCreator(key: ManifestKey, fn: CTACreatorFn): void {
   CREATORS.set(key, fn);
 }
-export function _registerAfterMutation(key: ManifestKey, fn: () => void): void {
-  AFTER_MUTATION.set(key, fn);
+export function _registerDispatcher(
+  key: ManifestKey,
+  dispatcher: MutationDispatcher,
+): void {
+  DISPATCHERS.set(key, dispatcher);
 }
 export function _registerRecordResolver(
   key: ManifestKey,
@@ -106,9 +118,23 @@ export function _registerRecordResolver(
 }
 export function _clearModuleRegistries(): void {
   CREATORS.clear();
-  AFTER_MUTATION.clear();
+  DISPATCHERS.clear();
   RECORD_RESOLVERS.clear();
 }
+
+/**
+ * Default no-op dispatcher used when a manifest module hasn't registered
+ * one yet (early-boot, tests). Engine output silently drops; the only
+ * effect of confirm() will be the audit entry + toast.
+ */
+const NOOP_DISPATCHER: MutationDispatcher = {
+  update: () => {
+    /* no-op */
+  },
+  create: () => {
+    /* no-op */
+  },
+};
 /** Test helper — resets the singleton state between cases. */
 export function _resetManifestDialogState(): void {
   state.value = null;
@@ -146,16 +172,14 @@ function readRoleList(): string[] | null {
 
 function buildDeps(manifestKey: ManifestKey): ApplyDeps {
   const audit = useAuditLogStore();
+  const dispatcher = DISPATCHERS.get(manifestKey) ?? NOOP_DISPATCHER;
   return {
     auditAppend: (entry) => audit.append(entry),
     toast: {
       success: (title, description) => toast.success(title, { description }),
       error: (title, description) => toast.error(title, { description }),
     },
-    afterMutation: () => {
-      const fn = AFTER_MUTATION.get(manifestKey);
-      if (fn) fn();
-    },
+    dispatch: dispatcher,
     recompute: (token) => (record, manifest) => {
       const out = runRecompute(token, record, manifest);
       return out ?? '';

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { Search } from 'lucide-vue-next';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
+import { toast } from 'vue-sonner';
 import { Input } from '@/components/ui/input';
 import { Badge, type BadgeVariants } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,8 +23,8 @@ import { ManifestActionsMenu } from '@/components/manifest';
 import type { KanbanAxis, KanbanState } from '@/types/kanban';
 import { useManifestModule } from '@/composables/useManifestModule';
 import { ALERTAS_MANIFEST_KEY } from '@/manifests/framework.template.alertas.actions';
-import { ALERTS } from '@/mocks/genericos/alertas';
-import { CURRENT_USER } from '@/mocks/genericos/users';
+import { useCurrentUser } from '@/composables/useCurrentUser';
+import { listAlertas, updateAlerta } from '@/api/modules/alertas';
 import type {
   Alerta,
   AlertaState,
@@ -31,7 +33,7 @@ import type {
 } from '@/types/genericos';
 
 // ════════════════════════════════════════════════════════════════════
-// Alertas — system-detected events surface (L1/L2/L3, profile A default)
+// Alertas — system-detected events surface (L1/L2/L3, category 'triage' default)
 // ────────────────────────────────────────────────────────────────────
 //   L1 — title + ViewToggle.
 //   L2 — KPI cards (Críticas hoy, En revisión, Resueltas mes, Descartadas mes).
@@ -51,22 +53,62 @@ const alertasMod = useManifestModule(ALERTAS_MANIFEST_KEY);
 // ─── State ───────────────────────────────────────────────────────────
 const view = ref<ViewMode>('list');
 const search = ref('');
-const filterType = ref<string>('');
+const filterConcept = ref<string>('');
 const filterSeverity = ref<string>('');
 const filterState = ref<string>('');
 
-const alertas = ref<Alerta[]>(ALERTS.map((a) => ({ ...a })));
+const { user: currentUserRef } = useCurrentUser();
+const fallbackUser = { id: 'u-1', name: '—' };
+function actor(): { id: string; name: string } {
+  const u = currentUserRef.value;
+  if (!u) return fallbackUser;
+  return { id: u.id, name: u.name };
+}
 
-const ACTIVE_TYPES = computed(() => {
+// ─── vue-query is the source of truth (no local mirror) ──────────────
+const ALERTAS_KEY = ['alertas'] as const;
+const queryClient = useQueryClient();
+
+const alertasQuery = useQuery({
+  queryKey: ALERTAS_KEY,
+  queryFn: listAlertas,
+});
+
+const alertas = computed<Alerta[]>(() => alertasQuery.data.value ?? []);
+
+const updateMutation = useMutation({
+  mutationFn: (vars: { id: string; patch: Partial<Alerta> }) => {
+    const current = alertas.value.find((a) => a.id === vars.id);
+    const merged = { ...(current ?? {}), ...vars.patch } as Alerta;
+    return updateAlerta(vars.id, merged);
+  },
+  onMutate: async ({ id, patch }) => {
+    await queryClient.cancelQueries({ queryKey: ALERTAS_KEY });
+    const snapshot = queryClient.getQueryData<Alerta[]>(ALERTAS_KEY);
+    queryClient.setQueryData<Alerta[]>(ALERTAS_KEY, (old) =>
+      (old ?? []).map((a) => (a.id === id ? ({ ...a, ...patch } as Alerta) : a)),
+    );
+    return { snapshot };
+  },
+  onError: (_err, _vars, ctx) => {
+    if (ctx?.snapshot) queryClient.setQueryData(ALERTAS_KEY, ctx.snapshot);
+    toast.error('No se pudo guardar el cambio. Se revirtió y resincronizó.');
+  },
+  onSettled: () => {
+    void queryClient.invalidateQueries({ queryKey: ALERTAS_KEY });
+  },
+});
+
+const ACTIVE_CONCEPTS = computed(() => {
   const set = new Set<string>();
-  for (const a of alertas.value) set.add(a.type);
+  for (const a of alertas.value) set.add(a.concept);
   return Array.from(set).sort();
 });
 
 const filteredAlertas = computed<Alerta[]>(() => {
   const term = search.value.trim().toLowerCase();
   return alertas.value.filter((a) => {
-    if (filterType.value && a.type !== filterType.value) return false;
+    if (filterConcept.value && a.concept !== filterConcept.value) return false;
     if (filterSeverity.value && a.severity !== filterSeverity.value) return false;
     if (filterState.value && a.state !== filterState.value) return false;
     if (term) {
@@ -93,18 +135,23 @@ const kpis = computed(() => {
   };
 });
 
-// ─── Drawer ──────────────────────────────────────────────────────────
+// ─── Drawer — track id only; derive the record from query data ───────
 const drawerOpen = ref(false);
-const drawerAlerta = ref<Alerta | null>(null);
+const drawerAlertaId = ref<string | null>(null);
+const drawerAlerta = computed<Alerta | null>(() =>
+  drawerAlertaId.value
+    ? (alertas.value.find((a) => a.id === drawerAlertaId.value) ?? null)
+    : null,
+);
 
 function openDrawer(a: Alerta): void {
-  drawerAlerta.value = a;
+  drawerAlertaId.value = a.id;
   drawerOpen.value = true;
 }
 
 function closeDrawer(): void {
   drawerOpen.value = false;
-  drawerAlerta.value = null;
+  drawerAlertaId.value = null;
 }
 
 function statusVariant(state: AlertaState): BadgeVariants['variant'] {
@@ -141,28 +188,36 @@ function severityVariant(severity?: Severity): BadgeVariants['variant'] {
 
 // ─── Comments ────────────────────────────────────────────────────────
 function addComment(payload: { body: string; parent_id?: string | null }): void {
-  if (!drawerAlerta.value) return;
-  const id = `cmt-${drawerAlerta.value.id}-${Date.now()}`;
-  drawerAlerta.value.comments.push({
+  const a = drawerAlerta.value;
+  if (!a) return;
+  const id = `cmt-${a.id}-${Date.now()}`;
+  const me = actor();
+  const newComment = {
     id,
     at: new Date().toISOString(),
-    author_id: CURRENT_USER.id,
-    author_name: CURRENT_USER.name,
+    author_id: me.id,
+    author_name: me.name,
     body: payload.body,
     parent_id: payload.parent_id ?? null,
-  });
-  const evt: TimelineEvent = {
+  };
+  const newEvent: TimelineEvent = {
     id: `evt-${id}`,
     at: new Date().toISOString(),
-    actor_id: CURRENT_USER.id,
-    actor_name: CURRENT_USER.name,
+    actor_id: me.id,
+    actor_name: me.name,
     kind: 'comment_added',
     label: 'Agregó un comentario',
   };
-  drawerAlerta.value.timeline.push(evt);
+  updateMutation.mutate({
+    id: a.id,
+    patch: {
+      comments: [...a.comments, newComment],
+      timeline: [...a.timeline, newEvent],
+    },
+  });
 }
 
-// ─── Manifest wiring ─────────────────────────────────────────────────
+// ─── Manifest wiring (record resolver + dispatcher) ──────────────────
 onMounted(() => {
   alertasMod.registerRecordResolver((ref) => {
     if (typeof ref === 'string') {
@@ -177,8 +232,16 @@ onMounted(() => {
     }
     return undefined;
   });
-  alertasMod.registerAfterMutation(() => {
-    // mock-backed; real apps would invalidate query cache here.
+  alertasMod.registerDispatcher({
+    update: (recordId, patch) => {
+      updateMutation.mutate({
+        id: recordId,
+        patch: patch as Partial<Alerta>,
+      });
+    },
+    create: () => {
+      // Alertas manifest doesn't declare module CTAs that create records.
+    },
   });
 });
 
@@ -235,14 +298,21 @@ function handleKanbanTransition(payload: {
     }
     return;
   }
-  a.state = payload.toState as AlertaState;
-  a.timeline.push({
+  const me = actor();
+  const newEvent: TimelineEvent = {
     id: `evt-${a.id}-${Date.now()}`,
     at: new Date().toISOString(),
-    actor_id: CURRENT_USER.id,
-    actor_name: CURRENT_USER.name,
+    actor_id: me.id,
+    actor_name: me.name,
     kind: 'state_change',
     label: `Estado: ${stateLabel(payload.toState)}`,
+  };
+  updateMutation.mutate({
+    id: a.id,
+    patch: {
+      state: payload.toState as AlertaState,
+      timeline: [...a.timeline, newEvent],
+    },
   });
 }
 
@@ -315,13 +385,13 @@ const STATE_FILTER_OPTIONS: AlertaState[] = ['new', 'in_review', 'resolved', 'di
       </div>
       <div class="flex-1" />
       <select
-        v-model="filterType"
+        v-model="filterConcept"
         class="rounded-md border border-b-2 bg-card px-3 py-2 text-xs text-t-2"
-        aria-label="Filtrar por tipo"
-        data-testid="filter-type"
+        aria-label="Filtrar por concepto"
+        data-testid="filter-concept"
       >
-        <option value="">Tipo · Todos</option>
-        <option v-for="t in ACTIVE_TYPES" :key="t" :value="t">{{ t }}</option>
+        <option value="">Concepto · Todos</option>
+        <option v-for="c in ACTIVE_CONCEPTS" :key="c" :value="c">{{ c }}</option>
       </select>
       <select
         v-model="filterSeverity"
@@ -364,7 +434,7 @@ const STATE_FILTER_OPTIONS: AlertaState[] = ['new', 'in_review', 'resolved', 'di
             <tr class="border-b border-b-2">
               <th class="px-[18px] py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">ID</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Título</th>
-              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Tipo</th>
+              <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Concepto</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Severidad</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Estado</th>
               <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Detectada</th>
@@ -383,7 +453,7 @@ const STATE_FILTER_OPTIONS: AlertaState[] = ['new', 'in_review', 'resolved', 'di
                 <span class="font-mono text-xs text-t-3">{{ a.id }}</span>
               </td>
               <td class="px-3.5 py-2.5 text-[13px] font-semibold text-t-2">{{ a.title }}</td>
-              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ a.type }}</td>
+              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ a.concept }}</td>
               <td class="px-3.5 py-2.5">
                 <Badge :variant="severityVariant(a.severity)">
                   {{ a.severity ? SEVERITY_LABELS[a.severity] : '—' }}
@@ -475,7 +545,7 @@ const STATE_FILTER_OPTIONS: AlertaState[] = ['new', 'in_review', 'resolved', 'di
                 <p class="line-clamp-2 text-xs text-t-3">{{ (record as Alerta).summary || '—' }}</p>
               </template>
               <template #footer>
-                <span>{{ (record as Alerta).type }}</span>
+                <span>{{ (record as Alerta).concept }}</span>
                 <Badge :variant="severityVariant((record as Alerta).severity)">
                   {{ (record as Alerta).severity ? SEVERITY_LABELS[(record as Alerta).severity!] : '—' }}
                 </Badge>
@@ -520,27 +590,27 @@ const STATE_FILTER_OPTIONS: AlertaState[] = ['new', 'in_review', 'resolved', 'di
         </h3>
         <div
           v-if="drawerAlerta.summary"
-          class="rounded-md border border-b-2 bg-[#111] p-3"
+          class="rounded-md border border-b-2 bg-surf p-3"
         >
           <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Contexto</div>
           <div class="whitespace-pre-wrap text-[13px] text-t-2">{{ drawerAlerta.summary }}</div>
         </div>
         <div class="grid grid-cols-2 gap-2.5 text-sm">
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
-            <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Tipo</div>
-            <div class="text-[13px] font-semibold text-t-2">{{ drawerAlerta.type }}</div>
+          <div class="rounded-md border border-b-2 bg-surf p-3">
+            <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Concepto</div>
+            <div class="text-[13px] font-semibold text-t-2">{{ drawerAlerta.concept }}</div>
           </div>
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="rounded-md border border-b-2 bg-surf p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Severidad</div>
             <Badge :variant="severityVariant(drawerAlerta.severity)">
               {{ drawerAlerta.severity ? SEVERITY_LABELS[drawerAlerta.severity] : '—' }}
             </Badge>
           </div>
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
-            <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Perfil</div>
-            <div class="text-[13px] font-semibold text-t-2">{{ drawerAlerta.profile }}</div>
+          <div class="rounded-md border border-b-2 bg-surf p-3">
+            <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Categoría</div>
+            <div class="text-[13px] font-semibold text-t-2">{{ drawerAlerta.category }}</div>
           </div>
-          <div class="rounded-md border border-b-2 bg-[#111] p-3">
+          <div class="rounded-md border border-b-2 bg-surf p-3">
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Origen</div>
             <div class="text-[13px] font-semibold text-t-2">
               {{ drawerAlerta.source_app }} · {{ drawerAlerta.source_module }}
@@ -548,7 +618,7 @@ const STATE_FILTER_OPTIONS: AlertaState[] = ['new', 'in_review', 'resolved', 'di
           </div>
           <div
             v-if="drawerAlerta.closure_comment"
-            class="col-span-2 rounded-md border border-b-2 bg-[#111] p-3"
+            class="col-span-2 rounded-md border border-b-2 bg-surf p-3"
           >
             <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-t-4">Justificación de cierre</div>
             <div class="whitespace-pre-wrap text-[13px] text-t-2">{{ drawerAlerta.closure_comment }}</div>
@@ -564,7 +634,7 @@ const STATE_FILTER_OPTIONS: AlertaState[] = ['new', 'in_review', 'resolved', 'di
         <h3 class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-t-3">Comentarios</h3>
         <CommentsThread
           :comments="drawerAlerta.comments"
-          :current-user-id="CURRENT_USER.id"
+          :current-user-id="currentUserRef?.id ?? ''"
           @add="addComment"
         />
       </template>

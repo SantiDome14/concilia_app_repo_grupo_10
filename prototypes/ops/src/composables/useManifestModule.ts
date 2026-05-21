@@ -11,8 +11,9 @@ import { useAuthStore } from '@/stores/auth';
 import {
   useManifestDialog,
   _registerCreator,
-  _registerAfterMutation,
+  _registerDispatcher,
   _registerRecordResolver,
+  type MutationDispatcher,
 } from './useManifestDialog';
 
 // ════════════════════════════════════════════════════════════════════
@@ -33,7 +34,13 @@ export interface UseManifestModuleApi {
   ) => void;
   openModuleCTA: (ctaId: string) => void;
   registerCreator: (fn: CTACreatorFn) => void;
-  registerAfterMutation: (fn: () => void) => void;
+  /**
+   * Wires the page's vue-query mutations into the manifest engine. The
+   * engine never mutates records — it dispatches computed patches here
+   * and the page's `useMutation` implementation owns optimistic update,
+   * rollback, refetch.
+   */
+  registerDispatcher: (dispatcher: MutationDispatcher) => void;
   registerRecordResolver: (
     fn: (
       ref: string | Record<string, unknown>,
@@ -71,7 +78,8 @@ export function useManifestModule(manifestKey: ManifestKey): UseManifestModuleAp
       dialog.openBatch(actionId, manifestKey, recordRefs),
     openModuleCTA: (ctaId) => dialog.openModuleCTA(ctaId, manifestKey),
     registerCreator: (fn) => _registerCreator(manifestKey, fn),
-    registerAfterMutation: (fn) => _registerAfterMutation(manifestKey, fn),
+    registerDispatcher: (dispatcher) =>
+      _registerDispatcher(manifestKey, dispatcher),
     registerRecordResolver: (fn) => _registerRecordResolver(manifestKey, fn),
   };
 }

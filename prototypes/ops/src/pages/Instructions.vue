@@ -26,7 +26,7 @@ import {
   listInstructions,
   getInstruction,
   deleteInstruction,
-} from '@/ops/instructions/api';
+} from '@/api/modules/instructions';
 import InstructionsTable from '@/ops/instructions/InstructionsTable.vue';
 import CreateInstructionModal from '@/ops/instructions/CreateInstructionModal.vue';
 import EditInstructionModal from '@/ops/instructions/EditInstructionModal.vue';
