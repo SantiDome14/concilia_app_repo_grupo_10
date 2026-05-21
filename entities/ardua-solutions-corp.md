@@ -1,48 +1,53 @@
 # Ardua Solutions Corp
 
-> Última actualización: 2026-04-23
+> Última actualización: 2026-05-21
 > Tipo: Propia
-> Jurisdicción(es): [A completar — probablemente Estados Unidos o Canadá dado el sufijo "Corp"]
+> Jurisdicción(es): Canadá
 > Estado de la relación: Activa
 
 ## Qué es
 
-Entidad legal del grupo Ardua. Por su estructura corporativa ("Corp"), probablemente cumple rol de entidad internacional del grupo — holding, contratación con proveedores globales, o pata operativa en jurisdicción anglosajona.
+Ardua Solutions Corp es la entidad de referencia del grupo Ardua, registrada en Canadá como MSB (Money Services Business) bajo la licencia M23611988. Es la única entidad del grupo habilitada para operar internacionalmente y actúa como eje de las relaciones intercompany.
 
-> [A completar: jurisdicción exacta (US/CA), rol estructural (operativa vs. holding), cuándo se constituyó, propósito original]
+Opera cross-border, OTC, prime broker y pagos al exterior. Haz Pagos y Circuit Pay tienen cuentas operativas dentro de Ardua Solutions Corp, lo que las convierte en clientes institucionales de la entidad canadiense.
 
 ---
 
 ## Capacidades que nos habilita
 
-- **[A completar]**: rol en contratación con proveedores internacionales (Bridge, Binance, Bitso, Convera)
-- **[A completar]**: capacidad de operar cuentas en USD en bancos internacionales
-- **[A completar]**: rol en el producto OTC y RFQ Gateway (si aplica como entidad contraparte)
-- **[A completar]**: capacidades de facturación internacional a clientes
-- **[A completar]**: rol en la estructura fiscal del grupo (holding, IP, management fees intercompany)
+- **Operaciones cross-border**: cambio de divisas, pagos internacionales (China, artistas, importaciones), recepción de fondos desde plataformas como Deel.
+- **OTC y Prime Broker**: provee liquidez ARS/USDT por bps sobre monto para clientes institucionales (aggregators, arbitradores).
+- **Virtual Accounts USD/EUR**: recepción de fondos de terceros en cuenta virtual para clientes habilitados.
+- **MEP / CCL**: fondeo con USD MEP o CCL para operar desde Bridge.
+- **Cuentas intercompany**: Haz Pagos y Circuit Pay operan como clientes institucionales dentro de Ardua Solutions Corp.
+- **Acuerdo de recaudación con Haz Pagos**: permite a Ardua Solutions Corp recaudar pesos argentinos por cuenta y orden de Haz Pagos. Es la única figura vigente donde una entidad actúa formalmente por cuenta y orden de otra.
+- **Cesión de accesos de compliance**: cede acceso a Worldcheck y Aiprise a Haz Pagos y Circuit Pay; acceso a Elliptic exclusivamente a Circuit Pay, para tareas de compliance y onboarding.
 
 ---
 
 ## Integración operativa
 
-- **Módulos internos que la usan**: [A completar — probablemente TRD, OPS, FIN]
-- **Flujo de fondos**: [A completar — cuentas USD, bancos contraparte, relación con cuentas Vostro/Nostro del grupo]
-- **Conciliación**: [A completar]
-- **Integraciones técnicas**: [A completar]
+- **Módulos internos que la usan**: TRD (operaciones FX y OTC), OPS (ejecución cross-border), FIN (conciliación internacional).
+- **Flujo de fondos**: [A completar — cuentas USD operativas, bancos contraparte internacionales, relación con cuentas Vostro/Nostro del grupo]
+- **Conciliación**: [A completar — frecuencia, criterio de matching, responsable]
+- **Integraciones técnicas**: [A completar — APIs, webhooks, flujos n8n específicos]
 
 ---
 
 ## Restricciones y condiciones
 
-- **[A completar]**: registraciones regulatorias (FinCEN MSB, state-level money transmitter licenses, según corresponda)
-- **[A completar]**: obligaciones de reporting (SAR, CTR)
-- **[A completar]**: límites operativos
-- **[A completar]**: costos estructurales
+- **Sin US Persons**: restricción hard — no puede operar con ciudadanos o residentes estadounidenses bajo ninguna circunstancia ni producto.
+- **Sin PEPs**: personas política o públicamente expuestas — directas o por parentesco — son rechazadas automáticamente. Política actual en revisión hacia un modelo de admisión progresiva por niveles de exposición.
+- **Jurisdicciones prohibidas por compliance**: [A completar — lista de jurisdicciones excluidas por política de compliance del grupo]
+- **Reporting regulatorio canadiense MSB**: reporte de operaciones sospechosas. Auditoría del manual de procedimientos cada dos años.
+- **[A completar]**: límites operativos, costos estructurales, obligaciones de reporte adicionales (FINTRAC).
 
 ---
 
 ## Referencias
 
-- **[A completar]**: contratos con proveedores internacionales
-- **[A completar]**: documentación técnica
-- **[A completar]**: contactos clave (legal, compliance, banking)
+- **Licencia MSB**: M23611988 (Canadá).
+- **Contrato de recaudación Ardua Solutions Corp ↔ Haz Pagos**: habilita recaudación de ARS por cuenta y orden.
+- **Acuerdo de giro al descubierto Ardua Solutions Corp → Circuit Pay**: fondeo operativo intercompany.
+- **Manual de Onboarding de Clientes** (Legal & Compliance, mayo 2026) — §1 Sociedades del grupo y §8 Operaciones disponibles en Bridge.
+- **Contactos clave**: [A completar — legal, compliance, banking]

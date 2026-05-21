@@ -1,6 +1,6 @@
 # Entities — Convención y criterio
 
-> Última actualización: 2026-05-04
+> Última actualización: 2026-05-21
 
 ## Propósito
 
@@ -25,7 +25,7 @@ Si se menciona una entidad y no existe archivo, el sistema debe flaguearlo y pro
 | Tipo | Descripción | Ejemplos |
 |---|---|---|
 | **Propia** | Entidades legales del grupo Ardua | Haz Pagos, Circuit Pay, Ardua Solutions Corp, Astra Ventures |
-| **Proveedor** | Infraestructura financiera que Ardua consume | Binance, Bitso, Bridge |
+| **Proveedor** | Infraestructura financiera que Ardua consume | Binance, Bitso, Bridge, AiPrise |
 | **Banco** | Instituciones bancarias que operan cuentas o rails | Brubank, BIND, COINAG, Banco de Comercio |
 | **Partner** | Alianzas operativas y comerciales | Convera |
 
@@ -88,6 +88,7 @@ haz-pagos.md
 circuit-pay.md
 ardua-solutions-corp.md
 astra-ventures.md
+aiprise.md
 binance.md
 bitso.md
 bridge.md
@@ -114,17 +115,19 @@ banco-de-comercio.md
 
 ## Inventario vivo
 
-Lista generada el 2026-04-23. Regenerar manualmente cuando se agreguen o renombren archivos.
+Lista generada el 2026-05-21.
 
 | Archivo | Tipo | Estado del draft |
 |---|---|---|
-| `ardua-solutions-corp.md` | Propia | Draft inicial |
+| `aiprise.md` | Proveedor | Completo |
+| `ardua-solutions-corp.md` | Propia | Completo |
 | `banco-de-comercio.md` | Banco | Draft inicial |
 | `binance.md` | Proveedor | Pendiente |
 | `bind.md` | Banco | Draft inicial |
 | `bitso.md` | Proveedor | Pendiente |
-| `bridge.md` | Proveedor | Pendiente |
-| `circuit-pay.md` | Propia | Draft inicial |
+| `bridge.md` | Proveedor | Completo |
+| `circuit-pay.md` | Propia | Completo |
 | `coinag.md` | Banco | Draft inicial |
 | `convera.md` | Partner | Pendiente |
-| `haz-pagos.md` | Propia | Draft inicial |
+| `haz-pagos.md` | Propia | Completo |
+| `hubspot.md` | Partner | Completo |
