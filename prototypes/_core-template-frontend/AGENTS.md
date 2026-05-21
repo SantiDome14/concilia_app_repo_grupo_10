@@ -23,8 +23,8 @@ Its purpose is fourfold:
 
 - **Project name:** `core-template-frontend` (all lowercase, kebab-case).
 - **Parent organization:** Ardua Solutions.
-- **Derived apps:** `core-app`, `core-lex`, `core-ops`, `core-trd`, `core-fin`, `core-com` (naming convention: `core-<module>`).
-- In documentation and code, **always write module names in lowercase** (`ops`, `lex`, `trd`, `clp`, `fin`, `com`). Uppercase is only used in enums and in brand references (e.g. the L1 page header may display the module name in uppercase as a style choice, but the identifier is lowercase).
+- **Derived apps:** `core-app`, `core-lex`, `core-ops`, `core-trd`, `core-fin` (naming convention: `core-<module>`).
+- In documentation and code, **always write module names in lowercase** (`ops`, `lex`, `trd`, `clp`, `fin`). Uppercase is only used in enums and in brand references (e.g. the L1 page header may display the module name in uppercase as a style choice, but the identifier is lowercase).
 - **Exception:** capitalize only at the beginning of a sentence when grammatically required.
 
 ## Tech Stack
@@ -79,23 +79,19 @@ Its purpose is fourfold:
 
 For the full structural contract, see `openspec/specs/core-layout/spec.md`, `openspec/specs/core-navigation/spec.md`, and the other capability specs under `openspec/specs/`.
 
-## Current & Future Core Apps
+## Apps derived from this template
 
-### Current (legacy, pending migration)
+Every Ardua core frontend derives from this template via the "Use this template" flow. The current set:
 
 | App | Module prefix | Stack today | Migration status |
 |---|---|---|---|
 | `core-app` | CLP | Vue + JS, no TS | Not started |
 | `core-lex` | LEX | Vue + JS, no TS | Not started |
-| `core-ops` | OPS | Vue + JS, no TS | Not started |
+| `core-ops` | OPS | Vue + JS, no TS | **In progress** (6 capabilities archived, 249 tests, ~64% LOC reduction) |
 | `core-trd` | TRD | React + TS (strict off) | Not started (React → Vue) |
+| `core-fin` | FIN | n/a (new build) | **Baseline shipped** + `fin-disponibilidades` capability archived |
 
-### Planned / proposed
-
-- `core-fin` (FIN) — Finance & accounting operations
-- `core-com` (COM) — Commercial operations
-
-Each migration is its own OpenSpec change with a dedicated Jira REQ ticket.
+Each migration / new build is its own OpenSpec change with a dedicated Jira REQ ticket. Per-prototype legacy inventory + decisions live in `prototypes/<app>/MIGRATION-NOTES.md`. Cross-prototype patterns validated across migrations live in [`MIGRATION-PLAYBOOK.md`](./MIGRATION-PLAYBOOK.md).
 
 ## Documentation Hierarchy
 
@@ -107,7 +103,7 @@ This repository operates on **four coordinated layers** for AI agents and develo
 **Format:** `### Requirement:` with SHALL/MUST + `#### Scenario:` in Gherkin GIVEN/WHEN/THEN
 **Enforcement:** `openspec validate --all --strict` in CI; a broken contract breaks the build.
 
-These are the **formal contracts** every app derived from this template MUST satisfy. There are 10 baseline capabilities (6 Tier 1, 4 Tier 2 seed), plus the new `core-actions-manifest` (Tier 1) currently in active migration via change `add-core-actions-manifest`. To browse them:
+These are the **formal contracts** every app derived from this template MUST satisfy. As of today the template ships **18 capabilities archived** in `openspec/specs/` (run `npm run spec:list` for the current set). To browse them:
 
 ```bash
 openspec list
@@ -177,13 +173,13 @@ Every meaningful change in this repository flows through OpenSpec. The four comm
 
 ### When a change starts
 
-1. Create a working branch: `temp-open-spec/<change-slug>` (following tradingsuit convention).
+1. Create a working branch: `temp-open-spec/<change-slug>`.
 2. Run `/opsx:propose <change-slug>` from Claude Code.
 3. Fill the four artifacts with the agent's help. **Do not skip `design.md`** for non-trivial changes — it is where tradeoffs are captured.
 4. Every `proposal.md` starts with a Jira REQ frontmatter:
    ```markdown
    > Jira REQ: [REQ-XX](https://arduasolutions.atlassian.net/browse/REQ-XX)
-   > Module: CLP    # or OPS / TRD / FIN / LEX / COM / core-template
+   > Module: CLP    # or OPS / TRD / FIN / LEX / core-template
    ```
 5. The `proposal.md` H1 is the canonical source for the PR title.
 
@@ -271,7 +267,6 @@ Every meaningful change in this repository flows through OpenSpec. The four comm
   - `TRD` → blue `217 91% 60%`
   - `FIN` → green `142 71% 45%`
   - `CLP` → purple `258 90% 74%`
-  - `COM` → amber `38 92% 50%`
   - `LEX` → teal `172 66% 50%`
 - **Surface hierarchy:** `--bg` (outermost) → `--surf` (sidebar/topbar) → `--card-2` (cards) → `--card` (nested cards).
 - **Text ramp:** `--t1` (primary) → `--t4` (muted).
@@ -291,6 +286,27 @@ Every meaningful change in this repository flows through OpenSpec. The four comm
 - **`src/components/manifest/`** (deferred) — `<ManifestDialog>`, `<ManifestField>`, `<ManifestModuleCTAs>`, `<ManifestBatchCTA>`. Wire the engine to the UI. `ModuleCTA` declares an optional `variant?: 'primary' | 'secondary'` (default `'primary'`) that maps to the `<Button>` variant prop — use `'secondary'` for CTAs that are visually subordinated to a sibling primary (per `core-actions-manifest` spec).
 - **Never inline a dropdown menu in a `<td>` cell.** Use the shared `ActionsMenu.vue` portal.
 - **Never render more than 3 CTAs in a page header** (per `core-layout`). More actions belong in the row actions menu or in a future bulk-action bar.
+
+## Catalog registration
+
+Lookup fields in action manifests resolve their dropdown data through the **catalog registry** (`@/lib/manifest/catalog.ts`). Apps register one resolver per catalog id at boot via `setupCatalogs()` in `src/plugins/catalogs.ts`, invoked from `main.ts` after Pinia. Per `core-actions-manifest` Requirement 10:
+
+- Manifest declares `{ type: 'lookup', catalog: '<scope>.<entity>', catalog_filter?: … }`.
+- Engine calls `resolveCatalog(id, filter)` at dropdown-open time.
+- When the filter is `null` / `undefined` / `''`, the engine returns `[]` and the dropdown renders the "antecedent missing" empty state — the resolver MAY assume a non-empty filter when invoked.
+- When the field declares no `catalog_filter`, the engine invokes the resolver with NO argument; the resolver returns the full catalog.
+
+The template ships ONE demonstrative resolver (`framework.users`) plus a commented cascading-lookup example. Derived apps replace / extend these with their own data sources.
+
+## Placeholder modules
+
+Apps frequently need to surface modules that are scoped but not yet implemented (e.g. "Cobros" or "Plan de Cuentas" appearing in the Sidebar before the capability lands). The canonical pattern:
+
+- Declare the entry in the Sidebar's `blocks[]` with `soon: true` on the `NavItem`. The Sidebar renders a "Soon" badge next to the label (collapsed sidebars omit the badge; the tooltip switches to `<label> (Próximamente)`).
+- The route stays routable; the target page renders `<ModuloSoon>` (or the equivalent placeholder component the app declares) with `meta.soon = true`.
+- When the capability is scoped via its own OpenSpec change, the placeholder is replaced with the real page and the `soon: true` flag is removed in the same PR.
+
+The template ships the `NavItem.soon?: boolean` contract; derived apps own their own placeholder page component.
 
 ## Data Layer Conventions
 

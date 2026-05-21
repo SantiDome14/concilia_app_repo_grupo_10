@@ -40,6 +40,17 @@ interface NavItem {
   name: string;
   label: string;
   icon: typeof LayoutDashboard;
+  /**
+   * Marks the entry as a placeholder for a module that is not yet
+   * implemented. Renders a "Soon" badge next to the label (collapsed
+   * sidebars omit the badge; the tooltip switches to "<label>
+   * (Próximamente)").
+   *
+   * Use sparingly — a soon-flagged entry is still routable. Pair it
+   * with a `<ModuloSoon>` page or a route guard that surfaces the
+   * placeholder explicitly.
+   */
+  soon?: boolean;
 }
 
 interface NavBlock {
@@ -235,7 +246,7 @@ function handleHelp(): void {
         v-for="item in block.items"
         :key="item.to"
         :to="item.to"
-        :title="item.label"
+        :title="item.soon ? `${item.label} (Próximamente)` : item.label"
         :class="
           cn(
             'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium text-t-3 transition-colors hover:bg-card hover:text-t-2',
@@ -245,7 +256,13 @@ function handleHelp(): void {
         "
       >
         <component :is="item.icon" class="h-[15px] w-[15px] flex-shrink-0" />
-        <span v-if="!collapsed">{{ item.label }}</span>
+        <span v-if="!collapsed" class="flex-1 truncate">{{ item.label }}</span>
+        <span
+          v-if="!collapsed && item.soon"
+          class="rounded-sm border border-b-2 px-1 py-px text-[9px] font-bold uppercase tracking-wider text-t-4"
+        >
+          Soon
+        </span>
       </RouterLink>
     </template>
 

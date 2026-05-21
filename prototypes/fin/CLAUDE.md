@@ -10,16 +10,14 @@
 
 `core-fin` is Ardua's Finance & Accounting frontend — the operational app for Finanzas y Contabilidad, derived from `core-template-frontend` and bound by every capability in `openspec/specs/`. It replaces the legacy `prototypes/fin-old/fin-prototype.html` monolith with a Vue 3 + TypeScript + Vite + manifest-engine implementation.
 
-Scope (active modules, declared in this baseline migration):
+Scope (active modules, declared in this baseline):
 
-- **Operaciones / Movimientos** — back-office life cycle of every `movimiento` (deposits, withdrawals, fees, taxes, rebates, transfers); 9 governance + imputation actions.
-- **Cotizaciones** — outgoing quotes' invoicing workflow; 4 actions and a kanban over `documentacion` state.
-- **Tesorería / Disponibilidades** — cash position, treasury movements, and the assignment queue for unassigned withdrawals.
+- **Tesorería / Disponibilidades** — Type B page with three sub-tabs (`Posición / Bancos-Cuentas / Movimientos`), contextual Main + Secondary CTAs per sub-tab, three views on Movimientos (`Lista / Tarjetas / Tablero`), 6 selectable Tablero axes, drill-down from Posición.Cuenta to Movimientos with `cuenta_id` filter. The reference implementation of a FIN module — see `openspec/specs/fin-disponibilidades/spec.md`.
 - **Reportes**, **Inbox**, **Alertas**, **Dashboard** — the four cross-cutting standard modules from `core-modulo-genericos`, FIN-themed.
 
-Placeholder modules registered behind a `Próximamente` stub: Compras, Cobros, Pagos, Deudas / Préstamos, Inversiones, Monedas (Tesorería); Plan de Cuentas, Parametrizaciones, Libro Diario (Contabilidad).
+Placeholder modules registered with the `NavItem.soon` flag (render `<ModuloSoon>` until scoped): Ventas, Compras (Back Office); Cobros, Pagos, Deudas / Préstamos, Inversiones, Tipo de Cambio (Tesorería); Plan de Cuentas, Parametrizaciones, Libro Diario (Contabilidad).
 
-This app does NOT ship its own contracts — it is a **consumer** of the 13 capabilities defined in `openspec/specs/`. Any UI or behavior change MUST satisfy those contracts; non-trivial changes flow through the OpenSpec workflow described below.
+This app does NOT ship its own capability contracts beyond `fin-disponibilidades` — it is a **consumer** of the 18 capabilities defined by the template (see `openspec/specs/`). Any UI or behavior change MUST satisfy those contracts; non-trivial changes flow through the OpenSpec workflow described below.
 
 ## Branding
 
@@ -27,8 +25,8 @@ This app does NOT ship its own contracts — it is a **consumer** of the 13 capa
 - **Parent organization:** Ardua Solutions.
 - **Module prefix:** FIN (uppercase in enums, headers, and visual brand references; lowercase as the identifier).
 - **Brand color:** `--brand: 142 71% 45%` (FIN canonical green per `core-theming`).
-- **Sibling apps:** `core-app` (CLP), `core-lex`, `core-ops`, `core-trd`, `core-com`. Naming convention: `core-<module>`.
-- In documentation and code, **always write module names in lowercase** (`ops`, `lex`, `trd`, `clp`, `fin`, `com`). Uppercase is only used in enums and in brand references (e.g. the L1 page header may display the module name in uppercase as a style choice, but the identifier is lowercase).
+- **Sibling apps:** `core-app` (CLP), `core-lex`, `core-ops`, `core-trd`. Naming convention: `core-<module>`.
+- In documentation and code, **always write module names in lowercase** (`ops`, `lex`, `trd`, `clp`, `fin`). Uppercase is only used in enums and in brand references (e.g. the L1 page header may display the module name in uppercase as a style choice, but the identifier is lowercase).
 - **Exception:** capitalize only at the beginning of a sentence when grammatically required.
 
 ## Tech Stack
@@ -81,23 +79,19 @@ This app does NOT ship its own contracts — it is a **consumer** of the 13 capa
 
 For the full structural contract, see `openspec/specs/core-layout/spec.md`, `openspec/specs/core-navigation/spec.md`, and the other capability specs under `openspec/specs/`.
 
-## Current & Future Core Apps
+## Sibling apps
 
-### Current (legacy, pending migration)
+FIN is one of several apps derived from `_core-template-frontend`. The current set:
 
 | App | Module prefix | Stack today | Migration status |
 |---|---|---|---|
 | `core-app` | CLP | Vue + JS, no TS | Not started |
 | `core-lex` | LEX | Vue + JS, no TS | Not started |
-| `core-ops` | OPS | Vue + JS, no TS | Not started |
+| `core-ops` | OPS | Vue + JS, no TS | **In progress** (6 capabilities archived, 249 tests, ~64% LOC reduction) |
 | `core-trd` | TRD | React + TS (strict off) | Not started (React → Vue) |
+| `core-fin` (this) | FIN | n/a (new build) | **Baseline shipped** + `fin-disponibilidades` capability archived |
 
-### Planned / proposed
-
-- `core-fin` (FIN) — Finance & accounting operations
-- `core-com` (COM) — Commercial operations
-
-Each migration is its own OpenSpec change with a dedicated Jira REQ ticket.
+Each migration / new build is its own OpenSpec change with a dedicated Jira REQ ticket.
 
 ## Documentation Hierarchy
 
@@ -109,7 +103,7 @@ This repository operates on **four coordinated layers** for AI agents and develo
 **Format:** `### Requirement:` with SHALL/MUST + `#### Scenario:` in Gherkin GIVEN/WHEN/THEN
 **Enforcement:** `openspec validate --all --strict` in CI; a broken contract breaks the build.
 
-These are the **formal contracts** every app derived from this template MUST satisfy. There are 10 baseline capabilities (6 Tier 1, 4 Tier 2 seed), plus the new `core-actions-manifest` (Tier 1) currently in active migration via change `add-core-actions-manifest`. To browse them:
+These are the **formal contracts** every app derived from this template MUST satisfy. As of today FIN consumes **18 template capabilities** + ships its own `fin-disponibilidades` capability (run `npm run spec:list` for the current set). To browse them:
 
 ```bash
 openspec list
@@ -126,7 +120,7 @@ Not validated by CI — but read by every AI agent on every session.
 
 ### Layer 3 — Migration Playbook (cross-prototype patterns)
 
-**Where:** `prototypes/_core-template-frontend/MIGRATION-PLAYBOOK.md` (canon, applies to every prototype) and `prototypes/fin/MIGRATION-NOTES.md` (FIN-specific inventory + deltas).
+**Where:** [`MIGRATION-PLAYBOOK.md`](../_core-template-frontend/MIGRATION-PLAYBOOK.md) (canonical, in the template) and [`MIGRATION-NOTES.md`](./MIGRATION-NOTES.md) (FIN-specific inventory + deltas).
 **Scope:** patterns validated end-to-end by completed migrations (today: OPS — 6 capabilities, 249 tests, ~64 % LOC reduction). Architectural decisions, drill-down surface choice, refinement canon, antipattern list, PR review checklist.
 
 **Read this layer when:**
@@ -179,13 +173,13 @@ Every meaningful change in this repository flows through OpenSpec. The four comm
 
 ### When a change starts
 
-1. Create a working branch: `temp-open-spec/<change-slug>` (following tradingsuit convention).
+1. Create a working branch: `temp-open-spec/<change-slug>`.
 2. Run `/opsx:propose <change-slug>` from Claude Code.
 3. Fill the four artifacts with the agent's help. **Do not skip `design.md`** for non-trivial changes — it is where tradeoffs are captured.
 4. Every `proposal.md` starts with a Jira REQ frontmatter:
    ```markdown
    > Jira REQ: [REQ-XX](https://arduasolutions.atlassian.net/browse/REQ-XX)
-   > Module: CLP    # or OPS / TRD / FIN / LEX / COM / core-template
+   > Module: CLP    # or OPS / TRD / FIN / LEX / core-template
    ```
 5. The `proposal.md` H1 is the canonical source for the PR title.
 
@@ -273,7 +267,6 @@ Every meaningful change in this repository flows through OpenSpec. The four comm
   - `TRD` → blue `217 91% 60%`
   - `FIN` → green `142 71% 45%`
   - `CLP` → purple `258 90% 74%`
-  - `COM` → amber `38 92% 50%`
   - `LEX` → teal `172 66% 50%`
 - **Surface hierarchy:** `--bg` (outermost) → `--surf` (sidebar/topbar) → `--card-2` (cards) → `--card` (nested cards).
 - **Text ramp:** `--t1` (primary) → `--t4` (muted).
@@ -293,6 +286,25 @@ Every meaningful change in this repository flows through OpenSpec. The four comm
 - **`src/components/manifest/`** (deferred) — `<ManifestDialog>`, `<ManifestField>`, `<ManifestModuleCTAs>`, `<ManifestBatchCTA>`. Wire the engine to the UI. `ModuleCTA` declares an optional `variant?: 'primary' | 'secondary'` (default `'primary'`) that maps to the `<Button>` variant prop — use `'secondary'` for CTAs that are visually subordinated to a sibling primary (per `core-actions-manifest` spec).
 - **Never inline a dropdown menu in a `<td>` cell.** Use the shared `ActionsMenu.vue` portal.
 - **Never render more than 3 CTAs in a page header** (per `core-layout`). More actions belong in the row actions menu or in a future bulk-action bar.
+
+## Catalog registration
+
+Lookup fields in action manifests resolve their dropdown data through the **catalog registry** (`@/lib/manifest/catalog.ts`). FIN registers one resolver per catalog id at boot via `setupCatalogs()` in `src/plugins/catalogs.ts`, invoked from `main.ts` after Pinia. Per `core-actions-manifest` Requirement 10:
+
+- Manifest declares `{ type: 'lookup', catalog: '<scope>.<entity>', catalog_filter?: … }`.
+- Engine calls `resolveCatalog(id, filter)` at dropdown-open time.
+- When the filter is `null` / `undefined` / `''`, the engine returns `[]` and the dropdown renders the "antecedent missing" empty state — the resolver MAY assume a non-empty filter when invoked.
+- When the field declares no `catalog_filter`, the engine invokes the resolver with NO argument; the resolver returns the full catalog.
+
+FIN currently registers: `framework.sociedades`, `clp.clientes`, `fin.estructuras_bancos`, `fin.bancos_cuentas`, `fin.cuentas_operativas_cliente`, `fin.proveedores`, `fin.partners`, `framework.bancos_exchanges`, `ops.catalogo_cuentas`. New catalogs go into `setupCatalogs()`; the resolver function returns `{ value, label }[]`.
+
+## Placeholder modules
+
+FIN surfaces many modules that are scoped but not yet implemented (Cobros, Pagos, Plan de Cuentas, etc.). The canonical pattern:
+
+- Declare the entry in the Sidebar's `blocks[]` with `soon: true` on the `NavItem`. The Sidebar renders a "Soon" badge next to the label (collapsed sidebars omit the badge; the tooltip switches to `<label> (Próximamente)`).
+- The route stays routable; the target page renders `<ModuloSoon>` with `meta.soon = true`.
+- When the capability is scoped via its own OpenSpec change, the placeholder is replaced with the real page and the `soon: true` flag is removed in the same PR.
 
 ## Data Layer Conventions
 

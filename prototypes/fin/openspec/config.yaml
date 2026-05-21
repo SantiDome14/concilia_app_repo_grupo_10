@@ -10,10 +10,11 @@ context: |
   `core-template-frontend` and consuming every capability in `openspec/specs/`.
   Replaces the legacy single-HTML prototype `prototypes/fin-old/fin-prototype.html`
   with a Vue 3 + TypeScript + Vite + manifest-engine implementation. Active
-  modules: Operaciones (movimientos), Cotizaciones, Tesorería (Disponibilidades),
+  modules: Tesorería · Disponibilidades (reference implementation, REQ-50)
   plus the four cross-cutting standard modules (Dashboard, Inbox, Alertas,
-  Reportes). Placeholder modules behind a `Próximamente` stub: Compras, Cobros,
-  Pagos, Deudas/Préstamos, Inversiones, Monedas (Tesorería); Plan de Cuentas,
+  Reportes). Placeholder modules registered with `NavItem.soon` (render
+  `<ModuloSoon>` until scoped): Ventas, Compras (Back Office); Cobros, Pagos,
+  Deudas/Préstamos, Inversiones, Tipo de Cambio (Tesorería); Plan de Cuentas,
   Parametrizaciones, Libro Diario (Contabilidad).
 
   ## Canonical project memory (READ FIRST)
@@ -47,12 +48,15 @@ context: |
 
   ## Core capabilities (governed by openspec/specs/)
 
-  Tier 1 — enforceable from day 1:
-  - core-layout, core-navigation, core-data-tables, core-actions-menu,
-    core-modals, core-theming
-
-  Tier 2 — seed contracts, each app extends:
-  - core-forms, core-api-layer, core-auth, core-error-handling
+  FIN consumes 18 template capabilities + ships its own `fin-disponibilidades`
+  capability. Run `npm run spec:list` for the current set. Template highlights:
+  - Layout & navigation: core-layout, core-navigation, core-modulo-genericos
+  - Data & actions: core-data-tables, core-actions-menu, core-actions-manifest,
+    core-module-types
+  - Modals & forms: core-modals, core-forms, core-dynamic-forms,
+    core-multi-step-form
+  - Cross-cutting: core-theming, core-api-layer, core-auth, core-error-handling,
+    core-file-upload, core-charts, core-websocket-client
 
   ## Conventions
 
@@ -83,7 +87,7 @@ context: |
   - The proposal.md first line must reference the Jira REQ:
     `- Jira REQ: [REQ-XX](https://arduasolutions.atlassian.net/browse/REQ-XX)`
   - Module affected (if any) on the second line: `- Module: CLP` / `OPS` /
-    `TRD` / `FIN` / `LEX` / `COM`.
+    `TRD` / `FIN` / `LEX`.
 
   ## Quality gates
 

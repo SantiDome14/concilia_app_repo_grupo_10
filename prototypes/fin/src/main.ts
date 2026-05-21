@@ -3,11 +3,13 @@
 // ────────────────────────────────────────────────────────────────────
 // Plugin wiring order matters:
 //   1. Pinia         — stores must be ready before anything that uses them
-//   2. Router        — needs to be registered so route guards run
-//   3. Auth0         — router guards depend on Auth0 state
-//   4. Vue Query     — server-state cache
-//   5. i18n (opt-in) — gated by VITE_FEATURE_I18N
-//   6. LD (opt-in)   — gated by VITE_FEATURE_LAUNCHDARKLY
+//   2. Manifests     — registers action manifests in the registry store
+//   3. Catalogs      — registers lookup-field data resolvers
+//   4. Router        — needs to be registered so route guards run
+//   5. Auth0         — router guards depend on Auth0 state
+//   6. Vue Query     — server-state cache
+//   7. i18n (opt-in) — gated by VITE_FEATURE_I18N
+//   8. LD (opt-in)   — gated by VITE_FEATURE_LAUNCHDARKLY
 // ════════════════════════════════════════════════════════════════════
 
 import { createApp } from 'vue';
