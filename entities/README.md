@@ -121,6 +121,7 @@ Lista generada el 2026-05-21.
 |---|---|---|
 | `aiprise.md` | Proveedor | Completo |
 | `ardua-solutions-corp.md` | Propia | Completo |
+| `astra-ventures.md` | Propia | Completo |
 | `banco-de-comercio.md` | Banco | Draft inicial |
 | `binance.md` | Proveedor | Pendiente |
 | `bind.md` | Banco | Draft inicial |
