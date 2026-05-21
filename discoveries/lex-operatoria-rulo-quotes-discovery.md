@@ -4,7 +4,7 @@ features: [LEX]
 status: Concluida
 owner: Santino Domeniconi
 created_at: 2026-05-20
-updated_at: 2026-05-20
+updated_at: 2026-05-21
 propagates_to:
   - features/lex/README.md
 ---
@@ -32,6 +32,13 @@ Se prepararon dos prototipos HTML para validar con Camila en persona:
 - Se incorporaron tres ajustes al scope: (1) columna "Número de TC" adicional a "Tipo de TC"; (2) total de monto fiat como footer de tabla con selector de rango libre; (3) dockets de comitente como badges (AS en violeta, CIR en azul).
 - Criterio de identificación de cliente del rulo resuelto por decisión de producto: la sección aparece para todo cliente que tenga al menos un límite configurado en LEX.
 
+**Iteración post-validación — 2026-05-21:**
+- Camila confirmó que necesita dos modos de filtro: rango libre para consultas operativas y rango por meses para informes a entidades reguladoras (ej. bancos).
+- La moneda fiat puede ser ARS o USD — no exclusivamente ARS como se asumía en v1.
+- Se incorporaron dos funcionalidades de selección de filas: total de Monto fiat y promedio de TC, con chips independientes anclados al footer.
+- El título de la sección cambia de "Rulo" a "Quotes".
+- El wireframe fue actualizado por Design para reflejar todos los cambios. Wireframe vigente: `LEX_-_Operatoria_Rulo.html` (versión actualizada en `prototypes/lex/wireframes/`).
+
 ---
 
 ## Decisiones tomadas
@@ -48,11 +55,14 @@ En lugar de darle a Legal acceso directo a TRD, los datos se traen al detalle de
 
 **Fuente:** sesión de enriquecimiento REQ-82 (2026-05-20).
 
-### D-03 — Los quotes del rulo viven en una sección "Rulo" dentro de la tab Operatoria
+### D-03 — Los quotes del rulo viven en una sección "Quotes" dentro de la tab Operatoria
 
 La tab Operatoria (REQ-53) es la superficie correcta para centralizar la operatoria del cliente en LEX. Los quotes del rulo son una sección adicional dentro de esa tab, con TRD como fuente de datos. El tab Límites queda exclusivamente para la gestión de topes operativos.
 
-**Fuente:** sesión de enriquecimiento REQ-82 (2026-05-20).
+Nombre de la sección: "Quotes" (renombrado desde "Rulo" en iteración 2026-05-21).
+Descripción de la sección: _"Quotes del rulo registradas en TRD para este cliente, agrupadas según fecha de trade."_
+
+**Fuente:** sesión de enriquecimiento REQ-82 (2026-05-20 y 2026-05-21).
 
 ### D-04 — CTA "Ver detalle completo en TRD" al pie de la sección
 
@@ -60,9 +70,9 @@ Mismo patrón que el CTA "Ver movimientos completos en OPS" del REQ-53. LEX mues
 
 ### D-05 — Patrones de UX heredados del prototipo del REQ-53 (Yasmani Rodriguez)
 
-Al revisar el prototipo `lex_operatoria_prototype.html` (REQ-53), se identificaron cuatro patrones funcionales que aplican igual a la sección Rulo:
+Al revisar el prototipo `lex_operatoria_prototype.html` (REQ-53), se identificaron cuatro patrones funcionales que aplican igual a la sección Quotes:
 
-- **Skeleton loader** — shimmer animado en la tabla mientras se cargan los datos.
+- **Skeleton loader** — shimmer animado en la tabla mientras se cargan los datos. Las barras de loading reflejan el ancho y tipo de cada celda (pill, número, docket, checkbox).
 - **Nota de contexto** — banner informativo sutil: _"Para ver los límites configurados de este cliente, consultá la tab Límites."_
 - **Tooltip en columnas numéricas** — al hover sobre valores numéricos se muestra el detalle.
 - **CTA al pie como botón funcional** — con feedback visual al hacer click.
@@ -75,27 +85,37 @@ En validación presencial con Camila (2026-05-20), la vista B (tabla transaccion
 
 **Fuente:** validación presencial con Camila Cattaneo (2026-05-20).
 
-### D-07 — Tabla con 9 columnas provenientes de TRD
+### D-07 — Tabla con 7 columnas de datos y 2 columnas de selección intercaladas
 
-| Columna | Descripción |
-|---|---|
-| Fecha | Fecha del quote |
-| Tipo de trade | Compra / Venta |
-| Tipo de TC | MEP / CCL |
-| Valor del TC | Valor numérico del tipo de cambio aplicado por Mesa al cerrar la operación |
-| Monto fiat (ARS) | Monto en pesos argentinos. El rulo opera exclusivamente en ARS |
-| Monto crypto | Monto en criptomoneda con el tipo de crypto como prefijo inline (ej. USDT 36.420,00, BTC 0,4218) |
-| Comitente | Docket del cliente como badge (AS en violeta / CIR en azul) |
+| # | Columna | Tipo | Descripción |
+|---|---|---|---|
+| 1 | Fecha | Dato | Fecha y hora del quote |
+| 2 | Tipo de trade | Dato | BUY / SELL |
+| 3 | Tipo de TC | Dato | MEP / CCL |
+| 4 | Valor del TC | Dato | Valor numérico del tipo de cambio aplicado por Mesa al cerrar la operación |
+| 5 | Promediar TC | Selección | Checkbox por fila — sin master checkbox en el header |
+| 6 | Monto fiat | Dato | Monto con moneda como prefijo inline (ej. `ARS 42.518.400,00`, `USD 12.500,00`). Formato `###.###.###,##` |
+| 7 | Total Fiat | Selección | Checkbox por fila — con master checkbox en el header |
+| 8 | Monto crypto | Dato | Monto con tipo de crypto como prefijo inline (ej. `USDC 36.420,00`). Moneda en gris, monto alineado a la derecha. Formato `###.###.###,##` |
+| 9 | Comitente | Dato | Docket del cliente como badge (AS en violeta / CIR en azul) |
 
-"Tipo de TC" y "Valor del TC" son dos columnas separadas — ambas provenientes de TRD. La columna "Moneda fiat" fue eliminada dado que el rulo opera exclusivamente en ARS. La columna "Tipo de crypto" fue eliminada e integrada como prefijo inline dentro de la columna "Monto crypto". La tabla quedó con 7 columnas.
+La columna `Promediar TC` está ubicada inmediatamente a la derecha de `Valor del TC`. La columna `Total Fiat` está ubicada inmediatamente a la derecha de `Monto fiat`.
 
-**Fuente:** validación presencial con Camila Cattaneo (2026-05-20).
+**Cambio respecto a v1 (2026-05-21):** la moneda fiat puede ser ARS o USD — el rulo no opera exclusivamente en ARS como se asumía. La columna Monto fiat muestra la moneda como prefijo inline.
 
-### D-08 — Footer de totales y selector de rango libre
+**Fuente:** validación presencial (2026-05-20) + iteración con Camila (2026-05-21).
 
-Al pie de la tabla se muestra el total acumulado de Monto fiat para el período seleccionado. El filtro de período es un selector de rango libre (fecha desde / fecha hasta), no pills fijas — porque el período de análisis varía según el caso de reasignación.
+### D-08 — Dos modos de filtro que coexisten con exclusión mutua
 
-**Fuente:** validación presencial con Camila Cattaneo (2026-05-20).
+**Fila 1 — Filtro por período (meses):** dos dropdowns `Mes desde` y `Mes hasta` para filtrar por rango de meses completos. Uso principal: confección de informes a entidades reguladoras (ej. bancos). Si Mes hasta es anterior a Mes desde, los valores se intercambian automáticamente.
+
+**Fila 2 — Filtro por fecha exacta:** date picker libre `Desde` / `Hasta` para consultas operativas con rango arbitrario.
+
+**Exclusión mutua:** activar un filtro limpia el otro. Botón `Limpiar filtros` (estilo ghost) aparece solo cuando hay algún filtro activo y resetea ambos.
+
+**Cambio respecto a v1 (2026-05-21):** v1 tenía solo el filtro por fecha exacta. El filtro por meses se incorpora a pedido de Camila para casos de informes regulatorios.
+
+**Fuente:** iteración con Camila Cattaneo (2026-05-21).
 
 ### D-09 — Dockets de comitente como badges
 
@@ -105,15 +125,29 @@ La columna Comitente muestra el docket con el mismo estilo visual que el listado
 
 ### D-10 — Criterio de identificación de cliente del rulo: presencia de límites en LEX
 
-La sección "Rulo" aparece en la tab Operatoria únicamente para clientes que tienen al menos un límite configurado en LEX. No requiere flag externo ni consulta a TRD — la condición vive completamente en LEX.
+La sección "Quotes" aparece en la tab Operatoria únicamente para clientes que tienen al menos un límite configurado en LEX. No requiere flag externo ni consulta a TRD — la condición vive completamente en LEX.
 
 **Fuente:** decisión de producto · Santino Domeniconi (2026-05-20).
+
+### D-11 — Cálculos por selección de filas: Total Fiat y Promedio de TC
+
+Dos cálculos independientes activados por selección de filas mediante columnas de checkbox dedicadas. Cada columna tiene su propia selección — son completamente independientes entre sí. La fila seleccionada se resalta con un tinte teal sutil.
+
+**Total de Monto fiat (`Total Fiat`):** suma del Monto fiat de las filas seleccionadas. Chip en footer: `Total Monto fiat (N filas): ARS 248.440.400,00 ✕`. Master checkbox en el header para seleccionar/deseleccionar todas las filas visibles — soporta estado indeterminado.
+
+**Promedio de TC (`Promediar TC`):** promedio aritmético del Valor del TC de las filas seleccionadas. Chip en footer: `TC promedio (N filas): 1.245,32 ✕`. Sin master checkbox — selección fila por fila.
+
+**Advertencia por días distintos:** si las filas seleccionadas en `Promediar TC` pertenecen a distintas fechas, el chip muestra inline `⚠ Días distintos` en color ámbar. No bloquea el cálculo — es informativo.
+
+**Anclaje de chips:** los chips están anclados al pie de su columna de selección correspondiente — TC promedio debajo de `Promediar TC`, Total Monto fiat debajo de `Total Fiat`. Si se solapan visualmente, TC promedio queda encima (z-index mayor). El footer no tiene header de totales — muestra únicamente los chips activos.
+
+**Fuente:** iteración con Camila Cattaneo (2026-05-21).
 
 ---
 
 ## Hipótesis abiertas
 
-_Ninguna. Todas las hipótesis fueron resueltas al 2026-05-20._
+_Ninguna. Todas las hipótesis fueron resueltas al 2026-05-21._
 
 ---
 
@@ -123,15 +157,13 @@ _Ninguna. Todas las hipótesis fueron resueltas al 2026-05-20._
 |---|---|---|
 | `Rulo_A_-_Totalizadores.html` | Vista con métricas agregadas y breakdown por tipo de trade | Descartada en validación con Camila (2026-05-20) |
 | `Rulo_B_-_Historial_de_quotes.html` | Vista con tabla transaccional quote a quote (base de la solución) | Aprobada por Camila (2026-05-20) |
-| `LEX_-_Operatoria_Rulo.html` | Wireframe final aprobado — columna "Valor del TC" con valores numéricos, selector de rango, footer de totales | Aprobado · en `prototypes/lex/wireframes/` |
-
-Ambos prototipos están en la rama `feat/lex-rulo-quotes-operatoria-rulo`.
+| `LEX_-_Operatoria_Rulo.html` | Wireframe vigente — incorpora todos los cambios de la iteración 2026-05-21. Disponible en `prototypes/lex/wireframes/` | Pendiente actualización por Design |
 
 ---
 
 ## Dependencias
 
-- **REQ-53 (Tab Operatoria):** la sección "Rulo" vive dentro de la tab Operatoria. REQ-53 está en `SENT TO DEV`. Si REQ-53 no está desplegado cuando este REQ avance, se evalúa si la sección puede lanzarse de forma independiente o debe esperar.
+- **REQ-53 (Tab Operatoria):** la sección "Quotes" vive dentro de la tab Operatoria. REQ-53 está en `SENT TO DEV`. Si REQ-53 no está desplegado cuando este REQ avance, se evalúa si la sección puede lanzarse de forma independiente o debe esperar.
 - **TRD:** fuente de todos los campos de la tabla. Pendiente mapear qué endpoint/servicio de TRD expone los quotes del rulo con los 7 campos requeridos.
 
 ---
@@ -149,9 +181,10 @@ Ambos prototipos están en la rama `feat/lex-rulo-quotes-operatoria-rulo`.
 
 | Fecha | Cambio |
 |---|---|
-| 2026-05-20 | Creación del discovery a partir del enriquecimiento de REQ-82. Decisiones D-01 a D-04 cerradas. Hipótesis H-01 a H-03 abiertas. |
+| 2026-05-20 | Creación del discovery a partir del enriquecimiento de REQ-82. Decisiones D-01 a D-04 cerradas. |
 | 2026-05-20 | D-05 y D-06 agregadas con patrones UX del prototipo REQ-53. Prototipos A y B preparados para validación con Camila. |
-| 2026-05-20 | Validación presencial con Camila completada. D-06 a D-09 cerradas. Prototipo B elegido. 9 columnas definidas. Footer y selector de rango libre confirmados. Dockets como badges confirmados. |
+| 2026-05-20 | Validación presencial con Camila completada. D-06 a D-09 cerradas. Prototipo B elegido. 7 columnas definidas. Footer y selector de rango libre confirmados. Dockets como badges confirmados. |
 | 2026-05-20 | D-10 cerrada: criterio de identificación de cliente del rulo resuelto por decisión de producto (presencia de límites en LEX). Discovery concluido. Status → Concluida. |
 | 2026-05-20 | Columna renombrada de "Número de TC" a "Valor del TC". Wireframe final `LEX_-_Operatoria_Rulo.html` generado y aprobado. Disponible en `prototypes/lex/wireframes/`. |
 | 2026-05-20 | Tabla reducida a 7 columnas: "Moneda fiat" eliminada (rulo opera solo en ARS → renombrada a "Monto fiat (ARS)"). "Tipo de crypto" eliminada e integrada como prefijo inline en "Monto crypto". |
+| 2026-05-21 | Iteración con Camila: moneda fiat puede ser ARS o USD (no solo ARS). Dos modos de filtro incorporados (por meses y por fecha exacta con exclusión mutua). D-11 cerrada: cálculos por selección de filas (Total Fiat y Promedio de TC con chips independientes en footer). Sección renombrada de "Rulo" a "Quotes". REQ-82 actualizado en Jira. |
