@@ -1,0 +1,234 @@
+{
+  "name": "jira-sla-products-ticket-created",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "jira-sla-products-ticket-created",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "69aa228f-2604-4a8c-8689-2d6b41910da1",
+      "name": "Trigger — Jira Ticket Created",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        144
+      ],
+      "webhookId": "jira-sla-products-ticket-created"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\": true}",
+        "options": {}
+      },
+      "id": "be4d821d-a0f8-40fa-b868-a6333488bc75",
+      "name": "Respond — Acknowledge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        -176,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// EXTRACT & NORMALIZE JIRA TICKET DATA\n// ============================================================\nconst body = $input.item.json.body || $input.item.json;\nconst issue = body.issue || {};\nconst fields = issue.fields || {};\n\nconst key = issue.key || '';\nconst projectKey = (fields.project && fields.project.key) || key.split('-')[0];\n\n// Only process REQ project\nif (projectKey !== 'REQ') {\n  return [{ json: { skip: true, reason: 'Not a REQ ticket', key } }];\n}\n\nconst summary = fields.summary || '';\nconst issueType = (fields.issuetype && fields.issuetype.name) || '';\nconst status = (fields.status && fields.status.name) || 'BACKLOG';\nconst assignee = (fields.assignee && fields.assignee.displayName) || '';\nconst createdAt = fields.created || new Date().toISOString();\nconst updatedAt = fields.updated || new Date().toISOString();\nconst jiraUrl = `https://arduasolutions.atlassian.net/browse/${key}`;\n\n// Normalize issue type\nlet tipo = 'REQ';\nif (issueType === 'Task' || issueType === 'TASK') tipo = 'TASK';\n\n// Determine responsable based on status\nconst responsabilidadProducto = ['BACKLOG', 'IN ANALYSIS', 'In Progress', 'Blocked'];\nconst responsabilidadIT = ['SENT TO DEV', 'Ready for Dev', 'In Development'];\nconst responsabilidadNinguno = ['Done', 'DEPRECATED'];\n\nlet responsable = 'Producto';\nif (responsabilidadIT.includes(status)) responsable = 'IT';\nif (responsabilidadNinguno.includes(status)) responsable = 'Ninguno';\n\n// Format date as YYYY-MM-DD\nconst formatDate = (iso) => iso ? iso.split('T')[0] : null;\nconst today = formatDate(new Date().toISOString());\n\nreturn [{\n  json: {\n    skip: false,\n    key,\n    summary,\n    tipo,\n    status,\n    responsable,\n    assignee,\n    createdAt: formatDate(createdAt),\n    updatedAt: formatDate(updatedAt),\n    jiraUrl,\n    today\n  }\n}];"
+      },
+      "id": "666c3a6d-ab53-4af0-aae0-1e544c4d170b",
+      "name": "Extract Ticket Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-skip",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "17d5f900-e385-4c3d-96df-cf933f2ae898",
+      "name": "Should Skip?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        48,
+        144
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "af421aca-cd12-433e-8f08-24dba0a08c3f",
+      "name": "Ignore — Not REQ",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        272,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// BUILD NOTION PAGE PROPERTIES FOR SLA — Tickets PRODUCTS\n// Data Source ID: 9d7ea3de-0af8-4d78-9b56-0dfd5643a422\n// ============================================================\nconst d = $input.item.json;\n\n// Map status to the correct 'Fecha entrada [estado]' field\nconst statusToFechaField = {\n  'BACKLOG':         'date:Fecha entrada BACKLOG:start',\n  'IN ANALYSIS':     'date:Fecha entrada IN ANALYSIS:start',\n  'In Progress':     'date:Fecha entrada In Progress:start',\n  'Blocked':         'date:Fecha entrada Blocked:start',\n  'SENT TO DEV':     'date:Fecha entrada SENT TO DEV:start',\n  'Ready for Dev':   'date:Fecha entrada Ready for Dev:start',\n  'In Development':  'date:Fecha entrada In Development:start',\n  'Done':            'date:Fecha entrada Done:start',\n  'DEPRECATED':      'date:Fecha entrada DEPRECATED:start'\n};\n\nconst fechaField = statusToFechaField[d.status];\n\nconst properties = {\n  // Base fields\n  'Ticket Key':           d.key,\n  'Summary':              d.summary,\n  'Tipo':                 d.tipo,\n  'Estado Actual':        d.status,\n  'Responsable':          d.responsable,\n  'IT es responsable':    d.responsable === 'IT' ? '__YES__' : '__NO__',\n  'Assignee':             d.assignee,\n  'date:Fecha Creación:start':       d.createdAt,\n  'date:Fecha Creación:is_datetime': 0,\n  'date:Última Actualización:start': d.updatedAt,\n  'date:Última Actualización:is_datetime': 0,\n  'Días en Estado Actual': 0,\n  'userDefined:URL Jira':  d.jiraUrl\n};\n\n// Set fecha entrada for current status\nif (fechaField) {\n  properties[fechaField] = d.today;\n  properties[fechaField.replace(':start', ':is_datetime')] = 0;\n}\n\nreturn [{ json: { properties, key: d.key } }];"
+      },
+      "id": "8c3608c9-6c03-4c67-ad7f-9044eb13f8f6",
+      "name": "Build Notion Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "9d4e0a6f514a4e90968b89241f53ad86",
+          "mode": "id"
+        },
+        "title": "={{ $json.properties['Ticket Key'] }}",
+        "propertiesUi": {
+          "propertyValues": []
+        },
+        "options": {}
+      },
+      "id": "bfd2a830-77d2-4917-a0a9-30e78c335f48",
+      "name": "Create Page — SLA Tickets PRODUCTS",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        624,
+        -64
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "aldMlehkPJEZ6AqY",
+          "name": "Notion-API-Miles"
+        }
+      },
+      "notes": "Uses Notion API credential. Creates one row per ticket in SLA — Tickets PRODUCTS (DB ID: 9d4e0a6f514a4e90968b89241f53ad86)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/pages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"parent\": { \"database_id\": \"9d4e0a6f-514a-4e90-968b-89241f53ad86\" },\n  \"properties\": {{ JSON.stringify($json.properties) }}\n}",
+        "options": {}
+      },
+      "id": "aac9e273-b819-4a95-b06b-9926db7f593f",
+      "name": "Notion API — Create Ticket Row",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        496,
+        160
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "aldMlehkPJEZ6AqY",
+          "name": "Notion-API-Miles"
+        }
+      },
+      "notes": "POST to Notion API to create a new page in SLA — Tickets PRODUCTS"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger — Jira Ticket Created": {
+      "main": [
+        [
+          {
+            "node": "Respond — Acknowledge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Extract Ticket Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Ticket Data": {
+      "main": [
+        [
+          {
+            "node": "Should Skip?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Skip?": {
+      "main": [
+        [
+          {
+            "node": "Ignore — Not REQ",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Notion Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Notion Payload": {
+      "main": [
+        [
+          {
+            "node": "Notion API — Create Ticket Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "00b2f5d1-a940-43b1-b837-52014b6bdd17",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "95944be45d5aa5e5565d656a14e718ed8b92e30102ad1bd3fcad4cf1b1c2f383"
+  },
+  "id": "wfge0h52Atc7ivc4",
+  "tags": []
+}

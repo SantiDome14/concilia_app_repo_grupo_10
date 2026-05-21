@@ -1,0 +1,41 @@
+{
+  "id": "wfge0h52Atc7ivc4",
+  "name": "jira-sla-products-status-changed",
+  "active": true,
+  "versionId": "abaa2e36-cae6-462c-ba25-e61197267250",
+  "createdAt": "2026-05-20T15:57:01.719Z",
+  "updatedAt": "2026-05-21T15:44:28.286Z",
+  "trigger": {
+    "type": "webhook",
+    "path": "/webhook/jira-sla-products-status-changed",
+    "method": "POST"
+  },
+  "description": "Triggered by Jira Automation when a REQ ticket changes status. Filters non-REQ projects, Initiatives, and events without a status change. Finds the corresponding row in the SLA Tickets PRODUCTS Notion DB (9d4e0a6f) by Ticket Key. Calculates days spent in the previous status (decimal, based on exact Jira timestamps) and accumulates them in the Days in [Status] field. Updates Current Status, Flow, IT Flow?, Last Updated, Entered [new status] date, and Days in [old status] on the main row. Creates a new changelog entry in the SLA Changelog DB (1de23a75) with full transition data including entry/exit dates and days in status.",
+  "nodes": [
+    "Trigger — Jira Status Changed",
+    "Respond — Acknowledge",
+    "Extract Status Change",
+    "Should Skip?",
+    "Ignore — No aplica",
+    "Buscar ticket en Notion",
+    "Calcular días y armar payloads",
+    "Ticket encontrado?",
+    "Ignore — Ticket no encontrado",
+    "Actualizar ticket — SLA Tickets PRODUCTS",
+    "Crear entrada changelog"
+  ],
+  "filters": {
+    "project": "REQ",
+    "excluded_issue_types": ["Initiative"],
+    "requires_status_change": true
+  },
+  "notion_dbs": {
+    "sla_tickets": "9d4e0a6f-514a-4e90-968b-89241f53ad86",
+    "changelog": "1de23a75-d1ba-4a10-908c-126e456da721"
+  },
+  "responsable_logic": {
+    "IT": ["SENT TO DEV", "Ready for Dev", "In Development"],
+    "Ninguno": ["Done", "DEPRECATED"],
+    "Producto": "default"
+  }
+}

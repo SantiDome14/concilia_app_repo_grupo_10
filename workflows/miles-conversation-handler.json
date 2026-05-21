@@ -1,375 +1,81 @@
 {
-  "name": "miles-conversation-handler",
-  "nodes": [
-    {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "req-conversation",
-        "responseMode": "responseNode",
-        "options": {}
-      },
-      "id": "7dabf408-abdd-49b2-b2b3-1800fed5597c",
-      "name": "Trigger — Conversation Event",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [-1840, 992],
-      "webhookId": "miles-req-conversation"
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "{\"ok\": true}",
-        "options": {}
-      },
-      "id": "2527f429-a5ef-49ea-a930-8739cf9a8047",
-      "name": "Respond — Acknowledge",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [-1632, 800]
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {"id": "1", "name": "thread_ts", "value": "={{ $json.body.thread_ts }}", "type": "string"},
-            {"id": "2", "name": "channel_id", "value": "={{ $json.body.channel_id }}", "type": "string"},
-            {"id": "3", "name": "user_id", "value": "={{ $json.body.user_id }}", "type": "string"},
-            {"id": "4", "name": "message_text", "value": "={{ $json.body.message_text }}", "type": "string"},
-            {"id": "5", "name": "source", "value": "={{ (() => { const t = $json.body.message_text || ''; const fromRouter = $json.body.source || ''; const signatures = ['Sent using','Sent with','Sent via','Sent from','Sent by','Enviado usando','Enviado mediante','Enviado con','Enviado vía','Enviado via','Enviado por','Enviado desde']; const hasSig = signatures.some(s => t.includes(s)); if (hasSig && t.includes('U0AHZHTQE22')) return 'claude'; if (fromRouter === 'claude') return 'claude'; if (fromRouter === 'mention') return 'mention'; if (fromRouter === 'thread_reply') return 'thread_reply'; return 'human'; })() }}", "type": "string"}
-          ]
-        },
-        "options": {}
-      },
-      "id": "950d78cc-e216-474d-8ed1-a23d483910b1",
-      "name": "Extract Event Data",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [-1632, 1168]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict"},
-          "conditions": [{"id": "cond-source-claude", "leftValue": "={{ $json.source }}", "rightValue": "claude", "operator": {"type": "string", "operation": "equals"}}],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "ef1eb890-4faa-4a1c-99ba-b8246440f86d",
-      "name": "Is Source Claude?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [-1392, 1168]
-    },
-    {
-      "parameters": {"url": "https://slack.com/api/conversations.replies", "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth", "sendQuery": true, "queryParameters": {"parameters": [{"name": "channel", "value": "={{ $('Extract Event Data').item.json.channel_id }}"}, {"name": "ts", "value": "={{ $('Extract Event Data').item.json.thread_ts }}"}]}, "options": {}},
-      "id": "843c2012-eda4-48b3-ae8d-536e417c1f00",
-      "name": "Fetch Thread History",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [-1136, 1360],
-      "credentials": {"httpHeaderAuth": {"id": "MX2QZHGzOYBtt41s", "name": "Slack Bot Token — Miles"}}
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict"},
-          "conditions": [{"id": "cond-closed", "leftValue": "={{ ($json.messages || []).some(m => m.text && m.text.includes('Requerimiento creado exitosamente')) }}", "rightValue": true, "operator": {"type": "boolean", "operation": "true"}}],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "926de716-b2d0-414f-a919-e99974b56794",
-      "name": "Is Session Closed?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [-1136, 1216]
-    },
-    {
-      "parameters": {},
-      "id": "33694f33-0ab8-42b0-a5ff-a8e6a91b1869",
-      "name": "Ignore — Session Closed",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [-880, 1360]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {"caseSensitive": false, "leftValue": "", "typeValidation": "loose"},
-          "conditions": [{"id": "cond-is-notification", "leftValue": "={{ (() => { const msgs = $json.messages || []; if (msgs.length === 0) return false; const parent = msgs[0].text || ''; const markers = ['Nuevo requerimiento listo para desarrollo', 'requerimiento completado y disponible', 'en progreso —', 'completado —']; return markers.some(m => parent.includes(m)); })() }}", "rightValue": true, "operator": {"type": "boolean", "operation": "true"}}],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "ee338d0e-d717-4310-8a83-1808ddc90d0e",
-      "name": "Is Notification Thread?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [-1136, 1040]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1},
-          "conditions": [{"id": "cond-miles-active", "leftValue": "={{ (() => { const source = $('Extract Event Data').item.json.source; const msgs = $('Fetch Thread History').item.json.messages || []; const thread_ts = $('Extract Event Data').item.json.thread_ts; if (source !== 'thread_reply') return true; return msgs.some(m => m.bot_id && m.ts !== thread_ts); })() }}", "rightValue": true, "operator": {"type": "boolean", "operation": "true"}}],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "67bf5a95-6fbd-466e-a81b-c0427944cf51",
-      "name": "Has Miles Been Active?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [-784, 1248]
-    },
-    {
-      "parameters": {},
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [-480, 1280],
-      "id": "45bb82da-9a5c-47cd-8509-ba251492a8ed",
-      "name": "Ignore — Miles Not In Thread1"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict"},
-          "conditions": [{"id": "cond-is-mention", "leftValue": "={{ $('Extract Event Data').item.json.source }}", "rightValue": "mention", "operator": {"type": "string", "operation": "equals"}}],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "bfc5f331-2473-47bd-874c-798900064c77",
-      "name": "Is Mention Source?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [-912, 1584]
-    },
-    {
-      "parameters": {"method": "POST", "url": "https://slack.com/api/chat.postMessage", "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ JSON.stringify({ channel: $('Extract Event Data').item.json.channel_id, thread_ts: $('Extract Event Data').item.json.thread_ts, text: 'Este hilo ya tiene un requerimiento creado ✅\\n\\nSi necesitás cambios o querés agregar contexto, escribilo directamente en este hilo — será tenido en cuenta en la próxima sesión de enriquecimiento.\\n\\nPara nuevos requerimientos, abrí un nuevo hilo mencionándome 👋', mrkdwn: true }) }}", "options": {}},
-      "id": "a4dfb630-b940-4495-a57c-fe1bcf356168",
-      "name": "Post — Thread Has REQ",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [-272, 1360],
-      "credentials": {"httpHeaderAuth": {"id": "MX2QZHGzOYBtt41s", "name": "Slack Bot Token — Miles"}}
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {"caseSensitive": false, "leftValue": "", "typeValidation": "loose"},
-          "conditions": [{"id": "cond-is-notification-claude", "leftValue": "={{ (() => { const msgs = $json.messages || []; if (msgs.length === 0) return false; const parent = msgs[0].text || ''; const markers = ['Nuevo requerimiento listo para desarrollo', 'requerimiento completado y disponible', 'en progreso —', 'completado —']; return markers.some(m => parent.includes(m)); })() }}", "rightValue": true, "operator": {"type": "boolean", "operation": "true"}}],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "830421ff-c7c5-4dc5-aad6-7f2690c590a6",
-      "name": "Is Notification Thread — Claude Path?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [-816, 736]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict"},
-          "conditions": [{"id": "cond-closed-claude", "leftValue": "={{ ($json.messages || []).some(m => m.text && m.text.includes('Requerimiento creado exitosamente')) }}", "rightValue": true, "operator": {"type": "boolean", "operation": "true"}}],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "0d3179af-8a10-4741-9d83-60afe1a1dd68",
-      "name": "Is Session Closed — Claude Path?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [-240, 976]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict"},
-          "conditions": [{"id": "cond-is-dup", "leftValue": "={{ $json.is_duplicate }}", "rightValue": true, "operator": {"type": "boolean", "operation": "true"}}],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "7baf400e-ac74-4747-a5a1-6778c05bdcb1",
-      "name": "Skip if Duplicate? (Claude Path)",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [-192, 736]
-    },
-    {
-      "parameters": {"jsCode": "const msgs = ($json.messages || []);\nconst thread_ts = $('Extract Event Data').item.json.thread_ts;\nconst milesAlreadyReplied = msgs.some(m => m.bot_id && m.ts !== thread_ts);\nreturn [{ json: { ...$json, is_duplicate: milesAlreadyReplied } }];"},
-      "id": "a581f8cf-c0bc-4e04-b8ff-298ccf4d6186",
-      "name": "Is Duplicate? (Claude Path)",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [-448, 736]
-    },
-    {
-      "parameters": {"url": "https://slack.com/api/conversations.replies", "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth", "sendQuery": true, "queryParameters": {"parameters": [{"name": "channel", "value": "={{ $('Extract Event Data').item.json.channel_id }}"}, {"name": "ts", "value": "={{ $('Extract Event Data').item.json.thread_ts }}"}]}, "options": {}},
-      "id": "d3244a30-4984-4859-bc96-928a066ac8fd",
-      "name": "Fetch Thread — Claude Path",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [-672, 960],
-      "credentials": {"httpHeaderAuth": {"id": "MX2QZHGzOYBtt41s", "name": "Slack Bot Token — Miles"}}
-    },
-    {
-      "parameters": {"dataType": "string", "value1": "={{ $json.route }}", "rules": {"rules": [{"value2": "create-req"}, {"value2": "list-req", "output": 1}, {"value2": "status-req", "output": 2}]}, "fallbackOutput": 3},
-      "id": "2a029e58-3ab0-4632-bc76-18924f2a7199",
-      "name": "Switch — Intent Router",
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 1,
-      "position": [848, 1120]
-    },
-    {
-      "parameters": {"promptType": "define", "text": "={{ $json.prompt }}"},
-      "id": "7fb8139e-90eb-4e06-86f8-5d74264dca85",
-      "name": "LLM Chain — Process Step",
-      "type": "@n8n/n8n-nodes-langchain.chainLlm",
-      "typeVersion": 1.4,
-      "position": [112, 1152]
-    },
-    {
-      "parameters": {"model": "llama-3.3-70b-versatile", "options": {"temperature": 0.3}},
-      "id": "7ee35a0a-d53f-411f-8566-856bdb841531",
-      "name": "Groq — Llama 3.3 70B",
-      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
-      "typeVersion": 1,
-      "position": [112, 1376],
-      "credentials": {"groqApi": {"id": "qHxYgDy2Guy89SQR", "name": "Groq API — Miles"}}
-    },
-    {
-      "parameters": {"method": "POST", "url": "https://slack.com/api/chat.postMessage", "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ JSON.stringify({ channel: $('Extract Event Data').item.json.channel_id, thread_ts: $('Extract Event Data').item.json.thread_ts, text: $('Parse AI Response').item.json.next_message, mrkdwn: true }) }}", "options": {}},
-      "id": "79e39cee-e363-44b3-949e-a7a104c0eacd",
-      "name": "Post Next Message to Slack",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1248, 1376],
-      "credentials": {"httpHeaderAuth": {"id": "MX2QZHGzOYBtt41s", "name": "Slack Bot Token — Miles"}}
-    },
-    {
-      "parameters": {"url": "https://arduasolutions.atlassian.net/rest/api/3/search/jql", "authentication": "genericCredentialType", "genericAuthType": "httpBasicAuth", "sendQuery": true, "queryParameters": {"parameters": [{"name": "jql", "value": "={{ 'project = REQ AND cf[10170] = \"' + $('Parse AI Response').item.json.list_area + '\" ORDER BY created DESC' }}"}, {"name": "maxResults", "value": "15"}, {"name": "fields", "value": "key,summary,status,priority,created"}]}, "options": {}},
-      "id": "e908c517-aa7f-4273-990b-07273d9bd2d1",
-      "name": "Fetch Issues — req-list",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1248, 1008],
-      "credentials": {"httpBasicAuth": {"id": "S3p1Xv6Sya0RMRAH", "name": "Atlassian API — Miles"}}
-    },
-    {
-      "parameters": {"url": "={{ 'https://arduasolutions.atlassian.net/rest/api/3/issue/' + $('Parse AI Response').item.json.status_issue_key }}", "authentication": "genericCredentialType", "genericAuthType": "httpBasicAuth", "sendQuery": true, "queryParameters": {"parameters": [{"name": "fields", "value": "key,summary,status,priority,customfield_10170,created"}]}, "options": {}},
-      "id": "646255b8-0c68-4f4d-920f-0d7c5aab42d5",
-      "name": "Fetch Issue — req-status",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1248, 1184],
-      "credentials": {"httpBasicAuth": {"id": "S3p1Xv6Sya0RMRAH", "name": "Atlassian API — Miles"}}
-    },
-    {
-      "parameters": {"method": "POST", "url": "https://arduasolutions.atlassian.net/rest/api/3/issue", "authentication": "genericCredentialType", "genericAuthType": "httpBasicAuth", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ $json.jira_body }}", "options": {}},
-      "id": "50832731-ebfd-4b37-abd3-49141c474ec2",
-      "name": "Create REQ in Jira",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [752, 624],
-      "credentials": {"httpBasicAuth": {"id": "S3p1Xv6Sya0RMRAH", "name": "Atlassian API — Miles"}}
-    },
-    {
-      "parameters": {"method": "POST", "url": "https://slack.com/api/chat.postMessage", "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ JSON.stringify({ channel: $('Extract Event Data').item.json.channel_id, thread_ts: $('Extract Event Data').item.json.thread_ts, text: '🎉 Requerimiento creado exitosamente!\\n\\n*Ticket:* ' + $json.key + '\\n*Link:* https://arduasolutions.atlassian.net/browse/' + $json.key + '\\n\\n📎 Podés sumar _documentos, capturas, links o consideraciones adicionales_ directamente en este hilo — todo ese contexto será tenido en cuenta durante el proceso de refinamiento del requerimiento por parte del equipo de Producto.\\n\\nCuando el requerimiento esté listo para desarrollo, te avisaré por acá.', mrkdwn: true }) }}", "options": {}},
-      "id": "38bae2ce-103e-41d1-ad93-8012b465a7f8",
-      "name": "Post Success to Thread",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1008, 624],
-      "credentials": {"httpHeaderAuth": {"id": "MX2QZHGzOYBtt41s", "name": "Slack Bot Token — Miles"}}
-    },
-    {
-      "parameters": {"method": "POST", "url": "https://slack.com/api/chat.postMessage", "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ JSON.stringify({ channel: $('Extract Event Data').item.json.channel_id, thread_ts: $('Extract Event Data').item.json.thread_ts, text: 'Hmm, parece que no tengo suficiente información para crear el requerimiento. ¿Podés contarme cuál es el problema o la necesidad? 😊', mrkdwn: true }) }}", "options": {}},
-      "id": "69bc9002-5c6e-4558-b4fd-f70b0652f500",
-      "name": "Post — Context Missing",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1792, 816],
-      "credentials": {"httpHeaderAuth": {"id": "MX2QZHGzOYBtt41s", "name": "Slack Bot Token — Miles"}}
-    },
-    {
-      "parameters": {"assignments": {"assignments": [{"id": "fl1", "name": "slack_message", "type": "string", "value": "={{ (() => { const issues=$json.issues||[]; const area=$('Parse AI Response').item.json.list_area||''; if(issues.length===0) return 'No hay requerimientos registrados para *'+area+'*.'; const lines=issues.map(i=>{ const st=i.fields.status?i.fields.status.name:'—'; const s=(i.fields.summary||'').replace(/^\\[Miles\\] /,'').replace(/^[\\w & ]+ — /,''); return '• *'+i.key+'* — '+s+' _('+st+')_'; }).join('\\n'); return '📋 *Requerimientos — '+area+'*\\n\\n'+lines+'\\n\\n_'+issues.length+' requerimiento(s) encontrado(s)_'; })() }}"}]}, "options": {}},
-      "id": "97360f0b-fb6c-49d1-8c5b-7d427cd04ec2",
-      "name": "Format — req-list",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [1504, 1008]
-    },
-    {
-      "parameters": {"method": "POST", "url": "https://slack.com/api/chat.postMessage", "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ JSON.stringify({ channel: $('Extract Event Data').item.json.channel_id, thread_ts: $('Extract Event Data').item.json.thread_ts, text: $json.slack_message, mrkdwn: true }) }}", "options": {}},
-      "id": "04e08e8f-e7bb-47d5-85e8-69ffcc513296",
-      "name": "Post — req-list",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1792, 1008],
-      "credentials": {"httpHeaderAuth": {"id": "MX2QZHGzOYBtt41s", "name": "Slack Bot Token — Miles"}}
-    },
-    {
-      "parameters": {"assignments": {"assignments": [{"id": "fs1", "name": "slack_message", "type": "string", "value": "={{ (() => { const k=$json.key; const f=$json.fields||{}; const s=(f.summary||'').replace(/^\\[Miles\\] /,'').replace(/^[\\w & ]+ — /,''); const st=f.status?f.status.name:'—'; const pr=f.priority?f.priority.name:'—'; const area=f.customfield_10170?f.customfield_10170.value:'—'; const link='https://arduasolutions.atlassian.net/browse/'+k; return '📌 *'+k+' — '+s+'*\\n\\n*Estado:* '+st+'\\n*Prioridad:* '+pr+'\\n*Área:* '+area+'\\n\\n<'+link+'|Ver en Jira>'; })() }}"}]}, "options": {}},
-      "id": "f75eb071-9fc3-4437-861e-7a4e57225dac",
-      "name": "Format — req-status",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [1504, 1184]
-    },
-    {
-      "parameters": {"method": "POST", "url": "https://slack.com/api/chat.postMessage", "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth", "sendBody": true, "specifyBody": "json", "jsonBody": "={{ JSON.stringify({ channel: $('Extract Event Data').item.json.channel_id, thread_ts: $('Extract Event Data').item.json.thread_ts, text: $json.slack_message, mrkdwn: true }) }}", "options": {}},
-      "id": "4386b198-0be8-4c37-b99a-96156edae0e9",
-      "name": "Post — req-status",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1808, 1184],
-      "credentials": {"httpHeaderAuth": {"id": "MX2QZHGzOYBtt41s", "name": "Slack Bot Token — Miles"}}
-    }
-  ],
-  "pinData": {},
-  "connections": {
-    "Trigger — Conversation Event": {"main": [[{"node": "Respond — Acknowledge", "type": "main", "index": 0}, {"node": "Extract Event Data", "type": "main", "index": 0}]]},
-    "Extract Event Data": {"main": [[{"node": "Is Source Claude?", "type": "main", "index": 0}]]},
-    "Is Source Claude?": {"main": [[{"node": "Parse Claude Message", "type": "main", "index": 0}], [{"node": "Fetch Thread History", "type": "main", "index": 0}]]},
-    "Parse Claude Message": {"main": [[{"node": "Fetch Thread — Claude Path", "type": "main", "index": 0}]]},
-    "Fetch Thread History": {"main": [[{"node": "Is Notification Thread?", "type": "main", "index": 0}]]},
-    "Is Notification Thread?": {"main": [[{"node": "Ignore — Session Closed", "type": "main", "index": 0}], [{"node": "Has Miles Been Active?", "type": "main", "index": 0}]]},
-    "Has Miles Been Active?": {"main": [[{"node": "Is Session Closed?", "type": "main", "index": 0}], [{"node": "Ignore — Miles Not In Thread1", "type": "main", "index": 0}]]},
-    "Is Session Closed?": {"main": [[{"node": "Is Mention Source?", "type": "main", "index": 0}], [{"node": "Build Prompt with History", "type": "main", "index": 0}]]},
-    "Build Prompt with History": {"main": [[{"node": "Detect Intent", "type": "main", "index": 0}]]},
-    "Detect Intent": {"main": [[{"node": "LLM Chain — Process Step", "type": "main", "index": 0}]]},
-    "Groq — Llama 3.3 70B": {"ai_languageModel": [[{"node": "LLM Chain — Process Step", "type": "ai_languageModel", "index": 0}]]},
-    "LLM Chain — Process Step": {"main": [[{"node": "Parse AI Response", "type": "main", "index": 0}]]},
-    "Parse AI Response": {"main": [[{"node": "Switch — Intent Router", "type": "main", "index": 0}]]},
-    "Switch — Intent Router": {"main": [[{"node": "Build Jira Payload", "type": "main", "index": 0}], [{"node": "Fetch Issues — req-list", "type": "main", "index": 0}], [{"node": "Fetch Issue — req-status", "type": "main", "index": 0}], [{"node": "Post Next Message to Slack", "type": "main", "index": 0}]]},
-    "Build Jira Payload": {"main": [[{"node": "Has Minimum Context?", "type": "main", "index": 0}]]},
-    "Has Minimum Context?": {"main": [[{"node": "Code — Build Jira Body", "type": "main", "index": 0}], [{"node": "Post — Context Missing", "type": "main", "index": 0}]]},
-    "Code — Build Jira Body": {"main": [[{"node": "Create REQ in Jira", "type": "main", "index": 0}]]},
-    "Create REQ in Jira": {"main": [[{"node": "Post Success to Thread", "type": "main", "index": 0}]]},
-    "Fetch Issues — req-list": {"main": [[{"node": "Format — req-list", "type": "main", "index": 0}]]},
-    "Format — req-list": {"main": [[{"node": "Post — req-list", "type": "main", "index": 0}]]},
-    "Fetch Issue — req-status": {"main": [[{"node": "Format — req-status", "type": "main", "index": 0}]]},
-    "Format — req-status": {"main": [[{"node": "Post — req-status", "type": "main", "index": 0}]]},
-    "Fetch Thread — Claude Path": {"main": [[{"node": "Is Duplicate? (Claude Path)", "type": "main", "index": 0}]]},
-    "Is Duplicate? (Claude Path)": {"main": [[{"node": "Skip if Duplicate? (Claude Path)", "type": "main", "index": 0}]]},
-    "Skip if Duplicate? (Claude Path)": {"main": [[{"node": "Ignore — Session Closed", "type": "main", "index": 0}], [{"node": "Is Notification Thread — Claude Path?", "type": "main", "index": 0}]]},
-    "Is Session Closed — Claude Path?": {"main": [[{"node": "Ignore — Session Closed", "type": "main", "index": 0}], [{"node": "Code — Build Jira Body", "type": "main", "index": 0}]]},
-    "Is Mention Source?": {"main": [[{"node": "Post — Thread Has REQ", "type": "main", "index": 0}], [{"node": "Ignore — Session Closed", "type": "main", "index": 0}]]},
-    "Is Notification Thread — Claude Path?": {"main": [[{"node": "Ignore — Session Closed", "type": "main", "index": 0}], [{"node": "Is Session Closed — Claude Path?", "type": "main", "index": 0}]]}
-  },
-  "active": true,
-  "settings": {"executionOrder": "v1", "availableInMCP": true},
-  "versionId": "eda3a2b8-65bc-45c5-9a07-af311734e7a0",
-  "meta": {"templateCredsSetupCompleted": true, "instanceId": "95944be45d5aa5e5565d656a14e718ed8b92e30102ad1bd3fcad4cf1b1c2f383"},
   "id": "mLDlTEhHTPPKXtKD",
-  "tags": [
-    {"updatedAt": "2026-04-23T18:04:18.142Z", "createdAt": "2026-04-01T15:49:24.440Z", "id": "PUW9bm4KdcIVVs8y", "name": "product-management-app"},
-    {"updatedAt": "2026-05-06T18:00:32.617Z", "createdAt": "2026-05-06T18:00:32.617Z", "id": "PaO2qqf0vkABO4j3", "name": "product-manager-app"},
-    {"updatedAt": "2026-03-25T20:09:56.359Z", "createdAt": "2026-03-25T20:09:56.359Z", "id": "m3quhhGHST3hiHGb", "name": "miles"}
-  ]
+  "name": "miles-conversation-handler",
+  "active": true,
+  "versionId": "3b618837-9fca-4ef1-934b-575934bf74e2",
+  "createdAt": "2026-04-01T17:53:07.529Z",
+  "updatedAt": "2026-05-19T20:36:23.560Z",
+  "trigger": {
+    "type": "webhook",
+    "path": "/webhook/req-conversation",
+    "method": "POST"
+  },
+  "description": "Core conversational handler for the Miles REQ creation flow. Receives events from miles-slack-event-router (sources: claude, mention, thread_reply). Routes Claude-sourced messages through a structured parser (Parse Claude Message) that extracts area, problema, contexto, impacto, resultado_esperado, urgencia directly from the formatted Claude output. For human messages, fetches thread history, runs an intent detection heuristic (Detect Intent), then calls Groq Llama 3.3 70B via LangChain to determine intent (req-new, req-list, req-status, unclear) and manage the multi-turn conversation. Confirmed req-new intents go through an approval gate (Fetch Approval Config from Notion DB f698c2da) before creating the ticket in Jira REQ project. After creation, triggers miles-canvas-area-refresh sub-workflow to update the area Slack Canvas.",
+  "nodes": [
+    "Trigger — Conversation Event",
+    "Respond — Acknowledge",
+    "Extract Event Data",
+    "Is Source Claude?",
+    "Parse Claude Message",
+    "Fetch Thread History",
+    "Is Notification Thread?",
+    "Has Miles Been Active?",
+    "Is Session Closed?",
+    "Is Mention Source?",
+    "Post — Thread Has REQ",
+    "Build Prompt with History",
+    "Detect Intent",
+    "LLM Chain — Process Step",
+    "Groq — Llama 3.3 70B",
+    "Parse AI Response",
+    "Switch — Intent Router",
+    "Build Jira Payload",
+    "Has Minimum Context?",
+    "Code — Build Jira Body",
+    "Fetch Approval Config",
+    "Check Approval Gate",
+    "IF — Needs Approval?",
+    "Build Approval Buttons Body",
+    "Post approval buttons",
+    "Create req in Jira",
+    "Post Success to Thread",
+    "Resolve Canvas for New REQ",
+    "Call 'miles-canvas-area-refresh'",
+    "Fetch Thread — Claude Path",
+    "Is Duplicate? (Claude Path)",
+    "Skip if Duplicate? (Claude Path)",
+    "Is Notification Thread — Claude Path?",
+    "Is Session Closed — Claude Path?",
+    "Post — Context Missing",
+    "Post Next Message to Slack",
+    "Ignore — Session Closed",
+    "Ignore — Miles Not In Thread1"
+  ],
+  "llm": {
+    "provider": "Groq",
+    "model": "llama-3.3-70b-versatile",
+    "temperature": 0.3
+  },
+  "intents": ["req-new", "req-list", "req-status", "unclear"],
+  "req_fields": ["area", "problema", "contexto", "impacto", "resultado_esperado", "urgencia"],
+  "approval_config_notion_db": "f698c2da7e41437989a6aeaf93e7c814",
+  "jira_project": "REQ",
+  "jira_issuetype": "Requirement",
+  "business_area_ids": {
+    "Finance & Accounting": "10020",
+    "Legal & Compliance": "10021",
+    "Operations": "10022",
+    "Sales & Partnerships": "10023",
+    "Trading Desk": "10024",
+    "Management": "10095"
+  },
+  "canvas_map": {
+    "Legal & Compliance": "F0B3HRZ1CLD",
+    "Trading Desk": "F0B3QS12ASY",
+    "Operations": "F0B3M7YP4CS",
+    "Finance & Accounting": "F0B3QS32XRS",
+    "Sales & Partnerships": "F0B3P3AKCHX",
+    "Management": "F0B3QS4UTFE"
+  },
+  "sub_workflow": "Vd7rBC41kLTb7NvK"
 }

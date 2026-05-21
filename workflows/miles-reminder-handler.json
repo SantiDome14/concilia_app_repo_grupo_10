@@ -1,0 +1,27 @@
+{
+  "id": "9TxrLxzhf2xu1MIm",
+  "name": "miles-reminder-handler",
+  "active": true,
+  "versionId": "30dea718-5f73-4685-a31a-4fb2385f5eec",
+  "createdAt": "2026-05-19T18:27:14.787Z",
+  "updatedAt": "2026-05-21T15:44:32.103Z",
+  "trigger": {
+    "type": "schedule",
+    "cron": "0 10-18 * * 1-5",
+    "description": "Every hour, Monday to Friday, between 10:00 and 18:00 Argentina time (UTC-3)"
+  },
+  "description": "Cron-based reminder handler for pending approval requests. Runs every hour on business days (Mon-Fri, 10:00-18:00 ART). Queries the Notion lock table (DB 20437e6c) for entries with status=pending and reminder_sent=false. Calculates business hours elapsed since creation using an Argentina timezone-aware algorithm (8 business hours/day, Mon-Fri). When 24+ business hours have elapsed, posts a reminder in the original Slack thread mentioning the area head, then marks reminder_sent=true in the lock to prevent duplicate reminders.",
+  "nodes": [
+    "Trigger — Cron",
+    "Query Pending Locks",
+    "Check Business Hours Elapsed",
+    "IF — Has Pending?",
+    "Post Reminder in Thread",
+    "Update Notion Lock — Reminder Sent",
+    "No Operation, do nothing"
+  ],
+  "lock_notion_db": "20437e6c297a4afe923a29b5d01ad26c",
+  "reminder_threshold_business_hours": 24,
+  "timezone": "America/Argentina/Buenos_Aires",
+  "business_hours": { "start": 10, "end": 18, "days": "Mon-Fri" }
+}

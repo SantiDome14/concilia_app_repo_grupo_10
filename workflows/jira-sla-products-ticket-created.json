@@ -1,0 +1,33 @@
+{
+  "id": "fTD7Aldgw5IVtqQk",
+  "name": "jira-sla-products-ticket-created",
+  "active": true,
+  "versionId": "7d270d16-07cf-4929-badd-b732336d0f63",
+  "createdAt": "2026-05-20T15:58:00.473Z",
+  "updatedAt": "2026-05-21T15:44:25.351Z",
+  "trigger": {
+    "type": "webhook",
+    "path": "/webhook/jira-sla-products-ticket-created",
+    "method": "POST"
+  },
+  "description": "Triggered by Jira Automation when a new ticket is created in the REQ project. Filters out non-REQ projects and Initiative issue types. Extracts and normalizes ticket data (key, summary, type, status, assignee, timestamps). Determines the responsible party (Producto / IT / Ninguno) based on status. Creates a new row in the SLA Tickets PRODUCTS Notion database (DB 9d4e0a6f) with all fields including the Entered [Status] date field for the initial status.",
+  "nodes": [
+    "Trigger — Jira Ticket Created",
+    "Respond — Acknowledge",
+    "Extract Ticket Data",
+    "Should Skip?",
+    "Ignore — No aplica",
+    "Build Notion Payload",
+    "Notion API — Crear fila ticket"
+  ],
+  "filters": {
+    "project": "REQ",
+    "excluded_issue_types": ["Initiative"]
+  },
+  "notion_db": "9d4e0a6f-514a-4e90-968b-89241f53ad86",
+  "responsable_logic": {
+    "IT": ["SENT TO DEV", "Ready for Dev", "In Development"],
+    "Ninguno": ["Done", "DEPRECATED"],
+    "Producto": "default"
+  }
+}
