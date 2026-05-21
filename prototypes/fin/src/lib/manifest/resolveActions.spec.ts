@@ -22,7 +22,7 @@ describe('resolveActions', () => {
       const m = manifest([
         {
           ...baseAction,
-          show_when: { record_type_in: ['DEP'] },
+          show_when: { record_concept_in: ['DEP'] },
         },
       ]);
       const out = resolveActions({ _record_type: 'RET' }, m, 'ADMIN');
@@ -33,7 +33,7 @@ describe('resolveActions', () => {
       const m = manifest([
         {
           ...baseAction,
-          show_when: { record_type_in: ['DEP'] },
+          show_when: { record_concept_in: ['DEP'] },
         },
       ]);
       const out = resolveActions({ _record_type: 'DEP' }, m, 'ADMIN');

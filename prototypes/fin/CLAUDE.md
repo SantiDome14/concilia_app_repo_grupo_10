@@ -93,6 +93,41 @@ FIN is one of several apps derived from `_core-template-frontend`. The current s
 
 Each migration / new build is its own OpenSpec change with a dedicated Jira REQ ticket.
 
+### Template ↔ FIN relationship (current bootstrap phase)
+
+The flow between `_core-template-frontend` and `core-fin` is **bidirectional**, not top-down. Concrete module requirements (e.g. `fin-disponibilidades`) often land in FIN FIRST; the template absorbs the new primitive AFTERWARD once it's been validated. Later, when the template stabilizes, the flow reverses.
+
+**Two consequences:**
+
+1. **FIN can diverge from the template legitimately.** Sometimes FIN is *ahead*. Don't assume a divergence means FIN is behind — check `git log` or ask the framework owner before "syncing".
+2. **The contract is "shared patterns, free implementation".** FIN consumes the template's patterns (manifest engine, MSW transport, vue-query mutations, UI primitives, L1/L2/L3 layout, etc.) but ships its own module-specific implementations on top (`fin.disponibilidades.actions.ts`, the rich `Movimiento` model, the Posición consolidada KPI tile, the dashboard activity widget, etc.). FIN CANNOT skip a template primitive (use a different transport, bypass the manifest engine).
+
+## Data transport (mocks vs real)
+
+> ### 🔒 Hard rule — every page reads through HTTP, every mock lives in MSW
+>
+> **Pages NEVER import data from `src/mocks/`.** The directory exists for MSW handlers and seeds only — no top-level component is allowed to `import { FOO } from '@/mocks/...'` from a page. Reads go through `useQuery` → `src/api/modules/<domain>.ts` → `apiClient` (axios) → HTTP. Writes go through `useMutation` with optimistic update + rollback on error + refetch on settled.
+
+**Mock interception.** When `VITE_USE_MOCKS=true`, MSW (`src/mocks/browser.ts`) intercepts every outgoing HTTP call and routes matching URLs to handlers in `src/mocks/handlers/`. Handlers mutate seeds in `src/mocks/seed/*.ts` so CRUD round-trips are observable; a refresh resets the seed.
+
+**Promoting to real backend.** `VITE_USE_MOCKS="false"` + `VITE_API_BASE_URL=https://...`. Nothing else.
+
+**Mutation pattern (canonical).** `useMutation` with the three hooks:
+
+- `onMutate` — cancel in-flight queries, snapshot the cache, apply the patch via `queryClient.setQueryData(...)`. Return the snapshot.
+- `onError` — restore the snapshot, `toast.error(...)`. UI rolls back.
+- `onSettled` — `queryClient.invalidateQueries(...)`. Refetch covers concurrent changes by other users.
+
+**Manifest engine ↔ mutations.** The manifest engine is pure — `applyAction` / `applyCTA` / `applyComposite` compute patches and dispatch them via `deps.dispatch.{update,create}`, they never mutate `record`. Pages plug `useMutation` into the engine via `module.registerDispatcher({ update, create })`. Drawer panels watch `query.data` (computed lookup by id) so optimistic patches surface in detail views automatically.
+
+**FIN-specific exception (transitional).** `Disponibilidades.vue`, `plugins/catalogs.ts`, and `stores/disponibilidadesCatalog.ts` still import static arrays from `@/mocks/fin/*`. This will be migrated when FIN gets its own `api/modules/fin.ts` + dedicated handlers (separate session). Until then, **only** that sub-tree may keep the legacy pattern. Everything else must follow the rule above.
+
+**Antipattern (do not commit):**
+- Importing arrays from `@/mocks/*` in pages or components OTHER than the explicit Disponibilidades exception above.
+- Keeping a local `ref<T[]>` mirror of `query.data` + `watch`. The cache IS the source of truth.
+- Fire-and-forget `updateX()` calls outside `useMutation` (no optimistic + rollback wiring).
+- Mutating records inside the manifest engine.
+
 ## Documentation Hierarchy
 
 This repository operates on **four coordinated layers** for AI agents and developers. Each layer has a distinct role — none replaces the others.

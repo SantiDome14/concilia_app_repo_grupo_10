@@ -7,7 +7,7 @@
 // `tipo` via `categoriaOf` in `@/lib/movimientos/categoria`; since the
 // engine's predicate alphabet does not include a derived-value check,
 // the predicates here enumerate the tipos that belong to each
-// categoría through `record_type_in`.
+// categoría through `record_concept_in`.
 //
 // Action gating (per the spec MODIFIED Requirement):
 //
@@ -82,7 +82,7 @@ function enableImputarArduaAsignar(): Predicate {
   return {
     all: [
       { field_is_null: 'fin.cuenta_id' },
-      { record_type_in: tiposFinImputables() },
+      { record_concept_in: tiposFinImputables() },
     ],
   };
 }
@@ -93,7 +93,7 @@ function enableImputarArduaEditar(): Predicate {
   return {
     all: [
       { field_is_not_null: 'fin.cuenta_id' },
-      { record_type_in: tiposFinImputables() },
+      { record_concept_in: tiposFinImputables() },
     ],
   };
 }
@@ -101,7 +101,7 @@ function enableImputarArduaEditar(): Predicate {
 export const FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST: Manifest = {
   app: 'fin',
   module: 'disponibilidades',
-  record_type: 'movimiento',
+  record_concept: 'movimiento',
   scope: 'record',
   schema_version: '1',
 
@@ -260,7 +260,7 @@ export const FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST: Manifest = {
         'Asigná el Cliente + Cuenta Operativa del Cliente. Aplica solo a categorías A, B, F (movimientos con o esperando cliente externo).',
       icon: 'user-plus',
       target_field: 'fin.cliente_id',
-      show_when: { record_type_in: tiposWithLadoCliente() },
+      show_when: { record_concept_in: tiposWithLadoCliente() },
       enable_when: { field_is_null: 'fin.cliente_id' },
       capabilities: {
         required_role_any_of: ['fin.disponibilidades.movimientos.imputar_cliente'],
@@ -304,7 +304,7 @@ export const FIN_DISPONIBILIDADES_MOVIMIENTOS_MANIFEST: Manifest = {
       description: 'Editá la imputación actual del Lado Cliente.',
       icon: 'edit',
       target_field: 'fin.cliente_id',
-      show_when: { record_type_in: tiposWithLadoCliente() },
+      show_when: { record_concept_in: tiposWithLadoCliente() },
       enable_when: { field_is_not_null: 'fin.cliente_id' },
       capabilities: {
         required_role_any_of: ['fin.disponibilidades.movimientos.imputar_cliente'],

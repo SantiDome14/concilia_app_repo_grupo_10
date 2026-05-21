@@ -19,7 +19,7 @@ export const FIN_COTIZACIONES_MANIFEST_KEY = 'fin.cotizaciones' as const;
 export const FIN_COTIZACIONES_MANIFEST: Manifest = {
   app: 'fin',
   module: 'cotizaciones',
-  record_type: 'quote',
+  record_concept: 'quote',
   scope: 'record',
   schema_version: '1',
 

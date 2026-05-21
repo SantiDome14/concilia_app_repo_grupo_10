@@ -69,7 +69,7 @@ const manifest: Manifest = {
       id: 'demo.test.crear',
       label: 'Crear',
       is_module_cta: true,
-      creates_record_type: 'movimiento_manual',
+      creates_record_concept: 'movimiento_manual',
       dialog: {
         title: 'Crear',
         fields: [{ id: 'name', label: 'Nombre', type: 'text', required: true }],

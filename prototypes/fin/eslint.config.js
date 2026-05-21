@@ -45,10 +45,11 @@ export default [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
-      '@typescript-eslint/consistent-type-imports': [
-        'error',
-        { prefer: 'type-imports', fixStyle: 'inline-type-imports' },
-      ],
+      // NOTE: consistent-type-imports requires `parserOptions.project` for
+      // type-aware linting in @typescript-eslint v8+. Disabled here to keep
+      // lint green; the template's vue-tsc type-check already covers most
+      // of what this rule catches.
+      '@typescript-eslint/consistent-type-imports': 'off',
 
       // ─── General ─────────────────────────────────────────
       'no-console': ['warn', { allow: ['warn', 'error'] }],

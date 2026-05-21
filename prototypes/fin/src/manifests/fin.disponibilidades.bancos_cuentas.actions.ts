@@ -20,7 +20,7 @@ export const FIN_DISPONIBILIDADES_BANCOS_CUENTAS_MANIFEST_KEY =
 export const FIN_DISPONIBILIDADES_BANCOS_CUENTAS_MANIFEST: Manifest = {
   app: 'fin',
   module: 'disponibilidades',
-  record_type: 'cuenta_banco',
+  record_concept: 'cuenta_banco',
   scope: 'record',
   schema_version: '1',
 
@@ -73,7 +73,7 @@ export const FIN_DISPONIBILIDADES_BANCOS_CUENTAS_MANIFEST: Manifest = {
       icon: 'plus',
       is_module_cta: true,
       variant: 'primary',
-      creates_record_type: 'cuenta_banco',
+      creates_record_concept: 'cuenta_banco',
       capabilities: {
         required_role_any_of: ['fin.disponibilidades.bancos_cuentas.crear'],
       },
@@ -189,7 +189,7 @@ export const FIN_DISPONIBILIDADES_BANCOS_CUENTAS_MANIFEST: Manifest = {
       icon: 'building',
       is_module_cta: true,
       variant: 'secondary',
-      creates_record_type: 'estructura_banco',
+      creates_record_concept: 'estructura_banco',
       capabilities: {
         required_role_any_of: ['fin.disponibilidades.bancos_cuentas.crear'],
       },

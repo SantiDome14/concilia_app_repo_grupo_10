@@ -10,8 +10,8 @@ import type { Predicate } from '@/types/manifest';
 import { resolveField } from './dotPath';
 
 const KNOWN_KEYS = new Set<string>([
-  'record_type_in',
-  'record_type_not_in',
+  'record_concept_in',
+  'record_concept_not_in',
   'field_is_null',
   'field_is_not_null',
   'field_equals',
@@ -79,12 +79,12 @@ function evalKey(
   record: Record<string, unknown>,
 ): boolean {
   switch (key) {
-    case 'record_type_in': {
+    case 'record_concept_in': {
       const list = predicate[key] as unknown;
       const recordType = readRecordType(record);
       return Array.isArray(list) && list.includes(recordType);
     }
-    case 'record_type_not_in': {
+    case 'record_concept_not_in': {
       const list = predicate[key] as unknown;
       const recordType = readRecordType(record);
       return Array.isArray(list) && !list.includes(recordType);

@@ -1,39 +1,43 @@
 // ════════════════════════════════════════════════════════════════════
-// Mock Reports + ReportRuns — seed data for the Reportes module
+// MSW seed — reports + reportRuns + reportCategories
 // ────────────────────────────────────────────────────────────────────
-// CATALOG mirrors the prototype (`prototypes/_core-template-frontend.html`,
-// lines 5149-5185) — five reports including a CRON Mensual, a CRON
-// Semanal, an On-demand, one with two dependencies (one completed),
-// and one locked. HISTORY runs span success/error and manual/cron.
+// Five reports (CRON Mensual, CRON Semanal, On-demand, one with two
+// dependencies, one locked) and eight historical runs spanning
+// success/error and manual/cron triggers. Two category definitions
+// (INTERNO / OPERATIVO) are served as a separate list since they're
+// referenced by both the catalog page and the detail modal.
+//
+// Every Report carries (per the 2026-05-10 spec alignment):
+//   - `permissions: ReportPermissions` — 4 independent capability lists
+//   - `consumer_apps: ConsumerAppRef[]` — empty = headless
+//   - `allows_auto_generation: boolean` — drives próximo-emisión and
+//     dependency-incomplete event bifurcation
 // ════════════════════════════════════════════════════════════════════
 
-import type { Report, ReportRun } from '@/types/genericos';
+import type { Report, ReportRun, ReportPermissions } from '@/types/genericos';
+import type { ReportCategoryDef } from '@/api/modules/reports';
 
-/**
- * Baseline category configuration. Apps extend or override this map
- * with their own keys; the page reads it to render category sections
- * + badges in the catalog.
- */
-export interface ReportCategoryDef {
-  key: string;
-  label: string;
-  badgeClass: string;
-}
-
-export const REPORT_CATEGORIES: ReportCategoryDef[] = [
+const initialCategories: ReportCategoryDef[] = [
   { key: 'INTERNO', label: 'Internos', badgeClass: 'border-success/30 text-success' },
   { key: 'OPERATIVO', label: 'Operativos', badgeClass: 'border-info/30 text-info' },
 ];
 
-export const REPORT_CATEGORY_BY_KEY: Record<string, ReportCategoryDef> = Object.fromEntries(
-  REPORT_CATEGORIES.map((c) => [c.key, c]),
-);
+// Default permissions shared by template-shipped reports. Apps that
+// clone the template tighten these per-report using their own
+// capability catalog (per `core-modulo-genericos` Requirement:
+// Reportes MUST declare ReportPermissions with secure defaults).
+const TEMPLATE_DEFAULT_PERMISSIONS: ReportPermissions = {
+  view: ['VIEW_REPORTS'],
+  execute: ['EXECUTE_REPORTS'],
+  edit: ['EDIT_REPORTS'],
+  delete: ['DELETE_REPORTS'],
+};
 
-export const REPORTS_CATALOG: Report[] = [
+const initialReports: Report[] = [
   {
     id: 'rpt_001',
-    name: 'Posición consolidada por sociedad',
-    description: 'Saldos por cuenta y moneda agregados al cierre del mes, por sociedad del grupo.',
+    name: 'Reporte Genérico Mensual',
+    description: 'Reporte placeholder · descripción del propósito y alcance.',
     category: 'INTERNO',
     periodicity: 'Mensual',
     next: '2026-05-05',
@@ -43,11 +47,14 @@ export const REPORTS_CATALOG: Report[] = [
     retention: '5 años',
     params: ['Período (mes/año)'],
     antic: 7,
+    permissions: TEMPLATE_DEFAULT_PERMISSIONS,
+    consumer_apps: [{ app: 'CORE' }],
+    allows_auto_generation: true,
   },
   {
     id: 'rpt_002',
-    name: 'Movimientos por sociedad y cuenta',
-    description: 'Ledger semanal de movimientos imputados, agrupado por sociedad y cuenta.',
+    name: 'Indicadores Operativos',
+    description: 'Métricas operativas semanales · placeholder.',
     category: 'OPERATIVO',
     periodicity: 'Semanal',
     next: '2026-05-04',
@@ -57,11 +64,14 @@ export const REPORTS_CATALOG: Report[] = [
     retention: '2 años',
     params: ['Semana', 'Año'],
     antic: 2,
+    permissions: TEMPLATE_DEFAULT_PERMISSIONS,
+    consumer_apps: [{ app: 'CORE' }],
+    allows_auto_generation: true,
   },
   {
     id: 'rpt_003',
-    name: 'Quotes facturadas (ad-hoc)',
-    description: 'Listado de quotes con factura emitida en el rango solicitado — bajo demanda.',
+    name: 'Reporte Ad-hoc Ejemplo',
+    description: 'Reporte sin periodicidad fija — se genera bajo demanda.',
     category: 'INTERNO',
     periodicity: 'On-demand',
     next: null,
@@ -69,12 +79,17 @@ export const REPORTS_CATALOG: Report[] = [
     format: 'CSV',
     retention: '1 año',
     params: ['Descripción del caso'],
+    permissions: TEMPLATE_DEFAULT_PERMISSIONS,
+    consumer_apps: [{ app: 'CORE' }],
+    // On-demand: no auto-generation path. Próximo-emisión events
+    // (when applicable) route to the consumer Inbox as a Tarea.
+    allows_auto_generation: false,
   },
   {
     id: 'rpt_004',
-    name: 'Conciliación bancaria mensual',
+    name: 'Reporte Consolidado Inter-Área',
     description:
-      'Reconcilia el ledger FIN contra los extractos bancarios del período. Requiere conciliación operativa cerrada por OPS.',
+      'Reporte placeholder que requiere coordinación de varias apps antes de poder generarse.',
     category: 'INTERNO',
     periodicity: 'Mensual',
     next: '2026-05-10',
@@ -92,22 +107,29 @@ export const REPORTS_CATALOG: Report[] = [
         owner_role: 'OPS_OFFICER',
         sla_days_before: 2,
         completed: false,
+        // Binds to a recurring Inbox series (Decision 10): when an
+        // instance of `daily_reconciliation` closes, the dependency
+        // auto-resolves and any open `report_dependency_block` Tarea
+        // auto-archives.
+        recurring_definition_id: 'series-daily-reconciliation',
       },
       {
         app: 'LEX',
-        module: 'Alertas',
-        task: 'Cierre de alertas del período',
+        module: 'Compliance',
+        task: 'Cierre de revisiones de legajo del período',
         owner_role: 'COMPLIANCE',
         sla_days_before: 1,
         completed: true,
       },
     ],
+    permissions: TEMPLATE_DEFAULT_PERMISSIONS,
+    consumer_apps: [{ app: 'CORE' }],
+    allows_auto_generation: true,
   },
   {
     id: 'rpt_005',
-    name: 'Plan de cuentas — auditoría (bloqueado)',
-    description:
-      'Reporte futuro que depende del módulo Plan de Cuentas; visible en el catálogo pero no generable aún.',
+    name: 'Análisis Especializado (Bloqueado)',
+    description: 'Ejemplo de reporte futuro · visible en el catálogo pero no generable aún.',
     category: 'OPERATIVO',
     periodicity: 'Mensual',
     next: null,
@@ -115,10 +137,13 @@ export const REPORTS_CATALOG: Report[] = [
     format: 'PDF',
     locked: true,
     locked_reason: 'Bloqueado · ejemplo de reporte futuro',
+    permissions: TEMPLATE_DEFAULT_PERMISSIONS,
+    consumer_apps: [{ app: 'CORE' }],
+    allows_auto_generation: false,
   },
 ];
 
-export const REPORT_RUNS: ReportRun[] = [
+const initialRuns: ReportRun[] = [
   {
     id: 'g001',
     report_id: 'rpt_001',
@@ -195,6 +220,20 @@ export const REPORT_RUNS: ReportRun[] = [
     requested_by_name: 'Sistema (CRON)',
     trigger: { type: 'cron' },
     params: 'Período: Marzo 2026',
+    // Example: this run was generated with one dependency still pending
+    // (rpt_004 has `allows_auto_generation: true`). The snapshot is
+    // persisted so an audit can reconstruct what was incomplete.
+    dependencies_unmet: [
+      {
+        app: 'OPS',
+        module: 'Movimientos',
+        task: 'Conciliación operativa cerrada',
+        owner_role: 'OPS_OFFICER',
+        sla_days_before: 2,
+        recurring_definition_id: 'series-daily-reconciliation',
+        state_at_run: 'pending',
+      },
+    ],
   },
   {
     id: 'g008',
@@ -208,3 +247,13 @@ export const REPORT_RUNS: ReportRun[] = [
     params: 'Período: Marzo 2026 (reenvío)',
   },
 ];
+
+export let reportsSeed: Report[] = initialReports.map((r) => ({ ...r }));
+export let reportRunsSeed: ReportRun[] = initialRuns.map((r) => ({ ...r }));
+export let reportCategoriesSeed: ReportCategoryDef[] = [...initialCategories];
+
+export function resetReportsSeed(): void {
+  reportsSeed = initialReports.map((r) => ({ ...r }));
+  reportRunsSeed = initialRuns.map((r) => ({ ...r }));
+  reportCategoriesSeed = [...initialCategories];
+}

@@ -1,18 +1,14 @@
 // ════════════════════════════════════════════════════════════════════
-// Mock users — owner_name resolution + current user
+// MSW seed — users
 // ────────────────────────────────────────────────────────────────────
-// Seed data for the empty new app. Real apps replace these by reading
-// from their auth provider + user directory.
+// Identity directory consumed by `GET /users` and `GET /users/me`.
+// The first entry is treated as "the current user" by the /me handler;
+// derived apps replace this when wiring real auth.
 // ════════════════════════════════════════════════════════════════════
 
-export interface MockUser {
-  id: string;
-  name: string;
-  initials: string;
-  role: string;
-}
+import type { UserProfile } from '@/types/models';
 
-export const MOCK_USERS: MockUser[] = [
+const initial: UserProfile[] = [
   { id: 'u-1', name: 'Yasmani Rodríguez', initials: 'YR', role: 'admin' },
   { id: 'u-2', name: 'María González', initials: 'MG', role: 'analyst' },
   { id: 'u-3', name: 'Juan Pérez', initials: 'JP', role: 'reviewer' },
@@ -20,9 +16,8 @@ export const MOCK_USERS: MockUser[] = [
   { id: 'u-5', name: 'Lucía Fernández', initials: 'LF', role: 'analyst' },
 ];
 
-export const CURRENT_USER: MockUser = MOCK_USERS[0]!;
+export let usersSeed: UserProfile[] = [...initial];
 
-export function findUser(id: string | null | undefined): MockUser | undefined {
-  if (!id) return undefined;
-  return MOCK_USERS.find((u) => u.id === id);
+export function resetUsersSeed(): void {
+  usersSeed = [...initial];
 }

@@ -93,6 +93,17 @@ Every Ardua core frontend derives from this template via the "Use this template"
 
 Each migration / new build is its own OpenSpec change with a dedicated Jira REQ ticket. Per-prototype legacy inventory + decisions live in `prototypes/<app>/MIGRATION-NOTES.md`. Cross-prototype patterns validated across migrations live in [`MIGRATION-PLAYBOOK.md`](./MIGRATION-PLAYBOOK.md).
 
+### Template ↔ prototype relationship (current bootstrap phase)
+
+The flow is **bidirectional** in this phase, not top-down. Concrete module requirements often land in a derived prototype FIRST (e.g. FIN gets a `daterange` DialogField type to satisfy `fin-disponibilidades`); the template absorbs the new primitive AFTERWARD once it's been validated in practice. Later, when enough modules exist to identify the common surface, the flow reverses (template-first → prototype propagation), but until then the prototypes lead.
+
+**Two important implications for any agent working on this repo:**
+
+1. **A prototype diverging from the template is NOT automatically "behind".** It may be ahead. Always check `git log` / `git blame` before deciding sync direction. Asking the framework owner (Yasmani) is faster than guessing.
+2. **The contract is "shared patterns, free implementation".** Prototypes consume the template's **patterns, conventions, components, primitives** — manifest engine, MSW transport, vue-query mutations, UI primitives, layout/L1-L2-L3 pattern, etc. — but they MAY ship their own module-specific implementations on top (e.g. `fin.disponibilidades.actions.ts` lives only in FIN; that's correct). What a prototype CANNOT do: invent a different transport, skip the manifest engine, or re-implement a primitive that already exists in the template.
+
+When you see drift between the template and a prototype, **don't reflexively "sync" the prototype to match the template byte-for-byte**. Identify what's a pattern violation (must fix) vs. what's prototype-specific implementation (leave alone).
+
 ## Documentation Hierarchy
 
 This repository operates on **four coordinated layers** for AI agents and developers. Each layer has a distinct role — none replaces the others.

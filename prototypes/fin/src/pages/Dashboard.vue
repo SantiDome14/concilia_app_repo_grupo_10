@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useQuery } from '@tanstack/vue-query';
 import {
   AlertTriangle,
   BellRing,
@@ -22,9 +23,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ROUTE_PATHS } from '@/config/routes';
-import { ALERTS } from '@/mocks/genericos/alertas';
-import { INBOX_SOLICITUDES } from '@/mocks/genericos/inbox';
-import { REPORTS_CATALOG } from '@/mocks/genericos/reportes';
+import { listAlertas } from '@/api/modules/alertas';
+import { listReports } from '@/api/modules/reports';
+import { listSolicitudes } from '@/api/modules/solicitudes';
 import { POSICION_TREE } from '@/mocks/fin/disponibilidades';
 import { DASHBOARD_ACTIVITY } from '@/mocks/fin/dashboard-activity';
 import {
@@ -33,8 +34,23 @@ import {
   type DashboardPeriod,
   type PosicionTrendPoint,
 } from '@/mocks/fin/posicion-trend';
-import type { Alerta, AlertaState, Severity } from '@/types/genericos';
+import type { Alerta, AlertaState, Report, Severity, Solicitud } from '@/types/genericos';
 import { cn } from '@/lib/cn';
+
+// ─── Cross-cutting data via vue-query (MSW intercepts when
+//    VITE_USE_MOCKS=true; real backend otherwise) ───────────────────────
+const alertasQuery = useQuery({ queryKey: ['alertas'], queryFn: listAlertas });
+const solicitudesQuery = useQuery({
+  queryKey: ['solicitudes'],
+  queryFn: listSolicitudes,
+});
+const reportsQuery = useQuery({ queryKey: ['reports'], queryFn: listReports });
+
+const ALERTS = computed<Alerta[]>(() => alertasQuery.data.value ?? []);
+const INBOX_SOLICITUDES = computed<Solicitud[]>(
+  () => solicitudesQuery.data.value ?? [],
+);
+const REPORTS_CATALOG = computed<Report[]>(() => reportsQuery.data.value ?? []);
 
 // ════════════════════════════════════════════════════════════════════
 // Dashboard — vista consolidada FIN
@@ -60,19 +76,19 @@ const MS_DAY = 86_400_000;
 const ACTIVE_ALERT_STATES: AlertaState[] = ['new', 'in_review'];
 
 const alertasActivasCount = computed(
-  () => ALERTS.filter((a) => ACTIVE_ALERT_STATES.includes(a.state)).length,
+  () => ALERTS.value.filter((a) => ACTIVE_ALERT_STATES.includes(a.state)).length,
 );
 
 const inboxPendientesCount = computed(
   () =>
-    INBOX_SOLICITUDES.filter(
+    INBOX_SOLICITUDES.value.filter(
       (s) => s.state === 'pendiente' || s.state === 'en_proceso',
     ).length,
 );
 
 const reportesProxVencer = computed(() => {
   let n = 0;
-  for (const r of REPORTS_CATALOG) {
+  for (const r of REPORTS_CATALOG.value) {
     if (!r.next) continue;
     const d = daysUntilDate(r.next);
     if (d !== null && d >= 0 && d <= 7) n++;
@@ -82,7 +98,7 @@ const reportesProxVencer = computed(() => {
 
 const reportesVencidos = computed(() => {
   let n = 0;
-  for (const r of REPORTS_CATALOG) {
+  for (const r of REPORTS_CATALOG.value) {
     if (!r.next) continue;
     const d = daysUntilDate(r.next);
     if (d !== null && d < 0) n++;
@@ -158,7 +174,7 @@ const SEVERITY_RANK: Record<Severity, number> = {
 };
 
 const alertasActivas = computed<Alerta[]>(() =>
-  ALERTS.filter((a) => ACTIVE_ALERT_STATES.includes(a.state))
+  ALERTS.value.filter((a) => ACTIVE_ALERT_STATES.includes(a.state))
     .slice()
     .sort((a, b) => {
       const sa = SEVERITY_RANK[a.severity ?? 'low'];
@@ -224,7 +240,7 @@ interface UpcomingReport {
 
 const proximosVencimientos = computed<UpcomingReport[]>(() => {
   const items: UpcomingReport[] = [];
-  for (const r of REPORTS_CATALOG) {
+  for (const r of REPORTS_CATALOG.value) {
     if (!r.next) continue;
     const d = daysUntilDate(r.next);
     if (d === null) continue;
@@ -511,7 +527,7 @@ function onCardKeydown(event: KeyboardEvent, href: string): void {
             <div class="flex min-w-0 flex-1 flex-col gap-0.5">
               <div class="truncate text-[13px] font-semibold text-t-1">{{ a.title }}</div>
               <div class="text-[11px] text-t-4">
-                {{ a.type }} · {{ timeAgo(a.detected_at) }}
+                {{ a.concept }} · {{ timeAgo(a.detected_at) }}
               </div>
             </div>
             <Badge :variant="alertStateVariant(a.state)">

@@ -31,7 +31,7 @@ export const INBOX_MANIFEST: Manifest = {
       icon: 'user',
       target_field: 'owner_id',
       show_when: {
-        record_type_in: [
+        record_concept_in: [
           'aprobacion_pago',
           'revision_legajo',
           'baja_usuario',

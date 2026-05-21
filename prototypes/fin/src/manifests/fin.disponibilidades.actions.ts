@@ -19,7 +19,7 @@ export const FIN_DISPONIBILIDADES_MANIFEST_KEY = 'fin.disponibilidades' as const
 export const FIN_DISPONIBILIDADES_MANIFEST: Manifest = {
   app: 'fin',
   module: 'disponibilidades',
-  record_type: null,
+  record_concept: null,
   scope: 'module',
   schema_version: '1',
 
@@ -34,7 +34,7 @@ export const FIN_DISPONIBILIDADES_MANIFEST: Manifest = {
         'Cargá un movimiento manual de los tipos registrados por FIN (comisiones, intereses, pagos, sweepings, intercompany, aportes, ajustes). Los tipos OPS-native (DEPOSIT/WITHDRAWAL/FEE/SWAP/etc) se cargan desde OPS, no acá.',
       icon: 'plus',
       is_module_cta: true,
-      creates_record_type: 'movimiento',
+      creates_record_concept: 'movimiento',
       capabilities: {
         required_role_any_of: ['fin.disponibilidades.movimientos.cargar_directo'],
       },

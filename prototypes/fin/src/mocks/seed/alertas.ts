@@ -1,20 +1,20 @@
 // ════════════════════════════════════════════════════════════════════
-// Mock Alertas — seed data for the Alertas module
+// MSW seed — alertas
 // ────────────────────────────────────────────────────────────────────
-// All entries default to profile A (active triage list) — the canonical
-// template default. Apps that need profile B/C/D add their own datasets
-// alongside or replace these entirely.
+// 6 entries spanning new / in_review / resolved / dismissed states.
+// All `triage` category (the canonical template default). Apps that
+// need `workflow` / `metric` / `cross_app_panel` extend this list.
 // ════════════════════════════════════════════════════════════════════
 
 import type { Alerta } from '@/types/genericos';
 
-export const ALERTS: Alerta[] = [
+const initial: Alerta[] = [
   {
     id: 'ALT-001',
-    type: 'saldo_anomaly',
-    profile: 'A',
-    source_app: 'FIN',
-    source_module: 'tesoreria',
+    concept: 'saldo_anomaly',
+    category: 'triage',
+    source_app: 'CORE',
+    source_module: 'alertas',
     state: 'new',
     severity: 'critical',
     detected_at: '2026-04-29T07:30:00Z',
@@ -34,15 +34,15 @@ export const ALERTS: Alerta[] = [
   },
   {
     id: 'ALT-002',
-    type: 'imputacion_pendiente',
-    profile: 'A',
-    source_app: 'FIN',
-    source_module: 'movimientos',
+    concept: 'login_failure',
+    category: 'triage',
+    source_app: 'CORE',
+    source_module: 'alertas',
     state: 'new',
     severity: 'high',
     detected_at: '2026-04-29T09:10:00Z',
-    title: 'Movimiento sin imputar > 48 hs',
-    summary: 'M-2026-12842 (DEPOSIT ARS 8.5M) sin asignar cliente · pendiente de imputación',
+    title: '5 intentos de login fallidos',
+    summary: 'Usuario consultor.acme — 5 fallos en 2 minutos',
     timeline: [
       {
         id: 'altevt-002-1',
@@ -57,8 +57,8 @@ export const ALERTS: Alerta[] = [
   },
   {
     id: 'ALT-003',
-    type: 'cron_failed',
-    profile: 'A',
+    concept: 'cron_failed',
+    category: 'triage',
     source_app: 'CORE',
     source_module: 'alertas',
     state: 'in_review',
@@ -97,8 +97,8 @@ export const ALERTS: Alerta[] = [
   },
   {
     id: 'ALT-004',
-    type: 'saldo_anomaly',
-    profile: 'A',
+    concept: 'saldo_anomaly',
+    category: 'triage',
     source_app: 'CORE',
     source_module: 'alertas',
     state: 'resolved',
@@ -129,8 +129,8 @@ export const ALERTS: Alerta[] = [
   },
   {
     id: 'ALT-005',
-    type: 'login_failure',
-    profile: 'A',
+    concept: 'login_failure',
+    category: 'triage',
     source_app: 'CORE',
     source_module: 'alertas',
     state: 'dismissed',
@@ -161,8 +161,8 @@ export const ALERTS: Alerta[] = [
   },
   {
     id: 'ALT-006',
-    type: 'capacity_warning',
-    profile: 'A',
+    concept: 'capacity_warning',
+    category: 'triage',
     source_app: 'CORE',
     source_module: 'alertas',
     state: 'new',
@@ -183,3 +183,9 @@ export const ALERTS: Alerta[] = [
     comments: [],
   },
 ];
+
+export let alertasSeed: Alerta[] = initial.map((a) => ({ ...a }));
+
+export function resetAlertasSeed(): void {
+  alertasSeed = initial.map((a) => ({ ...a }));
+}
