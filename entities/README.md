@@ -4,9 +4,11 @@
 
 ## Propósito
 
-Esta carpeta contiene el **catálogo del ecosistema operativo de Ardua**: cada entidad con la que el grupo opera, documentada desde la perspectiva de **qué capacidades operativas nos habilita**.
+Esta carpeta contiene el **catálogo del ecosistema operativo de Ardua**: cada entidad con la que el grupo opera, documentada desde la perspectiva de **qué capacidades operativas nos habilita** y, en el caso de los reguladores, **qué nos exige y bajo qué condiciones**.
 
 Un archivo de entity responde a la pregunta: **"¿qué nos permite hacer esta entidad, bajo qué condiciones, con qué límites?"**. No es un overview general de la empresa ni un perfil comercial — es el mapeo concreto de las capacidades que desbloquea para nuestra operatoria diaria.
+
+Para los reguladores, la pregunta es: **"¿qué nos exige este organismo, sobre qué entidades del grupo, y con qué implicancia para el diseño de productos?"**
 
 ---
 
@@ -26,8 +28,9 @@ Si se menciona una entidad y no existe archivo, el sistema debe flaguearlo y pro
 |---|---|---|
 | **Propia** | Entidades legales del grupo Ardua | Haz Pagos, Circuit Pay, Ardua Solutions Corp, Astra Ventures |
 | **Proveedor** | Infraestructura financiera que Ardua consume | Binance, Bitso, Bridge, AiPrise |
-| **Banco** | Instituciones bancarias que operan cuentas o rails | Brubank, BIND, COINAG, Banco de Comercio |
-| **Partner** | Alianzas operativas y comerciales | Convera |
+| **Banco** | Instituciones bancarias que operan cuentas o rails | BIND, COINAG, Banco de Comercio |
+| **Partner** | Alianzas operativas y comerciales | Convera, HubSpot |
+| **Regulador** | Organismos reguladores y de supervisión que imponen obligaciones sobre las entidades del grupo | BCRA, UIF, CNV, FINTRAC, GIIF |
 
 ---
 
@@ -39,7 +42,7 @@ Cada archivo sigue esta estructura:
 # [Nombre de la Entidad]
 
 > Última actualización: [fecha]
-> Tipo: Propia | Proveedor | Banco | Partner
+> Tipo: Propia | Proveedor | Banco | Partner | Regulador
 > Jurisdicción(es): [países relevantes para Ardua]
 > Estado de la relación: Activa | En onboarding | Pausada | Histórica
 
@@ -47,9 +50,8 @@ Cada archivo sigue esta estructura:
 Descripción concisa (3-5 líneas): qué tipo de organización es, licencias
 relevantes, rol en el mercado.
 
-## Capacidades que nos habilita
-Corazón del documento. Lista de capacidades operativas concretas.
-- **[Capacidad]**: qué nos permite hacer | bajo qué condiciones | con qué límites
+## Capacidades que nos habilita  ← para Propia, Proveedor, Banco, Partner
+## Entidades del grupo supervisadas + Obligaciones que nos impone  ← para Regulador
 
 ## Integración operativa
 - Módulos internos que la usan
@@ -57,7 +59,7 @@ Corazón del documento. Lista de capacidades operativas concretas.
 - Conciliación
 - Integraciones técnicas (APIs, webhooks, flujos n8n)
 
-## Restricciones y condiciones
+## Restricciones y condiciones / Implicancia para el diseño de productos
 Límites operativos, SLAs, costos, cláusulas críticas, requisitos KYC/compliance.
 
 ## Referencias
@@ -81,24 +83,6 @@ Reglas:
 - Sin prefijos de tipo (el tipo se declara en el header del documento).
 - Si la entidad tiene nombre compuesto, los espacios se convierten en guiones.
 
-**Ejemplos:**
-
-```
-haz-pagos.md
-circuit-pay.md
-ardua-solutions-corp.md
-astra-ventures.md
-aiprise.md
-binance.md
-bitso.md
-bridge.md
-convera.md
-brubank.md
-bind.md
-coinag.md
-banco-de-comercio.md
-```
-
 ---
 
 ## Cuándo se actualiza
@@ -110,6 +94,7 @@ banco-de-comercio.md
 | Nueva integración técnica | Agregar a §Integración |
 | Cambio de estado de la relación (activa → pausada, etc.) | Actualizar header |
 | Nuevo contrato o adenda | Referenciar en §Referencias |
+| Cambio normativo que afecta obligaciones de reporte | Actualizar §Obligaciones del regulador correspondiente |
 
 ---
 
@@ -123,12 +108,17 @@ Lista generada el 2026-05-21.
 | `ardua-solutions-corp.md` | Propia | Completo |
 | `astra-ventures.md` | Propia | Completo |
 | `banco-de-comercio.md` | Banco | Draft inicial |
+| `bcra.md` | Regulador | Esqueleto — pendiente Legal |
 | `binance.md` | Proveedor | Pendiente |
 | `bind.md` | Banco | Draft inicial |
 | `bitso.md` | Proveedor | Pendiente |
 | `bridge.md` | Proveedor | Completo |
 | `circuit-pay.md` | Propia | Completo |
+| `cnv.md` | Regulador | Esqueleto — pendiente Legal |
 | `coinag.md` | Banco | Draft inicial |
 | `convera.md` | Partner | Pendiente |
+| `fintrac.md` | Regulador | Esqueleto — pendiente Legal |
+| `giif-polonia.md` | Regulador | Esqueleto — pendiente Legal |
 | `haz-pagos.md` | Propia | Completo |
 | `hubspot.md` | Partner | Completo |
+| `uif.md` | Regulador | Esqueleto — pendiente Legal |

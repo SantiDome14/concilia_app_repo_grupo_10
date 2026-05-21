@@ -1,0 +1,114 @@
+{
+  "name": "jira-sla-main-ticket-created",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "jira-sla-main-ticket-created",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook",
+      "name": "Trigger — Jira MAIN Ticket Created",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-800, 0],
+      "webhookId": "jira-sla-main-ticket-created"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\": true}",
+        "options": {}
+      },
+      "id": "node-ack",
+      "name": "Respond — Acknowledge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [-576, -160]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// EXTRACT & NORMALIZE JIRA MAIN TICKET DATA\n// ============================================================\nconst body = $input.item.json.body || $input.item.json;\nconst issue = body.issue || {};\nconst fields = issue.fields || {};\n\nconst key = issue.key || '';\nconst projectKey = (fields.project && fields.project.key) || key.split('-')[0];\n\n// Only process AM project\nif (projectKey !== 'AM') {\n  return [{ json: { skip: true, reason: 'Not an AM ticket', key } }];\n}\n\nconst summary = fields.summary || '';\nconst issueType = (fields.issuetype && fields.issuetype.name) || '';\nconst status = (fields.status && fields.status.name) || 'Backlog';\nconst assignee = (fields.assignee && fields.assignee.displayName) || '';\nconst createdAt = fields.created || new Date().toISOString();\nconst updatedAt = fields.updated || new Date().toISOString();\nconst jiraUrl = `https://arduasolutions.atlassian.net/browse/${key}`;\n\n// Normalize issue type\nlet tipo = 'Story';\nif (['Task', 'Sub-task'].includes(issueType)) tipo = 'Task IT';\nelse if (issueType === 'Epic') tipo = 'Epic';\n\n// Determine responsable based on status\nconst responsable = ['Done', 'DEPRECATED'].includes(status) ? 'Ninguno' : 'IT';\n\n// Format date as YYYY-MM-DD\nconst formatDate = (iso) => iso ? iso.split('T')[0] : null;\nconst today = formatDate(new Date().toISOString());\n\n// Map initial status to Entered field\nconst statusToEnteredField = {\n  'Backlog':        'Entered Backlog',\n  'TO REFINEMENT':  'Entered TO REFINEMENT',\n  'IN REFINEMENT':  'Entered IN REFINEMENT',\n  'To Do':          'Entered To Do',\n  'In Progress':    'Entered In Progress',\n  'STAND BY':       'Entered STAND BY',\n  'CODE REVIEW':    'Entered CODE REVIEW',\n  'Done':           'Entered Done',\n  'DEPRECATED':     'Entered DEPRECATED'\n};\n\nreturn [{\n  json: {\n    skip: false,\n    key,\n    summary,\n    tipo,\n    status,\n    responsable,\n    assignee,\n    createdAt: formatDate(createdAt),\n    updatedAt: formatDate(updatedAt),\n    jiraUrl,\n    enteredField: statusToEnteredField[status] || 'Entered Backlog',\n    today\n  }\n}];"
+      },
+      "id": "node-extract",
+      "name": "Extract Ticket Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-576, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-skip",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-should-skip",
+      "name": "Should Skip?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-352, 0]
+    },
+    {
+      "parameters": {},
+      "id": "node-ignore",
+      "name": "Ignore — Not AM",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [-128, -160]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/pages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"parent\": { \"database_id\": \"29f85f16-cf46-43a3-af3e-ac6c20bf56e1\" },\n  \"properties\": {\n    \"Ticket Key\":     { \"title\": [{ \"text\": { \"content\": \"{{ $json.key }}\" } }] },\n    \"Summary\":        { \"rich_text\": [{ \"text\": { \"content\": \"{{ $json.summary.substring(0, 2000) }}\" } }] },\n    \"Type\":           { \"select\": { \"name\": \"{{ $json.tipo }}\" } },\n    \"Current Status\": { \"select\": { \"name\": \"{{ $json.status }}\" } },\n    \"Flow\":           { \"select\": { \"name\": \"{{ $json.responsable }}\" } },\n    \"IT Flow?\":       { \"checkbox\": {{ $json.responsable === 'IT' ? 'true' : 'false' }} },\n    \"Assignee\":       { \"rich_text\": [{ \"text\": { \"content\": \"{{ $json.assignee }}\" } }] },\n    \"Created Date\":   { \"date\": { \"start\": \"{{ $json.createdAt }}\" } },\n    \"Last Updated\":   { \"date\": { \"start\": \"{{ $json.updatedAt }}\" } },\n    \"Days in Current Status\": { \"number\": 0 },\n    \"Jira URL\":       { \"url\": \"{{ $json.jiraUrl }}\" },\n    \"{{ $json.enteredField }}\": { \"date\": { \"start\": \"{{ $json.today }}\" } }\n  }\n}",
+        "options": {}
+      },
+      "id": "node-notion-create",
+      "name": "Notion API — Create Ticket Row",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-128, 0],
+      "notes": "Creates a new row in SLA — Tickets MAIN (DB ID: 29f85f16-cf46-43a3-af3e-ac6c20bf56e1)"
+    }
+  ],
+  "connections": {
+    "Trigger — Jira MAIN Ticket Created": {
+      "main": [
+        [
+          { "node": "Respond — Acknowledge", "type": "main", "index": 0 },
+          { "node": "Extract Ticket Data", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Extract Ticket Data": {
+      "main": [
+        [{ "node": "Should Skip?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Should Skip?": {
+      "main": [
+        [{ "node": "Ignore — Not AM", "type": "main", "index": 0 }],
+        [{ "node": "Notion API — Create Ticket Row", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": {
+    "description": "Triggered by Jira webhook on issue creation in AM (MAIN) project. Creates a new row in SLA — Tickets MAIN."
+  }
+}
