@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { mount, flushPromises } from '@vue/test-utils';
 import { setActivePinia, createPinia } from 'pinia';
 import { createRouter, createMemoryHistory } from 'vue-router';
 import Inbox from './Inbox.vue';
@@ -53,6 +53,9 @@ async function mountInbox() {
   const wrapper = mount(Inbox, {
     global: { plugins: [router], stubs: POPOVER_STUBS },
   });
+  // Drain pending microtasks (vue-query fetches + MSW responses + Vue
+  // reactivity flushes) so the component renders with hydrated data.
+  for (let i = 0; i < 5; i += 1) await flushPromises();
   return { wrapper, router };
 }
 

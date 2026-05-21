@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { Clock, Search } from 'lucide-vue-next';
+import { useQuery } from '@tanstack/vue-query';
 import { Input } from '@/components/ui/input';
 import { Badge, type BadgeVariants } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,8 +23,13 @@ import { InboxCreateCTA, TriggeredActionsPanel } from '@/components/inbox';
 import type { KanbanAxis, KanbanState } from '@/types/kanban';
 import { useManifestModule } from '@/composables/useManifestModule';
 import { INBOX_MANIFEST_KEY } from '@/manifests/framework.template.inbox.actions';
-import { INBOX_SOLICITUDES } from '@/mocks/genericos/inbox';
-import { CURRENT_USER, MOCK_USERS, findUser } from '@/mocks/genericos/users';
+import { useCurrentUser } from '@/composables/useCurrentUser';
+import { useUsers } from '@/composables/useUsers';
+import {
+  createSolicitud,
+  listSolicitudes,
+  updateSolicitud,
+} from '@/api/modules/solicitudes';
 import type {
   InboxType,
   Solicitud,
@@ -51,6 +57,9 @@ function solicitudSummary(s: Solicitud): string {
   const p = (s.payload ?? {}) as DisplayPayload;
   return p.description ?? p.summary ?? '';
 }
+
+const { findUser, users: usersList } = useUsers();
+const { user: currentUserRef } = useCurrentUser();
 
 function solicitudOwnerName(s: Solicitud): string {
   return findUser(s.owner)?.name ?? '';
@@ -125,12 +134,41 @@ const filterType = ref<'' | InboxType>('');
 const filterAssignee = ref<string>('');
 
 /** Human users available as assignee filter options (system actor excluded). */
-const ASSIGNEE_FILTER_USERS = MOCK_USERS.filter((u) => u.role !== 'system');
-
-// ─── Reactive dataset (mock-backed) ──────────────────────────────────
-const solicitudes = ref<Solicitud[]>(
-  INBOX_SOLICITUDES.map((s) => ({ ...s })),
+const ASSIGNEE_FILTER_USERS = computed(() =>
+  usersList.value.filter((u) => u.role !== 'system'),
 );
+
+// ─── Reactive dataset — fetched via vue-query, mirrored locally so the
+//    manifest engine can mutate records in place. Each user-initiated
+//    mutation also calls the MSW handler so a refresh preserves state.
+const solicitudesQuery = useQuery({
+  queryKey: ['solicitudes'],
+  queryFn: listSolicitudes,
+});
+
+const solicitudes = ref<Solicitud[]>([]);
+
+watch(
+  () => solicitudesQuery.data.value,
+  (data) => {
+    if (data) solicitudes.value = data.map((s) => ({ ...s }));
+  },
+  { immediate: true },
+);
+
+function persistSolicitud(s: Solicitud): void {
+  void updateSolicitud(s.id, s).catch((error) => {
+
+    console.error('[inbox] persist failed', error);
+  });
+}
+
+const fallbackUser = { id: 'u-1', name: '—' };
+function actor(): { id: string; name: string } {
+  const u = currentUserRef.value;
+  if (!u) return fallbackUser;
+  return { id: u.id, name: u.name };
+}
 
 const TERMINAL_STATES: SolicitudState[] = ['completed', 'rejected'];
 
@@ -192,13 +230,18 @@ function openDrawer(s: Solicitud): void {
 }
 
 // ─── Main CTA wiring ──────────────────────────────────────────────────
-// `<InboxCreateCTA>` emits the newly-created Solicitud; we persist into
-// the reactive mock dataset. The audit entry was already emitted by
-// `<InboxCreateDialog>` (single source for `AuditEntryCTA`).
+// `<InboxCreateCTA>` emits the newly-created Solicitud; we push it into
+// the local mirror AND POST to the MSW handler so refresh preserves it.
+// The audit entry was already emitted by `<InboxCreateDialog>` (single
+// source for `AuditEntryCTA`).
 function handleCreatedSolicitud(s: Solicitud): void {
   solicitudes.value.push(s);
   drawerSolicitud.value = s;
   drawerOpen.value = true;
+  void createSolicitud(s).catch((error) => {
+
+    console.error('[inbox] create failed', error);
+  });
 }
 
 function closeDrawer(): void {
@@ -229,26 +272,35 @@ function stateLabel(state: SolicitudState): string {
 function addComment(payload: { body: string; parent_id?: string | null }): void {
   if (!drawerSolicitud.value) return;
   const id = `cmt-${drawerSolicitud.value.id}-${Date.now()}`;
+  const a = actor();
   drawerSolicitud.value.comments.push({
     id,
     at: new Date().toISOString(),
-    author_id: CURRENT_USER.id,
-    author_name: CURRENT_USER.name,
+    author_id: a.id,
+    author_name: a.name,
     body: payload.body,
     parent_id: payload.parent_id ?? null,
   });
   const evt: TimelineEvent = {
     id: `evt-${id}`,
     at: new Date().toISOString(),
-    actor_id: CURRENT_USER.id,
-    actor_name: CURRENT_USER.name,
+    actor_id: a.id,
+    actor_name: a.name,
     kind: 'comment_added',
     label: 'Agregó un comentario',
   };
   drawerSolicitud.value.timeline.push(evt);
+  persistSolicitud(drawerSolicitud.value);
 }
 
-// ─── Manifest wiring (record resolver + after-mutation refetch) ──────
+// ─── Manifest wiring (record resolver + after-mutation persist) ──────
+// The manifest engine mutates records in place. Its `afterMutation` hook
+// is called with no arguments, so we stash the record id of the last
+// per-row action invocation and persist that specific record when the
+// hook fires. Module-level CTAs (none today on Inbox) would need a
+// different hook.
+const lastActedSolicitudId = ref<string | null>(null);
+
 onMounted(() => {
   inbox.registerRecordResolver((ref) => {
     if (typeof ref === 'string') {
@@ -264,9 +316,11 @@ onMounted(() => {
     return undefined;
   });
   inbox.registerAfterMutation(() => {
-    // The manifest engine mutates records in place; nothing to re-fetch
-    // for the mock-backed dataset. Real apps invalidate their query cache
-    // here.
+    const id = lastActedSolicitudId.value;
+    if (!id) return;
+    const record = solicitudes.value.find((s) => s.id === id);
+    if (record) persistSolicitud(record);
+    lastActedSolicitudId.value = null;
   });
 });
 
@@ -276,6 +330,7 @@ function rowActions(s: Solicitud): ReturnType<typeof inbox.resolveActionsFor> {
 }
 
 function performAction(actionId: string, s: Solicitud): void {
+  lastActedSolicitudId.value = s.id;
   inbox.openDialog(actionId, s as unknown as Record<string, unknown>);
 }
 
@@ -311,6 +366,7 @@ function handleKanbanTransition(payload: {
   const s = solicitudes.value.find((row) => row.id === payload.recordId);
   if (!s) return;
   if (payload.mode === 'modal') {
+    lastActedSolicitudId.value = s.id;
     if (payload.toState === 'completed') {
       inbox.openDialog(
         'inbox.cerrar_solicitud',
@@ -331,21 +387,23 @@ function handleKanbanTransition(payload: {
   const wasTomar =
     payload.fromState === 'pendiente'
     && payload.toState === 'en_proceso';
+  const a = actor();
   s.state = payload.toState as SolicitudState;
   s.updated_at = new Date().toISOString();
   if (wasTomar && s.owner === null) {
-    s.owner = CURRENT_USER.id;
+    s.owner = a.id;
   }
   s.timeline.push({
     id: `evt-${s.id}-${Date.now()}`,
     at: s.updated_at,
-    actor_id: CURRENT_USER.id,
-    actor_name: CURRENT_USER.name,
+    actor_id: a.id,
+    actor_name: a.name,
     kind: wasTomar ? 'taken' : 'state_change',
     label: wasTomar
       ? 'Tomada — en proceso'
       : `Estado: ${stateLabel(payload.toState)}`,
   });
+  persistSolicitud(s);
 }
 
 // ─── State filter options (all states surfaced together) ────────────
@@ -746,7 +804,7 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
         <h3 class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-t-3">Comentarios</h3>
         <CommentsThread
           :comments="drawerSolicitud.comments"
-          :current-user-id="CURRENT_USER.id"
+          :current-user-id="currentUserRef?.id ?? ''"
           @add="addComment"
         />
       </template>

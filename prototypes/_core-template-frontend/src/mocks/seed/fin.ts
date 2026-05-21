@@ -1,10 +1,13 @@
 // ════════════════════════════════════════════════════════════════════
-// Mock Disponibilidades — seed data for the Tesorería surface
+// MSW seed — FIN Tesorería / Disponibilidades
 // ────────────────────────────────────────────────────────────────────
 // Mirrors the legacy fin-prototype.html constants:
-//   POS_TREE (line 3689)  — Posición jerárquica por sociedad
-//   TES_MOVS (line 3868)  — Ledger movements
-//   COLA     (line 3891)  — Retiros pendientes de asignación
+//   posicionTree    — Posición jerárquica por sociedad
+//   movimientos     — Ledger movements
+//   cola            — Retiros pendientes de asignación
+// Two derived catalogs (sociedades + monedas) and two KPI aggregates
+// (posicion + movimientos) are exposed by helper getters that the
+// handlers call to keep response shape stable across mutations.
 // ════════════════════════════════════════════════════════════════════
 
 import type {
@@ -13,12 +16,17 @@ import type {
   RetiroEnCola,
   SociedadPos,
 } from '@/types/fin';
+import type {
+  CatalogEntry,
+  MovimientosKpis,
+  PosicionKpis,
+} from '@/api/modules/fin';
 
 // ────────────────────────────────────────────────────────────────────
 // Sociedades + cuentas (Posición)
 // ────────────────────────────────────────────────────────────────────
 
-export const POS_TREE: SociedadPos[] = [
+const initialPosTree: SociedadPos[] = [
   {
     id: 'hp',
     name: 'Haz Pagos',
@@ -81,42 +89,11 @@ export const POS_TREE: SociedadPos[] = [
   },
 ];
 
-/** Sociedades catalog flattened for the filter dropdown. */
-export const SOCIEDADES_CATALOG = POS_TREE.map((s) => ({
-  value: s.id,
-  label: s.name,
-}));
-
-/** Distinct currencies present in the tree, used for the moneda filter. */
-export const MONEDAS_CATALOG: Moneda[] = Array.from(
-  new Set(POS_TREE.flatMap((s) => s.cuentas.map((c) => c.moneda))),
-).sort();
-
-// ────────────────────────────────────────────────────────────────────
-// Posición KPIs (top of the tab)
-// ────────────────────────────────────────────────────────────────────
-
-export interface PosicionKpis {
-  posicionConsolidada: string;
-  liquidezDisponible: string;
-  comprometido: string;
-  cuentasActivas: number;
-  sociedadesActivas: number;
-}
-
-export const POSICION_KPIS: PosicionKpis = {
-  posicionConsolidada: 'USD 28.4M',
-  liquidezDisponible: 'USD 24.1M',
-  comprometido: 'USD 4.3M',
-  cuentasActivas: POS_TREE.reduce((acc, s) => acc + s.cuentas.length, 0),
-  sociedadesActivas: POS_TREE.length,
-};
-
 // ────────────────────────────────────────────────────────────────────
 // Ledger movements (Tab "Movimientos")
 // ────────────────────────────────────────────────────────────────────
 
-export const TES_MOVS: MovimientoLedger[] = [
+const initialMovs: MovimientoLedger[] = [
   { id: 'TM-58420', fecha: '2026-04-24 18:42', tipo: 'COLLECTOR_IN',  cuenta: 'CBU Coinag',       monto: '+ 18.500.000', moneda: 'ARS',  origen: 'OPS',   estado: 'CONF' },
   { id: 'TM-58419', fecha: '2026-04-24 17:55', tipo: 'WITHDRAWAL',    cuenta: 'Pool BitGo USDC',  monto: '- 250.000',    moneda: 'USDC', origen: 'OPS',   estado: 'CONF' },
   { id: 'TM-58418', fecha: '2026-04-24 16:30', tipo: 'DEPOSIT',       cuenta: 'Bridge USD',       monto: '+ 180.000',    moneda: 'USD',  origen: 'OPS',   estado: 'CONF' },
@@ -134,25 +111,11 @@ export const TES_MOVS: MovimientoLedger[] = [
   { id: 'TM-58406', fecha: '2026-04-23 11:00', tipo: 'WITHDRAWAL',    cuenta: 'Cuenta Brubank',   monto: '- 4.200.000',  moneda: 'ARS',  origen: 'OPS',   estado: 'CONF' },
 ];
 
-export interface MovimientosKpis {
-  movimientosHoy: number;
-  volumenIngresado: string;
-  volumenEgresado: string;
-  enCola: number;
-}
-
-export const MOVIMIENTOS_KPIS: MovimientosKpis = {
-  movimientosHoy: 124,
-  volumenIngresado: 'USD 1.2M',
-  volumenEgresado: 'USD 980K',
-  enCola: 8,
-};
-
 // ────────────────────────────────────────────────────────────────────
 // Cola de Asignación (Tab "Cola de Asignación")
 // ────────────────────────────────────────────────────────────────────
 
-export const COLA: RetiroEnCola[] = [
+const initialCola: RetiroEnCola[] = [
   { id: 'M-2026-12815', fecha: '2026-04-24 14:20', cliente: 'Inversiones Norte',    monto: '95.000',  moneda: 'USDT', tiempo: '4 hs 22 min', cuenta_id: null, asignacion_note: null },
   { id: 'M-2026-12818', fecha: '2026-04-24 16:05', cliente: 'Capital Plus',         monto: '180.000', moneda: 'USDC', tiempo: '2 hs 37 min', cuenta_id: null, asignacion_note: null },
   { id: 'M-2026-12820', fecha: '2026-04-24 17:12', cliente: 'ACME Corp',            monto: '42.000',  moneda: 'USD',  tiempo: '1 hs 30 min', cuenta_id: null, asignacion_note: null },
@@ -162,3 +125,57 @@ export const COLA: RetiroEnCola[] = [
   { id: 'M-2026-12825', fecha: '2026-04-24 18:18', cliente: 'Andes Capital',        monto: '310.000', moneda: 'USDC', tiempo: '24 min',      cuenta_id: null, asignacion_note: null },
   { id: 'M-2026-12826', fecha: '2026-04-24 18:32', cliente: 'Costa Atlántica SRL',  monto: '52.000',  moneda: 'USDT', tiempo: '10 min',      cuenta_id: null, asignacion_note: null },
 ];
+
+// ────────────────────────────────────────────────────────────────────
+// Mutable seeds + derived helpers
+// ────────────────────────────────────────────────────────────────────
+
+export let posicionTreeSeed: SociedadPos[] = initialPosTree.map((s) => ({
+  ...s,
+  cuentas: s.cuentas.map((c) => ({ ...c })),
+  totals: s.totals.map((t) => ({ ...t })),
+}));
+export let movimientosSeed: MovimientoLedger[] = initialMovs.map((m) => ({ ...m }));
+export let colaSeed: RetiroEnCola[] = initialCola.map((c) => ({ ...c }));
+
+export function resetFinSeed(): void {
+  posicionTreeSeed = initialPosTree.map((s) => ({
+    ...s,
+    cuentas: s.cuentas.map((c) => ({ ...c })),
+    totals: s.totals.map((t) => ({ ...t })),
+  }));
+  movimientosSeed = initialMovs.map((m) => ({ ...m }));
+  colaSeed = initialCola.map((c) => ({ ...c }));
+}
+
+/** Derived from the current `posicionTreeSeed`. */
+export function getSociedadesCatalog(): CatalogEntry[] {
+  return posicionTreeSeed.map((s) => ({ value: s.id, label: s.name }));
+}
+
+/** Derived from the current `posicionTreeSeed`. */
+export function getMonedasCatalog(): Moneda[] {
+  return Array.from(
+    new Set(posicionTreeSeed.flatMap((s) => s.cuentas.map((c) => c.moneda))),
+  ).sort();
+}
+
+/** Static aggregates plus tree-derived counts. */
+export function getPosicionKpisSnapshot(): PosicionKpis {
+  return {
+    posicionConsolidada: 'USD 28.4M',
+    liquidezDisponible: 'USD 24.1M',
+    comprometido: 'USD 4.3M',
+    cuentasActivas: posicionTreeSeed.reduce((acc, s) => acc + s.cuentas.length, 0),
+    sociedadesActivas: posicionTreeSeed.length,
+  };
+}
+
+export function getMovimientosKpisSnapshot(): MovimientosKpis {
+  return {
+    movimientosHoy: 124,
+    volumenIngresado: 'USD 1.2M',
+    volumenEgresado: 'USD 980K',
+    enCola: colaSeed.length,
+  };
+}

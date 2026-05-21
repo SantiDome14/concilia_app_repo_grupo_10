@@ -25,14 +25,15 @@ const envSchema = z.object({
    * `src/mocks/handlers/`. When `false`, no worker is registered and every
    * request flies to `VITE_API_BASE_URL`.
    *
-   * Defaults to `true` so a freshly-cloned template runs end-to-end without
-   * any backend. Set to `false` in `.env.qa` / `.env.production` to point
-   * at a real API.
+   * Schema default is `'false'` (defensive: builds without an explicit
+   * value go to the real backend). The template ships `.env.local` with
+   * the flag set to `'true'` so a freshly-cloned repo runs end-to-end
+   * without any backend.
    */
   VITE_USE_MOCKS: z
     .string()
     .optional()
-    .default('true')
+    .default('false')
     .transform((v) => v === 'true'),
 
   VITE_AUTH0_DOMAIN: z.string().optional().default(''),

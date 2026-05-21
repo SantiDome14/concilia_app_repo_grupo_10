@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useQuery } from '@tanstack/vue-query';
 import {
   Inbox as InboxIcon,
   BellRing,
@@ -21,12 +22,35 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ROUTE_PATHS } from '@/config/routes';
-import { DASHBOARD_KPIS } from '@/mocks/genericos/dashboard';
-import { INBOX_SOLICITUDES } from '@/mocks/genericos/inbox';
-import { ALERTS } from '@/mocks/genericos/alertas';
-import { REPORTS_CATALOG } from '@/mocks/genericos/reportes';
+import { listAlertas } from '@/api/modules/alertas';
+import { listDashboardKpis } from '@/api/modules/dashboardKpis';
+import { listReports } from '@/api/modules/reports';
+import { listSolicitudes } from '@/api/modules/solicitudes';
 import type { Alerta, AlertaState, Report, Severity } from '@/types/genericos';
 import { cn } from '@/lib/cn';
+
+// ─── Data — every list reaches the server (or MSW) via vue-query ─────
+const dashboardKpisQuery = useQuery({
+  queryKey: ['dashboardKpis'],
+  queryFn: listDashboardKpis,
+});
+const solicitudesQuery = useQuery({
+  queryKey: ['solicitudes'],
+  queryFn: listSolicitudes,
+});
+const alertasQuery = useQuery({
+  queryKey: ['alertas'],
+  queryFn: listAlertas,
+});
+const reportsQuery = useQuery({
+  queryKey: ['reports'],
+  queryFn: listReports,
+});
+
+const dashboardKpis = computed(() => dashboardKpisQuery.data.value ?? []);
+const solicitudes = computed(() => solicitudesQuery.data.value ?? []);
+const alertas = computed<Alerta[]>(() => alertasQuery.data.value ?? []);
+const reports = computed<Report[]>(() => reportsQuery.data.value ?? []);
 
 // ════════════════════════════════════════════════════════════════════
 // Dashboard — consolidated home (card-grid layout, NOT L1/L2/L3)
@@ -51,16 +75,16 @@ const MS_DAY = MS_HOUR * 24;
 const ACTIVE_ALERT_STATES: AlertaState[] = ['new', 'in_review'];
 
 const inboxPendingCount = computed(
-  () => INBOX_SOLICITUDES.filter((s) => s.state === 'pendiente').length,
+  () => solicitudes.value.filter((s) => s.state === 'pendiente').length,
 );
 
 const alertasActivasCount = computed(
-  () => ALERTS.filter((a) => ACTIVE_ALERT_STATES.includes(a.state)).length,
+  () => alertas.value.filter((a) => ACTIVE_ALERT_STATES.includes(a.state)).length,
 );
 
 const reportesProxVencerCount = computed(() => {
   let n = 0;
-  for (const r of REPORTS_CATALOG) {
+  for (const r of reports.value) {
     if (r.locked || !r.next) continue;
     const d = daysUntilDate(r.next);
     if (d !== null && d >= 0 && d <= 7) n++;
@@ -113,8 +137,8 @@ const counterCards = computed<CounterCard[]>(() => [
   },
 ]);
 
-// 4th slot — placeholder KPI sourced from app-provided DASHBOARD_KPIS.
-const placeholderKpi = computed(() => DASHBOARD_KPIS[0] ?? null);
+// 4th slot — placeholder KPI sourced from app-provided dashboardKpis.
+const placeholderKpi = computed(() => dashboardKpis.value[0] ?? null);
 
 // ─── Alertas activas widget — top 4 active alertas ───────────────────
 const SEVERITY_RANK: Record<Severity, number> = {
@@ -125,7 +149,8 @@ const SEVERITY_RANK: Record<Severity, number> = {
 };
 
 const alertasActivas = computed<Alerta[]>(() =>
-  ALERTS.filter((a) => ACTIVE_ALERT_STATES.includes(a.state))
+  alertas.value
+    .filter((a) => ACTIVE_ALERT_STATES.includes(a.state))
     .slice()
     .sort((a, b) => {
       const sa = SEVERITY_RANK[a.severity ?? 'low'];
@@ -189,7 +214,7 @@ interface UpcomingItem {
 
 const proximosVencimientos = computed<UpcomingItem[]>(() => {
   const items: UpcomingItem[] = [];
-  for (const r of REPORTS_CATALOG) {
+  for (const r of reports.value) {
     if (r.locked || !r.next) continue;
     const d = daysUntilDate(r.next);
     if (d === null || d < 0) continue;

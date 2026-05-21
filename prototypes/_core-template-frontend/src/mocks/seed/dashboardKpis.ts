@@ -1,21 +1,13 @@
 // ════════════════════════════════════════════════════════════════════
-// Mock Dashboard KPIs — seed data for the consolidated home
+// MSW seed — dashboard KPIs
 // ────────────────────────────────────────────────────────────────────
-// Each tile is clickable and navigates to its `href`. The Dashboard
-// page also computes 3 dynamic counters from the Inbox/Alertas/Reportes
-// mock data (unread Solicitudes, critical Alertas, pending Reportes).
+// Three placeholder KPI tiles plus a fourth dynamic one computed at
+// page-level from the inbox/alertas/reports queries.
 // ════════════════════════════════════════════════════════════════════
 
-export interface DashboardKpi {
-  id: string;
-  label: string;
-  value: string | number;
-  trend?: 'up' | 'down' | 'flat';
-  href: string;
-  hint?: string;
-}
+import type { DashboardKpi } from '@/api/modules/dashboardKpis';
 
-export const DASHBOARD_KPIS: DashboardKpi[] = [
+const initial: DashboardKpi[] = [
   {
     id: 'volumen-mes',
     label: 'Volumen procesado del mes',
@@ -41,3 +33,9 @@ export const DASHBOARD_KPIS: DashboardKpi[] = [
     hint: '−18% vs. semana pasada',
   },
 ];
+
+export let dashboardKpisSeed: DashboardKpi[] = [...initial];
+
+export function resetDashboardKpisSeed(): void {
+  dashboardKpisSeed = [...initial];
+}

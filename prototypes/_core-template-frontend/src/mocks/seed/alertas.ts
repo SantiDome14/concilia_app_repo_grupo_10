@@ -1,16 +1,14 @@
 // ════════════════════════════════════════════════════════════════════
-// Mock Alertas — seed data for the Alertas module
+// MSW seed — alertas
 // ────────────────────────────────────────────────────────────────────
-// All entries default to category `triage` (active triage list) — the
-// canonical template default. Apps that need `workflow`, `metric`, or
-// `cross_app_panel` add their own datasets alongside or replace these
-// entirely. (The 2026-05-10 product enrichment renamed profiles A/B/C/D
-// to categories triage/workflow/metric/cross_app_panel.)
+// 6 entries spanning new / in_review / resolved / dismissed states.
+// All `triage` category (the canonical template default). Apps that
+// need `workflow` / `metric` / `cross_app_panel` extend this list.
 // ════════════════════════════════════════════════════════════════════
 
 import type { Alerta } from '@/types/genericos';
 
-export const ALERTS: Alerta[] = [
+const initial: Alerta[] = [
   {
     id: 'ALT-001',
     concept: 'saldo_anomaly',
@@ -185,3 +183,9 @@ export const ALERTS: Alerta[] = [
     comments: [],
   },
 ];
+
+export let alertasSeed: Alerta[] = initial.map((a) => ({ ...a }));
+
+export function resetAlertasSeed(): void {
+  alertasSeed = initial.map((a) => ({ ...a }));
+}

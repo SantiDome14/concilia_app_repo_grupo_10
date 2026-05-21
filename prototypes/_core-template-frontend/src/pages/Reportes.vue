@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { Search } from 'lucide-vue-next';
+import { useQuery } from '@tanstack/vue-query';
 import { Input } from '@/components/ui/input';
 import { Badge, type BadgeVariants } from '@/components/ui/badge';
 import EmptyState from '@/components/feedback/EmptyState.vue';
@@ -18,11 +19,12 @@ import { ManifestActionsMenu } from '@/components/manifest';
 import { useManifestModule } from '@/composables/useManifestModule';
 import { REPORTES_MANIFEST_KEY } from '@/manifests/framework.template.reportes.actions';
 import {
-  REPORTS_CATALOG,
-  REPORT_RUNS,
-  REPORT_CATEGORIES,
-  REPORT_CATEGORY_BY_KEY,
-} from '@/mocks/genericos/reportes';
+  listReportCategories,
+  listReportRuns,
+  listReports,
+  updateReport,
+  type ReportCategoryDef,
+} from '@/api/modules/reports';
 import { depsStatus } from '@/lib/reportes/depsStatus';
 import type {
   Periodicity,
@@ -89,8 +91,44 @@ const filterStatusModel = computed<string>({
   },
 });
 
-const reports = ref<Report[]>(REPORTS_CATALOG.map((r) => ({ ...r })));
-const runs = ref<ReportRun[]>(REPORT_RUNS.map((r) => ({ ...r })));
+// ─── Data — via vue-query against MSW / real backend ─────────────────
+const reportsQuery = useQuery({ queryKey: ['reports'], queryFn: listReports });
+const runsQuery = useQuery({ queryKey: ['reportRuns'], queryFn: listReportRuns });
+const categoriesQuery = useQuery({
+  queryKey: ['reportCategories'],
+  queryFn: listReportCategories,
+});
+
+const reports = ref<Report[]>([]);
+const runs = ref<ReportRun[]>([]);
+const reportCategories = computed<ReportCategoryDef[]>(
+  () => categoriesQuery.data.value ?? [],
+);
+const reportCategoryByKey = computed<Record<string, ReportCategoryDef>>(() =>
+  Object.fromEntries(reportCategories.value.map((c) => [c.key, c])),
+);
+
+watch(
+  () => reportsQuery.data.value,
+  (data) => {
+    if (data) reports.value = data.map((r) => ({ ...r }));
+  },
+  { immediate: true },
+);
+watch(
+  () => runsQuery.data.value,
+  (data) => {
+    if (data) runs.value = data.map((r) => ({ ...r }));
+  },
+  { immediate: true },
+);
+
+function persistReport(r: Report): void {
+  void updateReport(r.id, r).catch((error) => {
+
+    console.error('[reportes] persist failed', error);
+  });
+}
 
 // ─── Detail modal ────────────────────────────────────────────────────
 const detailOpen = ref(false);
@@ -248,7 +286,7 @@ function reportName(reportId: string): string {
 function reportCategory(reportId: string): string {
   const r = reports.value.find((x) => x.id === reportId);
   if (!r) return '';
-  return REPORT_CATEGORY_BY_KEY[r.category]?.label ?? r.category;
+  return reportCategoryByKey.value[r.category]?.label ?? r.category;
 }
 
 function unfulfilled(r: Report) {
@@ -273,9 +311,15 @@ onMounted(() => {
     return undefined;
   });
   reportesMod.registerAfterMutation(() => {
-    // mock-backed; nothing to invalidate.
+    const id = lastActedReportId.value;
+    if (!id) return;
+    const r = reports.value.find((rep) => rep.id === id);
+    if (r) persistReport(r);
+    lastActedReportId.value = null;
   });
 });
+
+const lastActedReportId = ref<string | null>(null);
 
 // ─── Card actions ────────────────────────────────────────────────────
 function generar(r: Report): void {
@@ -300,6 +344,7 @@ function generar(r: Report): void {
     }
     if (status.blocked) return;
   }
+  lastActedReportId.value = r.id;
   reportesMod.openDialog(
     'reportes.generar_report',
     r as unknown as Record<string, unknown>,
@@ -425,7 +470,7 @@ function reportsForCategory(catKey: string): Report[] {
           <SelectContent>
             <SelectItem :value="ALL">Categoría · Todas</SelectItem>
             <SelectItem
-              v-for="c in REPORT_CATEGORIES"
+              v-for="c in reportCategories"
               :key="c.key"
               :value="c.key"
             >
@@ -464,7 +509,7 @@ function reportsForCategory(catKey: string): Report[] {
         />
         <template v-else>
           <section
-            v-for="cat in REPORT_CATEGORIES"
+            v-for="cat in reportCategories"
             :key="cat.key"
             class="cat-section flex flex-col gap-2.5"
             :data-testid="`cat-section-${cat.key}`"
@@ -484,6 +529,7 @@ function reportsForCategory(catKey: string): Report[] {
                   v-for="r in reportsForCategory(cat.key)"
                   :key="r.id"
                   :report="r"
+                  :category="reportCategoryByKey[r.category]"
                   :now="today"
                   @click="openDetail"
                   @editar="editar"
@@ -643,6 +689,7 @@ function reportsForCategory(catKey: string): Report[] {
       :open="detailOpen"
       :report="detailReport"
       :runs="runs"
+      :category-by-key="reportCategoryByKey"
       :now="today"
       @update:open="detailOpen = $event"
     />

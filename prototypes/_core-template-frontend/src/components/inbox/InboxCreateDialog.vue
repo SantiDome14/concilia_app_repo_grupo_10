@@ -22,7 +22,8 @@ import { Input } from '@/components/ui/input';
 import InboxTypeSelector from './InboxTypeSelector.vue';
 import DynamicPayloadForm from './DynamicPayloadForm.vue';
 import { useAuditLog } from '@/composables/useAuditLog';
-import { CURRENT_USER, MOCK_USERS } from '@/mocks/genericos/users';
+import { useCurrentUser } from '@/composables/useCurrentUser';
+import { useUsers } from '@/composables/useUsers';
 import { INBOX_MANIFEST_KEY } from '@/manifests/framework.template.inbox.actions';
 import type {
   InboxTypeConfig,
@@ -59,6 +60,9 @@ const emit = defineEmits<{
 }>();
 
 const audit = useAuditLog();
+const { user: currentUserRef } = useCurrentUser();
+const { users: allUsers } = useUsers();
+const fallbackUser = { id: 'u-1', name: '—' };
 
 // ── Step state ───────────────────────────────────────────────────────
 type Step = 'pick-type' | 'fill-payload';
@@ -136,6 +140,7 @@ function submit(): void {
     const t = selectedType.value;
     const now = new Date().toISOString();
     const id = nextSequentialId();
+    const me = currentUserRef.value ?? fallbackUser;
     const triggered: TriggeredAction[] | undefined = t.triggers_on_create?.map(
       (trig) => ({
         action_ref: trig.action_id,
@@ -147,8 +152,8 @@ function submit(): void {
       {
         id: `evt-${id}-1`,
         at: now,
-        actor_id: CURRENT_USER.id,
-        actor_name: CURRENT_USER.name,
+        actor_id: me.id,
+        actor_name: me.name,
         kind: 'system',
         label: `${t.type === 'tarea' ? 'Tarea' : 'Solicitud'} creada manualmente desde el Inbox`,
       },
@@ -194,7 +199,7 @@ function submit(): void {
       record_id: newSolicitud.id,
       created_record_type: newSolicitud.concept,
       is_module_cta: true,
-      user_id: CURRENT_USER.id,
+      user_id: me.id,
       timestamp: Date.now(),
       changes: { ...(newSolicitud.payload as Record<string, unknown>) },
     });
@@ -263,7 +268,7 @@ const openModel = computed({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem
-                      v-for="u in MOCK_USERS"
+                      v-for="u in allUsers"
                       :key="u.id"
                       :value="u.id"
                     >

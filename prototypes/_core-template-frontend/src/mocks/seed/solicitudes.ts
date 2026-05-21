@@ -1,24 +1,21 @@
 // ════════════════════════════════════════════════════════════════════
-// Mock Solicitudes — seed data for the Inbox module
+// MSW seed — solicitudes (Inbox)
 // ────────────────────────────────────────────────────────────────────
 // Spans every state in the canonical vocabulary plus a mix of
-// severities so list / cards / kanban views all surface variety in
-// the empty new app. Real apps override by providing their own
-// dataset and disabling these mocks.
+// severities so list / cards / kanban views all surface variety.
 //
 // Schema conventions:
 //   - `payload` follows the `payload_schema` of the matching
 //     `InboxTypeConfig` in `@/config/inbox-types`.
-//   - `assignee` is the user the record is directed to (settable on
-//     create / mutable later); `owner` is the user actively working it
-//     now (null in `pendiente`; auto-set on transition to `en_proceso`).
+//   - `assignee` is the user the record is directed to; `owner` is
+//     the user actively working it now (null in `pendiente`).
 //   - Closed records carry `closure_action`, `closed_by`, `closed_at`
 //     and `closure_comment` (≥10 chars for `rejected`).
 // ════════════════════════════════════════════════════════════════════
 
 import type { Solicitud } from '@/types/genericos';
 
-export const INBOX_SOLICITUDES: Solicitud[] = [
+const initial: Solicitud[] = [
   {
     id: 'SOL-001',
     concept: 'aprobacion_pago',
@@ -406,3 +403,9 @@ export const INBOX_SOLICITUDES: Solicitud[] = [
     comments: [],
   },
 ];
+
+export let solicitudesSeed: Solicitud[] = initial.map((s) => ({ ...s }));
+
+export function resetSolicitudesSeed(): void {
+  solicitudesSeed = initial.map((s) => ({ ...s }));
+}

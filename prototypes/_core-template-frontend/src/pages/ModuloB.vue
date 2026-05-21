@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
+import { useQuery } from '@tanstack/vue-query';
 import {
   Plus,
   Search,
@@ -23,16 +24,19 @@ import { Segmenter } from '@/components/views';
 import EmptyState from '@/components/feedback/EmptyState.vue';
 import { PAGE_SIZE_OPTIONS } from '@/constants';
 import {
-  POS_TREE,
-  POSICION_KPIS,
-  TES_MOVS,
-  MOVIMIENTOS_KPIS,
-  COLA,
-  SOCIEDADES_CATALOG,
-  MONEDAS_CATALOG,
-} from '@/mocks/fin/disponibilidades';
+  getMovimientosKpis,
+  getPosicionKpis,
+  getPosicionTree,
+  listCola,
+  listMonedas,
+  listMovimientos,
+  listSociedades,
+  type MovimientosKpis,
+  type PosicionKpis,
+} from '@/api/modules/fin';
 import type {
   CuentaPos,
+  Moneda,
   MovimientoEstado,
   MovimientoLedger,
   MovimientoOrigen,
@@ -55,16 +59,89 @@ import { cn } from '@/lib/cn';
 // of the active section (per the prototype's header pattern).
 // ════════════════════════════════════════════════════════════════════
 
-// ─── Reactive datasets (deep-cloned from mocks) ─────────────────────
-const sociedades = ref<SociedadPos[]>(
-  POS_TREE.map((s) => ({
-    ...s,
-    totals: s.totals.map((t) => ({ ...t })),
-    cuentas: s.cuentas.map((c) => ({ ...c })),
-  })),
+// ─── Reactive datasets — vue-query against MSW / real backend ────────
+const posicionTreeQuery = useQuery({
+  queryKey: ['fin', 'posicion', 'tree'],
+  queryFn: getPosicionTree,
+});
+const posicionKpisQuery = useQuery({
+  queryKey: ['fin', 'posicion', 'kpis'],
+  queryFn: getPosicionKpis,
+});
+const movimientosQuery = useQuery({
+  queryKey: ['fin', 'movimientos'],
+  queryFn: listMovimientos,
+});
+const movimientosKpisQuery = useQuery({
+  queryKey: ['fin', 'movimientos', 'kpis'],
+  queryFn: getMovimientosKpis,
+});
+const colaQuery = useQuery({
+  queryKey: ['fin', 'cola'],
+  queryFn: listCola,
+});
+const sociedadesCatalogQuery = useQuery({
+  queryKey: ['fin', 'sociedades'],
+  queryFn: listSociedades,
+});
+const monedasCatalogQuery = useQuery({
+  queryKey: ['fin', 'monedas'],
+  queryFn: listMonedas,
+});
+
+const sociedades = ref<SociedadPos[]>([]);
+const movimientos = ref<MovimientoLedger[]>([]);
+const cola = ref<RetiroEnCola[]>([]);
+
+watch(
+  () => posicionTreeQuery.data.value,
+  (data) => {
+    if (data)
+      sociedades.value = data.map((s) => ({
+        ...s,
+        totals: s.totals.map((t) => ({ ...t })),
+        cuentas: s.cuentas.map((c) => ({ ...c })),
+      }));
+  },
+  { immediate: true },
 );
-const movimientos = ref<MovimientoLedger[]>(TES_MOVS.map((m) => ({ ...m })));
-const cola = ref<RetiroEnCola[]>(COLA.map((c) => ({ ...c })));
+watch(
+  () => movimientosQuery.data.value,
+  (data) => {
+    if (data) movimientos.value = data.map((m) => ({ ...m }));
+  },
+  { immediate: true },
+);
+watch(
+  () => colaQuery.data.value,
+  (data) => {
+    if (data) cola.value = data.map((c) => ({ ...c }));
+  },
+  { immediate: true },
+);
+
+const sociedadesCatalog = computed(() => sociedadesCatalogQuery.data.value ?? []);
+const monedasCatalog = computed<Moneda[]>(() => monedasCatalogQuery.data.value ?? []);
+
+const POSICION_KPIS_FALLBACK: PosicionKpis = {
+  posicionConsolidada: '—',
+  liquidezDisponible: '—',
+  comprometido: '—',
+  cuentasActivas: 0,
+  sociedadesActivas: 0,
+};
+const MOVIMIENTOS_KPIS_FALLBACK: MovimientosKpis = {
+  movimientosHoy: 0,
+  volumenIngresado: '—',
+  volumenEgresado: '—',
+  enCola: 0,
+};
+const posicionKpis = computed<PosicionKpis>(
+  () => posicionKpisQuery.data.value ?? POSICION_KPIS_FALLBACK,
+);
+const movimientosKpis = computed<MovimientosKpis>(
+  () => movimientosKpisQuery.data.value ?? MOVIMIENTOS_KPIS_FALLBACK,
+);
 
 // ─── Tab state ──────────────────────────────────────────────────────
 type FinTab = 'posicion' | 'movimientos' | 'cola';
@@ -296,7 +373,7 @@ function onCargarManual(): void {
             Posición consolidada
           </div>
           <div class="font-mono text-2xl font-extrabold leading-none tracking-tight text-t-1">
-            {{ POSICION_KPIS.posicionConsolidada }}
+            {{ posicionKpis.posicionConsolidada }}
           </div>
           <div class="mt-1.5 text-[11px] text-t-4">equivalente · todas las monedas</div>
         </div>
@@ -305,7 +382,7 @@ function onCargarManual(): void {
             Liquidez disponible
           </div>
           <div class="font-mono text-2xl font-extrabold leading-none tracking-tight text-success">
-            {{ POSICION_KPIS.liquidezDisponible }}
+            {{ posicionKpis.liquidezDisponible }}
           </div>
           <div class="mt-1.5 text-[11px] text-t-4">no comprometida</div>
         </div>
@@ -314,7 +391,7 @@ function onCargarManual(): void {
             Comprometido
           </div>
           <div class="font-mono text-2xl font-extrabold leading-none tracking-tight text-warning">
-            {{ POSICION_KPIS.comprometido }}
+            {{ posicionKpis.comprometido }}
           </div>
           <div class="mt-1.5 text-[11px] text-t-4">en quotes activos / retiros</div>
         </div>
@@ -323,10 +400,10 @@ function onCargarManual(): void {
             Cuentas activas
           </div>
           <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">
-            {{ POSICION_KPIS.cuentasActivas }}
+            {{ posicionKpis.cuentasActivas }}
           </div>
           <div class="mt-1.5 text-[11px] text-t-4">
-            en {{ POSICION_KPIS.sociedadesActivas }} sociedades
+            en {{ posicionKpis.sociedadesActivas }} sociedades
           </div>
         </div>
       </section>
@@ -348,7 +425,7 @@ function onCargarManual(): void {
           <SelectContent>
             <SelectItem :value="ALL">Sociedad · Todas</SelectItem>
             <SelectItem
-              v-for="s in SOCIEDADES_CATALOG"
+              v-for="s in sociedadesCatalog"
               :key="s.value"
               :value="s.value"
             >
@@ -366,7 +443,7 @@ function onCargarManual(): void {
           </SelectTrigger>
           <SelectContent>
             <SelectItem :value="ALL">Moneda · Todas</SelectItem>
-            <SelectItem v-for="m in MONEDAS_CATALOG" :key="m" :value="m">
+            <SelectItem v-for="m in monedasCatalog" :key="m" :value="m">
               {{ m }}
             </SelectItem>
           </SelectContent>
@@ -492,7 +569,7 @@ function onCargarManual(): void {
             Movimientos hoy
           </div>
           <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">
-            {{ MOVIMIENTOS_KPIS.movimientosHoy }}
+            {{ movimientosKpis.movimientosHoy }}
           </div>
           <div class="mt-1.5 text-[11px] text-t-4">ingresados al ledger</div>
         </div>
@@ -501,7 +578,7 @@ function onCargarManual(): void {
             Volumen ingresado
           </div>
           <div class="font-mono text-2xl font-extrabold leading-none tracking-tight text-success">
-            {{ MOVIMIENTOS_KPIS.volumenIngresado }}
+            {{ movimientosKpis.volumenIngresado }}
           </div>
           <div class="mt-1.5 text-[11px] text-t-4">DEPOSIT + COLLECTOR_IN + ADDITION</div>
         </div>
@@ -510,7 +587,7 @@ function onCargarManual(): void {
             Volumen egresado
           </div>
           <div class="font-mono text-2xl font-extrabold leading-none tracking-tight text-danger">
-            {{ MOVIMIENTOS_KPIS.volumenEgresado }}
+            {{ movimientosKpis.volumenEgresado }}
           </div>
           <div class="mt-1.5 text-[11px] text-t-4">WITHDRAWAL + COLLECTOR_OUT</div>
         </div>
@@ -519,7 +596,7 @@ function onCargarManual(): void {
             En cola
           </div>
           <div class="text-2xl font-extrabold leading-none tracking-tight text-warning">
-            {{ MOVIMIENTOS_KPIS.enCola }}
+            {{ movimientosKpis.enCola }}
           </div>
           <div class="mt-1.5 text-[11px] text-t-4">sin asignación</div>
         </div>

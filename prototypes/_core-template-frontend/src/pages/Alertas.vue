@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { Search } from 'lucide-vue-next';
+import { useQuery } from '@tanstack/vue-query';
 import { Input } from '@/components/ui/input';
 import { Badge, type BadgeVariants } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,8 +22,8 @@ import { ManifestActionsMenu } from '@/components/manifest';
 import type { KanbanAxis, KanbanState } from '@/types/kanban';
 import { useManifestModule } from '@/composables/useManifestModule';
 import { ALERTAS_MANIFEST_KEY } from '@/manifests/framework.template.alertas.actions';
-import { ALERTS } from '@/mocks/genericos/alertas';
-import { CURRENT_USER } from '@/mocks/genericos/users';
+import { useCurrentUser } from '@/composables/useCurrentUser';
+import { listAlertas, updateAlerta } from '@/api/modules/alertas';
 import type {
   Alerta,
   AlertaState,
@@ -55,7 +56,35 @@ const filterConcept = ref<string>('');
 const filterSeverity = ref<string>('');
 const filterState = ref<string>('');
 
-const alertas = ref<Alerta[]>(ALERTS.map((a) => ({ ...a })));
+const { user: currentUserRef } = useCurrentUser();
+const fallbackUser = { id: 'u-1', name: '—' };
+function actor(): { id: string; name: string } {
+  const u = currentUserRef.value;
+  if (!u) return fallbackUser;
+  return { id: u.id, name: u.name };
+}
+
+const alertasQuery = useQuery({
+  queryKey: ['alertas'],
+  queryFn: listAlertas,
+});
+
+const alertas = ref<Alerta[]>([]);
+
+watch(
+  () => alertasQuery.data.value,
+  (data) => {
+    if (data) alertas.value = data.map((a) => ({ ...a }));
+  },
+  { immediate: true },
+);
+
+function persistAlerta(a: Alerta): void {
+  void updateAlerta(a.id, a).catch((error) => {
+
+    console.error('[alertas] persist failed', error);
+  });
+}
 
 const ACTIVE_CONCEPTS = computed(() => {
   const set = new Set<string>();
@@ -143,26 +172,32 @@ function severityVariant(severity?: Severity): BadgeVariants['variant'] {
 function addComment(payload: { body: string; parent_id?: string | null }): void {
   if (!drawerAlerta.value) return;
   const id = `cmt-${drawerAlerta.value.id}-${Date.now()}`;
+  const a = actor();
   drawerAlerta.value.comments.push({
     id,
     at: new Date().toISOString(),
-    author_id: CURRENT_USER.id,
-    author_name: CURRENT_USER.name,
+    author_id: a.id,
+    author_name: a.name,
     body: payload.body,
     parent_id: payload.parent_id ?? null,
   });
   const evt: TimelineEvent = {
     id: `evt-${id}`,
     at: new Date().toISOString(),
-    actor_id: CURRENT_USER.id,
-    actor_name: CURRENT_USER.name,
+    actor_id: a.id,
+    actor_name: a.name,
     kind: 'comment_added',
     label: 'Agregó un comentario',
   };
   drawerAlerta.value.timeline.push(evt);
+  persistAlerta(drawerAlerta.value);
 }
 
 // ─── Manifest wiring ─────────────────────────────────────────────────
+// Track the last record acted upon so `afterMutation` can persist the
+// specific record that was just mutated by the engine.
+const lastActedAlertaId = ref<string | null>(null);
+
 onMounted(() => {
   alertasMod.registerRecordResolver((ref) => {
     if (typeof ref === 'string') {
@@ -178,7 +213,11 @@ onMounted(() => {
     return undefined;
   });
   alertasMod.registerAfterMutation(() => {
-    // mock-backed; real apps would invalidate query cache here.
+    const id = lastActedAlertaId.value;
+    if (!id) return;
+    const record = alertas.value.find((a) => a.id === id);
+    if (record) persistAlerta(record);
+    lastActedAlertaId.value = null;
   });
 });
 
@@ -187,6 +226,7 @@ function rowActions(a: Alerta): ReturnType<typeof alertasMod.resolveActionsFor> 
 }
 
 function performAction(actionId: string, a: Alerta): void {
+  lastActedAlertaId.value = a.id;
   alertasMod.openDialog(actionId, a as unknown as Record<string, unknown>);
 }
 
@@ -222,6 +262,7 @@ function handleKanbanTransition(payload: {
   const a = alertas.value.find((row) => row.id === payload.recordId);
   if (!a) return;
   if (payload.mode === 'modal') {
+    lastActedAlertaId.value = a.id;
     if (payload.toState === 'resolved') {
       alertasMod.openDialog(
         'alertas.marcar_resolved',
@@ -235,15 +276,17 @@ function handleKanbanTransition(payload: {
     }
     return;
   }
+  const me = actor();
   a.state = payload.toState as AlertaState;
   a.timeline.push({
     id: `evt-${a.id}-${Date.now()}`,
     at: new Date().toISOString(),
-    actor_id: CURRENT_USER.id,
-    actor_name: CURRENT_USER.name,
+    actor_id: me.id,
+    actor_name: me.name,
     kind: 'state_change',
     label: `Estado: ${stateLabel(payload.toState)}`,
   });
+  persistAlerta(a);
 }
 
 // ─── Filter options ──────────────────────────────────────────────────
@@ -564,7 +607,7 @@ const STATE_FILTER_OPTIONS: AlertaState[] = ['new', 'in_review', 'resolved', 'di
         <h3 class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-t-3">Comentarios</h3>
         <CommentsThread
           :comments="drawerAlerta.comments"
-          :current-user-id="CURRENT_USER.id"
+          :current-user-id="currentUserRef?.id ?? ''"
           @add="addComment"
         />
       </template>

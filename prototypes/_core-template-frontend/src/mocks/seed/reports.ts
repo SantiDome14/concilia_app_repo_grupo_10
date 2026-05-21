@@ -1,12 +1,13 @@
 // ════════════════════════════════════════════════════════════════════
-// Mock Reports + ReportRuns — seed data for the Reportes module
+// MSW seed — reports + reportRuns + reportCategories
 // ────────────────────────────────────────────────────────────────────
-// CATALOG mirrors the prototype (`prototypes/_core-template-frontend.html`,
-// lines 5149-5185) — five reports including a CRON Mensual, a CRON
-// Semanal, an On-demand, one with two dependencies (one completed),
-// and one locked. HISTORY runs span success/error and manual/cron.
+// Five reports (CRON Mensual, CRON Semanal, On-demand, one with two
+// dependencies, one locked) and eight historical runs spanning
+// success/error and manual/cron triggers. Two category definitions
+// (INTERNO / OPERATIVO) are served as a separate list since they're
+// referenced by both the catalog page and the detail modal.
 //
-// 2026-05-10 product-spec alignment additions (mandatory on every Report):
+// Every Report carries (per the 2026-05-10 spec alignment):
 //   - `permissions: ReportPermissions` — 4 independent capability lists
 //   - `consumer_apps: ConsumerAppRef[]` — empty = headless
 //   - `allows_auto_generation: boolean` — drives próximo-emisión and
@@ -14,26 +15,12 @@
 // ════════════════════════════════════════════════════════════════════
 
 import type { Report, ReportRun, ReportPermissions } from '@/types/genericos';
+import type { ReportCategoryDef } from '@/api/modules/reports';
 
-/**
- * Baseline category configuration. Apps extend or override this map
- * with their own keys; the page reads it to render category sections
- * + badges in the catalog.
- */
-export interface ReportCategoryDef {
-  key: string;
-  label: string;
-  badgeClass: string;
-}
-
-export const REPORT_CATEGORIES: ReportCategoryDef[] = [
+const initialCategories: ReportCategoryDef[] = [
   { key: 'INTERNO', label: 'Internos', badgeClass: 'border-success/30 text-success' },
   { key: 'OPERATIVO', label: 'Operativos', badgeClass: 'border-info/30 text-info' },
 ];
-
-export const REPORT_CATEGORY_BY_KEY: Record<string, ReportCategoryDef> = Object.fromEntries(
-  REPORT_CATEGORIES.map((c) => [c.key, c]),
-);
 
 // Default permissions shared by template-shipped reports. Apps that
 // clone the template tighten these per-report using their own
@@ -46,7 +33,7 @@ const TEMPLATE_DEFAULT_PERMISSIONS: ReportPermissions = {
   delete: ['DELETE_REPORTS'],
 };
 
-export const REPORTS_CATALOG: Report[] = [
+const initialReports: Report[] = [
   {
     id: 'rpt_001',
     name: 'Reporte Genérico Mensual',
@@ -156,7 +143,7 @@ export const REPORTS_CATALOG: Report[] = [
   },
 ];
 
-export const REPORT_RUNS: ReportRun[] = [
+const initialRuns: ReportRun[] = [
   {
     id: 'g001',
     report_id: 'rpt_001',
@@ -260,3 +247,13 @@ export const REPORT_RUNS: ReportRun[] = [
     params: 'Período: Marzo 2026 (reenvío)',
   },
 ];
+
+export let reportsSeed: Report[] = initialReports.map((r) => ({ ...r }));
+export let reportRunsSeed: ReportRun[] = initialRuns.map((r) => ({ ...r }));
+export let reportCategoriesSeed: ReportCategoryDef[] = [...initialCategories];
+
+export function resetReportsSeed(): void {
+  reportsSeed = initialReports.map((r) => ({ ...r }));
+  reportRunsSeed = initialRuns.map((r) => ({ ...r }));
+  reportCategoriesSeed = [...initialCategories];
+}
