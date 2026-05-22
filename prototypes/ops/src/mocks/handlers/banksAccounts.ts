@@ -140,10 +140,13 @@ export const banksAccountsHandlers: HttpHandler[] = [
       );
     }
     const body = (await request.json()) as UpdateAccountPayload;
-    record.tipoCuenta = body.tipoCuenta;
-    record.moneda = body.moneda;
-    record.nro = body.nro;
-    record.status = body.status;
+    // Apply only the fields present in the payload — supports both the
+    // full-form Editar action and the single-field Activar / Desactivar
+    // actions surfaced via the manifest engine.
+    if (body.tipoCuenta !== undefined) record.tipoCuenta = body.tipoCuenta;
+    if (body.moneda !== undefined) record.moneda = body.moneda;
+    if (body.nro !== undefined) record.nro = body.nro;
+    if (body.status !== undefined) record.status = body.status;
     if ('padreCuentaId' in (body ?? {})) {
       const padre = body.padreCuentaId
         ? banksAccountsSeed.find((c) => c.id === body.padreCuentaId)

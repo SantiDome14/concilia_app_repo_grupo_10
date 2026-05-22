@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { useQuery, useQueryClient } from '@tanstack/vue-query';
-import { Plus, FilePlus2, MoreVertical, AlertCircle } from 'lucide-vue-next';
-import { Button } from '@/components/ui/button';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
+import { Search, AlertCircle } from 'lucide-vue-next';
+import { toast } from 'vue-sonner';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -10,66 +11,99 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
 import EmptyState from '@/components/feedback/EmptyState.vue';
 import Skeleton from '@/components/feedback/Skeleton.vue';
-import ActionsMenu from '@/components/feedback/ActionsMenu.vue';
+import { TablePagination } from '@/components/data-display';
+import { ManifestActionsMenu, ManifestModuleCTAs } from '@/components/manifest';
 import { useTable } from '@/composables/useTable';
-import { useCapabilities } from '@/composables/useCapabilities';
-import { fetchBanksAccounts } from '@/api/modules/banksAccounts';
-import CreateStructureModal from '@/ops/banks-accounts/CreateStructureModal.vue';
-import CreateAccountModal from '@/ops/banks-accounts/CreateAccountModal.vue';
-import EditAccountModal from '@/ops/banks-accounts/EditAccountModal.vue';
-import type { BankAccountRecord } from '@/ops/banks-accounts/types';
+import { useManifestModule } from '@/composables/useManifestModule';
+import { PAGE_SIZE_OPTIONS } from '@/constants';
+import {
+  fetchBanksAccounts,
+  fetchEstructuras,
+  fetchSociedades,
+  createAccount,
+  createStructure,
+  updateAccount,
+} from '@/api/modules/banksAccounts';
+import { CATALOG_QUERY_KEYS } from '@/plugins/catalogs';
+import { OPS_BANKS_ACCOUNTS_MANIFEST_KEY } from '@/manifests/ops.banks_accounts.actions';
+import type {
+  BankAccountRecord,
+  CreateAccountPayload,
+  CreateStructurePayload,
+  CuentaTipo,
+  EstructuraTipo,
+  Moneda,
+  UpdateAccountPayload,
+} from '@/ops/banks-accounts/types';
+import type { ModuleCTA } from '@/types/manifest';
 
 // ════════════════════════════════════════════════════════════════════
-// Bancos / Cuentas — implements ops-banks-accounts (post-refactor):
-// Type-A page with header + 2 KPIs + 4 filters + 8 columns + per-row
-// Edit-Account action. Accounting metadata is owned by the future `fin`
-// app and is NOT exposed on this page.
+// Bancos / Cuentas — Type A master list at /banks-accounts.
+// ────────────────────────────────────────────────────────────────────
+// Mirror of the FIN.Disponibilidades > Bancos/Cuentas sub-tab minus
+// the accounting metadata (Cuenta Contable column + configurar_contable
+// action are FIN-owned). OPS adds two governance actions in their
+// place: activar / desactivar (manifest engine, `set_fields`).
+//
+// L1 header: title + <ManifestModuleCTAs> (Nueva Estructura + Nueva
+// Cuenta). L2: 4 KPI tiles. L3: search left + 5 filters right
+// (Sociedad / Estructura / Tipo cuenta / Moneda / Estado). Lista view
+// only — no Cards/Kanban for the catalog. Per-row <ManifestActionsMenu>.
+// Footer: <TablePagination> via useTable.
+//
+// Creators + dispatcher: `registerCreator` resolves the two CTAs
+// (crear_cuenta / crear_estructura) into POST mutations; `register
+// Dispatcher` re-routes per-row patches into PATCH updateAccount.
 // ════════════════════════════════════════════════════════════════════
 
+const banksAccountsMod = useManifestModule(OPS_BANKS_ACCOUNTS_MANIFEST_KEY);
 const queryClient = useQueryClient();
-const { can } = useCapabilities();
 
-const canCreateStructure = computed(
-  () => can('banks-accounts:create-structure') || can('OPS_ADMIN'),
-);
-const canCreateAccount = computed(
-  () => can('banks-accounts:create-account') || can('OPS_ADMIN'),
-);
-const canEditAccount = computed(
-  () => can('banks-accounts:edit-account') || can('OPS_ADMIN'),
-);
+// ─── Queries ─────────────────────────────────────────────────────────
+const ACCOUNTS_KEY = ['ops', 'banks-accounts', 'list'] as const;
 
-// ─── Data ────────────────────────────────────────────────────────────
-const QUERY_KEY = ['ops', 'banks-accounts', 'list'] as const;
-
-const { data, isPending, isError } = useQuery({
-  queryKey: QUERY_KEY,
+const accountsQuery = useQuery({
+  queryKey: ACCOUNTS_KEY,
   queryFn: fetchBanksAccounts,
 });
 
-const rows = computed<BankAccountRecord[]>(() => data.value ?? []);
+// Sociedades + Estructuras are pre-fetched so the lookup catalogs
+// resolve synchronously on first dropdown open.
+useQuery({
+  queryKey: CATALOG_QUERY_KEYS.sociedades,
+  queryFn: fetchSociedades,
+});
+useQuery({
+  queryKey: CATALOG_QUERY_KEYS.estructuras,
+  queryFn: fetchEstructuras,
+});
 
-// ─── KPIs (always derived from full dataset) ─────────────────────────
+const rows = computed<BankAccountRecord[]>(() => accountsQuery.data.value ?? []);
+const isPending = computed(() => accountsQuery.isPending.value);
+const isError = computed(() => accountsQuery.isError.value);
+const isEmpty = computed(() => !isPending.value && rows.value.length === 0);
+
+// ─── KPIs (computed from full dataset) ───────────────────────────────
 const kpis = computed(() => {
   const r = rows.value;
   return {
-    estructuras: new Set(r.map((x) => x.estructura)).size,
-    total: r.length,
+    estructurasTotales: new Set(r.map((x) => x.estructura)).size,
+    cuentasTotales: r.length,
+    cuentasActivas: r.filter((x) => x.status === 'Activa').length,
+    cuentasInactivas: r.filter((x) => x.status === 'Inactiva').length,
   };
 });
 
 // ─── Filters (client-side) ───────────────────────────────────────────
-// `reka-ui` forbids <SelectItem value="">; use sentinel ALL.
 const ALL = '__all__';
-
 const search = ref('');
 const fSociedad = ref('');
-const fTipo = ref('');
+const fEstructuraTipo = ref('');
 const fTipoCuenta = ref('');
 const fMoneda = ref('');
+const fEstado = ref('');
 
 function bridge<T extends string>(getter: () => T, setter: (v: T) => void) {
   return computed<string>({
@@ -78,22 +112,11 @@ function bridge<T extends string>(getter: () => T, setter: (v: T) => void) {
   });
 }
 
-const fSociedadModel = bridge(
-  () => fSociedad.value,
-  (v) => (fSociedad.value = v),
-);
-const fTipoModel = bridge(
-  () => fTipo.value,
-  (v) => (fTipo.value = v),
-);
-const fTipoCuentaModel = bridge(
-  () => fTipoCuenta.value,
-  (v) => (fTipoCuenta.value = v),
-);
-const fMonedaModel = bridge(
-  () => fMoneda.value,
-  (v) => (fMoneda.value = v),
-);
+const fSociedadModel = bridge(() => fSociedad.value, (v) => (fSociedad.value = v));
+const fTipoModel = bridge(() => fEstructuraTipo.value, (v) => (fEstructuraTipo.value = v));
+const fTipoCuentaModel = bridge(() => fTipoCuenta.value, (v) => (fTipoCuenta.value = v));
+const fMonedaModel = bridge(() => fMoneda.value, (v) => (fMoneda.value = v));
+const fEstadoModel = bridge(() => fEstado.value, (v) => (fEstado.value = v));
 
 const visibleRows = computed<BankAccountRecord[]>(() => {
   const q = search.value.toLowerCase().trim();
@@ -103,24 +126,30 @@ const visibleRows = computed<BankAccountRecord[]>(() => {
       if (!haystack.includes(q)) return false;
     }
     if (fSociedad.value && r.sociedad !== fSociedad.value) return false;
-    if (fTipo.value && r.estructuraTipo !== fTipo.value) return false;
+    if (fEstructuraTipo.value && r.estructuraTipo !== fEstructuraTipo.value) return false;
     if (fTipoCuenta.value && r.tipoCuenta !== fTipoCuenta.value) return false;
     if (fMoneda.value && r.moneda !== fMoneda.value) return false;
+    if (fEstado.value && r.status !== fEstado.value) return false;
     return true;
   });
 });
 
-const table = useTable<BankAccountRecord>({
-  data: visibleRows,
-  pageSize: 25,
-});
+const table = useTable<BankAccountRecord>({ data: visibleRows, pageSize: 10 });
 
 // ─── Filter option lists ─────────────────────────────────────────────
 const sociedadOptions = computed(() =>
   Array.from(new Set(rows.value.map((r) => r.sociedad))).sort(),
 );
-const tipoOptions = ['Banco', 'Banco digital', 'ALyC', 'Exchange', 'Custodio', 'PSP', 'Proveedor'];
-const tipoCuentaOptions = [
+const tipoOptions: EstructuraTipo[] = [
+  'Banco',
+  'Banco digital',
+  'ALyC',
+  'Exchange',
+  'Custodio',
+  'PSP',
+  'Proveedor',
+];
+const tipoCuentaOptions: CuentaTipo[] = [
   'Cuenta Corriente',
   'CVU',
   'Wallet Pool',
@@ -128,49 +157,9 @@ const tipoCuentaOptions = [
   'Exchange Account',
   'Comitente',
 ];
-const monedaOptions = ['ARS', 'USD', 'USDC', 'USDT', 'BTC'];
+const monedaOptions: Moneda[] = ['ARS', 'USD', 'USDC', 'USDT', 'BTC'];
 
-// ─── Modal state ─────────────────────────────────────────────────────
-const createStructureOpen = ref(false);
-const createAccountOpen = ref(false);
-const editAccountOpen = ref(false);
-const editAccountTarget = ref<BankAccountRecord | null>(null);
-
-function openCreateStructure(): void {
-  createStructureOpen.value = true;
-}
-
-function openCreateAccount(): void {
-  createAccountOpen.value = true;
-}
-
-function openEditAccount(row: BankAccountRecord): void {
-  editAccountTarget.value = row;
-  editAccountOpen.value = true;
-  closeActionsMenu();
-}
-
-function onMutationSuccess(): void {
-  void queryClient.invalidateQueries({ queryKey: QUERY_KEY });
-}
-
-// ─── Per-row Actions menu ────────────────────────────────────────────
-const openMenuId = ref<string | null>(null);
-const menuAnchorRefs = ref<Record<string, HTMLElement | null>>({});
-
-function setMenuAnchor(id: string, el: HTMLElement | null): void {
-  menuAnchorRefs.value[id] = el;
-}
-
-function toggleActionsMenu(id: string): void {
-  openMenuId.value = openMenuId.value === id ? null : id;
-}
-
-function closeActionsMenu(): void {
-  openMenuId.value = null;
-}
-
-// ─── Visual helpers ──────────────────────────────────────────────────
+// ─── Visual helpers (chip-style cells matching the canonical pattern) ─
 function sociedadShort(name: string): string {
   return name.replace(' SA', '').replace(' Corp', '');
 }
@@ -179,7 +168,6 @@ function tipoBadgeClass(tipo: string): string {
   switch (tipo) {
     case 'Banco':
     case 'Custodio':
-      return 'bg-info-bg text-info';
     case 'Banco digital':
       return 'bg-info-bg text-info';
     case 'ALyC':
@@ -187,8 +175,6 @@ function tipoBadgeClass(tipo: string): string {
       return 'bg-warning-bg text-warning';
     case 'Exchange':
       return 'bg-success-bg text-success';
-    case 'Proveedor':
-      return 'bg-card text-t-3';
     default:
       return 'bg-card text-t-3';
   }
@@ -197,7 +183,6 @@ function tipoBadgeClass(tipo: string): string {
 function monedaBadgeClass(moneda: string): string {
   switch (moneda) {
     case 'ARS':
-      return 'bg-card text-t-2';
     case 'USD':
       return 'bg-card text-t-2';
     case 'USDC':
@@ -211,60 +196,148 @@ function monedaBadgeClass(moneda: string): string {
   }
 }
 
-const isEmpty = computed(() => !isPending.value && rows.value.length === 0);
+// ─── Mutations ───────────────────────────────────────────────────────
+const updateMutation = useMutation({
+  mutationFn: ({ id, patch }: { id: string; patch: UpdateAccountPayload }) =>
+    updateAccount(id, patch),
+  onMutate: async ({ id, patch }) => {
+    await queryClient.cancelQueries({ queryKey: ACCOUNTS_KEY });
+    const snapshot = queryClient.getQueryData<BankAccountRecord[]>(ACCOUNTS_KEY);
+    queryClient.setQueryData<BankAccountRecord[]>(ACCOUNTS_KEY, (old) =>
+      (old ?? []).map((r) => (r.id === id ? ({ ...r, ...patch } as BankAccountRecord) : r)),
+    );
+    return { snapshot };
+  },
+  onError: (_err, _vars, ctx) => {
+    if (ctx?.snapshot) queryClient.setQueryData(ACCOUNTS_KEY, ctx.snapshot);
+    toast.error('No se pudo guardar el cambio. Se revirtió.');
+  },
+  onSettled: () => {
+    void queryClient.invalidateQueries({ queryKey: ACCOUNTS_KEY });
+  },
+});
+
+const createAccountMutation = useMutation({
+  mutationFn: (payload: CreateAccountPayload) => createAccount(payload),
+  onError: (err) => {
+    toast.error(err instanceof Error ? err.message : 'No se pudo crear la cuenta.');
+  },
+  onSettled: () => {
+    void queryClient.invalidateQueries({ queryKey: ACCOUNTS_KEY });
+  },
+});
+
+const createStructureMutation = useMutation({
+  mutationFn: (payload: CreateStructurePayload) => createStructure(payload),
+  onError: (err) => {
+    toast.error(err instanceof Error ? err.message : 'No se pudo crear la estructura.');
+  },
+  onSettled: () => {
+    void queryClient.invalidateQueries({ queryKey: CATALOG_QUERY_KEYS.estructuras });
+    // Newly-created structures should appear when the operator re-opens
+    // Crear Cuenta even before the user navigates away.
+    void queryClient.invalidateQueries({ queryKey: ACCOUNTS_KEY });
+  },
+});
+
+// ─── Manifest creators (Module CTAs) ─────────────────────────────────
+banksAccountsMod.registerCreator((cta: ModuleCTA, formValues) => {
+  if (cta.id === 'ops.banks_accounts.crear_cuenta') {
+    const payload: CreateAccountPayload = {
+      sociedadId: String(formValues.sociedadId ?? ''),
+      estructuraId: String(formValues.estructuraId ?? ''),
+      tipoCuenta: String(formValues.tipoCuenta ?? '') as CuentaTipo,
+      moneda: String(formValues.moneda ?? '') as Moneda,
+      nro: String(formValues.nro ?? ''),
+    };
+    createAccountMutation.mutate(payload);
+    return payload as unknown as Record<string, unknown>;
+  }
+  if (cta.id === 'ops.banks_accounts.crear_estructura') {
+    const payload: CreateStructurePayload = {
+      name: String(formValues.name ?? ''),
+      tipo: String(formValues.tipo ?? '') as EstructuraTipo,
+    };
+    createStructureMutation.mutate(payload);
+    return payload as unknown as Record<string, unknown>;
+  }
+  return formValues as Record<string, unknown>;
+});
+
+// ─── Manifest dispatcher (per-row actions) ───────────────────────────
+banksAccountsMod.registerDispatcher({
+  update: (recordId, patch) => {
+    // Strip undefined keys so the partial schema validates cleanly.
+    const clean: UpdateAccountPayload = {};
+    if (typeof patch.tipoCuenta === 'string') clean.tipoCuenta = patch.tipoCuenta as CuentaTipo;
+    if (typeof patch.moneda === 'string') clean.moneda = patch.moneda as Moneda;
+    if (typeof patch.nro === 'string') clean.nro = patch.nro;
+    if (typeof patch.status === 'string') clean.status = patch.status as UpdateAccountPayload['status'];
+    if ('padreCuentaId' in patch) clean.padreCuentaId = patch.padreCuentaId as string | null;
+    updateMutation.mutate({ id: recordId, patch: clean });
+  },
+  create: () => {
+    // Creators are dispatched by `registerCreator` above; this branch
+    // is unused by the page.
+  },
+});
 </script>
 
 <template>
-  <div class="flex flex-col gap-5 p-6">
-    <!-- L1 page header -->
-    <div class="flex items-center justify-between">
+  <div class="flex flex-col gap-5 px-[22px] py-5" data-testid="banks-accounts-page">
+    <!-- L1 · Page header -->
+    <header class="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h1 class="text-xl font-bold text-t-1">Bancos / Cuentas</h1>
-        <p class="text-xs text-t-4">
+        <h1 class="text-[22px] font-extrabold tracking-tight text-t-1">Bancos / Cuentas</h1>
+        <p class="mt-1 text-xs text-t-3">
           Catálogo maestro de estructuras y cuentas del grupo Ardua.
         </p>
       </div>
-      <div class="flex items-center gap-2">
-        <Button
-          v-if="canCreateStructure"
-          variant="secondary"
-          data-testid="banks-accounts-create-structure-cta"
-          @click="openCreateStructure"
-        >
-          <FilePlus2 class="h-4 w-4" />
-          Nueva Estructura
-        </Button>
-        <Button
-          v-if="canCreateAccount"
-          variant="primary"
-          data-testid="banks-accounts-create-account-cta"
-          @click="openCreateAccount"
-        >
-          <Plus class="h-4 w-4" />
-          Nueva Cuenta
-        </Button>
+      <div class="flex items-center gap-3" data-testid="banks-accounts-main-cta">
+        <ManifestModuleCTAs :manifest-key="OPS_BANKS_ACCOUNTS_MANIFEST_KEY" />
       </div>
-    </div>
+    </header>
 
-    <!-- L2 KPI grid (2 cards, full-catalog state) -->
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <div class="rounded-lg border border-b-2 bg-card-2 p-4">
-        <div class="text-[10px] font-bold uppercase tracking-wider text-t-4">Estructuras</div>
-        <div class="mt-2 text-2xl font-bold text-t-1" data-testid="kpi-estructuras">
-          {{ kpis.estructuras }}
+    <!-- L2 · KPIs (4 tiles) -->
+    <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" data-testid="banks-accounts-kpis">
+      <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+        <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">
+          Estructuras totales
         </div>
-        <div class="mt-1 text-[11px] text-t-4">bancos, exchanges y custodios</div>
-      </div>
-      <div class="rounded-lg border border-b-2 bg-card-2 p-4">
-        <div class="text-[10px] font-bold uppercase tracking-wider text-t-4">Cuentas totales</div>
-        <div class="mt-2 text-2xl font-bold text-t-1" data-testid="kpi-total">
-          {{ kpis.total }}
+        <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">
+          {{ kpis.estructurasTotales }}
         </div>
-        <div class="mt-1 text-[11px] text-t-4">activas en el catálogo</div>
       </div>
-    </div>
+      <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+        <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">
+          Cuentas totales
+        </div>
+        <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">
+          {{ kpis.cuentasTotales }}
+        </div>
+      </div>
+      <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+        <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">
+          Cuentas activas
+        </div>
+        <div class="text-2xl font-extrabold leading-none tracking-tight text-success">
+          {{ kpis.cuentasActivas }}
+        </div>
+      </div>
+      <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+        <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">
+          Cuentas inactivas
+        </div>
+        <div
+          class="text-2xl font-extrabold leading-none tracking-tight"
+          :class="kpis.cuentasInactivas > 0 ? 'text-warning' : 'text-t-1'"
+        >
+          {{ kpis.cuentasInactivas }}
+        </div>
+      </div>
+    </section>
 
-    <!-- Error banner (transient API failures) -->
+    <!-- Error banner -->
     <div
       v-if="isError"
       class="flex items-start gap-2 rounded-md border border-danger/30 bg-danger/10 px-3 py-2.5 text-[13px] text-danger"
@@ -274,55 +347,71 @@ const isEmpty = computed(() => !isPending.value && rows.value.length === 0);
       <div>No se pudo cargar el catálogo. Reintentá en unos segundos.</div>
     </div>
 
-    <!-- Filter row -->
-    <div v-if="!isEmpty || isPending" class="flex flex-wrap items-center gap-2">
-      <div class="flex-1 min-w-[200px] max-w-sm">
+    <!-- L3 · Search + filters -->
+    <section
+      v-if="!isEmpty || isPending"
+      class="flex flex-wrap items-center gap-2"
+      data-testid="banks-accounts-filters"
+    >
+      <div class="relative">
+        <Search class="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-t-4" />
         <Input
           v-model="search"
-          placeholder="Buscar por banco, sociedad o número"
+          placeholder="Buscar por banco, sociedad o número…"
+          class="w-[260px] pl-8"
           data-testid="banks-accounts-search"
         />
       </div>
-      <div class="h-6 w-px bg-b-2" />
+      <div class="flex-1" />
       <Select v-model="fSociedadModel">
-        <SelectTrigger class="w-[170px]" data-testid="filter-sociedad">
-          <SelectValue placeholder="Sociedad" />
+        <SelectTrigger class="h-9 w-[160px] text-xs" data-testid="filter-sociedad">
+          <SelectValue placeholder="Sociedad · Todas" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem :value="ALL">Todas</SelectItem>
+          <SelectItem :value="ALL">Sociedad · Todas</SelectItem>
           <SelectItem v-for="o in sociedadOptions" :key="o" :value="o">{{ o }}</SelectItem>
         </SelectContent>
       </Select>
       <Select v-model="fTipoModel">
-        <SelectTrigger class="w-[150px]" data-testid="filter-tipo">
-          <SelectValue placeholder="Tipo" />
+        <SelectTrigger class="h-9 w-[150px] text-xs" data-testid="filter-tipo">
+          <SelectValue placeholder="Estructura · Todas" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem :value="ALL">Todos</SelectItem>
+          <SelectItem :value="ALL">Estructura · Todas</SelectItem>
           <SelectItem v-for="o in tipoOptions" :key="o" :value="o">{{ o }}</SelectItem>
         </SelectContent>
       </Select>
       <Select v-model="fTipoCuentaModel">
-        <SelectTrigger class="w-[170px]" data-testid="filter-tipo-cuenta">
-          <SelectValue placeholder="Tipo de cuenta" />
+        <SelectTrigger class="h-9 w-[160px] text-xs" data-testid="filter-tipo-cuenta">
+          <SelectValue placeholder="Cuenta · Todas" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem :value="ALL">Todos</SelectItem>
+          <SelectItem :value="ALL">Cuenta · Todas</SelectItem>
           <SelectItem v-for="o in tipoCuentaOptions" :key="o" :value="o">{{ o }}</SelectItem>
         </SelectContent>
       </Select>
       <Select v-model="fMonedaModel">
-        <SelectTrigger class="w-[120px]" data-testid="filter-moneda">
-          <SelectValue placeholder="Moneda" />
+        <SelectTrigger class="h-9 w-[120px] text-xs" data-testid="filter-moneda">
+          <SelectValue placeholder="Moneda · Todas" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem :value="ALL">Todas</SelectItem>
+          <SelectItem :value="ALL">Moneda · Todas</SelectItem>
           <SelectItem v-for="o in monedaOptions" :key="o" :value="o">{{ o }}</SelectItem>
         </SelectContent>
       </Select>
-    </div>
+      <Select v-model="fEstadoModel">
+        <SelectTrigger class="h-9 w-[130px] text-xs" data-testid="filter-estado">
+          <SelectValue placeholder="Estado · Todos" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem :value="ALL">Estado · Todos</SelectItem>
+          <SelectItem value="Activa">Activa</SelectItem>
+          <SelectItem value="Inactiva">Inactiva</SelectItem>
+        </SelectContent>
+      </Select>
+    </section>
 
-    <!-- EmptyState branch (no inline CTA — operators use the page-header CTA) -->
+    <!-- Empty state -->
     <div v-if="isEmpty" data-testid="banks-accounts-empty-state">
       <EmptyState
         title="Sin cuentas en el catálogo"
@@ -331,165 +420,93 @@ const isEmpty = computed(() => !isPending.value && rows.value.length === 0);
     </div>
 
     <!-- Table -->
-    <div
+    <section
       v-else
-      class="rounded-lg border border-b-2 bg-card-2 overflow-x-auto"
+      class="overflow-hidden rounded-[10px] border border-b-2 bg-card-2"
       data-testid="banks-accounts-table"
     >
-      <table class="w-full table-auto text-sm">
-        <thead
-          class="border-b border-b-2 text-[10px] font-bold uppercase tracking-wider text-t-4"
-        >
-          <tr>
-            <th class="px-4 py-3 text-left">Sociedad</th>
-            <th class="px-4 py-3 text-left">Banco / Estructura</th>
-            <th class="px-4 py-3 text-left">Tipo</th>
-            <th class="px-4 py-3 text-left">Tipo de cuenta</th>
-            <th class="px-4 py-3 text-left">Moneda</th>
-            <th class="px-4 py-3 text-left">Nro. / Address</th>
-            <th class="px-4 py-3 text-left">Cuenta padre</th>
-            <th class="px-4 py-3 text-left">Estado</th>
-            <th class="w-12 px-4 py-3 text-right">Acciones</th>
+      <table class="w-full border-collapse">
+        <thead>
+          <tr class="border-b border-b-2">
+            <th class="px-[18px] py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Sociedad</th>
+            <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Banco / Estructura</th>
+            <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Tipo estructura</th>
+            <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Tipo cuenta</th>
+            <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Moneda</th>
+            <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Nro. / Address</th>
+            <th class="px-3.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-t-3">Estado</th>
+            <th class="px-3.5 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-t-3">Acciones</th>
           </tr>
         </thead>
         <tbody>
           <template v-if="isPending">
             <tr v-for="i in 5" :key="`skeleton-${i}`">
-              <td v-for="c in 8" :key="c" class="px-4 py-3">
+              <td v-for="c in 7" :key="c" class="px-3.5 py-2.5">
                 <Skeleton class="h-4 w-24" />
               </td>
-              <td class="px-4 py-3" />
+              <td class="px-3.5 py-2.5" />
             </tr>
           </template>
           <template v-else>
             <tr
               v-for="row in table.paged.value"
               :key="row.id"
-              class="border-b border-b-1 last:border-b-0 hover:bg-card"
+              class="border-b border-b-1 last:border-b-0 hover:bg-white/[0.02]"
+              :data-testid="`banks-accounts-row-${row.id}`"
             >
-              <td class="px-4 py-3">
-                <span
-                  class="inline-block rounded-md bg-card px-2 py-0.5 text-[10px] font-semibold text-t-2"
-                >
+              <td class="px-[18px] py-2.5">
+                <span class="inline-block rounded-md bg-card px-2 py-0.5 text-[10px] font-semibold text-t-2">
                   {{ sociedadShort(row.sociedad) }}
                 </span>
               </td>
-              <td class="px-4 py-3 text-[13px] text-t-2">{{ row.estructura }}</td>
-              <td class="px-4 py-3">
-                <span
-                  :class="`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${tipoBadgeClass(row.estructuraTipo)}`"
-                >
+              <td class="px-3.5 py-2.5 text-xs text-t-2 font-semibold">{{ row.estructura }}</td>
+              <td class="px-3.5 py-2.5">
+                <span :class="`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${tipoBadgeClass(row.estructuraTipo)}`">
                   {{ row.estructuraTipo }}
                 </span>
               </td>
-              <td class="px-4 py-3 text-[11px] text-t-3">{{ row.tipoCuenta }}</td>
-              <td class="px-4 py-3">
-                <span
-                  :class="`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${monedaBadgeClass(row.moneda)}`"
-                >
+              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ row.tipoCuenta }}</td>
+              <td class="px-3.5 py-2.5">
+                <span :class="`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${monedaBadgeClass(row.moneda)}`">
                   {{ row.moneda }}
                 </span>
               </td>
-              <td class="px-4 py-3 font-mono text-[11px] text-t-3">{{ row.nro }}</td>
-              <td class="px-4 py-3 text-[11px]">
-                <span v-if="row.cuentaPadreLabel" class="text-t-3">
-                  {{ row.cuentaPadreLabel }}
-                </span>
-                <span v-else class="text-t-4 opacity-40">—</span>
-              </td>
-              <td class="px-4 py-3">
+              <td class="px-3.5 py-2.5 font-mono text-[11px] text-t-3">{{ row.nro }}</td>
+              <td class="px-3.5 py-2.5">
                 <span
                   :class="`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${
-                    row.status === 'Activa'
-                      ? 'bg-success-bg text-success'
-                      : 'bg-card text-t-3'
+                    row.status === 'Activa' ? 'bg-success-bg text-success' : 'bg-card text-t-3'
                   }`"
                 >
                   {{ row.status }}
                 </span>
               </td>
-              <td class="px-4 py-3 text-right" data-actions-cell>
-                <button
-                  v-if="canEditAccount"
-                  :ref="(el) => setMenuAnchor(row.id, el as HTMLElement | null)"
-                  type="button"
-                  class="inline-flex h-7 w-7 items-center justify-center rounded-md text-t-3 transition-colors hover:bg-card hover:text-t-1"
-                  :data-testid="`row-actions-${row.id}`"
-                  @click="toggleActionsMenu(row.id)"
-                >
-                  <MoreVertical class="h-4 w-4" />
-                </button>
+              <td class="px-3.5 py-2.5 text-center" @click.stop>
+                <div class="flex items-center justify-center">
+                  <ManifestActionsMenu
+                    :manifest-key="OPS_BANKS_ACCOUNTS_MANIFEST_KEY"
+                    :record="row as unknown as Record<string, unknown>"
+                    variant="table"
+                    :data-testid="`banks-accounts-row-${row.id}-actions`"
+                  />
+                </div>
               </td>
             </tr>
           </template>
         </tbody>
       </table>
-    </div>
+    </section>
 
-    <!-- Pagination footer -->
-    <div
+    <TablePagination
       v-if="!isPending && rows.length > 0"
-      class="flex items-center justify-between text-xs text-t-4"
-    >
-      <div>
-        Página {{ table.page.value }} de {{ table.totalPages.value }} · {{ table.total.value }}
-        cuenta{{ table.total.value === 1 ? '' : 's' }} visibles
-      </div>
-      <div class="flex gap-1.5">
-        <Button
-          variant="ghost"
-          size="sm"
-          :disabled="table.page.value <= 1"
-          @click="table.setPage(table.page.value - 1)"
-        >
-          Anterior
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          :disabled="table.page.value >= table.totalPages.value"
-          @click="table.setPage(table.page.value + 1)"
-        >
-          Siguiente
-        </Button>
-      </div>
-    </div>
-
-    <!-- Per-row Actions menu (single instance, anchored to whichever row is open) -->
-    <ActionsMenu
-      :open="openMenuId !== null"
-      :anchor="openMenuId ? menuAnchorRefs[openMenuId] ?? null : null"
-      @close="closeActionsMenu"
-    >
-      <template v-if="openMenuId">
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-2 text-left text-[13px] font-medium text-t-2 transition-colors hover:bg-card hover:text-t-1"
-          :data-testid="`action-edit-account-${openMenuId}`"
-          @click="
-            (() => {
-              const target = rows.find((r) => r.id === openMenuId);
-              if (target) openEditAccount(target);
-            })()
-          "
-        >
-          <span>Editar datos</span>
-        </button>
-      </template>
-    </ActionsMenu>
-
-    <!-- Modals -->
-    <CreateStructureModal v-model:open="createStructureOpen" @created="onMutationSuccess" />
-    <CreateAccountModal
-      v-model:open="createAccountOpen"
-      :existing-accounts="rows"
-      @created="onMutationSuccess"
-    />
-    <EditAccountModal
-      v-model:open="editAccountOpen"
-      :record="editAccountTarget"
-      :existing-accounts="rows"
-      @saved="onMutationSuccess"
+      :page="table.page.value"
+      :page-size="table.pageSize.value"
+      :total="table.total.value"
+      :total-pages="table.totalPages.value"
+      :page-size-options="PAGE_SIZE_OPTIONS"
+      data-testid="banks-accounts-pagination"
+      @update:page="table.setPage"
+      @update:page-size="table.setPageSize"
     />
   </div>
 </template>

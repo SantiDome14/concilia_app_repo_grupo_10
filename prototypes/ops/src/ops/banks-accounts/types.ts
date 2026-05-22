@@ -96,13 +96,14 @@ export interface CreateAccountPayload {
   padreCuentaId?: string | null;
 }
 
-/** Body for `PATCH /api/banks-accounts/:id` (Edit-Account flow). */
+/** Body for `PATCH /api/banks-accounts/:id` — every field optional so
+ *  the manifest engine can fire single-field updates (Activar / Desactivar). */
 export interface UpdateAccountPayload {
-  tipoCuenta: CuentaTipo;
-  moneda: Moneda;
-  nro: string;
+  tipoCuenta?: CuentaTipo;
+  moneda?: Moneda;
+  nro?: string;
   padreCuentaId?: string | null;
-  status: EstadoCatalogo;
+  status?: EstadoCatalogo;
 }
 
 /**

@@ -1,26 +1,47 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { computed, ref } from 'vue';
+import { setActivePinia, createPinia } from 'pinia';
+import type * as VueQueryModule from '@tanstack/vue-query';
 import type { BankAccountRecord } from '@/ops/banks-accounts/types';
+import { useManifestRegistryStore } from '@/stores/manifestRegistry';
+import { useAuthStore } from '@/stores/auth';
+import {
+  OPS_BANKS_ACCOUNTS_MANIFEST,
+  OPS_BANKS_ACCOUNTS_MANIFEST_KEY,
+} from '@/manifests/ops.banks_accounts.actions';
 
 // ════════════════════════════════════════════════════════════════════
-// BanksAccounts page — component tests covering ops-banks-accounts
-// (post-refactor): page shell, 2 KPIs from full dataset, 8 columns,
-// empty-state branch, no accounting surfaces.
+// BanksAccounts page — post-manifest-rewrite tests covering the shell,
+// 4 KPIs, header CTAs surfaced by <ManifestModuleCTAs>, table columns
+// (no Cuenta contable), and per-row <ManifestActionsMenu> trigger.
+// vue-query is fully mocked to keep the spec deterministic and avoid
+// HTTP traffic; the manifest engine is wired through a real
+// PiniaRegistry instance.
 // ════════════════════════════════════════════════════════════════════
 
-const mockQueryData = ref<BankAccountRecord[]>([]);
+const mockAccountsData = ref<BankAccountRecord[]>([]);
 const mockIsPending = ref(false);
 const mockIsError = ref(false);
 
-vi.mock('@tanstack/vue-query', () => ({
-  useQuery: () => ({
-    data: mockQueryData,
-    isPending: mockIsPending,
-    isError: mockIsError,
-  }),
-  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
-}));
+vi.mock('@tanstack/vue-query', async (importOriginal) => {
+  const actual = await importOriginal<typeof VueQueryModule>();
+  return {
+    ...actual,
+    useQuery: () => ({
+      data: mockAccountsData,
+      isPending: mockIsPending,
+      isError: mockIsError,
+    }),
+    useMutation: () => ({ mutate: vi.fn() }),
+    useQueryClient: () => ({
+      cancelQueries: vi.fn(),
+      getQueryData: vi.fn(),
+      setQueryData: vi.fn(),
+      invalidateQueries: vi.fn(),
+    }),
+  };
+});
 
 vi.mock('@/composables/useCapabilities', () => ({
   useCapabilities: () => ({
@@ -30,19 +51,6 @@ vi.mock('@/composables/useCapabilities', () => ({
     canAll: () => true,
   }),
 }));
-
-vi.mock('@/ops/banks-accounts/CreateStructureModal.vue', async () => {
-  const { defineComponent: dc } = await import('vue');
-  return { default: dc({ name: 'CreateStructureStub', props: { open: Boolean }, setup: () => () => null }) };
-});
-vi.mock('@/ops/banks-accounts/CreateAccountModal.vue', async () => {
-  const { defineComponent: dc } = await import('vue');
-  return { default: dc({ name: 'CreateAccountStub', props: { open: Boolean }, setup: () => () => null }) };
-});
-vi.mock('@/ops/banks-accounts/EditAccountModal.vue', async () => {
-  const { defineComponent: dc } = await import('vue');
-  return { default: dc({ name: 'EditAccountStub', props: { open: Boolean }, setup: () => () => null }) };
-});
 
 function row(overrides: Partial<BankAccountRecord> = {}): BankAccountRecord {
   return {
@@ -61,14 +69,28 @@ function row(overrides: Partial<BankAccountRecord> = {}): BankAccountRecord {
 }
 
 const sample: BankAccountRecord[] = [
-  row({ id: 'a', sociedad: 'Circuit Pay SA', estructura: 'COINAG', moneda: 'ARS', nro: '10.045' }),
-  row({ id: 'b', sociedad: 'Circuit Pay SA', estructura: 'COINAG', moneda: 'USD', nro: '10.047' }),
-  row({ id: 'c', sociedad: 'Haz Pagos SA', estructura: 'BIND', estructuraTipo: 'Banco', tipoCuenta: 'Cuenta Corriente', moneda: 'ARS', nro: '356744' }),
-  row({ id: 'd', sociedad: 'Haz Pagos SA', estructura: 'MACRO', estructuraTipo: 'Banco', tipoCuenta: 'Cuenta Corriente', moneda: 'USD', nro: '821111' }),
-  row({ id: 'e', sociedad: 'Astra Ventures', estructura: 'BITGO', estructuraTipo: 'Custodio', tipoCuenta: 'Custodia', moneda: 'BTC', nro: '0xabc123' }),
+  row({ id: 'a', moneda: 'ARS', nro: '10.045', status: 'Activa' }),
+  row({ id: 'b', moneda: 'USD', nro: '10.047', status: 'Activa' }),
+  row({ id: 'c', sociedad: 'Haz Pagos SA', estructura: 'BIND', estructuraTipo: 'Banco', tipoCuenta: 'Cuenta Corriente', moneda: 'ARS', nro: '356744', status: 'Activa' }),
+  row({ id: 'd', sociedad: 'Haz Pagos SA', estructura: 'MACRO', estructuraTipo: 'Banco', tipoCuenta: 'Cuenta Corriente', moneda: 'USD', nro: '821111', status: 'Inactiva' }),
+  row({ id: 'e', sociedad: 'Astra Ventures', estructura: 'BITGO', estructuraTipo: 'Custodio', tipoCuenta: 'Custodia', moneda: 'BTC', nro: '0xabc123', status: 'Activa' }),
 ];
 
 import BanksAccounts from './BanksAccounts.vue';
+
+beforeEach(() => {
+  setActivePinia(createPinia());
+  useManifestRegistryStore().register(
+    OPS_BANKS_ACCOUNTS_MANIFEST_KEY,
+    OPS_BANKS_ACCOUNTS_MANIFEST,
+  );
+  useAuthStore().setUser({
+    id: 'u-1',
+    email: 'u@x',
+    name: 'U',
+    capabilities: ['OPS_ADMIN'],
+  });
+});
 
 function mountPage() {
   return mount(BanksAccounts, {
@@ -80,14 +102,15 @@ function mountPage() {
         SelectContent: { template: '<div data-stub="select-content"><slot /></div>' },
         SelectItem: { template: '<div data-stub="select-item"><slot /></div>' },
         Input: { template: '<input />' },
+        TablePagination: { template: '<div data-stub="pagination" />' },
       },
     },
   });
 }
 
-describe('BanksAccounts page — happy path (OPS-only shape)', () => {
-  it('renders the title, both CTAs, and exactly 2 KPI cards (no accounting concerns)', () => {
-    mockQueryData.value = sample;
+describe('BanksAccounts page — happy path (OPS shape, no contable)', () => {
+  it('renders the title and the 4 KPI tiles (no contable concerns)', () => {
+    mockAccountsData.value = sample;
     mockIsPending.value = false;
     mockIsError.value = false;
 
@@ -95,49 +118,57 @@ describe('BanksAccounts page — happy path (OPS-only shape)', () => {
     const text = w.text();
 
     expect(text).toContain('Bancos / Cuentas');
-    expect(w.find('[data-testid="banks-accounts-create-structure-cta"]').exists()).toBe(true);
-    expect(w.find('[data-testid="banks-accounts-create-account-cta"]').exists()).toBe(true);
 
-    // Only 2 KPIs render (Estructuras, Cuentas totales). The accounting KPIs are gone.
-    expect(w.find('[data-testid="kpi-estructuras"]').text()).toBe('4');
-    expect(w.find('[data-testid="kpi-total"]').text()).toBe('5');
-    expect(w.find('[data-testid="kpi-configuradas"]').exists()).toBe(false);
-    expect(w.find('[data-testid="kpi-sin-configurar"]').exists()).toBe(false);
+    // 4 KPIs render and no accounting tile exists.
+    const kpiSection = w.find('[data-testid="banks-accounts-kpis"]');
+    expect(kpiSection.exists()).toBe(true);
+    expect(kpiSection.text()).toContain('Estructuras totales');
+    expect(kpiSection.text()).toContain('Cuentas totales');
+    expect(kpiSection.text()).toContain('Cuentas activas');
+    expect(kpiSection.text()).toContain('Cuentas inactivas');
+    expect(kpiSection.text()).not.toContain('configuración contable');
+    expect(kpiSection.text()).not.toContain('Sin configurar');
+  });
 
-    // No preparatory accounting notice anywhere on the page.
-    expect(w.find('[data-testid="banks-accounts-prep-notice"]').exists()).toBe(false);
-    expect(text).not.toContain('preparatoria');
-    expect(text).not.toContain('Motor Contable');
+  it('renders the manifest-driven Module CTAs in the page header', () => {
+    mockAccountsData.value = sample;
+    const w = mountPage();
+    const header = w.find('[data-testid="banks-accounts-main-cta"]');
+    expect(header.exists()).toBe(true);
+    // Both CTA labels surface through <ManifestModuleCTAs>
+    expect(header.text()).toContain('Nueva Cuenta');
+    expect(header.text()).toContain('Nueva Estructura');
+  });
 
-    // Table renders 9 headers (8 data columns + Acciones). The Cuenta contable column is gone.
+  it('renders 8 table headers without a Cuenta contable column', () => {
+    mockAccountsData.value = sample;
+    const w = mountPage();
     const headers = w.findAll('thead th').map((th) => th.text());
     expect(headers).toEqual([
       'Sociedad',
       'Banco / Estructura',
-      'Tipo',
-      'Tipo de cuenta',
+      'Tipo estructura',
+      'Tipo cuenta',
       'Moneda',
       'Nro. / Address',
-      'Cuenta padre',
       'Estado',
       'Acciones',
     ]);
-
-    // Empty-state surface is NOT in the DOM when data is present.
-    expect(w.find('[data-testid="banks-accounts-empty-state"]').exists()).toBe(false);
+    expect(headers).not.toContain('Cuenta contable');
   });
 
-  it('renders one Editar datos action per row when the operator has edit-account capability', () => {
-    mockQueryData.value = sample;
+  it('renders one manifest-driven Acciones trigger per row', () => {
+    mockAccountsData.value = sample;
     const w = mountPage();
-    // Per-row Actions trigger button is visible (canEditAccount is true via the mock).
-    expect(w.find('[data-testid="row-actions-a"]').exists()).toBe(true);
+    const triggers = w.findAll('[data-testid="manifest-actions-trigger"]');
+    // Pagination defaults to 10 rows; sample has 5 → 5 triggers.
+    expect(triggers.length).toBe(sample.length);
   });
 });
 
 describe('BanksAccounts page — empty state', () => {
-  it('renders EmptyState with both KPIs at 0 when the catalog returns 0 rows', () => {
-    mockQueryData.value = [];
+  it('renders EmptyState when the catalog returns 0 rows', () => {
+    mockAccountsData.value = [];
     mockIsPending.value = false;
     mockIsError.value = false;
 
@@ -145,17 +176,6 @@ describe('BanksAccounts page — empty state', () => {
     const empty = w.find('[data-testid="banks-accounts-empty-state"]');
     expect(empty.exists()).toBe(true);
     expect(empty.text()).toContain('Sin cuentas en el catálogo');
-    expect(empty.text()).toContain('Comenzá agregando una estructura y luego sus cuentas');
-    // No inline CTA inside the empty state — operators use the page-header CTA.
-    expect(w.find('[data-testid="banks-accounts-empty-cta"]').exists()).toBe(false);
-
-    // Only 2 KPI cards render with zeros.
-    expect(w.find('[data-testid="kpi-estructuras"]').text()).toBe('0');
-    expect(w.find('[data-testid="kpi-total"]').text()).toBe('0');
-    expect(w.find('[data-testid="kpi-configuradas"]').exists()).toBe(false);
-    expect(w.find('[data-testid="kpi-sin-configurar"]').exists()).toBe(false);
-
-    // Table is NOT rendered.
     expect(w.find('[data-testid="banks-accounts-table"]').exists()).toBe(false);
   });
 });

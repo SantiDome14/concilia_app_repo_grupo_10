@@ -22,6 +22,7 @@ import { setupRouter } from './router';
 import { setupAuth0 } from './plugins/auth0';
 import { setupQuery } from './plugins/query';
 import { setupManifests } from './plugins/manifests';
+import { setupCatalogs } from './plugins/catalogs';
 
 import './styles/globals.css';
 
@@ -52,6 +53,7 @@ async function bootstrap() {
   setupRouter(app);
   setupAuth0(app);
   setupQuery(app);
+  setupCatalogs();
 
   // ─── Opt-in plugins ───────────────────────────────────────────────
   // Activated by setting VITE_FEATURE_* env vars to "true".

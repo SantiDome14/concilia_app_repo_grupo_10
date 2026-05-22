@@ -80,6 +80,10 @@ const movRail = ref<string>(typeof route.query.rail === 'string' ? route.query.r
 const movPeriod = ref<PeriodValue>(parsePeriod(route.query.period));
 const view = ref<ViewMode>(parseView(route.query.view));
 
+type AxisId = 'imputacion_banco_cuenta' | 'imputacion_cliente' | 'estado_operativo';
+
+const activeAxisId = ref<AxisId>(parseAxisId(route.query.axis));
+
 function parsePeriod(value: unknown): PeriodValue {
   if (value === 'dia' || value === 'semana' || value === 'mes') return value;
   return 'todo';
@@ -88,6 +92,11 @@ function parsePeriod(value: unknown): PeriodValue {
 function parseView(value: unknown): ViewMode {
   if (value === 'cards' || value === 'kanban') return value;
   return 'list';
+}
+
+function parseAxisId(value: unknown): AxisId {
+  if (value === 'imputacion_cliente' || value === 'estado_operativo') return value;
+  return 'imputacion_banco_cuenta';
 }
 
 // Reference "today" anchor — matches the latest mock record.
@@ -103,8 +112,8 @@ function withinPeriodo(fecha: string, periodo: PeriodValue): boolean {
 
 // ─── URL sync ───────────────────────────────────────────────────────
 watch(
-  [sponsorFilter, movSearch, movType, movStatus, movRail, movPeriod, view],
-  ([sponsor, search, type, status, rail, period, viewMode]) => {
+  [sponsorFilter, movSearch, movType, movStatus, movRail, movPeriod, view, activeAxisId],
+  ([sponsor, search, type, status, rail, period, viewMode, axisId]) => {
     const next: Record<string, string> = {};
     if (sponsor) next.sponsor = sponsor;
     if (search) next.search = search;
@@ -113,6 +122,7 @@ watch(
     if (rail) next.rail = rail;
     if (period !== 'todo') next.period = period;
     if (viewMode !== 'list') next.view = viewMode;
+    if (axisId !== 'imputacion_banco_cuenta') next.axis = axisId;
     if (typeof route.query.movement === 'string') next.movement = route.query.movement;
     void router.replace({ query: next });
   },
@@ -306,21 +316,66 @@ const movTable = useTable<Movement>({
   pageSize: 10,
 });
 
-// ─── Kanban axis — imputación Lado Ardua (sin asignar / asignado) ───
-// `_imp_destination` is a projected discriminator computed below; the
-// kanban transition opens the `asignar_banco_cuenta` action so the
-// operator imputes the row through the manifest engine.
-const IMPUTACION_AXIS: KanbanAxis = {
-  axis_id: 'imputacion_banco_cuenta',
-  label: 'Imputación · Banco y Cuenta',
-  description: 'Arrastrá un movimiento "Sin asignar" a "Asignado" para imputarle banco y cuenta.',
-  state_field: '_imp_destination',
-  states: [
-    { id: 'sin_asignar', label: 'Sin asignar', order: 1 },
-    { id: 'asignado', label: 'Asignado', order: 2 },
-  ],
-  transitions: [{ from: 'sin_asignar', to: 'asignado', mode: 'modal' }],
+// ─── Kanban axes — every state-bearing field on a Movement exposes a
+//     column breakdown. Two of them are drag-droppable (the imputación
+//     ones, which open the matching manifest dialog); the other three
+//     are read-only views of the catalog states (status / tipo / rail).
+//     `_imp_destination` and `_imp_cliente` are projected discriminators
+//     computed below (the source field is binary presence, not a
+//     discrete state).
+const KANBAN_AXES: Record<AxisId, KanbanAxis> = {
+  imputacion_banco_cuenta: {
+    axis_id: 'imputacion_banco_cuenta',
+    label: 'Imputación · Banco y Cuenta',
+    description: 'Arrastrá una tarjeta "Sin asignar" a "Asignado" para imputarle banco y cuenta.',
+    state_field: '_imp_destination',
+    states: [
+      { id: 'sin_asignar', label: 'Sin asignar', order: 1 },
+      { id: 'asignado', label: 'Asignado', order: 2 },
+    ],
+    transitions: [{ from: 'sin_asignar', to: 'asignado', mode: 'modal' }],
+  },
+  imputacion_cliente: {
+    axis_id: 'imputacion_cliente',
+    label: 'Imputación · Cliente',
+    description: 'Arrastrá una tarjeta "Sin asignar" a "Asignado" para imputarle un cliente.',
+    state_field: '_imp_cliente',
+    states: [
+      { id: 'sin_asignar', label: 'Sin asignar', order: 1 },
+      { id: 'asignado', label: 'Asignado', order: 2 },
+    ],
+    transitions: [{ from: 'sin_asignar', to: 'asignado', mode: 'modal' }],
+  },
+  estado_operativo: {
+    axis_id: 'estado_operativo',
+    label: 'Estado operativo',
+    description:
+      'OPS gestiona este lifecycle: arrastrá una tarjeta PENDING a Completed / Failed / Cancelled para resolverla. Los estados terminales no se vuelven atrás.',
+    state_field: 'status',
+    states: [
+      { id: 'PENDING', label: 'Pending', order: 1 },
+      { id: 'COMPLETED', label: 'Completed', order: 2, terminal: true },
+      { id: 'FAILED', label: 'Failed', order: 3, terminal: true },
+      { id: 'CANCELLED', label: 'Cancelled', order: 4, terminal: true },
+    ],
+    // `free` mode: the drag gesture itself is the operator's confirmation,
+    // no modal — the handler patches `status` through the existing
+    // updateMovement mutation. Terminals are unreachable from each
+    // other because no transition spans them.
+    transitions: [
+      { from: 'PENDING', to: 'COMPLETED', mode: 'free' },
+      { from: 'PENDING', to: 'FAILED', mode: 'free' },
+      { from: 'PENDING', to: 'CANCELLED', mode: 'free' },
+    ],
+  },
 };
+
+const activeAxis = computed<KanbanAxis>(() => KANBAN_AXES[activeAxisId.value]);
+
+function setActiveAxis(next: AxisId): void {
+  if (next === activeAxisId.value) return;
+  activeAxisId.value = next;
+}
 
 const kanbanRecords = computed<KanbanRecord[]>(() =>
   filteredMovements.value.map(
@@ -328,6 +383,7 @@ const kanbanRecords = computed<KanbanRecord[]>(() =>
       ({
         ...(m as unknown as Record<string, unknown>),
         _imp_destination: m.destination ? 'asignado' : 'sin_asignar',
+        _imp_cliente: m.client ? 'asignado' : 'sin_asignar',
       }) as unknown as KanbanRecord,
   ),
 );
@@ -337,16 +393,32 @@ function handleKanbanTransition(payload: {
   fromState: string;
   toState: string;
   mode: string;
+  axisId: string;
 }): void {
+  // `free` transitions on estado_operativo: OPS owns the lifecycle, so
+  // the drag gesture is enough — patch `status` directly through the
+  // existing optimistic-rollback mutation.
+  if (payload.mode === 'free' && payload.axisId === 'estado_operativo') {
+    updateMutation.mutate({
+      id: payload.recordId,
+      patch: { status: payload.toState },
+    });
+    return;
+  }
+  // `modal` transitions on the two imputación axes: route to the
+  // matching manifest action so the dialog captures the asignación.
   if (payload.mode !== 'modal') return;
   const record = allMovements.value.find((m) => m.id === payload.recordId);
   if (!record) return;
-  if (payload.toState === 'asignado') {
-    movimientosMod.openDialog(
-      'movimientos.asignar_banco_cuenta',
-      record as unknown as Record<string, unknown>,
-    );
-  }
+  if (payload.toState !== 'asignado') return;
+  const actionId =
+    payload.axisId === 'imputacion_banco_cuenta'
+      ? 'movimientos.asignar_banco_cuenta'
+      : payload.axisId === 'imputacion_cliente'
+        ? 'movimientos.asignar_cliente'
+        : null;
+  if (!actionId) return;
+  movimientosMod.openDialog(actionId, record as unknown as Record<string, unknown>);
 }
 
 // ─── Movement details modal ─────────────────────────────────────────
@@ -582,10 +654,12 @@ function isInflow(amount: string): boolean {
     <!-- KANBAN view -->
     <div v-else class="min-h-[480px]" data-testid="movimientos-kanban-wrapper">
       <KanbanBoard
-        :axis="IMPUTACION_AXIS"
+        :axis="activeAxis"
+        :axes="KANBAN_AXES"
         :records="kanbanRecords"
-        title="Imputación · Banco y Cuenta"
+        title="Movimientos"
         @transition="handleKanbanTransition"
+        @update:axis-id="(id: string) => setActiveAxis(id as AxisId)"
       >
         <template #card="{ record }">
           <CardItem :record="record" @click="openDetails(record as unknown as Movement)">

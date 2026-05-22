@@ -98,12 +98,15 @@ const createAccountPayloadSchema = z.object({
   padreCuentaId: z.string().nullable().optional(),
 });
 
+// Every field optional so single-field PATCH operations (Activar /
+// Desactivar from the manifest engine sends `{ status }` only) round-
+// trip through the same endpoint as the full-form Edit.
 const updateAccountPayloadSchema = z.object({
-  tipoCuenta: cuentaTipoSchema,
-  moneda: monedaSchema,
-  nro: z.string().min(1),
+  tipoCuenta: cuentaTipoSchema.optional(),
+  moneda: monedaSchema.optional(),
+  nro: z.string().min(1).optional(),
   padreCuentaId: z.string().nullable().optional(),
-  status: estadoCatalogoSchema,
+  status: estadoCatalogoSchema.optional(),
 });
 
 // ─── Public schema exports (used by tests + form validators) ────────
