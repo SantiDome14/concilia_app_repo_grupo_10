@@ -35,8 +35,10 @@ function makeInstruction(overrides: Partial<Instruction> = {}): Instruction {
   return {
     id: 'inst-1',
     name: 'Default',
+    provider: null,
     currency_id: 'ARS',
     description: null,
+    status: 'ACTIVE',
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
     attributes_count: 0,
@@ -47,8 +49,10 @@ function makeInstruction(overrides: Partial<Instruction> = {}): Instruction {
 function makeFormData(overrides: Partial<InstructionFormData> = {}): InstructionFormData {
   return {
     name: 'Pago a proveedor X',
+    provider: '',
     currency_id: 'ARS',
     description: 'instructivo',
+    status: 'DRAFT',
     attributes: [
       { key: 'banco', value: 'BBVA', index: 0 },
       { key: 'cbu', value: '123', index: 1 },
@@ -131,8 +135,10 @@ describe('createInstructionWithAttributes — two-phase orchestrator', () => {
 
     expect(post).toHaveBeenNthCalledWith(1, '/instruction', {
       name: 'Pago a proveedor X',
+      provider: null,
       currency_id: 'ARS',
       description: 'instructivo',
+      status: 'DRAFT',
     });
     expect(post).toHaveBeenNthCalledWith(2, '/instruction-attribute/save-all', {
       instruction_id: 'new-1',
@@ -224,8 +230,10 @@ describe('updateInstructionWithAttributes', () => {
 
     expect(put).toHaveBeenCalledWith('/instruction/u-1', {
       name: 'Renamed',
+      provider: null,
       currency_id: 'ARS',
       description: 'instructivo',
+      status: 'DRAFT',
     });
     expect(post).toHaveBeenCalledWith('/instruction-attribute/save-all', {
       instruction_id: 'u-1',

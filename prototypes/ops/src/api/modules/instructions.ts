@@ -63,8 +63,10 @@ export async function createInstructionRecord(
 ): Promise<Instruction> {
   const response = await apiClient.post<Instruction>(ENDPOINTS.instructions.list, {
     name: data.name,
+    provider: data.provider.trim() ? data.provider.trim() : null,
     currency_id: data.currency_id,
     description: data.description || null,
+    status: data.status,
   });
   return response.data;
 }
@@ -149,8 +151,10 @@ export async function updateInstructionWithAttributes(
   try {
     const response = await apiClient.put<Instruction>(ENDPOINTS.instructions.detail(id), {
       name: data.name,
+      provider: data.provider.trim() ? data.provider.trim() : null,
       currency_id: data.currency_id,
       description: data.description || null,
+      status: data.status,
     });
     updated = response.data;
   } catch (e) {
@@ -185,7 +189,13 @@ function extractPhaseAError(
     const detail = e.details as ValidationDetail | undefined;
     if (detail && typeof detail === 'object' && typeof detail.field === 'string') {
       const field = detail.field;
-      if (field === 'name' || field === 'currency_id' || field === 'description') {
+      if (
+        field === 'name' ||
+        field === 'currency_id' ||
+        field === 'description' ||
+        field === 'provider' ||
+        field === 'status'
+      ) {
         return { message: detail.message ?? e.message, field };
       }
     }

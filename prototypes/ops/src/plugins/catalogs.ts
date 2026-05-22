@@ -16,13 +16,16 @@ import { registerCatalog } from '@/lib/manifest/catalog';
 import { queryClient } from '@/plugins/query';
 import { fetchSociedades, fetchEstructuras } from '@/api/modules/banksAccounts';
 import { listAccounts } from '@/api/modules/psp';
+import { listCurrencies } from '@/api/modules/clients';
 import { activeSponsors } from '@/ops/psp/sponsor-catalog';
 import type { Estructura, Sociedad } from '@/ops/banks-accounts/types';
 import type { AccountsListResponse } from '@/ops/psp/types';
+import type { CurrencyEntry } from '@/ops/clients/types';
 
 const SOCIEDADES_KEY = ['ops', 'banks-accounts', 'sociedades'] as const;
 const ESTRUCTURAS_KEY = ['ops', 'banks-accounts', 'estructuras'] as const;
 const PSP_ACCOUNTS_CATALOG_KEY = ['ops', 'psp', 'accounts', 'catalog'] as const;
+const CURRENCIES_KEY = ['ops', 'currencies'] as const;
 
 export function setupCatalogs(): void {
   // framework.sociedades — every Sociedad active or not, used by the
@@ -90,6 +93,21 @@ export function setupCatalogs(): void {
       .map((name) => ({ value: name, label: name }));
   });
 
+  // ops.currencies — `GET /currencies` cache used by the Instructions
+  // manifest (`currency_id` lookup field) and by the page-level filter
+  // label resolver. Stable cache key so the page can prefetch.
+  registerCatalog('ops.currencies', () => {
+    const cached = queryClient.getQueryData<CurrencyEntry[]>(CURRENCIES_KEY);
+    if (!cached) {
+      void queryClient.ensureQueryData({
+        queryKey: CURRENCIES_KEY,
+        queryFn: listCurrencies,
+      });
+      return [];
+    }
+    return cached.map((c) => ({ value: c.id, label: c.name }));
+  });
+
   // ops.psp.cbus — CBU-padre records filtered by their sponsor. The
   // Crear Cuenta dialog passes `catalog_filter` with the chosen
   // Partner's code → engine invokes us with that value.
@@ -116,4 +134,5 @@ export const CATALOG_QUERY_KEYS = {
   sociedades: SOCIEDADES_KEY,
   estructuras: ESTRUCTURAS_KEY,
   pspAccountsCatalog: PSP_ACCOUNTS_CATALOG_KEY,
+  currencies: CURRENCIES_KEY,
 } as const;

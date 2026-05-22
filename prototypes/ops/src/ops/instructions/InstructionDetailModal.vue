@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import type { InstructionWithAttributes } from './types';
+import type { InstructionStatus, InstructionWithAttributes } from './types';
 
 // ════════════════════════════════════════════════════════════════════
 // InstructionDetailModal — read-only surface (Requirement 7)
@@ -24,12 +24,33 @@ const props = defineProps<{
   instruction: InstructionWithAttributes | null;
   /** When false, the Editar button is hidden (per ops-instructions Requirement 4). */
   canEdit?: boolean;
+  /** Resolved currency labels (id → ISO/display). */
+  currencyLabels?: Record<string, string>;
 }>();
 
 const emit = defineEmits<{
   'update:open': [value: boolean];
   edit: [];
 }>();
+
+const STATUS_LABELS: Record<InstructionStatus, string> = {
+  DRAFT: 'Borrador',
+  ACTIVE: 'Activo',
+  INACTIVE: 'Inactivo',
+};
+
+function statusVariant(
+  status: InstructionStatus,
+): 'success' | 'warning' | 'neutral' {
+  switch (status) {
+    case 'ACTIVE':
+      return 'success';
+    case 'DRAFT':
+      return 'warning';
+    case 'INACTIVE':
+      return 'neutral';
+  }
+}
 
 const sortedAttributes = computed(() => {
   if (!props.instruction) return [];
@@ -66,14 +87,37 @@ function onEdit(): void {
   <Dialog :open="props.open" @update:open="(v) => (v ? null : close())">
     <DialogContent class="max-w-xl">
       <DialogHeader>
-        <DialogTitle>{{ props.instruction?.name ?? 'Instrucción' }}</DialogTitle>
+        <DialogTitle class="flex items-center gap-2">
+          <span>{{ props.instruction?.name ?? 'Instrucción' }}</span>
+          <Badge
+            v-if="props.instruction"
+            :variant="statusVariant(props.instruction.status)"
+          >
+            {{ STATUS_LABELS[props.instruction.status] }}
+          </Badge>
+        </DialogTitle>
         <DialogDescription v-if="props.instruction">
-          {{ props.instruction.currency_id }} · {{ props.instruction.attributes.length }}
-          atributo(s)
+          {{ props.currencyLabels?.[props.instruction.currency_id] ?? props.instruction.currency_id }}
+          · {{ props.instruction.attributes.length }} atributo(s)
         </DialogDescription>
       </DialogHeader>
 
       <div v-if="props.instruction" class="space-y-4 text-sm">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-t-3">Proveedor</div>
+            <div class="mt-1 text-t-1">
+              {{ props.instruction.provider || '—' }}
+            </div>
+          </div>
+          <div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-t-3">Moneda</div>
+            <div class="mt-1 text-t-1">
+              {{ props.currencyLabels?.[props.instruction.currency_id] ?? props.instruction.currency_id }}
+            </div>
+          </div>
+        </div>
+
         <div>
           <div class="text-[10px] font-bold uppercase tracking-wider text-t-3">Descripción</div>
           <div class="mt-1 text-t-1">

@@ -28,7 +28,7 @@ import {
   toInstructionAttribute,
   type SeedAttribute,
 } from '../seed/instructions';
-import type { Instruction } from '@/ops/instructions/types';
+import type { Instruction, InstructionStatus } from '@/ops/instructions/types';
 
 const LIST = apiPath(ENDPOINTS.instructions.list);
 const DETAIL = apiPath(ENDPOINTS.instructions.detail(':id'));
@@ -42,8 +42,23 @@ interface SaveAttributesBody {
 
 interface UpsertBody {
   name?: string;
+  provider?: string | null;
   currency_id?: string;
   description?: string | null;
+  status?: InstructionStatus;
+}
+
+const VALID_STATUSES: ReadonlySet<InstructionStatus> = new Set<InstructionStatus>([
+  'DRAFT',
+  'ACTIVE',
+  'INACTIVE',
+]);
+
+function normaliseProvider(raw: unknown): string | null {
+  if (raw == null) return null;
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 let nextTemplateSeq = 1;
@@ -172,11 +187,16 @@ export const instructionHandlers: HttpHandler[] = [
       );
     }
     const stamp = new Date().toISOString();
+    const status: InstructionStatus = VALID_STATUSES.has(body?.status as InstructionStatus)
+      ? (body!.status as InstructionStatus)
+      : 'DRAFT';
     const created: Instruction = {
       id: nextTemplateId(),
       name,
+      provider: normaliseProvider(body?.provider),
       currency_id: currencyId,
       description: body?.description ?? null,
+      status,
       created_at: stamp,
       updated_at: stamp,
       attributes_count: 0,
@@ -200,6 +220,10 @@ export const instructionHandlers: HttpHandler[] = [
     if (typeof body?.name === 'string') record.name = body.name;
     if (typeof body?.currency_id === 'string') record.currency_id = body.currency_id;
     if ('description' in (body ?? {})) record.description = body?.description ?? null;
+    if ('provider' in (body ?? {})) record.provider = normaliseProvider(body?.provider);
+    if (VALID_STATUSES.has(body?.status as InstructionStatus)) {
+      record.status = body!.status as InstructionStatus;
+    }
     record.updated_at = new Date().toISOString();
     return HttpResponse.json(record);
   }),

@@ -1,59 +1,58 @@
 <script setup lang="ts">
-import { Pencil, Trash2, MoreHorizontal } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import Skeleton from '@/components/feedback/Skeleton.vue';
 import EmptyState from '@/components/feedback/EmptyState.vue';
-import type { Instruction } from './types';
+import { ManifestActionsMenu } from '@/components/manifest';
+import type { Instruction, InstructionStatus } from './types';
+
+// `Badge` is used for the status chip. The `attributes_count` is
+// intentionally NOT rendered in the table — it surfaces in the detail
+// modal instead.
 
 // ════════════════════════════════════════════════════════════════════
-// InstructionsTable — implements Requirements 2 (column set + row click)
-// and 3 (filter state). The page owns the data fetch + filter state and
-// passes the rows here. The table emits `row-click` (outside Acciones)
-// and `action` events; the page wires those to the modals.
+// InstructionsTable — Lista view for the Instrucciones page.
+// ────────────────────────────────────────────────────────────────────
+// Columns: Nombre · Proveedor · Moneda · Descripción · Estado · Acciones.
+// `attributes_count` stays on the record (surfaced in the detail modal)
+// but is intentionally NOT a column — the canonical row shape stays
+// flat. Per-row actions surface through <ManifestActionsMenu> wired to
+// the `ops.instructions` manifest passed in via `manifestKey` (canonical
+// pattern — the inline Edit/Eliminar Popover was retired in favour of
+// the engine flow).
 // ════════════════════════════════════════════════════════════════════
 
 const props = defineProps<{
   rows: Instruction[];
   isLoading: boolean;
-  /** True when at least one filter is active — drives the EmptyState copy. */
   hasActiveFilters: boolean;
-  canEdit?: boolean;
-  canDelete?: boolean;
-  /** Map of currency_id → label for column display. */
   currencyLabels: Record<string, string>;
+  manifestKey: string;
 }>();
 
 const emit = defineEmits<{
   'row-click': [instruction: Instruction];
-  'edit': [instruction: Instruction];
-  'delete': [instruction: Instruction];
   'clear-filters': [];
 }>();
 
-function onRowClick(instruction: Instruction, event: MouseEvent): void {
-  // Stop-propagation pattern: clicks inside the Acciones cell already
-  // stopped propagation, so this only fires for clicks elsewhere.
-  if ((event.target as HTMLElement | null)?.closest('[data-actions-cell]')) return;
-  emit('row-click', instruction);
-}
+const STATUS_LABELS: Record<InstructionStatus, string> = {
+  DRAFT: 'Borrador',
+  ACTIVE: 'Activo',
+  INACTIVE: 'Inactivo',
+};
 
-function onEdit(instruction: Instruction, event: MouseEvent): void {
-  event.stopPropagation();
-  emit('edit', instruction);
+function statusVariant(
+  status: InstructionStatus,
+): 'success' | 'warning' | 'neutral' {
+  switch (status) {
+    case 'ACTIVE':
+      return 'success';
+    case 'DRAFT':
+      return 'warning';
+    case 'INACTIVE':
+      return 'neutral';
+  }
 }
-
-function onDelete(instruction: Instruction, event: MouseEvent): void {
-  event.stopPropagation();
-  emit('delete', instruction);
-}
-
-const showActions = (): boolean => Boolean(props.canEdit || props.canDelete);
 </script>
 
 <template>
@@ -62,36 +61,36 @@ const showActions = (): boolean => Boolean(props.canEdit || props.canDelete);
       <thead class="border-b border-b-2 text-[10px] font-bold uppercase tracking-wider text-t-4">
         <tr>
           <th class="px-4 py-3 text-left">Nombre</th>
+          <th class="px-4 py-3 text-left">Proveedor</th>
           <th class="px-4 py-3 text-left">Moneda</th>
           <th class="px-4 py-3 text-left">Descripción</th>
-          <th class="px-4 py-3 text-left">Atributos</th>
-          <th v-if="showActions()" class="w-12 px-4 py-3 text-right">Acciones</th>
+          <th class="px-4 py-3 text-left">Estado</th>
+          <th class="w-12 px-4 py-3 text-center">Acciones</th>
         </tr>
       </thead>
       <tbody>
-        <!-- Loading -->
         <template v-if="props.isLoading">
           <tr v-for="i in 5" :key="`skeleton-${i}`">
             <td class="px-4 py-3"><Skeleton class="h-4 w-32" /></td>
+            <td class="px-4 py-3"><Skeleton class="h-4 w-20" /></td>
             <td class="px-4 py-3"><Skeleton class="h-4 w-12" /></td>
             <td class="px-4 py-3"><Skeleton class="h-4 w-48" /></td>
-            <td class="px-4 py-3"><Skeleton class="h-4 w-8" /></td>
-            <td v-if="showActions()" class="px-4 py-3" />
+            <td class="px-4 py-3"><Skeleton class="h-4 w-16" /></td>
+            <td class="px-4 py-3"><Skeleton class="h-4 w-6" /></td>
           </tr>
         </template>
 
-        <!-- Empty -->
         <tr v-else-if="props.rows.length === 0">
-          <td :colspan="showActions() ? 5 : 4" class="px-4 py-8">
+          <td :colspan="6" class="px-4 py-8">
             <EmptyState
               v-if="!props.hasActiveFilters"
               title="No hay instrucciones cargadas"
-              description="Hacé click en + Crear instrucción para empezar"
+              description="Hacé click en Crear instrucción para empezar"
             />
             <EmptyState
               v-else
               title="Sin resultados para los filtros aplicados"
-              description="Probá ajustar los filtros o limpialos para ver todas las instrucciones."
+              description="Probá ajustar los filtros o limpialos."
             />
             <div v-if="props.hasActiveFilters" class="mt-3 flex justify-center">
               <Button variant="ghost" @click="emit('clear-filters')">
@@ -101,15 +100,16 @@ const showActions = (): boolean => Boolean(props.canEdit || props.canDelete);
           </td>
         </tr>
 
-        <!-- Rows -->
         <tr
           v-for="row in props.rows"
           v-else
           :key="row.id"
           class="cursor-pointer border-t border-b-1 transition-colors hover:bg-card-2"
-          @click="(e) => onRowClick(row, e)"
+          :data-testid="`instruction-row-${row.id}`"
+          @click="emit('row-click', row)"
         >
           <td class="px-4 py-3 text-t-1">{{ row.name }}</td>
+          <td class="px-4 py-3 text-t-2">{{ row.provider || '—' }}</td>
           <td class="px-4 py-3 text-t-2">
             {{ props.currencyLabels[row.currency_id] ?? row.currency_id }}
           </td>
@@ -117,42 +117,19 @@ const showActions = (): boolean => Boolean(props.canEdit || props.canDelete);
             {{ row.description || '—' }}
           </td>
           <td class="px-4 py-3">
-            <Badge variant="neutral" class="font-mono">{{ row.attributes_count }}</Badge>
+            <Badge :variant="statusVariant(row.status)">
+              {{ STATUS_LABELS[row.status] }}
+            </Badge>
           </td>
-          <td v-if="showActions()" data-actions-cell class="px-4 py-3 text-right">
-            <Popover>
-              <PopoverTrigger as-child>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  :aria-label="`Acciones de ${row.name}`"
-                  class="h-7 w-7 p-0"
-                  @click.stop
-                >
-                  <MoreHorizontal class="h-4 w-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" class="w-40 p-1">
-                <button
-                  v-if="props.canEdit"
-                  type="button"
-                  class="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-t-2 transition-colors hover:bg-card hover:text-t-1"
-                  @click="(e) => onEdit(row, e)"
-                >
-                  <Pencil class="h-3.5 w-3.5" />
-                  Editar
-                </button>
-                <button
-                  v-if="props.canDelete"
-                  type="button"
-                  class="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-danger transition-colors hover:bg-danger-bg"
-                  @click="(e) => onDelete(row, e)"
-                >
-                  <Trash2 class="h-3.5 w-3.5" />
-                  Eliminar
-                </button>
-              </PopoverContent>
-            </Popover>
+          <td class="px-4 py-3 text-center" @click.stop>
+            <div class="flex items-center justify-center">
+              <ManifestActionsMenu
+                :manifest-key="props.manifestKey"
+                :record="row as unknown as Record<string, unknown>"
+                variant="table"
+                :data-testid="`instruction-row-${row.id}-actions`"
+              />
+            </div>
           </td>
         </tr>
       </tbody>

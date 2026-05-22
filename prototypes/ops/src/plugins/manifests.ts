@@ -39,6 +39,10 @@ import {
   OPS_PSP_MOVIMIENTOS_MANIFEST,
   OPS_PSP_MOVIMIENTOS_MANIFEST_KEY,
 } from '@/manifests/ops.psp.movimientos.actions';
+import {
+  OPS_INSTRUCTIONS_MANIFEST,
+  OPS_INSTRUCTIONS_MANIFEST_KEY,
+} from '@/manifests/ops.instructions.actions';
 import { useManifestRegistryStore } from '@/stores/manifestRegistry';
 
 export function setupManifests(): void {
@@ -54,4 +58,5 @@ export function setupManifests(): void {
     OPS_PSP_MOVIMIENTOS_MANIFEST_KEY,
     OPS_PSP_MOVIMIENTOS_MANIFEST,
   );
+  registry.register(OPS_INSTRUCTIONS_MANIFEST_KEY, OPS_INSTRUCTIONS_MANIFEST);
 }

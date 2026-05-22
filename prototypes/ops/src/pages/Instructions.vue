@@ -1,17 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/vue-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import { useRoute, useRouter } from 'vue-router';
-import { Plus, X } from 'lucide-vue-next';
+import { Search, X } from 'lucide-vue-next';
 import { toast } from 'vue-sonner';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,70 +13,68 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { TablePagination } from '@/components/data-display';
+import { ManifestModuleCTAs } from '@/components/manifest';
+import { useTable } from '@/composables/useTable';
 import { useCapabilities } from '@/composables/useCapabilities';
+import { useManifestModule } from '@/composables/useManifestModule';
+import { PAGE_SIZE_OPTIONS } from '@/constants';
 import {
-  listInstructions,
-  getInstruction,
+  createInstructionWithAttributes,
   deleteInstruction,
+  getInstruction,
+  listInstructions,
+  updateInstructionWithAttributes,
 } from '@/api/modules/instructions';
+import { listCurrencies } from '@/api/modules/clients';
+import { CATALOG_QUERY_KEYS } from '@/plugins/catalogs';
 import InstructionsTable from '@/ops/instructions/InstructionsTable.vue';
-import CreateInstructionModal from '@/ops/instructions/CreateInstructionModal.vue';
-import EditInstructionModal from '@/ops/instructions/EditInstructionModal.vue';
 import InstructionDetailModal from '@/ops/instructions/InstructionDetailModal.vue';
+import { OPS_INSTRUCTIONS_MANIFEST_KEY } from '@/manifests/ops.instructions.actions';
 import type {
   Instruction,
+  InstructionFormData,
+  InstructionStatus,
   InstructionWithAttributes,
 } from '@/ops/instructions/types';
+import type { CurrencyEntry } from '@/ops/clients/types';
+import type { ModuleCTA } from '@/types/manifest';
 
 // ════════════════════════════════════════════════════════════════════
-// Instructions page — implements ops-instructions Requirements 1, 3,
-// 4, 7, 8, 9. The page composes the table + filters + modals; the
-// modals own the form orchestration.
+// Instructions page — canonical pattern: title + ManifestModuleCTAs +
+// L2 KPIs + L3 (search left + filters right) + table with manifest
+// actions + TablePagination. The Create / Edit / Delete dialogs flow
+// through the manifest engine; the Detail modal stays for read-only
+// row-click navigation.
 //
-// Capabilities (declared inline per design.md Decision 4):
-//   - instructions:create  → Crear CTA + Edit action
-//   - instructions:delete  → Eliminar action
-//
-// The capabilities composable gracefully degrades to false when no
-// roles are configured (template's first-run mode).
+// Two-phase orchestration (record + attributes) lives in the creator
+// + dispatcher below — the engine just collects form values; the
+// page wraps `createInstructionWithAttributes` and
+// `updateInstructionWithAttributes`.
 // ════════════════════════════════════════════════════════════════════
 
 const route = useRoute();
 const router = useRouter();
 const queryClient = useQueryClient();
 const { can } = useCapabilities();
+const instructionsMod = useManifestModule(OPS_INSTRUCTIONS_MANIFEST_KEY);
 
-const canCreate = computed(() => can('instructions:create') || can('OPS_ADMIN'));
-const canEdit = computed(() => can('instructions:edit') || can('OPS_ADMIN'));
-const canDelete = computed(() => can('instructions:delete') || can('OPS_ADMIN'));
+const canRead = computed(
+  () => can('instructions:read') || can('OPS_ADMIN') || can('ADMIN'),
+);
 
-// ─── Filters (URL-reflected, debounced for text per Requirement 3) ───
-const PAGE_SIZE_KEY = 'ops:instructions:pageSize';
-const initialPageSize = (() => {
-  const stored = typeof window !== 'undefined' ? window.localStorage.getItem(PAGE_SIZE_KEY) : null;
-  const parsed = stored ? Number(stored) : NaN;
-  return [10, 25, 50, 100].includes(parsed) ? parsed : 25;
-})();
+// ─── Filter state (URL-reflected) ───────────────────────────────────
+const search = ref<string>(typeof route.query.name === 'string' ? route.query.name : '');
+const currencyId = ref<string>(
+  typeof route.query.currency_id === 'string' ? route.query.currency_id : '',
+);
+const providerFilter = ref<string>(
+  typeof route.query.provider === 'string' ? route.query.provider : '',
+);
+const statusFilter = ref<InstructionStatus | ''>(
+  isStatus(route.query.status) ? (route.query.status as InstructionStatus) : '',
+);
 
-const nameInput = ref<string>(typeof route.query.name === 'string' ? route.query.name : '');
-const debouncedName = ref<string>(nameInput.value);
-let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-watch(nameInput, (v) => {
-  if (debounceTimer !== null) clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => {
-    debouncedName.value = v;
-  }, 300);
-});
-
-const currencyId = ref<string>(typeof route.query.currency_id === 'string' ? route.query.currency_id : '');
-const page = ref<number>(Number(route.query.page) || 1);
-const pageSize = ref<number>(initialPageSize);
-
-// reka-ui forbids `<SelectItem value="">` — using one throws in setup and
-// (fatally) breaks the unmount cycle when the operator navigates away,
-// leaving a zombie DOM tree (reported real bug, OPS 2026-05-08). Use a
-// sentinel for "All" and translate to/from the empty-string filter
-// storage via this v-model bridge.
 const ALL = '__all__';
 const currencyIdModel = computed<string>({
   get: () => currencyId.value || ALL,
@@ -92,331 +82,449 @@ const currencyIdModel = computed<string>({
     currencyId.value = v === ALL ? '' : v;
   },
 });
+const providerModel = computed<string>({
+  get: () => providerFilter.value || ALL,
+  set: (v) => {
+    providerFilter.value = v === ALL ? '' : v;
+  },
+});
+const statusModel = computed<string>({
+  get: () => statusFilter.value || ALL,
+  set: (v) => {
+    statusFilter.value = v === ALL ? '' : (v as InstructionStatus);
+  },
+});
 
-// ─── Currencies catalog (mocked for now; real: GET /currencies) ──────
-const currencies = ref<{ value: string; label: string }[]>([
-  { value: 'ARS', label: 'ARS · Pesos argentinos' },
-  { value: 'USD', label: 'USD · Dólares' },
-  { value: 'EUR', label: 'EUR · Euros' },
-  { value: 'USDT', label: 'USDT · Tether' },
-  { value: 'USDC', label: 'USDC · USD Coin' },
-]);
+// `/currencies` is the source-of-truth catalog — same cache key the
+// `ops.currencies` manifest catalog reads from, so the dropdown and the
+// table labels stay in lockstep with the form options.
+const currenciesQuery = useQuery({
+  queryKey: CATALOG_QUERY_KEYS.currencies,
+  queryFn: listCurrencies,
+  staleTime: 5 * 60 * 1000,
+});
+const currencies = computed<CurrencyEntry[]>(
+  () => currenciesQuery.data.value ?? [],
+);
 const currencyLabels = computed(() =>
-  Object.fromEntries(currencies.value.map((c) => [c.value, c.label.split(' · ')[0]!])),
+  Object.fromEntries(currencies.value.map((c) => [c.id, c.name])),
 );
 
-// ─── URL sync for filters (Requirement 3 Back-nav restoration) ───────
+const STATUS_LABEL: Record<InstructionStatus, string> = {
+  DRAFT: 'Borrador',
+  ACTIVE: 'Activo',
+  INACTIVE: 'Inactivo',
+};
+const STATUS_OPTIONS: InstructionStatus[] = ['DRAFT', 'ACTIVE', 'INACTIVE'];
+
+function isStatus(value: unknown): value is InstructionStatus {
+  return value === 'DRAFT' || value === 'ACTIVE' || value === 'INACTIVE';
+}
+
+// ─── URL sync ───────────────────────────────────────────────────────
 watch(
-  [debouncedName, currencyId, page, pageSize],
-  ([name, currency, p, ps]) => {
-    void router.replace({
-      query: {
-        ...(name ? { name } : {}),
-        ...(currency ? { currency_id: currency } : {}),
-        ...(p > 1 ? { page: String(p) } : {}),
-        ...(ps !== 25 ? { pageSize: String(ps) } : {}),
-        ...(typeof route.query.detail === 'string' ? { detail: route.query.detail } : {}),
-        ...(typeof route.query.edit === 'string' ? { edit: route.query.edit } : {}),
-      },
-    });
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(PAGE_SIZE_KEY, String(ps));
-    }
+  [search, currencyId, providerFilter, statusFilter],
+  ([name, currency, provider, status]) => {
+    const next: Record<string, string> = {};
+    if (name) next.name = name;
+    if (currency) next.currency_id = currency;
+    if (provider) next.provider = provider;
+    if (status) next.status = status;
+    if (typeof route.query.detail === 'string') next.detail = route.query.detail;
+    void router.replace({ query: next });
   },
 );
 
 const hasActiveFilters = computed(
-  () => Boolean(debouncedName.value) || Boolean(currencyId.value),
+  () =>
+    Boolean(search.value) ||
+    Boolean(currencyId.value) ||
+    Boolean(providerFilter.value) ||
+    Boolean(statusFilter.value),
 );
 
 function clearFilters(): void {
-  nameInput.value = '';
-  debouncedName.value = '';
+  search.value = '';
   currencyId.value = '';
-  page.value = 1;
+  providerFilter.value = '';
+  statusFilter.value = '';
 }
 
-// ─── List query ──────────────────────────────────────────────────────
-const queryParams = computed(() => ({
-  ...(debouncedName.value ? { name: debouncedName.value } : {}),
-  ...(currencyId.value ? { currency_id: currencyId.value } : {}),
-  page: page.value,
-  pageSize: pageSize.value,
-}));
+// ─── List query (client-side filter + pagination via useTable) ──────
+const FETCH_PAGE_SIZE = 1000;
+const LIST_KEY = ['ops', 'instructions', 'list'] as const;
 
-const queryKey = computed(() => ['ops', 'instructions', 'list', queryParams.value] as const);
-
-const {
-  data: listData,
-  isPending: isListPending,
-} = useQuery({
-  queryKey,
-  queryFn: () => listInstructions(queryParams.value),
+const listQuery = useQuery({
+  queryKey: LIST_KEY,
+  queryFn: () =>
+    listInstructions({ page: 1, pageSize: FETCH_PAGE_SIZE }),
+  enabled: canRead,
 });
 
-const rows = computed<Instruction[]>(() => listData.value?.data ?? []);
-const totalPages = computed(() => listData.value?.pagination.totalPages ?? 1);
+const allInstructions = computed<Instruction[]>(
+  () => listQuery.data.value?.data ?? [],
+);
+
+const filtered = computed<Instruction[]>(() => {
+  let source = allInstructions.value;
+  const q = search.value.trim().toLowerCase();
+  if (q !== '') {
+    source = source.filter(
+      (row) =>
+        row.name.toLowerCase().includes(q) ||
+        (row.provider ?? '').toLowerCase().includes(q) ||
+        (row.description ?? '').toLowerCase().includes(q),
+    );
+  }
+  if (currencyId.value) {
+    source = source.filter((row) => row.currency_id === currencyId.value);
+  }
+  if (providerFilter.value) {
+    source = source.filter((row) => row.provider === providerFilter.value);
+  }
+  if (statusFilter.value) {
+    source = source.filter((row) => row.status === statusFilter.value);
+  }
+  return source;
+});
+
+// Distinct providers across the full dataset (unfiltered) so changing
+// other filters doesn't make options vanish.
+const providers = computed<string[]>(() => {
+  const set = new Set<string>();
+  for (const row of allInstructions.value) {
+    if (row.provider) set.add(row.provider);
+  }
+  return Array.from(set).sort();
+});
+
+const table = useTable<Instruction>({ data: filtered, pageSize: 10 });
 
 function invalidateList(): void {
-  void queryClient.invalidateQueries({ queryKey: ['ops', 'instructions', 'list'] });
+  void queryClient.invalidateQueries({ queryKey: LIST_KEY });
 }
 
-// ─── Modals (Requirements 4, 7, 8) ───────────────────────────────────
-const createOpen = ref(false);
-const editOpen = ref(false);
+// ─── L2 KPIs ─────────────────────────────────────────────────────────
+const kpis = computed(() => {
+  const rows = filtered.value;
+  let active = 0;
+  let drafts = 0;
+  let inactive = 0;
+  for (const r of rows) {
+    if (r.status === 'ACTIVE') active += 1;
+    else if (r.status === 'DRAFT') drafts += 1;
+    else if (r.status === 'INACTIVE') inactive += 1;
+  }
+  return {
+    total: rows.length,
+    drafts,
+    active,
+    inactive,
+  };
+});
+
+// ─── Mutations: create / update / delete ────────────────────────────
+const createMutation = useMutation({
+  mutationFn: (data: InstructionFormData) =>
+    createInstructionWithAttributes(data),
+  onError: (err) => {
+    toast.error(
+      err instanceof Error ? err.message : 'No se pudo crear la instrucción.',
+    );
+  },
+  onSettled: invalidateList,
+});
+
+const updateMutation = useMutation({
+  mutationFn: ({ id, data }: { id: string; data: InstructionFormData }) =>
+    updateInstructionWithAttributes(id, data),
+  onError: (err) => {
+    toast.error(
+      err instanceof Error ? err.message : 'No se pudo guardar el cambio.',
+    );
+  },
+  onSettled: invalidateList,
+});
+
+const deleteMutation = useMutation({
+  mutationFn: (id: string) => deleteInstruction(id),
+  onError: (err) => {
+    toast.error(
+      err instanceof Error ? err.message : 'No se pudo eliminar la instrucción.',
+    );
+  },
+  onSettled: invalidateList,
+});
+
+// ─── Manifest engine wiring ─────────────────────────────────────────
+// Helper — manifest's key-value-array yields `[{ key, value }, ...]`;
+// the api expects `[{ key, value, index }, ...]` with index_order.
+function normaliseAttributes(
+  raw: unknown,
+): Array<{ key: string; value: string; index: number }> {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((entry, i) => {
+      if (!entry || typeof entry !== 'object') return null;
+      const obj = entry as Record<string, unknown>;
+      const key = typeof obj.key === 'string' ? obj.key : '';
+      const value = typeof obj.value === 'string' ? obj.value : '';
+      if (key === '') return null;
+      return { key, value, index: i };
+    })
+    .filter((x): x is { key: string; value: string; index: number } => x !== null);
+}
+
+function formValuesToFormData(formValues: Record<string, unknown>): InstructionFormData {
+  const rawStatus = formValues.status;
+  const status: InstructionStatus = isStatus(rawStatus) ? rawStatus : 'DRAFT';
+  return {
+    name: String(formValues.name ?? '').trim(),
+    provider: String(formValues.provider ?? '').trim(),
+    currency_id: String(formValues.currency_id ?? ''),
+    description: String(formValues.description ?? ''),
+    status,
+    attributes: normaliseAttributes(formValues.attributes),
+  };
+}
+
+instructionsMod.registerCreator((cta: ModuleCTA, formValues) => {
+  if (cta.id !== 'instructions.crear') return formValues as Record<string, unknown>;
+  const data = formValuesToFormData(formValues);
+  createMutation.mutate(data);
+  return data as unknown as Record<string, unknown>;
+});
+
+instructionsMod.registerDispatcher({
+  update: (recordId, patch) => {
+    if (patch['_action'] === 'eliminar') {
+      deleteMutation.mutate(recordId);
+      return;
+    }
+    // Edit flow — convert the form-shaped patch back to the API's
+    // InstructionFormData and fire the two-phase orchestrator.
+    const data = formValuesToFormData(patch);
+    updateMutation.mutate({ id: recordId, data });
+  },
+  create: () => {
+    // Creators are dispatched via registerCreator above.
+  },
+});
+
+// ─── Detail modal (read-only row-click navigation) ──────────────────
 const detailOpen = ref(false);
 const detailInstruction = ref<InstructionWithAttributes | null>(null);
-const editInstruction = ref<InstructionWithAttributes | null>(null);
-const deleteTarget = ref<Instruction | null>(null);
-const isDeleting = ref(false);
 
-async function openDetail(id: string): Promise<void> {
+async function openDetail(instruction: Instruction): Promise<void> {
   try {
-    const fetched = await getInstruction(id);
+    const fetched = await getInstruction(instruction.id);
     detailInstruction.value = fetched;
     detailOpen.value = true;
-    void router.replace({ query: { ...route.query, detail: id } });
+    void router.replace({ query: { ...route.query, detail: instruction.id } });
   } catch (e) {
-    toast.error(e instanceof Error ? e.message : 'No se pudo cargar la instrucción');
+    toast.error(
+      e instanceof Error ? e.message : 'No se pudo cargar la instrucción',
+    );
   }
 }
 
-function closeDetail(): void {
-  detailOpen.value = false;
-  detailInstruction.value = null;
-  const next = { ...route.query };
-  delete next.detail;
-  void router.replace({ query: next });
-}
-
-async function openEdit(id: string): Promise<void> {
-  try {
-    const fetched = await getInstruction(id);
-    editInstruction.value = fetched;
-    editOpen.value = true;
-    void router.replace({ query: { ...route.query, edit: id } });
-  } catch (e) {
-    toast.error(e instanceof Error ? e.message : 'No se pudo cargar la instrucción');
+function onDetailOpenChange(value: boolean): void {
+  detailOpen.value = value;
+  if (!value) {
+    detailInstruction.value = null;
+    const next = { ...route.query };
+    delete next.detail;
+    void router.replace({ query: next });
   }
 }
 
-function closeEdit(): void {
-  editOpen.value = false;
-  editInstruction.value = null;
-  const next = { ...route.query };
-  delete next.edit;
-  void router.replace({ query: next });
-}
-
-function onRowClick(instruction: Instruction): void {
-  void openDetail(instruction.id);
-}
-
-function onTableEdit(instruction: Instruction): void {
-  void openEdit(instruction.id);
-}
+// Detail deep-link rehydration on mount.
+watch(
+  () => route.query.detail,
+  async (id, prev) => {
+    if (id === prev) return;
+    if (typeof id !== 'string' || !id) return;
+    if (detailOpen.value && detailInstruction.value?.id === id) return;
+    try {
+      detailInstruction.value = await getInstruction(id);
+      detailOpen.value = true;
+    } catch {
+      detailInstruction.value = null;
+    }
+  },
+  { immediate: true },
+);
 
 function onDetailEdit(): void {
   if (!detailInstruction.value) return;
-  const id = detailInstruction.value.id;
-  closeDetail();
-  void openEdit(id);
-}
-
-// ─── Eliminar (Requirement 8) ────────────────────────────────────────
-const deleteMutation = useMutation({
-  mutationFn: (id: string) => deleteInstruction(id),
-});
-
-function onTableDelete(instruction: Instruction): void {
-  deleteTarget.value = instruction;
-}
-
-function cancelDelete(): void {
-  if (isDeleting.value) return;
-  deleteTarget.value = null;
-}
-
-async function confirmDelete(): Promise<void> {
-  if (!deleteTarget.value) return;
-  const target = deleteTarget.value;
-  isDeleting.value = true;
-  try {
-    await deleteMutation.mutateAsync(target.id);
-    toast.success('Instrucción eliminada');
-    deleteTarget.value = null;
-    invalidateList();
-  } catch (e) {
-    toast.error(e instanceof Error ? e.message : 'No se pudo eliminar la instrucción');
-  } finally {
-    isDeleting.value = false;
-  }
-}
-
-// ─── Detail/edit deep-link rehydration on mount ──────────────────────
-const detailQuery = computed(() =>
-  typeof route.query.detail === 'string' ? route.query.detail : null,
-);
-const editQuery = computed(() => (typeof route.query.edit === 'string' ? route.query.edit : null));
-
-watch(
-  detailQuery,
-  (id) => {
-    if (id && !detailOpen.value) void openDetail(id);
-  },
-  { immediate: true },
-);
-watch(
-  editQuery,
-  (id) => {
-    if (id && !editOpen.value) void openEdit(id);
-  },
-  { immediate: true },
-);
-
-// ─── Modal updates from Create/Edit (Requirement 6) ─────────────────
-function onCreated(): void {
-  invalidateList();
-}
-function onUpdated(): void {
-  invalidateList();
+  const record = detailInstruction.value;
+  onDetailOpenChange(false);
+  instructionsMod.openDialog(
+    'instructions.editar',
+    record as unknown as Record<string, unknown>,
+  );
 }
 </script>
 
 <template>
-  <div class="space-y-4 px-6 py-6">
-    <!-- Header -->
-    <header class="flex items-center justify-between">
+  <div class="flex flex-col gap-5 px-[22px] py-5" data-testid="instructions-page">
+    <!-- L1 · Page header -->
+    <header class="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h1 class="text-xl font-bold text-t-1">Instrucciones</h1>
-        <p class="text-sm text-t-3">
+        <h1 class="text-[22px] font-extrabold tracking-tight text-t-1">
+          Instrucciones
+        </h1>
+        <p class="mt-1 text-xs text-t-3">
           Templates de routing de pago. Cada instrucción puede tener atributos personalizados.
         </p>
       </div>
-      <Button
-        v-if="canCreate"
-        variant="primary"
-        class="gap-2"
-        @click="createOpen = true"
-      >
-        <Plus class="h-4 w-4" />
-        Crear instrucción
-      </Button>
+      <div class="flex items-center gap-3" data-testid="instructions-main-cta">
+        <ManifestModuleCTAs :manifest-key="OPS_INSTRUCTIONS_MANIFEST_KEY" />
+      </div>
     </header>
 
-    <!-- Filters -->
-    <div class="flex flex-wrap items-center gap-3 rounded-lg border border-b-2 bg-card p-3">
-      <Input
-        v-model="nameInput"
-        placeholder="Buscar por nombre…"
-        class="w-64"
-        aria-label="Filtrar por nombre"
-      />
-      <Select v-model="currencyIdModel">
-        <SelectTrigger class="w-48" aria-label="Filtrar por moneda">
-          <SelectValue placeholder="Todas las monedas" />
+    <!-- L2 · KPI strip -->
+    <section
+      class="grid grid-cols-2 gap-3 lg:grid-cols-4"
+      data-testid="instructions-kpis"
+    >
+      <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+        <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">
+          Total
+        </div>
+        <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">
+          {{ kpis.total }}
+        </div>
+        <div class="mt-1 text-[11px] text-t-4">instrucciones</div>
+      </div>
+      <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+        <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">
+          Borradores
+        </div>
+        <div
+          class="text-2xl font-extrabold leading-none tracking-tight"
+          :class="kpis.drafts > 0 ? 'text-warning' : 'text-t-1'"
+        >
+          {{ kpis.drafts }}
+        </div>
+        <div class="mt-1 text-[11px] text-t-4">templates en preparación</div>
+      </div>
+      <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+        <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">
+          Activos
+        </div>
+        <div class="text-2xl font-extrabold leading-none tracking-tight text-success">
+          {{ kpis.active }}
+        </div>
+        <div class="mt-1 text-[11px] text-t-4">templates publicados</div>
+      </div>
+      <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+        <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">
+          Inactivos
+        </div>
+        <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">
+          {{ kpis.inactive }}
+        </div>
+        <div class="mt-1 text-[11px] text-t-4">templates archivados</div>
+      </div>
+    </section>
+
+    <!-- L3 · Search + filters -->
+    <section
+      class="flex flex-wrap items-center gap-2.5"
+      data-testid="instructions-filters"
+    >
+      <div class="relative w-full max-w-sm sm:w-72">
+        <Search
+          class="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-t-4"
+        />
+        <Input
+          v-model="search"
+          placeholder="Buscar por nombre o descripción…"
+          class="pl-8"
+          data-testid="instructions-search"
+        />
+      </div>
+
+      <div class="flex-1" />
+
+      <Select v-model="providerModel">
+        <SelectTrigger class="h-9 w-[200px] text-xs" data-testid="instructions-filter-provider">
+          <SelectValue placeholder="Proveedor · Todos" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem :value="ALL">Todas las monedas</SelectItem>
-          <SelectItem v-for="c in currencies" :key="c.value" :value="c.value">
-            {{ c.label }}
+          <SelectItem :value="ALL">Proveedor · Todos</SelectItem>
+          <SelectItem v-for="p in providers" :key="p" :value="p">
+            {{ p }}
           </SelectItem>
         </SelectContent>
       </Select>
+
+      <Select v-model="currencyIdModel">
+        <SelectTrigger class="h-9 w-[200px] text-xs" data-testid="instructions-filter-currency">
+          <SelectValue placeholder="Moneda · Todas" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem :value="ALL">Moneda · Todas</SelectItem>
+          <SelectItem v-for="c in currencies" :key="c.id" :value="c.id">
+            {{ c.name }}
+          </SelectItem>
+        </SelectContent>
+      </Select>
+
+      <Select v-model="statusModel">
+        <SelectTrigger class="h-9 w-[180px] text-xs" data-testid="instructions-filter-status">
+          <SelectValue placeholder="Estado · Todos" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem :value="ALL">Estado · Todos</SelectItem>
+          <SelectItem v-for="s in STATUS_OPTIONS" :key="s" :value="s">
+            {{ STATUS_LABEL[s] }}
+          </SelectItem>
+        </SelectContent>
+      </Select>
+
       <Button
         v-if="hasActiveFilters"
         variant="ghost"
         size="sm"
-        class="gap-1.5"
+        data-testid="instructions-clear-filters"
         @click="clearFilters"
       >
         <X class="h-3.5 w-3.5" />
-        Limpiar filtros
+        Limpiar
       </Button>
-    </div>
+    </section>
 
     <!-- Table -->
     <InstructionsTable
-      :rows="rows"
-      :is-loading="isListPending"
+      :rows="table.paged.value"
+      :is-loading="listQuery.isPending.value"
       :has-active-filters="hasActiveFilters"
-      :can-edit="canEdit"
-      :can-delete="canDelete"
       :currency-labels="currencyLabels"
-      @row-click="onRowClick"
-      @edit="onTableEdit"
-      @delete="onTableDelete"
+      :manifest-key="OPS_INSTRUCTIONS_MANIFEST_KEY"
+      @row-click="openDetail"
       @clear-filters="clearFilters"
     />
-
-    <!-- Pagination (compact) -->
-    <div
-      v-if="rows.length > 0 && totalPages > 1"
-      class="flex items-center justify-end gap-2 text-sm text-t-3"
-    >
-      <Button
-        variant="ghost"
-        size="sm"
-        :disabled="page === 1"
-        @click="page = Math.max(1, page - 1)"
-      >
-        Anterior
-      </Button>
-      <span class="px-2">Página {{ page }} de {{ totalPages }}</span>
-      <Button
-        variant="ghost"
-        size="sm"
-        :disabled="page >= totalPages"
-        @click="page = Math.min(totalPages, page + 1)"
-      >
-        Siguiente
-      </Button>
-    </div>
-
-    <!-- Modals -->
-    <CreateInstructionModal
-      v-model:open="createOpen"
-      :currencies="currencies"
-      @created="onCreated"
+    <TablePagination
+      v-if="!listQuery.isPending.value && table.total.value > 0"
+      :page="table.page.value"
+      :page-size="table.pageSize.value"
+      :total="table.total.value"
+      :total-pages="table.totalPages.value"
+      :page-size-options="PAGE_SIZE_OPTIONS"
+      data-testid="instructions-pagination"
+      @update:page="table.setPage"
+      @update:page-size="table.setPageSize"
     />
-    <EditInstructionModal
-      v-model:open="editOpen"
-      :instruction="editInstruction"
-      :currencies="currencies"
-      @update:open="(v) => { if (!v) closeEdit(); }"
-      @updated="onUpdated"
-    />
+
     <InstructionDetailModal
-      v-model:open="detailOpen"
+      :open="detailOpen"
       :instruction="detailInstruction"
-      :can-edit="canEdit"
-      @update:open="(v) => { if (!v) closeDetail(); }"
+      :can-edit="true"
+      :currency-labels="currencyLabels"
+      @update:open="onDetailOpenChange"
       @edit="onDetailEdit"
     />
-
-    <!-- Destructive Eliminar dialog (Requirement 8) -->
-    <Dialog
-      :open="deleteTarget !== null"
-      @update:open="(v) => (v ? null : cancelDelete())"
-    >
-      <DialogContent class="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Eliminar instrucción</DialogTitle>
-          <DialogDescription v-if="deleteTarget">
-            Eliminar la instrucción "{{ deleteTarget.name }}" de la moneda
-            {{ currencyLabels[deleteTarget.currency_id] ?? deleteTarget.currency_id }}?
-            Esta acción no se puede deshacer.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button variant="ghost" :disabled="isDeleting" @click="cancelDelete">
-            Cancelar
-          </Button>
-          <Button variant="danger" :disabled="isDeleting" @click="confirmDelete">
-            {{ isDeleting ? 'Eliminando…' : 'Eliminar' }}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   </div>
 </template>

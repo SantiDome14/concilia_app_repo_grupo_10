@@ -7,8 +7,10 @@ function makeInstruction(overrides: Partial<Instruction> = {}): Instruction {
   return {
     id: 'i-1',
     name: 'Pago a proveedor X',
-    currency_id: 'ARS',
+    provider: 'BBVA',
+    currency_id: 'cur-ars',
     description: 'Instrucciones de pago al proveedor X',
+    status: 'ACTIVE',
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-02T00:00:00Z',
     attributes_count: 3,
@@ -16,7 +18,12 @@ function makeInstruction(overrides: Partial<Instruction> = {}): Instruction {
   };
 }
 
-const CURRENCY_LABELS = { ARS: 'ARS', USD: 'USD' };
+const CURRENCY_LABELS = { 'cur-ars': 'ARS', 'cur-usd': 'USD' };
+
+// `<ManifestActionsMenu>` needs Pinia + the manifest registry to mount.
+// The table's role under test is column layout / placeholder behaviour /
+// row-click bubbling — stub the menu out so the spec stays focused.
+const STUBS = { ManifestActionsMenu: true } as const;
 
 describe('InstructionsTable', () => {
   it('renders skeleton rows while loading', () => {
@@ -26,10 +33,11 @@ describe('InstructionsTable', () => {
         isLoading: true,
         hasActiveFilters: false,
         currencyLabels: CURRENCY_LABELS,
+        manifestKey: 'ops.instructions',
       },
+      global: { stubs: STUBS },
     });
 
-    // 5 skeleton rows declared in the loading template.
     expect(w.findAll('tbody tr').length).toBe(5);
     expect(w.text()).not.toContain('No hay instrucciones cargadas');
   });
@@ -41,11 +49,13 @@ describe('InstructionsTable', () => {
         isLoading: false,
         hasActiveFilters: false,
         currencyLabels: CURRENCY_LABELS,
+        manifestKey: 'ops.instructions',
       },
+      global: { stubs: STUBS },
     });
 
     expect(w.text()).toContain('No hay instrucciones cargadas');
-    expect(w.text()).toContain('+ Crear instrucción');
+    expect(w.text()).toContain('Crear instrucción');
     expect(w.text()).not.toContain('Limpiar filtros');
   });
 
@@ -56,7 +66,9 @@ describe('InstructionsTable', () => {
         isLoading: false,
         hasActiveFilters: true,
         currencyLabels: CURRENCY_LABELS,
+        manifestKey: 'ops.instructions',
       },
+      global: { stubs: STUBS },
     });
 
     expect(w.text()).toContain('Sin resultados para los filtros aplicados');
@@ -67,33 +79,54 @@ describe('InstructionsTable', () => {
     expect(w.emitted('clear-filters')).toBeTruthy();
   });
 
-  it('renders the canonical column set with currency label and attribute badge', () => {
+  it('renders the canonical 6-column header set', () => {
     const w = mount(InstructionsTable, {
       props: {
-        rows: [makeInstruction({ id: 'i-7', attributes_count: 4, currency_id: 'USD' })],
+        rows: [
+          makeInstruction({
+            id: 'i-7',
+            attributes_count: 4,
+            currency_id: 'cur-usd',
+            provider: 'Lead Bank',
+            status: 'INACTIVE',
+          }),
+        ],
         isLoading: false,
         hasActiveFilters: false,
         currencyLabels: CURRENCY_LABELS,
+        manifestKey: 'ops.instructions',
       },
+      global: { stubs: STUBS },
     });
 
     const headers = w.findAll('thead th').map((th) => th.text());
-    expect(headers).toEqual(['Nombre', 'Moneda', 'Descripción', 'Atributos']);
+    expect(headers).toEqual([
+      'Nombre',
+      'Proveedor',
+      'Moneda',
+      'Descripción',
+      'Estado',
+      'Acciones',
+    ]);
+    expect(headers).not.toContain('Atributos');
 
     const row = w.find('tbody tr');
     expect(row.text()).toContain('Pago a proveedor X');
+    expect(row.text()).toContain('Lead Bank');
     expect(row.text()).toContain('USD');
-    expect(row.text()).toContain('4');
+    expect(row.text()).toContain('Inactivo');
   });
 
-  it('renders an em-dash placeholder when description is null', () => {
+  it('renders an em-dash placeholder when description and provider are null', () => {
     const w = mount(InstructionsTable, {
       props: {
-        rows: [makeInstruction({ description: null })],
+        rows: [makeInstruction({ description: null, provider: null })],
         isLoading: false,
         hasActiveFilters: false,
         currencyLabels: CURRENCY_LABELS,
+        manifestKey: 'ops.instructions',
       },
+      global: { stubs: STUBS },
     });
 
     expect(w.find('tbody tr').text()).toContain('—');
@@ -106,53 +139,31 @@ describe('InstructionsTable', () => {
         rows: [inst],
         isLoading: false,
         hasActiveFilters: false,
-        canEdit: true,
-        canDelete: true,
         currencyLabels: CURRENCY_LABELS,
+        manifestKey: 'ops.instructions',
       },
+      global: { stubs: STUBS },
     });
 
-    // Click a non-actions cell (the Nombre cell).
     const nombreCell = w.findAll('tbody tr td')[0];
-    await nombreCell.trigger('click');
+    await nombreCell!.trigger('click');
 
     expect(w.emitted('row-click')).toBeTruthy();
     expect(w.emitted('row-click')?.[0]).toEqual([inst]);
   });
 
-  it('does not emit row-click when the click target is inside [data-actions-cell]', async () => {
+  it('translates DRAFT status into the Spanish label and warning variant', () => {
     const w = mount(InstructionsTable, {
       props: {
-        rows: [makeInstruction()],
+        rows: [makeInstruction({ status: 'DRAFT' })],
         isLoading: false,
         hasActiveFilters: false,
-        canEdit: true,
-        canDelete: true,
         currencyLabels: CURRENCY_LABELS,
+        manifestKey: 'ops.instructions',
       },
+      global: { stubs: STUBS },
     });
 
-    const actionsCell = w.find('[data-actions-cell]');
-    expect(actionsCell.exists()).toBe(true);
-    await actionsCell.trigger('click');
-
-    expect(w.emitted('row-click')).toBeFalsy();
-  });
-
-  it('hides the Acciones column entirely when neither canEdit nor canDelete is true', () => {
-    const w = mount(InstructionsTable, {
-      props: {
-        rows: [makeInstruction()],
-        isLoading: false,
-        hasActiveFilters: false,
-        canEdit: false,
-        canDelete: false,
-        currencyLabels: CURRENCY_LABELS,
-      },
-    });
-
-    expect(w.find('[data-actions-cell]').exists()).toBe(false);
-    const headers = w.findAll('thead th').map((th) => th.text());
-    expect(headers).not.toContain('Acciones');
+    expect(w.find('tbody tr').text()).toContain('Borrador');
   });
 });

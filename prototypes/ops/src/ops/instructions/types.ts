@@ -10,6 +10,10 @@
 
 export type InstructionId = string;
 
+/** Lifecycle states — `DRAFT` work in progress (no `account_instruction` may pick it),
+ * `ACTIVE` published template, `INACTIVE` archived but kept for historic letters. */
+export type InstructionStatus = 'DRAFT' | 'ACTIVE' | 'INACTIVE';
+
 /** Single attribute row attached to an instruction. */
 export interface InstructionAttribute {
   id?: string; // present on existing rows; absent when newly added in form
@@ -23,8 +27,12 @@ export interface InstructionAttribute {
 export interface Instruction {
   id: InstructionId;
   name: string;
+  /** Provider tag (free-form: bank, exchange, custodio, ...). */
+  provider: string | null;
   currency_id: string;
   description: string | null;
+  /** Lifecycle state — `DRAFT` work in progress, `ACTIVE` selectable by Account Instructions, `INACTIVE` archived. */
+  status: InstructionStatus;
   created_at: string; // ISO 8601
   updated_at: string;
   /** Pre-computed by the backend to avoid an extra fetch on the list. */
@@ -44,11 +52,14 @@ export interface InstructionsListParams {
   pageSize: number;
 }
 
-/** Form-layer shape (what `<CreateInstructionModal>` and `<EditInstructionModal>` v-model). */
+/** Form-layer shape — fed by the `ops.instructions` manifest engine
+ * (`instructions.crear` CTA + `instructions.editar` action). */
 export interface InstructionFormData {
   name: string;
+  provider: string;
   currency_id: string;
   description: string;
+  status: InstructionStatus;
   /** Attributes use the canonical `key-value-array` shape from `core-forms`. */
   attributes: Array<{ key: string; value: string; index: number }>;
 }
