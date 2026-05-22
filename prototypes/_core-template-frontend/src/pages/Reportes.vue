@@ -454,8 +454,6 @@ function reportsForCategory(catKey: string): Report[] {
     <!-- L3 Catálogo -->
     <template v-if="tab === 'catalogo'">
       <div class="flex flex-wrap items-center gap-2" data-testid="reportes-catalogo-header">
-        <span class="text-sm font-bold text-t-2">Catálogo</span>
-        <div class="w-4" />
         <div class="relative">
           <Search class="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-t-4" />
           <Input
@@ -553,8 +551,6 @@ function reportsForCategory(catKey: string): Report[] {
     <!-- L3 Ejecución -->
     <template v-else>
       <div class="flex flex-wrap items-center gap-2" data-testid="reportes-ejecucion-header">
-        <span class="text-sm font-bold text-t-2">Ejecución</span>
-        <div class="w-4" />
         <div class="relative">
           <Search class="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-t-4" />
           <Input

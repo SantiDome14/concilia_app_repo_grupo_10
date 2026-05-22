@@ -231,7 +231,11 @@ describe('Disponibilidades page · FIN (REQ-50)', () => {
     expect(filters.exists()).toBe(true);
     expect(filters.find('[data-testid="movimientos-search"]').exists()).toBe(true);
     const labels = filters.text();
-    expect(labels).toContain('Ledger');
+    // Per operator review 2026-05-22 the row-leading label + count
+    // badge ("Ledger N") is dropped — search is now the leftmost
+    // element, filters on the right. Labels survive only as filter
+    // headers ("Período · Todo", "Tipo · Todos", …).
+    expect(labels).not.toContain('Ledger');
     expect(labels).toContain('Período');
     expect(labels).toContain('Tipo');
     expect(labels).toContain('Rail');
@@ -278,7 +282,10 @@ describe('Disponibilidades page · FIN (REQ-50)', () => {
     expect(filters.exists()).toBe(true);
     expect(filters.find('[data-testid="bancos-cuentas-search"]').exists()).toBe(true);
     const text = filters.text();
-    expect(text).toContain('Catalogo');
+    // Per operator review 2026-05-22 the row-leading label + count
+    // badge ("Catalogo N") is dropped — search is now the leftmost
+    // element, filters on the right.
+    expect(text).not.toContain('Catalogo');
     expect(text).toContain('Sociedad');
     expect(text).toContain('Estructura');
     expect(text).toContain('Moneda');

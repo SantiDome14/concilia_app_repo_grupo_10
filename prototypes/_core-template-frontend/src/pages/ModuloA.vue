@@ -415,10 +415,8 @@ function onBackdropClick(): void {
       </div>
     </div>
 
-    <!-- L3 · Section header -->
+    <!-- L3 · Search + filters (search left, filters right) -->
     <div class="mb-2.5 flex flex-wrap items-center gap-2">
-      <span class="text-sm font-bold text-t-2">Registros</span>
-      <div class="w-4" />
       <div class="relative">
         <Search class="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-t-4" />
         <Input

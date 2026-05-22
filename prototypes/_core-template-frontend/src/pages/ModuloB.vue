@@ -606,11 +606,6 @@ function onCargarManual(): void {
         class="flex flex-wrap items-center gap-2"
         data-testid="movimientos-section-header"
       >
-        <span class="text-sm font-bold text-t-2">Ledger de movimientos</span>
-        <span class="rounded-full bg-card px-2 py-0.5 text-[11px] text-t-3">
-          {{ filteredMovs.length }}
-        </span>
-        <div class="w-4" />
         <div class="relative">
           <Search class="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-t-4" />
           <Input

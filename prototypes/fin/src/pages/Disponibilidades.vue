@@ -52,6 +52,7 @@ import {
   MOVIMIENTOS,
   MOVIMIENTOS_KPIS,
 } from '@/mocks/fin/movimientos';
+import { SOCIEDADES } from '@/mocks/fin/sociedades';
 import { categoriaOf } from '@/lib/movimientos/categoria';
 import { formatCompact } from '@/lib/format';
 import { useDisponibilidadesCatalogStore } from '@/stores/disponibilidadesCatalog';
@@ -97,6 +98,46 @@ const bancosCuentasMod = useManifestModule(
 // ─── Pinia store for Bancos/Cuentas + Estructuras CRUD (Fase B) ──────
 const catalogStore = useDisponibilidadesCatalogStore();
 const { cuentas, kpis: bancosCuentasKpis } = storeToRefs(catalogStore);
+
+// ─── Visual helpers — chip-style cells matching the OPS Bancos/Cuentas
+//     master list (operator review 2026-05-22). Same shape (`inline-block
+//     rounded-md px-2 py-0.5 text-[10px] font-semibold`) plus semantic
+//     color buckets per dimension.
+function sociedadName(id: string): string {
+  return SOCIEDADES.find((s) => s.id === id)?.nombre ?? id;
+}
+
+function tipoEstructuraBadgeClass(tipo: string): string {
+  switch (tipo) {
+    case 'Banco':
+    case 'Custodio':
+    case 'Banco digital':
+      return 'bg-info-bg text-info';
+    case 'ALyC':
+    case 'PSP':
+      return 'bg-warning-bg text-warning';
+    case 'Exchange':
+      return 'bg-success-bg text-success';
+    default:
+      return 'bg-card text-t-3';
+  }
+}
+
+function monedaBadgeClass(moneda: string): string {
+  switch (moneda) {
+    case 'ARS':
+    case 'USD':
+      return 'bg-card text-t-2';
+    case 'USDC':
+      return 'bg-info-bg text-info';
+    case 'USDT':
+      return 'bg-success-bg text-success';
+    case 'BTC':
+      return 'bg-warning-bg text-warning';
+    default:
+      return 'bg-card text-t-3';
+  }
+}
 
 // Register a single creator factory on the bancos_cuentas manifest;
 // dispatches by `cta.id` (per Decision 4 of
@@ -829,11 +870,6 @@ const movTable = useTable({
         class="flex flex-wrap items-center gap-2"
         data-testid="bancos-cuentas-filters"
       >
-        <span class="text-sm font-bold text-t-2">Catalogo</span>
-        <span class="rounded-full bg-card px-2 py-0.5 text-[11px] text-t-3">
-          {{ filteredCuentas.length }}
-        </span>
-        <div class="w-4" />
         <div class="relative">
           <Search class="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-t-4" />
           <Input
@@ -929,11 +965,23 @@ const movTable = useTable({
               class="border-b border-b-1 last:border-b-0 hover:bg-white/[0.02]"
               :data-testid="`bancos-cuentas-row-${cu.id}`"
             >
-              <td class="px-[18px] py-2.5 text-xs text-t-2">{{ cu.sociedad_id }}</td>
+              <td class="px-[18px] py-2.5">
+                <span class="inline-block rounded-md bg-card px-2 py-0.5 text-[10px] font-semibold text-t-2">
+                  {{ sociedadName(cu.sociedad_id) }}
+                </span>
+              </td>
               <td class="px-3.5 py-2.5 text-xs text-t-2 font-semibold">{{ cu.banco }}</td>
-              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ cu.tipo_estructura }}</td>
+              <td class="px-3.5 py-2.5">
+                <span :class="`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${tipoEstructuraBadgeClass(cu.tipo_estructura)}`">
+                  {{ cu.tipo_estructura }}
+                </span>
+              </td>
               <td class="px-3.5 py-2.5 text-xs text-t-3">{{ cu.tipo_cuenta }}</td>
-              <td class="px-3.5 py-2.5 text-xs text-t-3">{{ cu.moneda }}</td>
+              <td class="px-3.5 py-2.5">
+                <span :class="`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${monedaBadgeClass(cu.moneda)}`">
+                  {{ cu.moneda }}
+                </span>
+              </td>
               <td class="px-3.5 py-2.5 text-xs font-mono text-t-3">{{ cu.numero }}</td>
               <td class="px-3.5 py-2.5">
                 <Badge :variant="cu.estado === 'Activa' ? 'success' : 'neutral'">{{ cu.estado }}</Badge>
@@ -1049,11 +1097,6 @@ const movTable = useTable({
         class="flex flex-wrap items-center gap-2"
         data-testid="movimientos-filters"
       >
-        <span class="text-sm font-bold text-t-2">Ledger</span>
-        <span class="rounded-full bg-card px-2 py-0.5 text-[11px] text-t-3">
-          {{ filteredMovimientos.length }}
-        </span>
-        <div class="w-4" />
         <div class="relative">
           <Search class="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-t-4" />
           <Input

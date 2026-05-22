@@ -57,6 +57,7 @@ describe('listMovements', () => {
       status: 'COMPLETED',
       amount: '1500',
       currency: 'USD',
+      rail: null,
       origin: 'Acme Corp',
       destination: 'Coinag CVU',
       sponsor: 'COINAG',

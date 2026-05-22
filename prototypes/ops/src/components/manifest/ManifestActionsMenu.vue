@@ -45,7 +45,14 @@ const DIM_ORDER: Dimension[] = [
 const MF_DIM_HEADERS: Record<Dimension, string> = {
   imputacion: 'Imputación',
   registro_contable: 'Registro Contable',
-  conciliacion: 'Conciliación',
+  // OPS surfaces compensating-entry actions (Crear Ajuste DB/CR) under
+  // the `conciliacion` dimension; operator review 2026-05-22 settled on
+  // the friendlier label "Ajustes" since the operator perceives them as
+  // balance corrections (the immutability mechanic is implementation
+  // detail). OPS is the only consumer of `conciliacion` today; FIN /
+  // template keep the canonical label until they introduce their own
+  // conciliation actions.
+  conciliacion: 'Ajustes',
   governance: 'Governance',
   documentacion: 'Documentación',
   cierre: 'Cierre',

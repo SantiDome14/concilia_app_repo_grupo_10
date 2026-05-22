@@ -19,6 +19,10 @@ import {
   REPORTES_MANIFEST,
   REPORTES_MANIFEST_KEY,
 } from '@/manifests/framework.template.reportes.actions';
+import {
+  OPS_MOVIMIENTOS_MANIFEST,
+  OPS_MOVIMIENTOS_MANIFEST_KEY,
+} from '@/manifests/ops.movimientos.actions';
 import { useManifestRegistryStore } from '@/stores/manifestRegistry';
 
 export function setupManifests(): void {
@@ -26,4 +30,5 @@ export function setupManifests(): void {
   registry.register(INBOX_MANIFEST_KEY, INBOX_MANIFEST);
   registry.register(ALERTAS_MANIFEST_KEY, ALERTAS_MANIFEST);
   registry.register(REPORTES_MANIFEST_KEY, REPORTES_MANIFEST);
+  registry.register(OPS_MOVIMIENTOS_MANIFEST_KEY, OPS_MOVIMIENTOS_MANIFEST);
 }

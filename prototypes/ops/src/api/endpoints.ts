@@ -100,6 +100,8 @@ export const ENDPOINTS = {
   movimientos: {
     list: '/movements',
     detail: (id: string) => `/movements/${id}`,
+    create: '/movements',
+    update: (id: string) => `/movements/${id}`,
     receipt: (id: string) => `/receipt/${id}`,
   },
 

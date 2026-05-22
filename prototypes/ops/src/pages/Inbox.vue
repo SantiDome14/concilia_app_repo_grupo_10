@@ -520,13 +520,11 @@ const STATE_FILTER_OPTIONS = ['pendiente', 'en_proceso', 'completed', 'rejected'
       </div>
     </section>
 
-    <!-- L3 · Section header (search + filters) -->
+    <!-- L3 · Search + filters (search left, filters right) -->
     <div
       class="flex flex-wrap items-center gap-2"
       data-testid="inbox-section-header"
     >
-      <span class="text-sm font-bold text-t-2">Solicitudes</span>
-      <div class="w-4" />
       <div class="relative">
         <Search class="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-t-4" />
         <Input

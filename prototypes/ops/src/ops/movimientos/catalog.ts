@@ -50,14 +50,39 @@ export const MOVEMENT_STATUS_OPTIONS: ReadonlyArray<CatalogOption> = [
 ];
 
 /**
- * Open-set placeholder for the `Origen` filter pending backend
- * confirmation of the canonical list. Kept here for parity with the
- * other two catalogs.
+ * Open-set placeholder for the `Origen` filter consumed by the PSP tab
+ * (`ops-psp`). The standalone OPS Movimientos page no longer surfaces
+ * Origen as a filter (per operator review 2026-05-22) — kept here for
+ * PSP parity until that module is reviewed in its own pass.
  */
 export const MOVEMENT_ORIGIN_OPTIONS: ReadonlyArray<CatalogOption> = [
   { value: 'MANUAL', label: 'MANUAL' },
   { value: 'SWIFT', label: 'SWIFT' },
   { value: 'AUTO', label: 'AUTO' },
+];
+
+/**
+ * Closed catalog of transport rails. Sourced from the operator review on
+ * 2026-05-22 — display order matches the dropdown approved by Ops.
+ * Backend values match the labels (uppercase / Title Case for the two
+ * multi-word entries).
+ */
+export const MOVEMENT_RAIL_OPTIONS: ReadonlyArray<CatalogOption> = [
+  { value: 'ACH', label: 'ACH' },
+  { value: 'ARDUA', label: 'ARDUA' },
+  { value: 'Faster Payments', label: 'Faster Payments' },
+  { value: 'FEDWIRE', label: 'FEDWIRE' },
+  { value: 'FX', label: 'FX' },
+  { value: 'INTERNAL', label: 'INTERNAL' },
+  { value: 'PIX', label: 'PIX' },
+  { value: 'SEPA', label: 'SEPA' },
+  { value: 'SPE', label: 'SPE' },
+  { value: 'SPEI', label: 'SPEI' },
+  { value: 'SWIFT', label: 'SWIFT' },
+  { value: 'VCURRENCY', label: 'VCURRENCY' },
+  { value: 'VCURRENCY USDC', label: 'VCURRENCY USDC' },
+  { value: 'VCURRENCY USDT', label: 'VCURRENCY USDT' },
+  { value: 'WIRE', label: 'WIRE' },
 ];
 
 /** Convenience: human-readable label for a type code. */
@@ -70,4 +95,10 @@ export function getMovementTypeLabel(value: string | null | undefined): string {
 export function getMovementStatusLabel(value: string | null | undefined): string {
   if (!value) return '—';
   return MOVEMENT_STATUS_OPTIONS.find((o) => o.value === value)?.label ?? value;
+}
+
+/** Convenience: human-readable label for a rail code. */
+export function getMovementRailLabel(value: string | null | undefined): string {
+  if (!value) return '—';
+  return MOVEMENT_RAIL_OPTIONS.find((o) => o.value === value)?.label ?? value;
 }

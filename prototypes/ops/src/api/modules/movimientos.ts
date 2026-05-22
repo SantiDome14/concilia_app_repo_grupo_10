@@ -45,6 +45,29 @@ export async function getMovement(id: string): Promise<MovementDetails> {
   return normaliseMovementDetails(response.data);
 }
 
+/** PATCH /movements/:id — applies a partial update (status changes, closure notes). */
+export async function updateMovement(
+  id: string,
+  patch: Record<string, unknown>,
+): Promise<MovementDetails> {
+  const response = await apiClient.patch<RawMovement>(
+    ENDPOINTS.movimientos.update(id),
+    patch,
+  );
+  return normaliseMovementDetails(response.data);
+}
+
+/** POST /movements — creates a new movement (currently used for ajustes). */
+export async function createMovement(
+  payload: Record<string, unknown>,
+): Promise<MovementDetails> {
+  const response = await apiClient.post<RawMovement>(
+    ENDPOINTS.movimientos.create,
+    payload,
+  );
+  return normaliseMovementDetails(response.data);
+}
+
 /** GET /receipt/:id — discriminated success/failure shape. */
 export async function getReceipt(id: string): Promise<ReceiptResponse> {
   try {
@@ -71,6 +94,7 @@ interface RawMovement {
   status?: string;
   amount?: string | number;
   currency?: string | { code?: string; name?: string };
+  rail?: string | null;
   origin?: string | null;
   from?: string | null;
   destination?: string | null;
@@ -105,6 +129,7 @@ function normaliseMovement(raw: RawMovement): Movement {
     status: String(raw.status ?? ''),
     amount: String(raw.amount ?? '0'),
     currency: pickCurrency(raw),
+    rail: raw.rail ?? null,
     origin: raw.origin ?? raw.from ?? null,
     destination: raw.destination ?? raw.to ?? null,
     sponsor: raw.sponsor ?? raw.provider ?? null,

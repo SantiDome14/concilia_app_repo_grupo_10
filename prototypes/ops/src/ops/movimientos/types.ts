@@ -18,6 +18,8 @@ export interface Movement {
   status: string;
   amount: string;
   currency: string;
+  /** Closed-set transport rail (`SWIFT`, `INTERNAL`, `PIX`, …). See `MOVEMENT_RAIL_OPTIONS`. */
+  rail: string | null;
   origin: string | null;
   destination: string | null;
   sponsor: SponsorCode | null;
@@ -42,7 +44,7 @@ export interface MovementsListParams {
   sponsor?: SponsorCode;
   type?: string;
   status?: string;
-  origin?: string;
+  rail?: string;
   search?: string;
   page: number;
   pageSize: number;
