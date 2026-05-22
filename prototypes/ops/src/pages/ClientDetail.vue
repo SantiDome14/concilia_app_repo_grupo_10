@@ -1,21 +1,26 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { useQuery } from '@tanstack/vue-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import { useRoute, useRouter } from 'vue-router';
-import { ArrowLeft, ShieldCheck, FileText, Plus } from 'lucide-vue-next';
+import { ArrowLeft, ShieldCheck, FileText, Plus, UserPlus, MoreHorizontal } from 'lucide-vue-next';
+import { toast } from 'vue-sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Skeleton from '@/components/feedback/Skeleton.vue';
 import EmptyState from '@/components/feedback/EmptyState.vue';
+import PortalStatusChip from '@/components/feedback/PortalStatusChip.vue';
 import { useCapabilities } from '@/composables/useCapabilities';
-import { getClient, listCurrencies } from '@/api/modules/clients';
+import { useManifestModule } from '@/composables/useManifestModule';
+import { getClient, listCurrencies, patchClient } from '@/api/modules/clients';
+import { CATALOG_QUERY_KEYS } from '@/plugins/catalogs';
 import AccountCard from '@/ops/clients/AccountCard.vue';
 import RecentMovementsTable from '@/ops/clients/RecentMovementsTable.vue';
+import SignUpUserModal from '@/ops/clients/SignUpUserModal.vue';
 import WhitelistAccountModal from '@/ops/clients/WhitelistAccountModal.vue';
 import GenerateStatementModal from '@/ops/statements/GenerateStatementModal.vue';
 import CreateAccountInstructionModal from '@/ops/account-instructions/CreateAccountInstructionModal.vue';
-import { derivePortalStatus } from '@/ops/clients/portal-status';
-import type { Client, ClientWithAccounts } from '@/ops/clients/types';
+import { OPS_CLIENTS_MANIFEST_KEY } from '@/manifests/ops.clients.actions';
+import type { Client, ClientWithAccounts, PortalStatusFlat } from '@/ops/clients/types';
 
 // ════════════════════════════════════════════════════════════════════
 // ClientDetail page — implements ops-clients Requirements 6, 7, 8, 9,
@@ -27,10 +32,10 @@ import type { Client, ClientWithAccounts } from '@/ops/clients/types';
 
 const route = useRoute();
 const router = useRouter();
+const queryClient = useQueryClient();
 const { can } = useCapabilities();
+const clientsMod = useManifestModule(OPS_CLIENTS_MANIFEST_KEY);
 
-const canWhitelistByRole = computed(() => can('clients:whitelist') || can('OPS_ADMIN'));
-const canGenerateStatement = computed(() => can('clients:statement') || can('OPS_ADMIN'));
 const canCreateAccountInstructionByRole = computed(
   () => can('clients:create-account-instruction') || can('OPS_ADMIN'),
 );
@@ -56,12 +61,13 @@ const isNotFound = computed(
 
 // ─── Currencies (used by the whitelist modal) ───────────────────────
 const { data: currenciesData } = useQuery({
-  queryKey: ['ops', 'currencies'],
+  queryKey: CATALOG_QUERY_KEYS.currencies,
   queryFn: listCurrencies,
 });
 const currencies = computed(() => currenciesData.value ?? []);
 
-// ─── Whitelisting CTA gating (Requirement 8) ───────────────────────
+// ─── Derived row shape (so we can openDialog from the manifest with
+//   the flat fields the predicates depend on). ───────────────────────
 const hasCoinagInstruction = computed(() => {
   if (!client.value) return false;
   return client.value.accounts.some((a) =>
@@ -71,17 +77,74 @@ const hasCoinagInstruction = computed(() => {
   );
 });
 
-const canShowWhitelistCta = computed(
-  () => canWhitelistByRole.value && hasCoinagInstruction.value,
-);
+function flattenPortalStatus(c: Client | null): PortalStatusFlat {
+  const raw = c?.metadata?.status;
+  if (raw === 'ACTIVE') return 'ACTIVE';
+  if (raw === 'PENDING') return 'PENDING';
+  return 'NOT_CREATED';
+}
+
+const portalStatus = computed<PortalStatusFlat>(() => flattenPortalStatus(client.value));
+
+const rowShape = computed<Record<string, unknown> | null>(() => {
+  if (!client.value) return null;
+  return {
+    ...client.value,
+    portal_status: portalStatus.value,
+    has_coinag_instruction: hasCoinagInstruction.value,
+  };
+});
 
 const whitelistOpen = ref(false);
-
-// ─── Generate Statement (pre-populates the current client) ──────────
 const statementOpen = ref(false);
+const signUpOpen = ref(false);
+
 const preselectedClient = computed<Client | null>(() => client.value);
-function openStatement(): void {
-  statementOpen.value = true;
+
+// ─── Toggle is_active mutation (Activar / Desactivar from manifest) ─
+const setActiveMutation = useMutation({
+  mutationFn: ({ id, value }: { id: string; value: boolean }) =>
+    patchClient(id, { is_active: value }),
+  onError: (err) => {
+    toast.error(err instanceof Error ? err.message : 'No se pudo actualizar el cliente.');
+  },
+  onSettled: () => {
+    void queryClient.invalidateQueries({
+      queryKey: ['ops', 'clients', clientId.value],
+    });
+    void queryClient.invalidateQueries({ queryKey: ['ops', 'clients', 'list'] });
+  },
+});
+
+// ─── Manifest engine wiring (governance + statement + alta_portal +
+//   habilitar_cuenta + activar/desactivar) ─────────────────────────
+clientsMod.registerDispatcher({
+  update: (recordId, patch) => {
+    const action = patch._action;
+    if (action === 'generar_statement') {
+      statementOpen.value = true;
+      return;
+    }
+    if (action === 'alta_portal') {
+      signUpOpen.value = true;
+      return;
+    }
+    if (action === 'habilitar_cuenta') {
+      whitelistOpen.value = true;
+      return;
+    }
+    if (typeof patch.is_active === 'boolean') {
+      setActiveMutation.mutate({ id: recordId, value: patch.is_active });
+    }
+  },
+  create: () => {
+    // No module CTAs in ops.clients.
+  },
+});
+
+function openManifestDialog(actionId: string): void {
+  if (!rowShape.value) return;
+  clientsMod.openDialog(actionId, rowShape.value);
 }
 
 // ─── Create Account Instruction (Requirement 1 + 11 of ops-account-instructions)
@@ -127,8 +190,6 @@ watch(
 function goBack(): void {
   void router.push('/clients');
 }
-
-const portalInfo = computed(() => (client.value ? derivePortalStatus(client.value) : null));
 </script>
 
 <template>
@@ -144,8 +205,11 @@ const portalInfo = computed(() => (client.value ? derivePortalStatus(client.valu
       Volver a Clientes
     </button>
 
-    <!-- L1 header CTA row (anchored to the back-link area, before the main sections) -->
-    <div v-if="!isPending && !isError && client" class="-mt-2 flex justify-end gap-2">
+    <!-- L1 header CTA row (anchored to the back-link area, before the main sections).
+         Every action flows through the `ops.clients` manifest engine so the gating
+         lives in one place. `show_when` predicates on the manifest hide buttons
+         when the row doesn't qualify (no email, portal active, no COINAG, …). -->
+    <div v-if="!isPending && !isError && client" class="-mt-2 flex flex-wrap justify-end gap-2">
       <Button
         v-if="canShowCreateInstructionCta"
         variant="secondary"
@@ -156,13 +220,48 @@ const portalInfo = computed(() => (client.value ? derivePortalStatus(client.valu
         Crear instrucción de cuenta
       </Button>
       <Button
-        v-if="canGenerateStatement"
         variant="secondary"
         data-testid="client-detail-statement-cta"
-        @click="openStatement"
+        @click="openManifestDialog('clients.generar_statement')"
       >
         <FileText class="h-3.5 w-3.5" />
         Generar Statement
+      </Button>
+      <Button
+        v-if="portalStatus !== 'ACTIVE' && client.is_active && client.email"
+        variant="secondary"
+        data-testid="client-detail-alta-portal-cta"
+        @click="openManifestDialog('clients.alta_portal')"
+      >
+        <UserPlus class="h-3.5 w-3.5" />
+        Alta en el portal
+      </Button>
+      <Button
+        v-if="hasCoinagInstruction"
+        variant="primary"
+        data-testid="client-detail-whitelist-cta"
+        @click="openManifestDialog('clients.habilitar_cuenta')"
+      >
+        <ShieldCheck class="h-3.5 w-3.5" />
+        Habilitar cuenta CVU
+      </Button>
+      <Button
+        v-if="client.is_active"
+        variant="ghost"
+        data-testid="client-detail-deactivate-cta"
+        @click="openManifestDialog('clients.desactivar')"
+      >
+        <MoreHorizontal class="h-3.5 w-3.5" />
+        Desactivar
+      </Button>
+      <Button
+        v-else
+        variant="ghost"
+        data-testid="client-detail-activate-cta"
+        @click="openManifestDialog('clients.activar')"
+      >
+        <MoreHorizontal class="h-3.5 w-3.5" />
+        Activar
       </Button>
     </div>
 
@@ -221,27 +320,14 @@ const portalInfo = computed(() => (client.value ? derivePortalStatus(client.valu
             <Badge :variant="client.is_active ? 'success' : 'danger'">
               {{ client.is_active ? 'Activo' : 'Inactivo' }}
             </Badge>
-            <Badge v-if="portalInfo" :variant="portalInfo.tone">
-              {{ portalInfo.label }}
-            </Badge>
+            <PortalStatusChip :status="portalStatus" />
           </div>
         </div>
       </div>
 
       <!-- Accounts section -->
       <div class="flex flex-col gap-2.5">
-        <div class="flex items-center justify-between">
-          <h3 class="text-base font-semibold text-t-1">Cuentas e instrucciones</h3>
-          <Button
-            v-if="canShowWhitelistCta"
-            variant="primary"
-            data-testid="whitelist-cta"
-            @click="whitelistOpen = true"
-          >
-            <ShieldCheck class="h-3.5 w-3.5" />
-            Habilitar cuenta
-          </Button>
-        </div>
+        <h3 class="text-base font-semibold text-t-1">Cuentas e instrucciones</h3>
 
         <div
           v-if="client.accounts.length === 0"
@@ -277,6 +363,12 @@ const portalInfo = computed(() => (client.value ? derivePortalStatus(client.valu
       <!-- Generate Statement modal (pre-populates the current client) -->
       <GenerateStatementModal
         v-model:open="statementOpen"
+        :preselected-client="preselectedClient"
+      />
+
+      <!-- Alta en el portal modal -->
+      <SignUpUserModal
+        v-model:open="signUpOpen"
         :preselected-client="preselectedClient"
       />
 

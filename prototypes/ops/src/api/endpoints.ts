@@ -78,6 +78,7 @@ export const ENDPOINTS = {
   clients: {
     list: '/clients',
     detail: (id: string) => `/clients/${id}`,
+    update: (id: string) => `/clients/${id}`,
     signUp: '/sign-up',
     whitelistAccount: (id: string) => `/clients/${id}/whitelist-account`,
     validateCvu: (cvu: string) => `/coinag/account/${encodeURIComponent(cvu)}`,

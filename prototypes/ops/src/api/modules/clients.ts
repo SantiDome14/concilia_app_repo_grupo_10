@@ -2,6 +2,7 @@ import { apiClient } from '../client';
 import { ENDPOINTS } from '../endpoints';
 import { ApiError } from '@/types/api';
 import type {
+  Client,
   ClientId,
   ClientWithAccounts,
   ClientsListParams,
@@ -39,6 +40,17 @@ export async function listClients(
 /** GET /clients/:id with accounts + movements hydrated (Requirement 6). */
 export async function getClient(id: ClientId): Promise<ClientWithAccounts> {
   const response = await apiClient.get<ClientWithAccounts>(ENDPOINTS.clients.detail(id));
+  return response.data;
+}
+
+/** Partial update for client governance flags. Today the slim payload only
+ * supports the Activar / Desactivar manifest action; future additions live
+ * here so the page-side dispatcher stays one call away. */
+export async function patchClient(
+  id: ClientId,
+  body: { is_active?: boolean },
+): Promise<Client> {
+  const response = await apiClient.patch<Client>(ENDPOINTS.clients.update(id), body);
   return response.data;
 }
 

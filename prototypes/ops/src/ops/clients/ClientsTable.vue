@@ -1,24 +1,28 @@
 <script setup lang="ts">
-import { Check, X } from 'lucide-vue-next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Skeleton from '@/components/feedback/Skeleton.vue';
 import EmptyState from '@/components/feedback/EmptyState.vue';
-import { derivePortalStatus } from './portal-status';
+import PortalStatusChip from '@/components/feedback/PortalStatusChip.vue';
+import { ManifestActionsMenu } from '@/components/manifest';
 import type { Client } from './types';
 
 // ════════════════════════════════════════════════════════════════════
-// ClientsTable — implements Requirements 2 (canonical column set,
-// row click → detail page) and 10 (loading / empty / error surfaces).
-// The page owns the data fetch + filter state and passes the rows here.
-// The table emits `row-click` for clicks anywhere on a row.
+// ClientsTable — canonical column set for the Clientes master list.
+// ────────────────────────────────────────────────────────────────────
+// Columns: Legajo · Nombre · CUIT/CUIL · Email · Portal · Estado ·
+// Acciones. The row stays clickable (bubbles up to the page so the
+// detail route navigation works); the Acciones cell stops propagation
+// so opening the per-row menu does not also trigger a navigation.
+// Per-row actions come from the `ops.clients` manifest via
+// <ManifestActionsMenu>; the page wires the dispatcher.
 // ════════════════════════════════════════════════════════════════════
 
 const props = defineProps<{
   rows: Client[];
   isLoading: boolean;
-  /** True when at least one filter is active — drives the EmptyState copy. */
   hasActiveFilters: boolean;
+  manifestKey: string;
 }>();
 
 const emit = defineEmits<{
@@ -36,28 +40,30 @@ function onRowClick(client: Client): void {
     <table class="w-full table-auto text-sm">
       <thead class="border-b border-b-2 text-[10px] font-bold uppercase tracking-wider text-t-4">
         <tr>
-          <th class="px-4 py-3 text-left">CUIT/CUIL</th>
+          <th class="px-4 py-3 text-left">Legajo</th>
           <th class="px-4 py-3 text-left">Nombre</th>
+          <th class="px-4 py-3 text-left">CUIT/CUIL</th>
           <th class="px-4 py-3 text-left">Email</th>
-          <th class="px-4 py-3 text-left">Activo</th>
-          <th class="px-4 py-3 text-left">Estado Portal</th>
+          <th class="px-4 py-3 text-left">Portal</th>
+          <th class="px-4 py-3 text-left">Estado</th>
+          <th class="w-12 px-4 py-3 text-center">Acciones</th>
         </tr>
       </thead>
       <tbody>
-        <!-- Loading -->
         <template v-if="props.isLoading">
           <tr v-for="i in 5" :key="`skeleton-${i}`">
-            <td class="px-4 py-3"><Skeleton class="h-4 w-32" /></td>
+            <td class="px-4 py-3"><Skeleton class="h-4 w-20" /></td>
             <td class="px-4 py-3"><Skeleton class="h-4 w-40" /></td>
+            <td class="px-4 py-3"><Skeleton class="h-4 w-32" /></td>
             <td class="px-4 py-3"><Skeleton class="h-4 w-48" /></td>
+            <td class="px-4 py-3"><Skeleton class="h-4 w-20" /></td>
+            <td class="px-4 py-3"><Skeleton class="h-4 w-14" /></td>
             <td class="px-4 py-3"><Skeleton class="h-4 w-6" /></td>
-            <td class="px-4 py-3"><Skeleton class="h-4 w-28" /></td>
           </tr>
         </template>
 
-        <!-- Empty -->
         <tr v-else-if="props.rows.length === 0">
-          <td :colspan="5" class="px-4 py-8">
+          <td :colspan="7" class="px-4 py-8">
             <EmptyState
               v-if="!props.hasActiveFilters"
               title="No hay clientes"
@@ -76,7 +82,6 @@ function onRowClick(client: Client): void {
           </td>
         </tr>
 
-        <!-- Rows -->
         <tr
           v-for="row in props.rows"
           v-else
@@ -85,27 +90,29 @@ function onRowClick(client: Client): void {
           :data-testid="`client-row-${row.id}`"
           @click="onRowClick(row)"
         >
-          <td class="px-4 py-3 font-mono text-t-2">{{ row.tax_number || '—' }}</td>
+          <td class="px-4 py-3 font-mono text-t-2">{{ row.docket || '—' }}</td>
           <td class="px-4 py-3 text-t-1">{{ row.name || '—' }}</td>
+          <td class="px-4 py-3 font-mono text-t-2">{{ row.tax_number || '—' }}</td>
           <td class="max-w-md truncate px-4 py-3 text-t-3" :title="row.email ?? ''">
             {{ row.email || '—' }}
           </td>
           <td class="px-4 py-3">
-            <Check
-              v-if="row.is_active"
-              class="h-4 w-4 text-success"
-              :aria-label="'Activo'"
-            />
-            <X
-              v-else
-              class="h-4 w-4 text-danger"
-              :aria-label="'Inactivo'"
-            />
+            <PortalStatusChip :status="row.portal_status" />
           </td>
           <td class="px-4 py-3">
-            <Badge :variant="derivePortalStatus(row).tone">
-              {{ derivePortalStatus(row).label }}
+            <Badge :variant="row.is_active ? 'success' : 'danger'">
+              {{ row.is_active ? 'Activo' : 'Inactivo' }}
             </Badge>
+          </td>
+          <td class="px-4 py-3 text-center" @click.stop>
+            <div class="flex items-center justify-center">
+              <ManifestActionsMenu
+                :manifest-key="props.manifestKey"
+                :record="row as unknown as Record<string, unknown>"
+                variant="table"
+                :data-testid="`client-row-${row.id}-actions`"
+              />
+            </div>
           </td>
         </tr>
       </tbody>

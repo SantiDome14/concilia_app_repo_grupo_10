@@ -16,6 +16,10 @@ export type PortalStatus = 'active' | 'pending' | 'not-created';
 /** Tone returned by the portal-status helper, mapped to `core-theming` semantics. */
 export type PortalStatusTone = 'success' | 'warning' | 'danger';
 
+/** Flat lifecycle for the portal — derived from `metadata.status` so the
+ * manifest engine can match it via `field_equals` predicates on the row. */
+export type PortalStatusFlat = 'ACTIVE' | 'PENDING' | 'NOT_CREATED';
+
 /** Master-list row shape (slim — no accounts/movements). */
 export interface Client {
   id: ClientId;
@@ -28,6 +32,13 @@ export interface Client {
   external_client_id?: string;
   /** Backend-issued portal status. The helper normalises empty/missing → `not-created`. */
   metadata?: { status?: 'ACTIVE' | 'PENDING' | '' | null } | null;
+  /** Derived by the list handler so manifest predicates can branch on it. */
+  portal_status?: PortalStatusFlat;
+  /** True when the client owns at least one account with a `COINAG` instruction.
+   * Drives the Habilitar cuenta CVU per-row action's `show_when`. */
+  has_coinag_instruction?: boolean;
+  /** Backend timestamp — surfaced in the list and the detail header. */
+  created_at?: string;
 }
 
 /** Single attribute (key+value) attached to an `AccountInstruction`. */

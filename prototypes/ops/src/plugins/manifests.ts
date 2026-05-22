@@ -43,6 +43,10 @@ import {
   OPS_INSTRUCTIONS_MANIFEST,
   OPS_INSTRUCTIONS_MANIFEST_KEY,
 } from '@/manifests/ops.instructions.actions';
+import {
+  OPS_CLIENTS_MANIFEST,
+  OPS_CLIENTS_MANIFEST_KEY,
+} from '@/manifests/ops.clients.actions';
 import { useManifestRegistryStore } from '@/stores/manifestRegistry';
 
 export function setupManifests(): void {
@@ -59,4 +63,5 @@ export function setupManifests(): void {
     OPS_PSP_MOVIMIENTOS_MANIFEST,
   );
   registry.register(OPS_INSTRUCTIONS_MANIFEST_KEY, OPS_INSTRUCTIONS_MANIFEST);
+  registry.register(OPS_CLIENTS_MANIFEST_KEY, OPS_CLIENTS_MANIFEST);
 }

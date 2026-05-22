@@ -18,6 +18,15 @@ import { StepUpCancelledError } from '@/types/auth-step-up';
 import { listClients, signUpClient } from '@/api/modules/clients';
 import type { Client } from './types';
 
+const props = withDefaults(
+  defineProps<{
+    /** Optional preselected client (per-row action path). When set, the
+     *  picker is skipped and the modal jumps straight to confirmation. */
+    preselectedClient?: Client | null;
+  }>(),
+  { preselectedClient: null },
+);
+
 // ════════════════════════════════════════════════════════════════════
 // SignUpUserModal — implements Requirements 4 + 11 (toast on success).
 //
@@ -44,6 +53,8 @@ const selected = ref<Client | null>(null);
 const isSubmitting = ref(false);
 const stepUpNotice = ref<string | null>(null);
 
+const isPreselected = computed(() => props.preselectedClient !== null);
+
 let searchTimer: ReturnType<typeof setTimeout> | null = null;
 
 // ─── Reset state on each open ───────────────────────────────────────
@@ -51,9 +62,14 @@ watch(open, (isOpen) => {
   if (!isOpen) return;
   searchQuery.value = '';
   debouncedQuery.value = '';
-  selected.value = null;
   stepUpNotice.value = null;
-  void runSearch('');
+  if (props.preselectedClient) {
+    selected.value = props.preselectedClient;
+    suggestions.value = [];
+  } else {
+    selected.value = null;
+    void runSearch('');
+  }
 });
 
 // ─── Debounced search ───────────────────────────────────────────────
@@ -129,61 +145,80 @@ function close(): void {
     >
       <DialogHeader>
         <DialogTitle>Alta de Cliente en APP</DialogTitle>
-        <DialogDescription>
+        <DialogDescription v-if="!isPreselected">
           Seleccioná un cliente activo con email registrado para enviarle la invitación al portal.
+        </DialogDescription>
+        <DialogDescription v-else>
+          Confirmá el envío de la invitación al portal.
         </DialogDescription>
       </DialogHeader>
 
       <div class="flex flex-col gap-3">
-        <!-- Search -->
-        <div class="relative">
-          <Search
-            class="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-t-4"
-          />
-          <Input
-            v-model="searchQuery"
-            placeholder="Buscar por nombre…"
-            class="pl-8"
-            data-testid="signup-search"
-          />
+        <!-- Preselected client card (per-row action path) -->
+        <div
+          v-if="isPreselected && selected"
+          class="rounded-lg border border-b-1 bg-card-2 p-3"
+          data-testid="signup-preselected"
+        >
+          <div class="text-sm font-medium text-t-1">
+            {{ selected.name || 'Sin nombre' }}
+          </div>
+          <div class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-t-3">
+            <span v-if="selected.email">{{ selected.email }}</span>
+            <span v-if="selected.tax_number" class="font-mono">{{ selected.tax_number }}</span>
+          </div>
         </div>
 
-        <!-- Suggestions -->
-        <div class="max-h-72 overflow-y-auto rounded-lg border border-b-1 bg-card-2">
-          <div v-if="isLoadingSuggestions" class="space-y-1.5 p-2.5">
-            <Skeleton class="h-5 w-full" />
-            <Skeleton class="h-5 w-2/3" />
-            <Skeleton class="h-5 w-3/4" />
+        <!-- Picker mode (header CTA path — kept for backwards compatibility) -->
+        <template v-else>
+          <div class="relative">
+            <Search
+              class="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-t-4"
+            />
+            <Input
+              v-model="searchQuery"
+              placeholder="Buscar por nombre…"
+              class="pl-8"
+              data-testid="signup-search"
+            />
           </div>
-          <div
-            v-else-if="suggestions.length === 0"
-            class="px-3 py-6 text-center text-xs text-t-4"
-          >
-            No se encontraron clientes elegibles para invitar.
-          </div>
-          <ul v-else class="py-1">
-            <li
-              v-for="c in suggestions"
-              :key="c.id"
-              :data-testid="`signup-option-${c.id}`"
-              class="flex cursor-pointer items-center gap-2.5 px-3 py-2 transition-colors hover:bg-card"
-              :class="selected?.id === c.id && 'bg-brand-bg'"
-              @click="pickClient(c)"
+
+          <div class="max-h-72 overflow-y-auto rounded-lg border border-b-1 bg-card-2">
+            <div v-if="isLoadingSuggestions" class="space-y-1.5 p-2.5">
+              <Skeleton class="h-5 w-full" />
+              <Skeleton class="h-5 w-2/3" />
+              <Skeleton class="h-5 w-3/4" />
+            </div>
+            <div
+              v-else-if="suggestions.length === 0"
+              class="px-3 py-6 text-center text-xs text-t-4"
             >
-              <Check
-                class="h-3.5 w-3.5 shrink-0"
-                :class="selected?.id === c.id ? 'text-brand' : 'text-transparent'"
-              />
-              <div class="min-w-0 flex-1">
-                <div class="truncate text-sm font-medium text-t-1">
-                  {{ c.name || 'Sin nombre' }}
+              No se encontraron clientes elegibles para invitar.
+            </div>
+            <ul v-else class="py-1">
+              <li
+                v-for="c in suggestions"
+                :key="c.id"
+                :data-testid="`signup-option-${c.id}`"
+                class="flex cursor-pointer items-center gap-2.5 px-3 py-2 transition-colors hover:bg-card"
+                :class="selected?.id === c.id && 'bg-brand-bg'"
+                @click="pickClient(c)"
+              >
+                <Check
+                  class="h-3.5 w-3.5 shrink-0"
+                  :class="selected?.id === c.id ? 'text-brand' : 'text-transparent'"
+                />
+                <div class="min-w-0 flex-1">
+                  <div class="truncate text-sm font-medium text-t-1">
+                    {{ c.name || 'Sin nombre' }}
+                  </div>
+                  <div class="truncate text-xs text-t-4">{{ c.email }}</div>
                 </div>
-                <div class="truncate text-xs text-t-4">{{ c.email }}</div>
-              </div>
-              <span class="font-mono text-[11px] text-t-4">{{ c.tax_number || '' }}</span>
-            </li>
-          </ul>
-        </div>
+                <span class="font-mono text-[11px] text-t-4">{{ c.tax_number || '' }}</span>
+              </li>
+            </ul>
+          </div>
+        </template>
 
         <!-- Step-up cancellation notice -->
         <p

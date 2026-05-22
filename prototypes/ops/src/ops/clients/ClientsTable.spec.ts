@@ -12,21 +12,40 @@ function makeClient(overrides: Partial<Client> = {}): Client {
     docket: 'A1',
     is_active: true,
     metadata: { status: 'ACTIVE' },
+    portal_status: 'ACTIVE',
+    has_coinag_instruction: false,
     ...overrides,
   };
 }
 
+// `<ManifestActionsMenu>` needs Pinia + the manifest registry to mount;
+// the table's role under test is column layout / row-click bubbling so
+// stub the menu out.
+const STUBS = { ManifestActionsMenu: true } as const;
+
 describe('ClientsTable', () => {
   it('renders skeleton rows while loading', () => {
     const w = mount(ClientsTable, {
-      props: { rows: [], isLoading: true, hasActiveFilters: false },
+      props: {
+        rows: [],
+        isLoading: true,
+        hasActiveFilters: false,
+        manifestKey: 'ops.clients',
+      },
+      global: { stubs: STUBS },
     });
     expect(w.findAll('tbody tr').length).toBe(5);
   });
 
   it('renders the canonical empty state when no filters are active', () => {
     const w = mount(ClientsTable, {
-      props: { rows: [], isLoading: false, hasActiveFilters: false },
+      props: {
+        rows: [],
+        isLoading: false,
+        hasActiveFilters: false,
+        manifestKey: 'ops.clients',
+      },
+      global: { stubs: STUBS },
     });
     expect(w.text()).toContain('No hay clientes');
     expect(w.text()).not.toContain('Limpiar filtros');
@@ -34,7 +53,13 @@ describe('ClientsTable', () => {
 
   it('renders the filtered empty state with clear button when filters are active', async () => {
     const w = mount(ClientsTable, {
-      props: { rows: [], isLoading: false, hasActiveFilters: true },
+      props: {
+        rows: [],
+        isLoading: false,
+        hasActiveFilters: true,
+        manifestKey: 'ops.clients',
+      },
+      global: { stubs: STUBS },
     });
     expect(w.text()).toContain('Sin resultados para los filtros aplicados');
     const clearBtn = w.find('button');
@@ -43,74 +68,116 @@ describe('ClientsTable', () => {
     expect(w.emitted('clear-filters')).toBeTruthy();
   });
 
-  it('renders the canonical column set in the contracted order', () => {
-    const w = mount(ClientsTable, {
-      props: { rows: [makeClient()], isLoading: false, hasActiveFilters: false },
-    });
-    const headers = w.findAll('thead th').map((th) => th.text());
-    expect(headers).toEqual(['CUIT/CUIL', 'Nombre', 'Email', 'Activo', 'Estado Portal']);
-  });
-
-  it('renders cells with semantic colour for Activo and the portal-status badge', () => {
+  it('renders the canonical 7-column header set in the contracted order', () => {
     const w = mount(ClientsTable, {
       props: {
-        rows: [makeClient({ is_active: true, metadata: { status: 'ACTIVE' } })],
+        rows: [makeClient()],
         isLoading: false,
         hasActiveFilters: false,
+        manifestKey: 'ops.clients',
       },
+      global: { stubs: STUBS },
+    });
+    const headers = w.findAll('thead th').map((th) => th.text());
+    expect(headers).toEqual([
+      'Legajo',
+      'Nombre',
+      'CUIT/CUIL',
+      'Email',
+      'Portal',
+      'Estado',
+      'Acciones',
+    ]);
+  });
+
+  it('renders the row with active badge + portal chip in canonical order', () => {
+    const w = mount(ClientsTable, {
+      props: {
+        rows: [makeClient()],
+        isLoading: false,
+        hasActiveFilters: false,
+        manifestKey: 'ops.clients',
+      },
+      global: { stubs: STUBS },
     });
     const row = w.find('tbody tr');
-    expect(row.text()).toContain('20-12345678-9');
+    expect(row.text()).toContain('A1');
     expect(row.text()).toContain('ACME');
+    expect(row.text()).toContain('20-12345678-9');
     expect(row.text()).toContain('ops@acme.com');
-    expect(row.text()).toContain('Cuenta Validada');
-    // Active icon present (lucide-vue-next renders inline svg with text-success class).
-    expect(row.html()).toContain('text-success');
+    expect(row.text()).toContain('Activo');
+    expect(row.find('[data-portal-status="ACTIVE"]').exists()).toBe(true);
   });
 
   it('shows em-dash placeholders when optional fields are missing', () => {
     const w = mount(ClientsTable, {
       props: {
-        rows: [makeClient({ tax_number: null, email: null, name: null })],
+        rows: [makeClient({ tax_number: null, email: null, name: null, docket: null })],
         isLoading: false,
         hasActiveFilters: false,
+        manifestKey: 'ops.clients',
       },
+      global: { stubs: STUBS },
     });
     const row = w.find('tbody tr');
-    // Three em-dashes: tax, name, email.
     const dashes = row.text().match(/—/g);
-    expect(dashes && dashes.length).toBeGreaterThanOrEqual(3);
+    expect(dashes && dashes.length).toBeGreaterThanOrEqual(4);
   });
 
   it('emits row-click with the client when the row is clicked', async () => {
     const c = makeClient();
     const w = mount(ClientsTable, {
-      props: { rows: [c], isLoading: false, hasActiveFilters: false },
+      props: {
+        rows: [c],
+        isLoading: false,
+        hasActiveFilters: false,
+        manifestKey: 'ops.clients',
+      },
+      global: { stubs: STUBS },
     });
     await w.find(`[data-testid="client-row-${c.id}"]`).trigger('click');
     expect(w.emitted('row-click')).toBeTruthy();
     expect(w.emitted('row-click')?.[0]).toEqual([c]);
   });
 
-  it('renders the danger-toned portal badge for clients without portal', () => {
+  it('renders the No creado chip for clients without portal status', () => {
     const w = mount(ClientsTable, {
       props: {
-        rows: [makeClient({ metadata: null })],
+        rows: [makeClient({ portal_status: 'NOT_CREATED', metadata: null })],
         isLoading: false,
         hasActiveFilters: false,
+        manifestKey: 'ops.clients',
       },
+      global: { stubs: STUBS },
     });
-    expect(w.text()).toContain('Cuenta no Creada');
+    expect(w.text()).toContain('No creado');
+    expect(w.find('[data-portal-status="NOT_CREATED"]').exists()).toBe(true);
   });
 
-  it('renders the warning-toned portal badge for PENDING clients', () => {
+  it('renders the Pendiente chip for PENDING clients', () => {
     const w = mount(ClientsTable, {
       props: {
-        rows: [makeClient({ metadata: { status: 'PENDING' } })],
+        rows: [makeClient({ portal_status: 'PENDING' })],
         isLoading: false,
         hasActiveFilters: false,
+        manifestKey: 'ops.clients',
       },
+      global: { stubs: STUBS },
     });
-    expect(w.text()).toContain('Pendiente de Validación');
+    expect(w.text()).toContain('Pendiente');
+    expect(w.find('[data-portal-status="PENDING"]').exists()).toBe(true);
+  });
+
+  it('shows Inactivo badge when is_active is false', () => {
+    const w = mount(ClientsTable, {
+      props: {
+        rows: [makeClient({ is_active: false })],
+        isLoading: false,
+        hasActiveFilters: false,
+        manifestKey: 'ops.clients',
+      },
+      global: { stubs: STUBS },
+    });
+    expect(w.find('tbody tr').text()).toContain('Inactivo');
   });
 });

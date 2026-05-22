@@ -11,7 +11,7 @@ import { delay, http, HttpResponse, type HttpHandler } from 'msw';
 import { ENDPOINTS } from '@/api/endpoints';
 import { apiPath, randomDelayMs } from '../util';
 import { clientsSeed, currenciesSeed } from '../seed/clients';
-import type { Client } from '@/ops/clients/types';
+import type { Client, PortalStatusFlat } from '@/ops/clients/types';
 
 // MSW URL patterns. The leading `*` matches any baseURL, so the handler
 // fires regardless of whether the caller hit `/clients` or
@@ -24,7 +24,23 @@ const VALIDATE_CVU = apiPath(ENDPOINTS.clients.validateCvu(':cvu'));
 const CURRENCIES = apiPath(ENDPOINTS.clients.currencies);
 const CONFIRMATION_LETTER = apiPath(ENDPOINTS.clients.confirmationLetter(':id'));
 
-/** Project a full record down to the slim list row shape. */
+function flattenPortalStatus(c: (typeof clientsSeed)[number]): PortalStatusFlat {
+  const raw = c.metadata?.status;
+  if (raw === 'ACTIVE') return 'ACTIVE';
+  if (raw === 'PENDING') return 'PENDING';
+  return 'NOT_CREATED';
+}
+
+function hasCoinagInstruction(c: (typeof clientsSeed)[number]): boolean {
+  return c.accounts.some((a) =>
+    a.instructions.some(
+      (i) => (i.operations_provider_name ?? '').toUpperCase() === 'COINAG',
+    ),
+  );
+}
+
+/** Project a full record down to the slim list row shape (with the two
+ *  derived flat fields the `ops.clients` manifest depends on). */
 function projectListRow(c: (typeof clientsSeed)[number]): Client {
   return {
     id: c.id,
@@ -35,6 +51,9 @@ function projectListRow(c: (typeof clientsSeed)[number]): Client {
     is_active: c.is_active,
     external_client_id: c.external_client_id,
     metadata: c.metadata,
+    portal_status: flattenPortalStatus(c),
+    has_coinag_instruction: hasCoinagInstruction(c),
+    created_at: c.created_at,
   };
 }
 
@@ -61,6 +80,27 @@ export const clientHandlers: HttpHandler[] = [
       clients: window.map(projectListRow),
       total: filtered.length,
     });
+  }),
+
+  // PATCH /clients/:id — partial update used today by the manifest
+  // engine's Activar / Desactivar actions. Mutates is_active in place.
+  http.patch(DETAIL, async ({ params, request }) => {
+    await delay(randomDelayMs());
+    const id = String(params.id);
+    const client = clientsSeed.find((c) => c.id === id);
+    if (!client) {
+      return HttpResponse.json(
+        { message: 'Cliente no encontrado', code: 'NOT_FOUND' },
+        { status: 404 },
+      );
+    }
+    const body = (await request.json()) as {
+      is_active?: boolean;
+    };
+    if (typeof body?.is_active === 'boolean') {
+      client.is_active = body.is_active;
+    }
+    return HttpResponse.json(projectListRow(client));
   }),
 
   // GET /clients/:id
