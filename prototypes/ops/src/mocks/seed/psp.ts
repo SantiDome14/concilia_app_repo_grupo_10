@@ -23,9 +23,62 @@ import type {
   SwiftTransaction,
 } from '@/ops/psp/types';
 
-// ─── CVU sub-accounts (Cuentas tab) ─────────────────────────────────
+// ─── CBU-padre + CVU-hijos (Posición + Cuentas tabs) ───────────────
+// `parent_cbu_id = null` → CBU-padre; otherwise CVU-hijo. Account
+// numbers under each CBU share a structural prefix (e.g. 00028839...
+// vs 00003894...) — that's how the operator distinguishes CBUs in the
+// QA instance. CBU balances are redundant in the seed (the page sums
+// the CVU children); we leave them at '0' so a mismatch never lies.
+
+const CBU_COINAG_1 = 'psp-cbu-coinag-1';
+const CBU_COINAG_2 = 'psp-cbu-coinag-2';
+const CBU_BIND_1 = 'psp-cbu-bind-1';
+const CBU_BANCO_DE_COMERCIO_1 = 'psp-cbu-bdc-1';
 
 const initialAccounts: PspAccount[] = [
+  // CBU-padre records — one per master CBU. COINAG has two distinct
+  // CBUs (prefixes 0002883900... and 0000389400... in the QA data).
+  {
+    id: CBU_COINAG_1,
+    account_number: '00028839000000000CBU1',
+    currency: 'ARS',
+    balance: '0',
+    owner: null,
+    status: 'ACTIVE',
+    sponsor: 'COINAG',
+    parent_cbu_id: null,
+  },
+  {
+    id: CBU_COINAG_2,
+    account_number: '00003894000000000CBU2',
+    currency: 'ARS',
+    balance: '0',
+    owner: null,
+    status: 'ACTIVE',
+    sponsor: 'COINAG',
+    parent_cbu_id: null,
+  },
+  {
+    id: CBU_BIND_1,
+    account_number: '00007000000000000CBU1',
+    currency: 'ARS',
+    balance: '0',
+    owner: null,
+    status: 'ACTIVE',
+    sponsor: 'BIND',
+    parent_cbu_id: null,
+  },
+  {
+    id: CBU_BANCO_DE_COMERCIO_1,
+    account_number: '00007500000000000CBU1',
+    currency: 'ARS',
+    balance: '0',
+    owner: null,
+    status: 'ACTIVE',
+    sponsor: 'BANCO_DE_COMERCIO',
+    parent_cbu_id: null,
+  },
+  // CVU-hijos (Cuentas tab + drives CBU rollup in Posición).
   {
     id: 'psp-acc-001',
     account_number: '0002883900000000001454',
@@ -35,6 +88,7 @@ const initialAccounts: PspAccount[] = [
     status: 'ACTIVE',
     sponsor: 'COINAG',
     cvu: '0002883900000000001454',
+    parent_cbu_id: CBU_COINAG_1,
   },
   {
     id: 'psp-acc-002',
@@ -45,6 +99,7 @@ const initialAccounts: PspAccount[] = [
     status: 'ACTIVE',
     sponsor: 'COINAG',
     cvu: '0000389400000000000116',
+    parent_cbu_id: CBU_COINAG_2,
   },
   {
     id: 'psp-acc-003',
@@ -56,6 +111,7 @@ const initialAccounts: PspAccount[] = [
     sponsor: 'COINAG',
     cvu: '0002883900000000001164',
     alias: 'monti123',
+    parent_cbu_id: CBU_COINAG_1,
   },
   {
     id: 'psp-acc-004',
@@ -67,6 +123,7 @@ const initialAccounts: PspAccount[] = [
     sponsor: 'COINAG',
     cvu: '0002883900000000001430',
     alias: 'valentinvila',
+    parent_cbu_id: CBU_COINAG_1,
   },
   {
     id: 'psp-acc-005',
@@ -77,6 +134,7 @@ const initialAccounts: PspAccount[] = [
     status: 'ACTIVE',
     sponsor: 'COINAG',
     cvu: '0002883900000000001157',
+    parent_cbu_id: CBU_COINAG_1,
   },
   {
     id: 'psp-acc-006',
@@ -87,6 +145,7 @@ const initialAccounts: PspAccount[] = [
     status: 'ACTIVE',
     sponsor: 'COINAG',
     cvu: '0000389400000000000079',
+    parent_cbu_id: CBU_COINAG_2,
   },
   {
     id: 'psp-acc-007',
@@ -97,6 +156,7 @@ const initialAccounts: PspAccount[] = [
     status: 'ACTIVE',
     sponsor: 'COINAG',
     cvu: '0000389400000000000093',
+    parent_cbu_id: CBU_COINAG_2,
   },
   {
     id: 'psp-acc-008',
@@ -107,6 +167,7 @@ const initialAccounts: PspAccount[] = [
     status: 'ACTIVE',
     sponsor: 'COINAG',
     cvu: '0002883900000000001119',
+    parent_cbu_id: CBU_COINAG_1,
   },
   {
     id: 'psp-acc-009',
@@ -117,6 +178,7 @@ const initialAccounts: PspAccount[] = [
     status: 'ACTIVE',
     sponsor: 'COINAG',
     cvu: '0002883900000000001416',
+    parent_cbu_id: CBU_COINAG_1,
   },
   {
     id: 'psp-acc-010',
@@ -127,6 +189,7 @@ const initialAccounts: PspAccount[] = [
     status: 'ACTIVE',
     sponsor: 'COINAG',
     cvu: '0000389400000000000741',
+    parent_cbu_id: CBU_COINAG_2,
   },
   {
     id: 'psp-acc-011',
@@ -137,6 +200,7 @@ const initialAccounts: PspAccount[] = [
     status: 'ACTIVE',
     sponsor: 'COINAG',
     cvu: '0000389400000000000307',
+    parent_cbu_id: CBU_COINAG_2,
   },
   // BIND — sponsor structurally listed; lighter coverage than COINAG.
   {
@@ -148,6 +212,7 @@ const initialAccounts: PspAccount[] = [
     status: 'ACTIVE',
     sponsor: 'BIND',
     cvu: '0000700000000000001234',
+    parent_cbu_id: CBU_BIND_1,
   },
   {
     id: 'psp-acc-013',
@@ -158,6 +223,7 @@ const initialAccounts: PspAccount[] = [
     status: 'ACTIVE',
     sponsor: 'BIND',
     cvu: '0000700000000000005678',
+    parent_cbu_id: CBU_BIND_1,
   },
   // Banco de Comercio — single test record.
   {
@@ -170,6 +236,7 @@ const initialAccounts: PspAccount[] = [
     sponsor: 'BANCO_DE_COMERCIO',
     cvu: '0000750000000000000099',
     alias: 'cami-comercio',
+    parent_cbu_id: CBU_BANCO_DE_COMERCIO_1,
   },
 ];
 

@@ -56,7 +56,7 @@ export interface SeedMovement {
 const pspMovements: SeedMovement[] = [
   m('mov-psp-001', '2026-05-14', 'WITHDRAWAL', 'COMPLETED', '-123', 'ARS', 'ARDUA', 'COINAG', 'Santiago Montero', '20434043531', 'Lucas Prueba 245', '20160005115'),
   m('mov-psp-002', '2026-05-13', 'WITHDRAWAL', 'COMPLETED', '-123', 'ARS', 'ARDUA', 'COINAG', 'Santiago Montero', '20434043531', 'Lucas Prueba 245', '20160005115'),
-  m('mov-psp-003', '2026-05-12', 'DEPOSIT', 'COMPLETED', '1000', 'ARS', 'INTERNAL', null, 'Santiago Montero', '20434043531', 'Nombre', '30999999999'),
+  m('mov-psp-003', '2026-05-12', 'DEPOSIT', 'COMPLETED', '1000', 'ARS', 'INTERNAL', 'COINAG', 'Santiago Montero', '20434043531', 'Nombre', '30999999999'),
   m('mov-psp-004', '2026-05-12', 'WITHDRAWAL', 'COMPLETED', '-12', 'ARS', 'ARDUA', 'COINAG', 'Santiago Montero', '20434043531', 'Lucas Prueba 245', '20160005115'),
   m('mov-psp-005', '2026-05-12', 'WITHDRAWAL', 'COMPLETED', '-12', 'ARS', 'ARDUA', 'COINAG', 'Santiago Montero', '20434043531', 'Lucas Prueba 245', '20160005115'),
   m('mov-psp-006', '2026-05-12', 'INT_DEPOSIT', 'COMPLETED', '12', 'ARS', 'INTERNAL', 'COINAG', 'Manuel Gonzalez Lamensa', '20416466506', 'Santiago Montero', '20434043531'),

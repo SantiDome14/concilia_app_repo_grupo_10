@@ -4,7 +4,6 @@ import { setActivePinia, createPinia } from 'pinia';
 import { createRouter, createMemoryHistory } from 'vue-router';
 import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query';
 import Psp from './Psp.vue';
-import WhitelistAccountModal from '@/ops/clients/WhitelistAccountModal.vue';
 import { useAuthStore } from '@/stores/auth';
 import { ROUTE_PATHS } from '@/config/routes';
 
@@ -30,10 +29,11 @@ vi.mock('@/api/modules/psp', () => ({
   listSponsorBalances: vi.fn().mockResolvedValue([]),
   listMovements: vi.fn().mockResolvedValue({ data: [], total: 0 }),
   listAccounts: vi.fn().mockResolvedValue({ data: [], total: 0 }),
+  createAccount: vi.fn().mockResolvedValue({}),
 }));
 
-vi.mock('@/api/modules/clients', () => ({
-  listCurrencies: vi.fn().mockResolvedValue([]),
+vi.mock('@/api/modules/movimientos', () => ({
+  createMovement: vi.fn().mockResolvedValue({}),
 }));
 
 function makeRouter(initialPath: string) {
@@ -101,19 +101,19 @@ describe('Psp page — tab-aware page-header right-actions', () => {
     expect(wrapper.find('[data-testid="psp-create-movement-cta"]').exists()).toBe(false);
   });
 
-  it('Crear Cuenta opens <WhitelistAccountModal> (rename of the previous body-level Habilitar cuenta CTA)', async () => {
+  it('Crear Cuenta is wired (the page-header CTA exists; clicking it routes through the manifest engine)', async () => {
     const { wrapper } = await mountPsp(`${ROUTE_PATHS.PSP}?tab=cuentas`);
-    // Body-level legacy CTA is gone (replaced by the page-header CTA).
+    // The legacy body-level "Habilitar cuenta" CTA is gone — replaced
+    // by the page-header CTA wired to the `ops.psp.cuentas` manifest's
+    // `psp.cuentas.crear` module CTA (Partner + CBU + ...).
     expect(wrapper.find('[data-testid="psp-whitelist-cta"]').exists()).toBe(false);
-    // The whitelist modal component is mounted with `open=false`.
-    const modalBefore = wrapper.findComponent(WhitelistAccountModal);
-    expect(modalBefore.exists()).toBe(true);
-    expect(modalBefore.props('open')).toBe(false);
-    // Clicking the page-header Crear Cuenta flips `open` to true.
-    await wrapper.find('[data-testid="psp-create-account-cta"]').trigger('click');
+    const cta = wrapper.find('[data-testid="psp-create-account-cta"]');
+    expect(cta.exists()).toBe(true);
+    await cta.trigger('click');
+    // Click flows into the manifest engine — we don't assert on the
+    // global <ManifestDialog> here (it's mounted from <App>, not on
+    // this page). The contract is: the click doesn't throw.
     await wrapper.vm.$nextTick();
-    const modalAfter = wrapper.findComponent(WhitelistAccountModal);
-    expect(modalAfter.props('open')).toBe(true);
   });
 
   it('the Coinag health indicator is NOT mounted in the page header (it lives inside the Posición tree per-partner row)', async () => {

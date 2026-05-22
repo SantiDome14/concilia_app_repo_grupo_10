@@ -10,29 +10,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { activeSponsors } from './sponsor-catalog';
-import type { SponsorCode } from './types';
 import type { CatalogOption } from '@/ops/movimientos/catalog';
 
 // ════════════════════════════════════════════════════════════════════
-// MovementsFilters — implements part of the Movimientos Requirement.
+// MovementsFilters — L3 filter row for the PSP Movimientos tab.
+// ────────────────────────────────────────────────────────────────────
+// Search + Tipo + Estado + Origen. The Partner / sponsor filter was
+// dropped per operator review 2026-05-22 — every PSP movement is
+// already anchored to a partner (impossible to be null) and the
+// cross-tab `sponsorFilter` is exposed in the Posición + Cuentas
+// tabs; surfacing it again here was redundant.
 //
-// Per `extend-ops-psp-partner-rename-default-tab-and-filter` the
-// per-partner pill cards row was REMOVED — partner is now a Select
-// alongside Tipo / Estado / Origen, sourced from `activeSponsors()`.
-//
-// Type / status / origin options come from a closed catalog (per
-// `refine-ops-psp-tab-aware-header-and-multi-sponsor`); each option
-// is `{ value, label }` so the dropdown can render a human-readable
-// label (e.g. `COLLECTOR IN`) while the on-the-wire value remains
-// snake_case (e.g. `COLLECTOR_IN`).
+// Type / status / origin options come from a closed catalog; each
+// option is `{ value, label }` so the dropdown can render a human-
+// readable label (e.g. `COLLECTOR IN`) while the on-the-wire value
+// stays snake_case (e.g. `COLLECTOR_IN`).
 // ════════════════════════════════════════════════════════════════════
 
 const props = defineProps<{
   /** Search input value (synced via v-model:search). */
   search: string;
-  /** Active partner filter code; null = no filter. */
-  sponsor: SponsorCode | null;
+  /** Client filter — when set, only movements where `client` matches
+   *  the value pass. Driven by the "Ver movimientos" action on the
+   *  Cuentas tab, but also exposed as a Select here so the operator
+   *  can narrow manually. */
+  client: string;
   type: string;
   status: string;
   origin: string;
@@ -41,11 +43,14 @@ const props = defineProps<{
   typeOptions: ReadonlyArray<CatalogOption>;
   statusOptions: ReadonlyArray<CatalogOption>;
   originOptions: ReadonlyArray<CatalogOption>;
+  /** Distinct client names present in the current dataset — drives
+   *  the Cliente select. */
+  clientOptions: ReadonlyArray<string>;
 }>();
 
 const emit = defineEmits<{
   'update:search': [value: string];
-  'update:sponsor': [value: SponsorCode | null];
+  'update:client': [value: string];
   'update:type': [value: string];
   'update:status': [value: string];
   'update:origin': [value: string];
@@ -71,14 +76,9 @@ watch(localSearch, (v) => {
   }, 300);
 });
 
-// Partner Select — replaces the per-partner pill cards row.
-const partnerOptions = computed(() =>
-  activeSponsors().map((sp) => ({ value: sp.code, label: sp.label })),
-);
-
-const partnerModel = computed<string>({
-  get: () => props.sponsor || ALL,
-  set: (v) => emit('update:sponsor', v === ALL ? null : (v as SponsorCode)),
+const clientModel = computed<string>({
+  get: () => props.client || ALL,
+  set: (v) => emit('update:client', v === ALL ? '' : v),
 });
 
 // ALL bridges so the Select components can represent "no filter".
@@ -110,14 +110,16 @@ const originModel = computed<string>({
         />
       </div>
 
-      <Select v-model="partnerModel">
-        <SelectTrigger class="w-full sm:w-44" data-testid="movements-filter-partner">
-          <SelectValue placeholder="Partner" />
+      <div class="flex-1" />
+
+      <Select v-model="clientModel">
+        <SelectTrigger class="w-full sm:w-52" data-testid="movements-filter-client">
+          <SelectValue placeholder="Cliente · Todos" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem :value="ALL">Partner · Todos</SelectItem>
-          <SelectItem v-for="opt in partnerOptions" :key="opt.value" :value="opt.value">
-            {{ opt.label }}
+          <SelectItem :value="ALL">Cliente · Todos</SelectItem>
+          <SelectItem v-for="opt in props.clientOptions" :key="opt" :value="opt">
+            {{ opt }}
           </SelectItem>
         </SelectContent>
       </Select>

@@ -48,14 +48,13 @@ function statusVariant(status: string): 'success' | 'warning' | 'danger' | 'neut
     <table class="w-full table-auto text-sm">
       <thead class="border-b border-b-2 text-[10px] font-bold uppercase tracking-wider text-t-4">
         <tr>
-          <th class="px-4 py-3 text-left">Fecha</th>
+          <th class="px-4 py-3 text-left">Fecha de creación</th>
           <th class="px-4 py-3 text-left">Tipo</th>
-          <th class="px-4 py-3 text-left">Estado</th>
           <th class="px-4 py-3 text-right">Monto</th>
+          <th class="px-4 py-3 text-left">Status</th>
           <th class="px-4 py-3 text-left">Partner</th>
           <th class="px-4 py-3 text-left">Cliente</th>
           <th class="px-4 py-3 text-left">Contraparte</th>
-          <th class="px-4 py-3 text-left">Sponsor</th>
         </tr>
       </thead>
       <tbody>
@@ -68,12 +67,11 @@ function statusVariant(status: string): 'success' | 'warning' | 'danger' | 'neut
             <td class="px-4 py-3"><Skeleton class="h-4 w-24" /></td>
             <td class="px-4 py-3"><Skeleton class="h-4 w-32" /></td>
             <td class="px-4 py-3"><Skeleton class="h-4 w-32" /></td>
-            <td class="px-4 py-3"><Skeleton class="h-4 w-16" /></td>
           </tr>
         </template>
 
         <tr v-else-if="props.rows.length === 0">
-          <td :colspan="8" class="px-4 py-8">
+          <td :colspan="7" class="px-4 py-8">
             <EmptyState
               v-if="!props.hasActiveFilters"
               title="Sin movimientos"
@@ -99,18 +97,17 @@ function statusVariant(status: string): 'success' | 'warning' | 'danger' | 'neut
         >
           <td class="px-4 py-3 font-mono text-xs text-t-3">{{ row.date }}</td>
           <td class="px-4 py-3 text-t-2">{{ getMovementTypeLabel(row.type) }}</td>
+          <td class="px-4 py-3 text-right font-mono text-t-1">${{ formatAmount(row.amount) }}</td>
           <td class="px-4 py-3">
             <Badge :variant="statusVariant(row.status)">{{ getMovementStatusLabel(row.status) }}</Badge>
           </td>
-          <td class="px-4 py-3 text-right font-mono text-t-1">${{ formatAmount(row.amount) }}</td>
-          <td class="px-4 py-3 text-t-3">{{ row.partner || '—' }}</td>
+          <td class="px-4 py-3 text-t-3">{{ getSponsorLabel(row.partner ?? row.sponsor) }}</td>
           <td class="max-w-[180px] truncate px-4 py-3 text-t-2" :title="row.client ?? ''">
             {{ row.client || '—' }}
           </td>
           <td class="max-w-[180px] truncate px-4 py-3 text-t-3" :title="row.counterparty ?? ''">
             {{ row.counterparty || '—' }}
           </td>
-          <td class="px-4 py-3 text-t-2">{{ getSponsorLabel(row.sponsor) }}</td>
         </tr>
       </tbody>
     </table>

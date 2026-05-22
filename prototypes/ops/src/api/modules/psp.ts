@@ -6,6 +6,7 @@ import type {
   CoinagHealth,
   MovementsListParams,
   MovementsListResponse,
+  PspAccount,
   ReconciliationResponse,
   SponsorBalance,
   SwiftTransactionsResponse,
@@ -120,6 +121,17 @@ export async function listAccounts(
   };
 }
 
+/** POST /accounts — creates a new CVU sub-account. */
+export async function createAccount(
+  payload: Record<string, unknown>,
+): Promise<PspAccount> {
+  const response = await apiClient.post<PspAccountResponse>(
+    ENDPOINTS.psp.accounts,
+    payload,
+  );
+  return normaliseAccount(response.data);
+}
+
 /**
  * GET /accounts/:id/swift-transactions — drawer drill-down per
  * Requirement 6.
@@ -191,6 +203,7 @@ interface PspAccountResponse {
   status?: string;
   sponsor?: string | null;
   provider?: string | null;
+  parent_cbu_id?: string | null;
 }
 
 function normaliseAccount(raw: PspAccountResponse): AccountsListResponse['data'][number] {
@@ -210,5 +223,6 @@ function normaliseAccount(raw: PspAccountResponse): AccountsListResponse['data']
     sponsor: raw.sponsor ?? raw.provider ?? null,
     cvu: raw.cvu,
     alias: raw.alias,
+    parent_cbu_id: raw.parent_cbu_id ?? null,
   };
 }

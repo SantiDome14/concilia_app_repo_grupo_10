@@ -83,6 +83,9 @@ export interface MovementsListParams {
   type?: string;
   status?: string;
   origin?: string;
+  /** Client-name filter — used by the "Ver movimientos" action on
+   *  the Cuentas tab to narrow movements to a single CVU owner. */
+  client?: string;
   search?: string;
   page: number;
   pageSize: number;
@@ -94,13 +97,21 @@ export interface MovementsListResponse {
   total: number;
 }
 
-/** Account row in the Cuentas tab. */
+/** Account row in the Cuentas tab — covers both CBU-padre records (the
+ *  partner's master accounts) and the CVU-hijos that nest under them.
+ *  `parent_cbu_id` is the discriminator: `null` for CBU-padre, set for
+ *  CVU-hijos. The CBU's effective balance is the SUM of its CVU
+ *  children's balances (operator-confirmed 2026-05-22 — anything else
+ *  is a "descalce"). Multiple CBUs per sponsor are valid; one CBU
+ *  belongs to exactly one sponsor. */
 export interface PspAccount {
   id: string;
   account_number: string;
   /** Currency code (e.g. 'ARS', 'USD'). */
   currency: string;
-  /** Current balance for the account. */
+  /** Current balance for the account. For CBU-padre records this is
+   *  redundant (computed from children) and SHOULD be ignored by
+   *  consumers in favour of the derived sum. */
   balance: string;
   owner: string | null;
   /** Operational status (e.g. ACTIVE, PAUSED). */
@@ -110,12 +121,21 @@ export interface PspAccount {
   /** Optional Coinag-specific fields surfaced in the drawer. */
   cvu?: string;
   alias?: string;
+  /** `null` (or undefined) → this row is a CBU-padre. Otherwise it
+   *  points at the parent CBU's `id`. */
+  parent_cbu_id?: string | null;
 }
 
 /** Account listing query params. */
 export interface AccountsListParams {
   sponsor?: SponsorCode;
   search?: string;
+  /** ISO currency code filter (e.g. 'ARS', 'USD'). */
+  currency?: string;
+  /** Closed lifecycle filter (`ACTIVE` / `PAUSED` / `INACTIVE` / `BLOCKED`). */
+  status?: string;
+  /** `CBU` shows only master accounts; `CVU` shows only sub-accounts. */
+  accountType?: 'CBU' | 'CVU';
   page: number;
   pageSize: number;
 }

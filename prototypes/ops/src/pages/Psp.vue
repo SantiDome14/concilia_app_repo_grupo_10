@@ -1,30 +1,37 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { useQuery, useQueryClient } from '@tanstack/vue-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import { useRoute, useRouter } from 'vue-router';
 import { Plus } from 'lucide-vue-next';
 import { toast } from 'vue-sonner';
 import { Button } from '@/components/ui/button';
 import { ViewToggle, type ViewMode } from '@/components/views';
+import { TablePagination } from '@/components/data-display';
 import { cn } from '@/lib/cn';
+import { useTable } from '@/composables/useTable';
 import { useCapabilities } from '@/composables/useCapabilities';
+import { useManifestModule } from '@/composables/useManifestModule';
+import { PAGE_SIZE_OPTIONS } from '@/constants';
+import { CATALOG_QUERY_KEYS } from '@/plugins/catalogs';
+import { createMovement } from '@/api/modules/movimientos';
+import { OPS_PSP_CUENTAS_MANIFEST_KEY } from '@/manifests/ops.psp.cuentas.actions';
+import { OPS_PSP_MOVIMIENTOS_MANIFEST_KEY } from '@/manifests/ops.psp.movimientos.actions';
+import type { ModuleCTA } from '@/types/manifest';
 import {
+  createAccount,
   getCoinagHealth,
-  getReconciliation,
   listAccounts,
   listMovements,
   listSponsorBalances,
 } from '@/api/modules/psp';
-import ReconciliationBanner from '@/ops/psp/ReconciliationBanner.vue';
 import PosicionKpis from '@/ops/psp/PosicionKpis.vue';
 import PosicionTree from '@/ops/psp/PosicionTree.vue';
 import MovimientosKpis from '@/ops/psp/MovimientosKpis.vue';
 import MovementsFilters from '@/ops/psp/MovementsFilters.vue';
 import MovementsTable from '@/ops/psp/MovementsTable.vue';
 import AccountsTable from '@/ops/psp/AccountsTable.vue';
+import AccountsFilters from '@/ops/psp/AccountsFilters.vue';
 import SwiftTransactionsDrawer from '@/ops/psp/SwiftTransactionsDrawer.vue';
-import WhitelistAccountModal from '@/ops/clients/WhitelistAccountModal.vue';
-import { listCurrencies } from '@/api/modules/clients';
 import {
   MOVEMENT_TYPE_OPTIONS,
   MOVEMENT_STATUS_OPTIONS,
@@ -113,18 +120,25 @@ const movSearch = ref<string>(typeof route.query.search === 'string' ? route.que
 const movType = ref<string>(typeof route.query.type === 'string' ? route.query.type : '');
 const movStatus = ref<string>(typeof route.query.status === 'string' ? route.query.status : '');
 const movOrigin = ref<string>(typeof route.query.origin === 'string' ? route.query.origin : '');
-const movPage = ref<number>(Number(route.query.page) || 1);
-const movPageSize = ref<number>(25);
+// Pagination state is owned by `movementsTable` (useTable) — server
+// returns the full filtered set, the table slices the visible page.
 
 // Accounts filter state (sponsor + search shared with movements via cross-tab filter)
 const accSearch = ref<string>('');
-const accPage = ref<number>(1);
-const accPageSize = ref<number>(25);
+const accCurrency = ref<string>('');
+const accStatus = ref<string>('');
+
+// Client filter for the PSP Movimientos tab — driven by the
+// "Ver movimientos" action on the Cuentas tab (sets the client to
+// the row's owner) and also editable manually from the Movimientos
+// filter row.
+const movClient = ref<string>('');
+// Pagination state is owned by `accountsTable` (useTable).
 
 // ─── URL sync ───────────────────────────────────────────────────────
 watch(
-  [activeTab, sponsorFilter, movSearch, movType, movStatus, movOrigin, movPage],
-  ([tab, sponsor, search, type, status, origin, page]) => {
+  [activeTab, sponsorFilter, movSearch, movType, movStatus, movOrigin],
+  ([tab, sponsor, search, type, status, origin]) => {
     const next: Record<string, string> = { tab };
     if (sponsor) next.sponsor = sponsor;
     if (tab === 'movimientos') {
@@ -132,7 +146,6 @@ watch(
       if (type) next.type = type;
       if (status) next.status = status;
       if (origin) next.origin = origin;
-      if (page > 1) next.page = String(page);
     }
     // Preserve account drill-down deep-link if currently open.
     if (typeof route.query.account === 'string') next.account = route.query.account;
@@ -166,15 +179,11 @@ watch(healthQuery.data, (h) => {
 
 const isHealthStale = computed(() => Boolean(healthQuery.isError.value));
 
-// ─── Reconciliation snapshot (Requirement 3) ────────────────────────
-const reconciliationQuery = useQuery({
-  queryKey: ['ops', 'psp', 'reconciliation'],
-  queryFn: getReconciliation,
-  refetchInterval: 60_000,
-  enabled: canRead,
-});
-
-const mismatches = computed(() => reconciliationQuery.data.value?.mismatches ?? []);
+// The reconciliation banner / mismatches snapshot was removed
+// (operator review 2026-05-22). Descuadres between Ardua's ledger and
+// each partner's API balance will be surfaced through the Alertas
+// module instead — that's the canonical home for actionable
+// notifications.
 
 // ─── Sponsor balances (Requirement 4 — auto-refresh 60 s) ───────────
 const balancesQuery = useQuery({
@@ -190,14 +199,20 @@ const balances = computed(() => balancesQuery.data.value ?? []);
 // `activeSponsors()` and reads `balances` directly.
 
 // ─── Movements query (Requirement 5) ────────────────────────────────
+// Fetch the full set (FETCH_PAGE_SIZE = 1000) so filtering AND
+// pagination both run client-side. Server-side `page` / `pageSize` are
+// not forwarded — they're owned by `useTable` below.
+const FETCH_PAGE_SIZE = 1000;
+
 const movQueryParams = computed(() => ({
   ...(sponsorFilter.value ? { sponsor: sponsorFilter.value } : {}),
   ...(movSearch.value ? { search: movSearch.value } : {}),
   ...(movType.value ? { type: movType.value } : {}),
   ...(movStatus.value ? { status: movStatus.value } : {}),
   ...(movOrigin.value ? { origin: movOrigin.value } : {}),
-  page: movPage.value,
-  pageSize: movPageSize.value,
+  ...(movClient.value ? { client: movClient.value } : {}),
+  page: 1,
+  pageSize: FETCH_PAGE_SIZE,
 }));
 
 const movementsQuery = useQuery({
@@ -206,24 +221,42 @@ const movementsQuery = useQuery({
   enabled: computed(() => canRead.value && activeTab.value === 'movimientos'),
 });
 
-const movements = computed(() => movementsQuery.data.value?.data ?? []);
-const movementsTotal = computed(() => movementsQuery.data.value?.total ?? 0);
+// PSP movements are anchored to a CVU, which always belongs to a
+// sponsor — so `sponsor === null` rows (the general treasury
+// `mov-gen-*` records that share the `/movements` endpoint with the
+// OPS Movimientos page) are filtered out here. Operator review
+// 2026-05-22.
+const movements = computed(() =>
+  (movementsQuery.data.value?.data ?? []).filter((m) => m.sponsor !== null),
+);
 
+const movementsTable = useTable({ data: movements, pageSize: 10 });
+
+// `sponsorFilter` is intentionally NOT counted here — it lives in the
+// Posición / Cuentas filter rows; the Movimientos L3 owns only its
+// own filters (search / client / type / status / origin).
 const hasActiveMovementsFilters = computed(
   () =>
-    Boolean(sponsorFilter.value) ||
     Boolean(movSearch.value) ||
+    Boolean(movClient.value) ||
     Boolean(movType.value) ||
     Boolean(movStatus.value) ||
     Boolean(movOrigin.value),
 );
 
 // ─── Accounts query (Requirement 6) ─────────────────────────────────
+// Same pattern as movements: fetch the full filtered set, then let
+// `useTable` own the page slice + page size.
 const accQueryParams = computed(() => ({
   ...(sponsorFilter.value ? { sponsor: sponsorFilter.value } : {}),
   ...(accSearch.value ? { search: accSearch.value } : {}),
-  page: accPage.value,
-  pageSize: accPageSize.value,
+  ...(accCurrency.value ? { currency: accCurrency.value } : {}),
+  ...(accStatus.value ? { status: accStatus.value } : {}),
+  // Fetch the full set (CBUs + CVUs). The Cuentas table renders only
+  // CVUs (filtered client-side via `cvuAccounts`); the CBU records
+  // power the Posición tree + the Parent column lookup.
+  page: 1,
+  pageSize: FETCH_PAGE_SIZE,
 }));
 
 const accountsQuery = useQuery({
@@ -237,7 +270,34 @@ const accountsQuery = useQuery({
   ),
 });
 
+// Stable catalog query — feeds the `ops.psp.clientes` / `ops.psp.cbus`
+// catalog resolvers regardless of which filters the operator has on
+// the visible accounts query. Always fetches the full set.
+useQuery({
+  queryKey: CATALOG_QUERY_KEYS.pspAccountsCatalog,
+  queryFn: () => listAccounts({ page: 1, pageSize: 1000 }),
+  enabled: canRead,
+});
+
 const accounts = computed(() => accountsQuery.data.value?.data ?? []);
+
+// CVU-only view that feeds the Cuentas table. CBUs are excluded
+// here — they live in the Posición tab tree and as the Parent
+// column on each CVU row.
+const cvuAccounts = computed(() =>
+  accounts.value.filter((a) => Boolean(a.parent_cbu_id)),
+);
+
+// id → account_number lookup for the Parent column.
+const cbuParentLookup = computed<Record<string, string>>(() => {
+  const out: Record<string, string> = {};
+  for (const a of accounts.value) {
+    if (!a.parent_cbu_id) out[a.id] = a.account_number;
+  }
+  return out;
+});
+
+const accountsTable = useTable({ data: cvuAccounts, pageSize: 10 });
 
 // Posición also needs a recent movements snapshot to compute DR/CR cumulatives.
 // We fetch a wide page (no filters) when the tab is active.
@@ -249,12 +309,57 @@ const posicionMovementsQuery = useQuery({
 });
 
 const posicionMovements = computed(
-  () => posicionMovementsQuery.data.value?.data ?? [],
+  () =>
+    (posicionMovementsQuery.data.value?.data ?? []).filter(
+      (m) => m.sponsor !== null,
+    ),
 );
 
 const hasActiveAccountsFilters = computed(
-  () => Boolean(sponsorFilter.value) || Boolean(accSearch.value),
+  () =>
+    Boolean(sponsorFilter.value) ||
+    Boolean(accSearch.value) ||
+    Boolean(accCurrency.value) ||
+    Boolean(accStatus.value),
 );
+
+// Currency options surface every distinct currency present in the
+// CVU set (the table is CVU-only, so the filter mirrors what's
+// renderable rather than including CBU-master currencies).
+const accountsCurrencyOptions = computed<string[]>(() => {
+  const set = new Set<string>();
+  for (const a of cvuAccounts.value) set.add(a.currency.toUpperCase());
+  return Array.from(set).sort();
+});
+
+// L2 KPI tiles — full account set (CBU + CVU) so the operator sees
+// the hierarchy at a glance. Active counts only CVUs because CBU
+// masters carry status='ACTIVE' as a placeholder.
+const accountsKpis = computed(() => {
+  const rows = accounts.value;
+  let cbu = 0;
+  let cvu = 0;
+  let active = 0;
+  for (const a of rows) {
+    if (a.parent_cbu_id) {
+      cvu += 1;
+      if (a.status.toUpperCase() === 'ACTIVE') active += 1;
+    } else {
+      cbu += 1;
+    }
+  }
+  return { total: rows.length, cbu, cvu, active };
+});
+
+// Distinct client owners across the CVU set — drives the Cliente
+// filter Select in the PSP Movimientos tab.
+const movClientOptions = computed<string[]>(() => {
+  const set = new Set<string>();
+  for (const a of cvuAccounts.value) {
+    if (a.owner) set.add(a.owner);
+  }
+  return Array.from(set).sort();
+});
 
 // ─── Swift drawer (Requirement 6) ───────────────────────────────────
 const drawerOpen = ref(false);
@@ -291,38 +396,75 @@ watch(
   { immediate: true },
 );
 
-// ─── Page-level main CTAs (tab-aware per `refine-ops-psp-tab-aware-header-and-multi-sponsor`) ───
+// ─── Page-level main CTAs ─────────────────────────────────────────
 //
-// `Crear Movimiento` ships as a placeholder until
-// `extend-ops-psp-create-movement` lands a real mutation surface.
-function onCrearMovimiento(): void {
-  toast.info('Crear movimiento', {
-    description: 'Pendiente de wireado al backend (extend-ops-psp-create-movement)',
-  });
-}
+// `Crear Movimiento` opens the manifest-engine dialog declared on
+// `ops.psp.movimientos`. The creator below derives partner /
+// sponsor / currency from the chosen CVU's owner and fires the same
+// POST /movements endpoint the OPS Movimientos page uses.
 
-// `Crear Cuenta` opens `<WhitelistAccountModal>` — the same modal that
-// was previously triggered by the body-level `Habilitar cuenta` CTA.
-// In the PSP domain, "crear cuenta" IS the whitelist flow.
-function onCrearCuenta(): void {
-  whitelistOpen.value = true;
-}
+const pspMovimientosMod = useManifestModule(OPS_PSP_MOVIMIENTOS_MANIFEST_KEY);
 
-// ─── Whitelist modal (Requirement: PSP module CTA + tab access) ────
-const whitelistOpen = ref(false);
-
-function onWhitelistCreated(): void {
-  void queryClient.invalidateQueries({ queryKey: ['ops', 'psp', 'accounts'] });
-  void queryClient.invalidateQueries({ queryKey: ['ops', 'psp', 'sponsor-balances'] });
-}
-
-// Currencies needed by the whitelist modal.
-const currenciesQuery = useQuery({
-  queryKey: ['ops', 'currencies'],
-  queryFn: listCurrencies,
-  enabled: canRead,
+const createPspMovementMutation = useMutation({
+  mutationFn: (payload: Record<string, unknown>) => createMovement(payload),
+  onError: (err) => {
+    toast.error(
+      err instanceof Error ? err.message : 'No se pudo crear el movimiento.',
+    );
+  },
+  onSettled: () => {
+    void queryClient.invalidateQueries({ queryKey: ['ops', 'psp', 'movements'] });
+  },
 });
-const currencies = computed(() => currenciesQuery.data.value ?? []);
+
+pspMovimientosMod.registerCreator((cta: ModuleCTA, formValues) => {
+  if (cta.id !== 'psp.movimientos.crear') return formValues as Record<string, unknown>;
+
+  // Resolve the CVU the operator picked by client name → derives the
+  // partner, sponsor and currency for the new movement.
+  const ownerName = String(formValues.client ?? '');
+  const cvu = accounts.value.find(
+    (a) => a.owner === ownerName && Boolean(a.parent_cbu_id),
+  );
+  if (!cvu) {
+    toast.error('Cliente sin CVU activo — no se puede crear el movimiento.');
+    return formValues as Record<string, unknown>;
+  }
+
+  const amountRaw = String(formValues.amount ?? '0');
+
+  createPspMovementMutation.mutate({
+    type: String(formValues.type ?? ''),
+    status: 'PENDING',
+    amount: amountRaw,
+    currency: cvu.currency,
+    rail: 'ARDUA',
+    sponsor: cvu.sponsor,
+    partner: cvu.sponsor,
+    client: ownerName,
+    counterparty:
+      typeof formValues.counterparty === 'string' && formValues.counterparty !== ''
+        ? formValues.counterparty
+        : null,
+    metadata: {
+      cvu_account_id: cvu.id,
+      cvu_account_number: cvu.account_number,
+    },
+  });
+
+  return formValues as Record<string, unknown>;
+});
+
+function onCrearMovimiento(): void {
+  pspMovimientosMod.openModuleCTA('psp.movimientos.crear');
+}
+
+// `Crear Cuenta` now drives the manifest-engine dialog declared in
+// `ops.psp.cuentas` (module CTA `psp.cuentas.crear`) — adds the
+// Partner + CBU selectors operator review 2026-05-22 asked for.
+function onCrearCuenta(): void {
+  pspCuentasMod.openModuleCTA('psp.cuentas.crear');
+}
 
 // Filter option lists for Movimientos sourced from the closed catalog
 // (per `refine-ops-psp-tab-aware-header-and-multi-sponsor`).
@@ -331,18 +473,76 @@ const statusOptions = MOVEMENT_STATUS_OPTIONS;
 const originOptions = MOVEMENT_ORIGIN_OPTIONS;
 
 function clearMovementsFilters(): void {
-  sponsorFilter.value = null;
+  // `sponsorFilter` is cross-tab — cleared from Posición / Cuentas only.
   movSearch.value = '';
+  movClient.value = '';
   movType.value = '';
   movStatus.value = '';
   movOrigin.value = '';
-  movPage.value = 1;
+  movementsTable.setPage(1);
 }
+
+// Manifest engine for the Cuentas tab actions. The `ver_movimientos`
+// action emits `_action: 'ver_movimientos'` via on_confirm; the
+// dispatcher below intercepts the marker, looks up the source
+// account, and fires the cross-tab navigation + Cliente filter set.
+const pspCuentasMod = useManifestModule(OPS_PSP_CUENTAS_MANIFEST_KEY);
+
+pspCuentasMod.registerDispatcher({
+  update: (recordId, patch) => {
+    if (patch['_action'] === 'ver_movimientos') {
+      const account = accounts.value.find((a) => a.id === recordId);
+      if (!account) return;
+      movClient.value = account.owner ?? '';
+      movementsTable.setPage(1);
+      setTab('movimientos');
+    }
+  },
+  create: () => {
+    // Creators handle the actual POST — this branch stays no-op.
+  },
+});
+
+// Crear Cuenta — POST /accounts via the api module + invalidate the
+// accounts queries so both the table and the catalog refresh.
+const createPspAccountMutation = useMutation({
+  mutationFn: (payload: Record<string, unknown>) => createAccount(payload),
+  onError: (err) => {
+    toast.error(
+      err instanceof Error ? err.message : 'No se pudo crear la cuenta.',
+    );
+  },
+  onSettled: () => {
+    void queryClient.invalidateQueries({ queryKey: ['ops', 'psp', 'accounts'] });
+  },
+});
+
+pspCuentasMod.registerCreator((cta: ModuleCTA, formValues) => {
+  if (cta.id !== 'psp.cuentas.crear') return formValues as Record<string, unknown>;
+  const payload = {
+    sponsor: String(formValues.sponsor ?? ''),
+    parent_cbu_id: String(formValues.parent_cbu_id ?? ''),
+    owner: String(formValues.owner ?? ''),
+    account_number: String(formValues.account_number ?? ''),
+    currency: String(formValues.currency ?? 'ARS'),
+    alias:
+      typeof formValues.alias === 'string' && formValues.alias !== ''
+        ? formValues.alias
+        : undefined,
+    cvu: String(formValues.account_number ?? ''),
+    balance: '0',
+    status: 'ACTIVE',
+  };
+  createPspAccountMutation.mutate(payload);
+  return payload as unknown as Record<string, unknown>;
+});
 
 function clearAccountsFilters(): void {
   sponsorFilter.value = null;
   accSearch.value = '';
-  accPage.value = 1;
+  accCurrency.value = '';
+  accStatus.value = '';
+  accountsTable.setPage(1);
 }
 
 const TAB_LABELS: Record<PspTab, string> = {
@@ -397,7 +597,6 @@ const TAB_LABELS: Record<PspTab, string> = {
     </div>
 
     <!-- Reconciliation banner area -->
-    <ReconciliationBanner :mismatches="mismatches" />
 
     <!-- Tab indicator -->
     <div
@@ -457,7 +656,7 @@ const TAB_LABELS: Record<PspTab, string> = {
       <MovimientosKpis :movements="movements" />
       <MovementsFilters
         :search="movSearch"
-        :sponsor="sponsorFilter"
+        :client="movClient"
         :type="movType"
         :status="movStatus"
         :origin="movOrigin"
@@ -465,45 +664,31 @@ const TAB_LABELS: Record<PspTab, string> = {
         :type-options="typeOptions"
         :status-options="statusOptions"
         :origin-options="originOptions"
-        @update:search="(v: string) => { movSearch = v; movPage = 1; }"
-        @update:sponsor="(v: string | null) => { sponsorFilter = v; movPage = 1; }"
-        @update:type="(v: string) => { movType = v; movPage = 1; }"
-        @update:status="(v: string) => { movStatus = v; movPage = 1; }"
-        @update:origin="(v: string) => { movOrigin = v; movPage = 1; }"
+        :client-options="movClientOptions"
+        @update:search="(v: string) => { movSearch = v; movementsTable.setPage(1); }"
+        @update:client="(v: string) => { movClient = v; movementsTable.setPage(1); }"
+        @update:type="(v: string) => { movType = v; movementsTable.setPage(1); }"
+        @update:status="(v: string) => { movStatus = v; movementsTable.setPage(1); }"
+        @update:origin="(v: string) => { movOrigin = v; movementsTable.setPage(1); }"
         @clear-filters="clearMovementsFilters"
       />
       <MovementsTable
-        :rows="movements"
+        :rows="movementsTable.paged.value"
         :is-loading="movementsQuery.isPending.value"
         :has-active-filters="hasActiveMovementsFilters"
         @clear-filters="clearMovementsFilters"
       />
-      <div
-        v-if="!movementsQuery.isPending.value && movements.length > 0"
-        class="flex items-center justify-between text-xs text-t-4"
-      >
-        <div>{{ movementsTotal }} movimiento{{ movementsTotal === 1 ? '' : 's' }}</div>
-        <div class="flex gap-1.5">
-          <Button
-            variant="ghost"
-            size="sm"
-            :disabled="movPage <= 1"
-            data-testid="movements-pagination-prev"
-            @click="movPage = Math.max(1, movPage - 1)"
-          >
-            Anterior
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            :disabled="movements.length < movPageSize"
-            data-testid="movements-pagination-next"
-            @click="movPage += 1"
-          >
-            Siguiente
-          </Button>
-        </div>
-      </div>
+      <TablePagination
+        v-if="!movementsQuery.isPending.value && movementsTable.total.value > 0"
+        :page="movementsTable.page.value"
+        :page-size="movementsTable.pageSize.value"
+        :total="movementsTable.total.value"
+        :total-pages="movementsTable.totalPages.value"
+        :page-size-options="PAGE_SIZE_OPTIONS"
+        data-testid="psp-movements-pagination"
+        @update:page="movementsTable.setPage"
+        @update:page-size="movementsTable.setPageSize"
+      />
     </section>
 
     <!-- ─── Cuentas ──────────────────────────────────────────────── -->
@@ -512,17 +697,81 @@ const TAB_LABELS: Record<PspTab, string> = {
       class="flex flex-col gap-4"
       data-testid="psp-tab-body-cuentas"
     >
-      <div class="flex items-center justify-between">
-        <p class="text-sm text-t-3">
-          {{ accounts.length }} cuenta{{ accounts.length === 1 ? '' : 's' }}
-        </p>
-      </div>
+      <!-- L2 KPIs -->
+      <section
+        class="grid grid-cols-2 gap-3 lg:grid-cols-4"
+        data-testid="accounts-kpis"
+      >
+        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">
+            Total cuentas
+          </div>
+          <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">
+            {{ accountsKpis.total }}
+          </div>
+          <div class="mt-1 text-[11px] text-t-4">CBU + CVU</div>
+        </div>
+        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">
+            CBU
+          </div>
+          <div class="text-2xl font-extrabold leading-none tracking-tight text-info">
+            {{ accountsKpis.cbu }}
+          </div>
+          <div class="mt-1 text-[11px] text-t-4">cuentas globales por partner</div>
+        </div>
+        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">
+            CVU
+          </div>
+          <div class="text-2xl font-extrabold leading-none tracking-tight text-t-1">
+            {{ accountsKpis.cvu }}
+          </div>
+          <div class="mt-1 text-[11px] text-t-4">sub-cuentas por cliente</div>
+        </div>
+        <div class="rounded-xl border border-b-2 bg-card-2 px-[18px] py-4">
+          <div class="mb-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4">
+            Cuentas activas
+          </div>
+          <div class="text-2xl font-extrabold leading-none tracking-tight text-success">
+            {{ accountsKpis.active }}
+          </div>
+          <div class="mt-1 text-[11px] text-t-4">estado ACTIVE</div>
+        </div>
+      </section>
+
+      <AccountsFilters
+        :search="accSearch"
+        :sponsor="sponsorFilter"
+        :currency="accCurrency"
+        :status="accStatus"
+        :has-active-filters="hasActiveAccountsFilters"
+        :currency-options="accountsCurrencyOptions"
+        @update:search="(v: string) => { accSearch = v; accountsTable.setPage(1); }"
+        @update:sponsor="(v: SponsorCode | null) => { sponsorFilter = v; accountsTable.setPage(1); }"
+        @update:currency="(v: string) => { accCurrency = v; accountsTable.setPage(1); }"
+        @update:status="(v: string) => { accStatus = v; accountsTable.setPage(1); }"
+        @clear-filters="clearAccountsFilters"
+      />
       <AccountsTable
-        :rows="accounts"
+        :rows="accountsTable.paged.value"
         :is-loading="accountsQuery.isPending.value"
         :has-active-filters="hasActiveAccountsFilters"
+        :parent-lookup="cbuParentLookup"
+        :manifest-key="OPS_PSP_CUENTAS_MANIFEST_KEY"
         @row-click="openDrawer"
         @clear-filters="clearAccountsFilters"
+      />
+      <TablePagination
+        v-if="!accountsQuery.isPending.value && accountsTable.total.value > 0"
+        :page="accountsTable.page.value"
+        :page-size="accountsTable.pageSize.value"
+        :total="accountsTable.total.value"
+        :total-pages="accountsTable.totalPages.value"
+        :page-size-options="PAGE_SIZE_OPTIONS"
+        data-testid="psp-accounts-pagination"
+        @update:page="accountsTable.setPage"
+        @update:page-size="accountsTable.setPageSize"
       />
     </section>
 
@@ -531,15 +780,6 @@ const TAB_LABELS: Record<PspTab, string> = {
       :open="drawerOpen"
       :account="drawerAccount"
       @update:open="onDrawerOpenChange"
-    />
-
-    <!-- Whitelist modal (REUSED from ops-clients) — picker prefix
-         since PSP page doesn't have a client context (Decision 5). -->
-    <WhitelistAccountModal
-      v-model:open="whitelistOpen"
-      :client-id="null"
-      :currencies="currencies"
-      @created="onWhitelistCreated"
     />
   </div>
 </template>

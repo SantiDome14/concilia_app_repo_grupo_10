@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { ChevronRight, Wallet, Building2 } from 'lucide-vue-next';
+import { ChevronRight, Building2 } from 'lucide-vue-next';
 import {
   Select,
   SelectContent,
@@ -85,19 +85,28 @@ interface SponsorRow {
   label: string;
   /** Last-checked-at (for sub-label). */
   checkedAt: string | null;
-  /** Total balance across the sponsor's accounts (sum). */
+  /** Total balance across the sponsor's CBU master accounts (sum of
+   *  every CVU-hijo of every CBU under this sponsor). */
   totalSaldo: number;
-  /** Cuentas count for this sponsor (filtered by moneda if set). */
+  /** Count of CVU sub-accounts for this sponsor (sum across all its
+   *  CBUs). */
   cuentasCount: number;
-  cuentas: AccountRow[];
+  /** CBU-padre rows. A sponsor can have multiple CBUs; each CBU's
+   *  saldo is the sum of its CVU-hijos' balances (operator-confirmed
+   *  2026-05-22 — anything else is a "descalce"). */
+  cbus: CbuRow[];
 }
 
-interface AccountRow {
-  account: PspAccount;
+interface CbuRow {
+  id: string;
+  label: string;
+  currency: string;
   saldo: number;
   drAcum: number;
   crAcum: number;
   posicionNeta: number;
+  /** Count of CVU children under this CBU. */
+  cvuCount: number;
 }
 
 function parseAmount(value: string | undefined): number {
@@ -118,42 +127,63 @@ const filteredSponsors = computed<SponsorRow[]>(() => {
     .filter((sp) => !filterSponsor.value || sp.code === filterSponsor.value)
     .map((sp) => {
       const balance = props.balances.find((b) => b.sponsor === sp.code) ?? null;
-      const sponsorAccounts = props.accounts
-        .filter((a) => a.sponsor === sp.code)
+
+      // Partition this sponsor's accounts into CBU-padre (no parent)
+      // and CVU-hijos (has parent_cbu_id). The Posición tree renders
+      // one row per CBU; CVUs are the source of truth for each CBU's
+      // saldo (sum of their balances).
+      const sponsorAccounts = props.accounts.filter((a) => a.sponsor === sp.code);
+      const cbuMasters = sponsorAccounts.filter((a) => !a.parent_cbu_id);
+      const cvuChildren = sponsorAccounts.filter((a) => Boolean(a.parent_cbu_id));
+
+      const cbuRows: CbuRow[] = cbuMasters
         .filter(
-          (a) => !filterMoneda.value || a.currency.toUpperCase() === filterMoneda.value,
+          (cbu) =>
+            !filterMoneda.value || cbu.currency.toUpperCase() === filterMoneda.value,
         )
-        .map<AccountRow>((account) => {
-          const accountMovements = props.movements.filter(
+        .map((cbu) => {
+          const children = cvuChildren.filter((c) => c.parent_cbu_id === cbu.id);
+          const childIds = new Set(children.map((c) => c.account_number));
+          const saldo = children.reduce((acc, c) => acc + parseAmount(c.balance), 0);
+
+          // DR / CR roll up from every PENDING movement whose
+          // partner/client account is one of this CBU's CVU children.
+          const pending = props.movements.filter(
             (m) =>
-              (m.partner === account.account_number ||
-                m.client === account.account_number) &&
-              m.status?.toUpperCase() === 'PENDING',
+              m.status?.toUpperCase() === 'PENDING' &&
+              ((m.partner !== null && childIds.has(m.partner)) ||
+                (m.client !== null && childIds.has(m.client))),
           );
-          const drAcum = accountMovements.reduce(
+          const drAcum = pending.reduce(
             (acc, m) => acc + Math.max(parseAmount(m.amount), 0),
             0,
           );
-          const crAcum = accountMovements.reduce(
+          const crAcum = pending.reduce(
             (acc, m) => acc + Math.max(-parseAmount(m.amount), 0),
             0,
           );
-          const saldo = parseAmount(account.balance);
+
           return {
-            account,
+            id: cbu.id,
+            label: cbu.account_number,
+            currency: cbu.currency.toUpperCase(),
             saldo,
             drAcum,
             crAcum,
             posicionNeta: saldo + crAcum - drAcum,
+            cvuCount: children.length,
           };
         });
+
+      const totalSaldo = cbuRows.reduce((acc, c) => acc + c.saldo, 0);
+
       return {
         code: sp.code,
         label: sp.label,
         checkedAt: balance?.checked_at ?? null,
-        totalSaldo: parseAmount(balance?.balance),
-        cuentasCount: sponsorAccounts.length,
-        cuentas: sponsorAccounts,
+        totalSaldo,
+        cuentasCount: cvuChildren.length,
+        cbus: cbuRows,
       };
     });
 });
@@ -181,11 +211,6 @@ function formatCheckedAt(iso: string | null): string {
   const diffH = Math.floor(diffMin / 60);
   if (diffH < 24) return `Hace ${diffH}h`;
   return `Hace ${Math.floor(diffH / 24)}d`;
-}
-
-function iconFor(account: PspAccount): typeof Wallet | typeof Building2 {
-  // Wallet for ARS (CVU-style) accounts; Building2 for foreign currencies.
-  return account.currency.toUpperCase() === 'ARS' ? Wallet : Building2;
 }
 
 const sponsorOptions = computed(() => {
@@ -315,13 +340,14 @@ const sponsorOptions = computed(() => {
           </div>
         </button>
 
-        <div v-if="expanded.has(row.code)" class="border-t border-b-1 bg-[#181818]">
+        <div v-if="expanded.has(row.code)" class="border-t border-b-1 bg-card">
           <div
-            class="grid items-center gap-3.5 border-b border-b-2 bg-[#161616] px-[18px] py-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4"
-            style="grid-template-columns: 32px 2fr 1fr 1fr 1fr 1fr"
+            class="grid items-center gap-3.5 border-b border-b-2 bg-card px-[18px] py-2 text-[9px] font-extrabold uppercase tracking-wider text-t-4"
+            style="grid-template-columns: 32px 2fr 80px 1fr 1fr 1fr 1fr"
           >
             <div></div>
             <div>Cuenta</div>
+            <div class="text-left">Moneda</div>
             <div class="text-right">Saldo</div>
             <div class="text-right">DR acum</div>
             <div class="text-right">CR acum</div>
@@ -329,44 +355,46 @@ const sponsorOptions = computed(() => {
           </div>
 
           <div
-            v-if="row.cuentas.length === 0"
+            v-if="row.cbus.length === 0"
             class="px-[18px] py-6 text-center text-[12px] text-t-4"
           >
-            Sin cuentas para los filtros aplicados
+            Sin CBU para los filtros aplicados
           </div>
 
           <div
-            v-for="entry in row.cuentas"
-            :key="entry.account.id"
+            v-for="cbu in row.cbus"
+            :key="cbu.id"
             class="grid items-center gap-3.5 border-b border-b-1 px-[18px] py-2.5 text-xs last:border-b-0"
-            style="grid-template-columns: 32px 2fr 1fr 1fr 1fr 1fr"
-            :data-testid="`tree-account-${entry.account.id}`"
+            style="grid-template-columns: 32px 2fr 80px 1fr 1fr 1fr 1fr"
+            :data-testid="`tree-cbu-${cbu.id}`"
           >
             <div
-              class="flex h-7 w-7 items-center justify-center rounded-md border border-b-2 bg-card text-t-3"
+              class="flex h-7 w-7 items-center justify-center rounded-md border border-b-2 bg-card-2 text-t-3"
             >
-              <component :is="iconFor(entry.account)" class="h-3.5 w-3.5" />
+              <Building2 class="h-3.5 w-3.5" />
             </div>
             <div class="flex min-w-0 flex-col gap-0.5">
-              <span class="text-[13px] font-semibold text-t-1">
-                {{ entry.account.account_number }}
+              <span class="font-mono text-[13px] font-semibold text-t-1">{{ cbu.label }}</span>
+              <span class="text-[10px] text-t-4">
+                CBU padre · {{ cbu.cvuCount }} CVU{{ cbu.cvuCount === 1 ? '' : 's' }}
               </span>
-              <span class="font-mono text-[10px] text-t-4">
-                {{ entry.account.alias || entry.account.cvu || entry.account.currency }}
+            </div>
+            <div class="text-left">
+              <span class="inline-block rounded-md bg-card-2 px-2 py-0.5 font-mono text-[10px] font-semibold text-t-2">
+                {{ cbu.currency }}
               </span>
             </div>
             <div class="text-right font-mono font-bold tabular-nums text-t-1">
-              ${{ formatAmount(entry.saldo) }}
-              <span class="text-[10px] font-normal text-t-4">{{ entry.account.currency }}</span>
+              ${{ formatAmount(cbu.saldo) }}
             </div>
             <div class="text-right font-mono tabular-nums text-t-4">
-              ${{ formatAmount(entry.drAcum) }}
+              ${{ formatAmount(cbu.drAcum) }}
             </div>
             <div class="text-right font-mono tabular-nums text-t-4">
-              ${{ formatAmount(entry.crAcum) }}
+              ${{ formatAmount(cbu.crAcum) }}
             </div>
             <div class="text-right font-mono font-bold tabular-nums text-t-1">
-              ${{ formatAmount(entry.posicionNeta) }}
+              ${{ formatAmount(cbu.posicionNeta) }}
             </div>
           </div>
         </div>

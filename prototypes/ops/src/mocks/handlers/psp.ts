@@ -46,17 +46,24 @@ export const pspHandlers: HttpHandler[] = [
     });
   }),
 
-  // GET /accounts?sponsor=&search=&page=&pageSize=
+  // GET /accounts?sponsor=&search=&currency=&status=&accountType=&page=&pageSize=
   http.get(ACCOUNTS, async ({ request }) => {
     await delay(randomDelayMs());
     const url = new URL(request.url);
     const sponsor = url.searchParams.get('sponsor') ?? '';
     const search = url.searchParams.get('search')?.toLowerCase() ?? '';
+    const currency = url.searchParams.get('currency') ?? '';
+    const status = url.searchParams.get('status') ?? '';
+    const accountType = url.searchParams.get('accountType') ?? '';
     const page = Number(url.searchParams.get('page') ?? '1');
     const pageSize = Number(url.searchParams.get('pageSize') ?? '25');
 
     const filtered = accountsSeed.filter((a) => {
       if (sponsor && a.sponsor !== sponsor) return false;
+      if (currency && a.currency.toUpperCase() !== currency.toUpperCase()) return false;
+      if (status && a.status.toUpperCase() !== status.toUpperCase()) return false;
+      if (accountType === 'CBU' && a.parent_cbu_id) return false;
+      if (accountType === 'CVU' && !a.parent_cbu_id) return false;
       if (search) {
         const haystack = [a.owner, a.account_number, a.cvu, a.alias]
           .filter(Boolean)
@@ -71,6 +78,37 @@ export const pspHandlers: HttpHandler[] = [
     const window = filtered.slice(start, start + pageSize);
 
     return HttpResponse.json({ data: window, total: filtered.length });
+  }),
+
+  // POST /accounts — creates a new CVU sub-account in place. Used by
+  // the Crear Cuenta module CTA on the PSP page; mutates the seed so
+  // the next list-refetch surfaces the new row.
+  http.post(ACCOUNTS, async ({ request }) => {
+    await delay(randomDelayMs());
+    const body = (await request.json()) as Record<string, unknown>;
+    const id =
+      typeof body.id === 'string' && body.id.length > 0
+        ? body.id
+        : `psp-acc-${Date.now()}`;
+    const accountNumber =
+      typeof body.account_number === 'string' && body.account_number.length > 0
+        ? body.account_number
+        : id;
+    const record = {
+      id,
+      account_number: accountNumber,
+      currency: typeof body.currency === 'string' ? body.currency : 'ARS',
+      balance: typeof body.balance === 'string' ? body.balance : '0',
+      owner: typeof body.owner === 'string' ? body.owner : null,
+      status: typeof body.status === 'string' ? body.status : 'ACTIVE',
+      sponsor: typeof body.sponsor === 'string' ? body.sponsor : null,
+      cvu: typeof body.cvu === 'string' ? body.cvu : accountNumber,
+      alias: typeof body.alias === 'string' ? body.alias : undefined,
+      parent_cbu_id:
+        typeof body.parent_cbu_id === 'string' ? body.parent_cbu_id : null,
+    };
+    accountsSeed.unshift(record);
+    return HttpResponse.json(record, { status: 201 });
   }),
 
   // GET /accounts/:id/swift-transactions — drawer drill-down. Empty

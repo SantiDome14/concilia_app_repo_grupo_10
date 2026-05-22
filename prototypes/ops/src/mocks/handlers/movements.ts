@@ -33,6 +33,7 @@ export const movementsHandlers: HttpHandler[] = [
     const type = url.searchParams.get('type') ?? '';
     const status = url.searchParams.get('status') ?? '';
     const rail = url.searchParams.get('rail') ?? '';
+    const client = url.searchParams.get('client') ?? '';
     const search = url.searchParams.get('search')?.toLowerCase() ?? '';
     const page = Number(url.searchParams.get('page') ?? '1');
     const pageSize = Number(url.searchParams.get('pageSize') ?? '25');
@@ -45,6 +46,7 @@ export const movementsHandlers: HttpHandler[] = [
       if (type && m.type !== type) return false;
       if (status && m.status !== status) return false;
       if (rail && m.rail !== rail) return false;
+      if (client && m.client !== client) return false;
       if (search) {
         const haystack = [
           m.client,

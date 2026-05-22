@@ -41,7 +41,7 @@ describe('getSponsorByCode', () => {
 describe('getSponsorLabel', () => {
   it('returns the canonical label for a known code', () => {
     expect(getSponsorLabel('COINAG')).toBe('COINAG');
-    expect(getSponsorLabel('BANCO_DE_COMERCIO')).toBe('Banco de Comercio');
+    expect(getSponsorLabel('BANCO_DE_COMERCIO')).toBe('BANCO DE COMERCIO');
   });
 
   it('falls back to the code itself for unknown sponsors', () => {

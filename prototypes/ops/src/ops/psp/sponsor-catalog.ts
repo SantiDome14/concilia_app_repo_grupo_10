@@ -38,7 +38,7 @@ export const SPONSOR_CATALOG: ReadonlyArray<BancoSponsor> = [
   },
   {
     code: 'BANCO_DE_COMERCIO',
-    label: 'Banco de Comercio',
+    label: 'BANCO DE COMERCIO',
     active: true, // structurally listed; backend integration pending
     tone: 'brand',
   },
