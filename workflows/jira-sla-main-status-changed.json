@@ -1,0 +1,61 @@
+{
+  "id": "DkiCVByDHEU9dR0h",
+  "name": "jira-sla-main-status-changed",
+  "active": true,
+  "versionId": "29413972-8ead-4126-9391-0d32d0a937d3",
+  "createdAt": "2026-05-21T20:08:31.459Z",
+  "updatedAt": "2026-05-22T13:22:52.654Z",
+  "trigger": {
+    "type": "webhook",
+    "path": "/webhook/jira-sla-main-status-changed",
+    "method": "POST"
+  },
+  "description": "Triggered by Jira Automation when a ticket in the AM (MAIN) project changes status. Filters non-AM projects and events without a status change. Finds the corresponding row in SLA Tickets MAIN Notion DB (29f85f16) by Ticket Key. Calculates days spent in the previous status (decimal, based on Entered [Status] dates) and accumulates them in the Days in [Status] field. Updates Current Status, Flow, IT Flow?, Last Updated, and Entered [new status] date on the main row. Creates a new changelog entry in SLA Changelog MAIN DB (d2f2eb78) with full transition data.",
+  "nodes": [
+    "Trigger — Jira MAIN Status Changed",
+    "Respond — Acknowledge",
+    "Extract Status Change",
+    "Should Skip?",
+    "Ignore — Not Relevant",
+    "Find Ticket in Notion",
+    "Calculate Days & Build Payloads",
+    "Ticket Found?",
+    "Ignore — Ticket Not Found",
+    "Update Ticket — SLA Tickets MAIN",
+    "Create Changelog Entry — MAIN"
+  ],
+  "filters": {
+    "project": "AM",
+    "requires_status_change": true
+  },
+  "notion_dbs": {
+    "sla_tickets": "29f85f16-cf46-43a3-af3e-ac6c20bf56e1",
+    "changelog": "d2f2eb78-2011-4da2-9b4f-d7a6ae8e1f84"
+  },
+  "responsable_logic": {
+    "IT": "default",
+    "Ninguno": ["Done", "DEPRECATED"]
+  },
+  "status_fields": {
+    "Backlog": "Entered Backlog",
+    "TO REFINEMENT": "Entered TO REFINEMENT",
+    "IN REFINEMENT": "Entered IN REFINEMENT",
+    "To Do": "Entered To Do",
+    "In Progress": "Entered In Progress",
+    "STAND BY": "Entered STAND BY",
+    "CODE REVIEW": "Entered CODE REVIEW",
+    "Done": "Entered Done",
+    "DEPRECATED": "Entered DEPRECATED"
+  },
+  "days_fields": {
+    "Backlog": "Days in Backlog",
+    "TO REFINEMENT": "Days in TO REFINEMENT",
+    "IN REFINEMENT": "Days in IN REFINEMENT",
+    "To Do": "Days in To Do",
+    "In Progress": "Days in In Progress",
+    "STAND BY": "Days in STAND BY",
+    "CODE REVIEW": "Days in CODE REVIEW",
+    "Done": "Days in Done",
+    "DEPRECATED": "Days in DEPRECATED"
+  }
+}

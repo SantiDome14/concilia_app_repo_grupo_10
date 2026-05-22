@@ -2,9 +2,9 @@
   "id": "TJkEk7gl6bLiXyow",
   "name": "miles-jira-event-router",
   "active": true,
-  "versionId": "81a4d355-8470-4277-9427-487d12d96058",
+  "versionId": "e4512f16-ce53-4b2c-aec1-99ccb7052e1c",
   "createdAt": "2026-04-10T14:19:37.369Z",
-  "updatedAt": "2026-05-18T13:36:38.336Z",
+  "updatedAt": "2026-05-22T16:17:31.056Z",
   "trigger": {
     "type": "webhook",
     "path": "/webhook/jira-events",

@@ -1,0 +1,47 @@
+{
+  "id": "VYJ0En0x3PJtHeBa",
+  "name": "jira-sla-main-ticket-created",
+  "active": true,
+  "versionId": "41df480b-8568-4351-9511-c51a8f7637bc",
+  "createdAt": "2026-05-21T20:07:00.647Z",
+  "updatedAt": "2026-05-22T13:20:00.589Z",
+  "trigger": {
+    "type": "webhook",
+    "path": "/webhook/jira-sla-main-ticket-created",
+    "method": "POST"
+  },
+  "description": "Triggered by Jira Automation when a new ticket is created in the AM (MAIN) project. Filters out non-AM projects. Extracts and normalizes ticket data (key, summary, type, status, assignee, timestamps). Determines the responsible party: IT for all statuses except Done and DEPRECATED (which become Ninguno). Maps the initial status to the corresponding Entered [Status] field. Creates a new row in the SLA Tickets MAIN Notion database (DB 29f85f16) with all fields.",
+  "nodes": [
+    "Trigger — Jira MAIN Ticket Created",
+    "Respond — Acknowledge",
+    "Extract Ticket Data",
+    "Should Skip?",
+    "Ignore — Not AM",
+    "Notion API — Create Ticket Row"
+  ],
+  "filters": {
+    "project": "AM"
+  },
+  "notion_db": "29f85f16-cf46-43a3-af3e-ac6c20bf56e1",
+  "responsable_logic": {
+    "IT": "default",
+    "Ninguno": ["Done", "DEPRECATED"]
+  },
+  "issue_type_mapping": {
+    "Story": "Story",
+    "Task": "Task IT",
+    "Sub-task": "Task IT",
+    "Epic": "Epic"
+  },
+  "status_fields": {
+    "Backlog": "Entered Backlog",
+    "TO REFINEMENT": "Entered TO REFINEMENT",
+    "IN REFINEMENT": "Entered IN REFINEMENT",
+    "To Do": "Entered To Do",
+    "In Progress": "Entered In Progress",
+    "STAND BY": "Entered STAND BY",
+    "CODE REVIEW": "Entered CODE REVIEW",
+    "Done": "Entered Done",
+    "DEPRECATED": "Entered DEPRECATED"
+  }
+}

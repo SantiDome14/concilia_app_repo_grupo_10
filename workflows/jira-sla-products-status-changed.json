@@ -2,9 +2,9 @@
   "id": "wfge0h52Atc7ivc4",
   "name": "jira-sla-products-status-changed",
   "active": true,
-  "versionId": "abaa2e36-cae6-462c-ba25-e61197267250",
+  "versionId": "bf3d6d5f-5526-4e5a-8142-86d7c6c2ffc3",
   "createdAt": "2026-05-20T15:57:01.719Z",
-  "updatedAt": "2026-05-21T15:44:28.286Z",
+  "updatedAt": "2026-05-22T13:55:56.456Z",
   "trigger": {
     "type": "webhook",
     "path": "/webhook/jira-sla-products-status-changed",
