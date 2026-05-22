@@ -88,6 +88,8 @@ export const ENDPOINTS = {
 
   trades: {
     quotes: '/quotes',
+    detail: (id: string) => `/quotes/${id}`,
+    update: (id: string) => `/quotes/${id}`,
   },
 
   instructions: {

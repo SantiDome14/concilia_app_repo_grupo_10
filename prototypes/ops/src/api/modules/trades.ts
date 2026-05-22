@@ -2,6 +2,7 @@ import { apiClient } from '../client';
 import { ENDPOINTS } from '../endpoints';
 import type {
   Quote,
+  QuoteDetails,
   QuotesListParams,
   QuotesListResponse,
 } from '@/ops/trades/types';
@@ -33,6 +34,29 @@ export async function listQuotes(
   };
 }
 
+/** PATCH /quotes/:id — partial update (used by the manifest engine for status changes). */
+export async function updateQuote(
+  id: string,
+  patch: Record<string, unknown>,
+): Promise<Quote> {
+  const response = await apiClient.patch<RawQuote>(
+    ENDPOINTS.trades.update(id),
+    patch,
+  );
+  return normaliseQuote(response.data);
+}
+
+/** GET /quotes/:id — hydrated detail surfaced by QuoteDetailsModal. */
+export async function getQuote(id: string): Promise<QuoteDetails> {
+  const response = await apiClient.get<RawQuote>(ENDPOINTS.trades.detail(id));
+  return {
+    ...normaliseQuote(response.data),
+    origen_note: response.data?.origen_note ?? null,
+    destino_note: response.data?.destino_note ?? null,
+    metadata: response.data?.metadata,
+  };
+}
+
 // ─── Internal normaliser ────────────────────────────────────────────
 
 interface RawQuote {
@@ -48,6 +72,11 @@ interface RawQuote {
   exchange_rate?: string | number;
   status?: string;
   created_at?: string;
+  leg_origen_confirmed?: boolean | null;
+  leg_destino_confirmed?: boolean | null;
+  origen_note?: string | null;
+  destino_note?: string | null;
+  metadata?: Record<string, string | number | null | undefined>;
 }
 
 function normaliseQuote(raw: RawQuote): Quote {
@@ -64,5 +93,7 @@ function normaliseQuote(raw: RawQuote): Quote {
     exchange_rate: String(raw.exchange_rate ?? '0'),
     status: String(raw.status ?? ''),
     created_at: String(raw.created_at ?? ''),
+    leg_origen_confirmed: Boolean(raw.leg_origen_confirmed),
+    leg_destino_confirmed: Boolean(raw.leg_destino_confirmed),
   };
 }

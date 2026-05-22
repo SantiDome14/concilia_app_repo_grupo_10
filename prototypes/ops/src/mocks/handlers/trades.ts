@@ -17,6 +17,8 @@ import { apiPath, randomDelayMs } from '../util';
 import { tradesSeed } from '../seed/trades';
 
 const QUOTES = apiPath(ENDPOINTS.trades.quotes);
+const QUOTE_DETAIL = apiPath(ENDPOINTS.trades.detail(':id'));
+const QUOTE_UPDATE = apiPath(ENDPOINTS.trades.update(':id'));
 
 export const tradeHandlers: HttpHandler[] = [
   http.get(QUOTES, async ({ request }) => {
@@ -50,5 +52,51 @@ export const tradeHandlers: HttpHandler[] = [
     const window = sorted.slice(start, start + pageSize);
 
     return HttpResponse.json({ data: window, total: filtered.length });
+  }),
+
+  // GET /quotes/:id — hydrated detail for QuoteDetailsModal.
+  http.get(QUOTE_DETAIL, async ({ params }) => {
+    await delay(randomDelayMs());
+    const id = String(params.id);
+    const record = tradesSeed.find((q) => q.id === id);
+    if (!record) {
+      return HttpResponse.json(
+        { message: 'Quote no encontrado', code: 'NOT_FOUND' },
+        { status: 404 },
+      );
+    }
+    return HttpResponse.json(record);
+  }),
+
+  // PATCH /quotes/:id — applies a partial update in place. Mutates
+  // the seed so the next list-refetch shows the updated row.
+  //
+  // Derivation rule (operator review 2026-05-22): when BOTH leg
+  // confirmations land on `true` AND the quote is still ACCEPTED, the
+  // backend auto-transitions `status` to COMPLETED. OPS owns this
+  // derivation — there is no manual Liquidar action; the COMPLETED
+  // column on the estado_operativo kanban populates automatically
+  // once both legs are confirmed.
+  http.patch(QUOTE_UPDATE, async ({ params, request }) => {
+    await delay(randomDelayMs());
+    const id = String(params.id);
+    const idx = tradesSeed.findIndex((q) => q.id === id);
+    if (idx === -1) {
+      return HttpResponse.json(
+        { message: 'Quote no encontrado', code: 'NOT_FOUND' },
+        { status: 404 },
+      );
+    }
+    const patch = (await request.json()) as Partial<typeof tradesSeed[number]>;
+    const merged = { ...tradesSeed[idx], ...patch };
+    if (
+      merged.leg_origen_confirmed === true &&
+      merged.leg_destino_confirmed === true &&
+      merged.status === 'ACCEPTED'
+    ) {
+      merged.status = 'COMPLETED';
+    }
+    tradesSeed[idx] = merged;
+    return HttpResponse.json(merged);
   }),
 ];

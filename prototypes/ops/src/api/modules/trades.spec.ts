@@ -56,6 +56,8 @@ describe('listQuotes', () => {
       exchange_rate: '500',
       status: 'ACCEPTED',
       created_at: '2026-05-08T12:00:00Z',
+      leg_origen_confirmed: false,
+      leg_destino_confirmed: false,
     });
   });
 

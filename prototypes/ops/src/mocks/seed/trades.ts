@@ -38,6 +38,9 @@ const initial: Quote[] = [
     exchange_rate: '1490.3595',
     status: 'ACCEPTED',
     created_at: '2026-05-05T12:59:00Z',
+    // Both legs confirmed — used as a demo state for the kanban tabs.
+    leg_origen_confirmed: true,
+    leg_destino_confirmed: true,
   },
   {
     id: 'q-002',
@@ -52,6 +55,8 @@ const initial: Quote[] = [
     exchange_rate: '1010.00',
     status: 'ACCEPTED',
     created_at: '2026-04-29T12:45:00Z',
+    // Only lado-origen confirmed.
+    leg_origen_confirmed: true,
   },
   {
     id: 'q-003',
@@ -66,6 +71,8 @@ const initial: Quote[] = [
     exchange_rate: '1468.1025',
     status: 'ACCEPTED',
     created_at: '2026-04-13T16:21:00Z',
+    // Only lado-destino confirmed.
+    leg_destino_confirmed: true,
   },
   {
     id: 'q-004',
