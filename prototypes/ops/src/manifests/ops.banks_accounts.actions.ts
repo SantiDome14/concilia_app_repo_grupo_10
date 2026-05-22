@@ -34,9 +34,6 @@ export const OPS_BANKS_ACCOUNTS_MANIFEST: Manifest = {
       label: 'Editar datos',
       description: 'Edita los campos mutables de la cuenta (moneda, tipo, número, padre, estado).',
       icon: 'edit',
-      capabilities: {
-        required_role_any_of: ['banks-accounts:edit-account', 'OPS_ADMIN'],
-      },
       dialog: {
         title: 'Editar cuenta',
         description: '{record.estructura} · {record.moneda} · {record.nro}',
@@ -104,9 +101,6 @@ export const OPS_BANKS_ACCOUNTS_MANIFEST: Manifest = {
       enable_when: { field_equals: { field: 'status', value: 'Inactiva' } },
       disable_reason: 'Solo aplica a cuentas inactivas',
       disable_tag: 'Estado',
-      capabilities: {
-        required_role_any_of: ['banks-accounts:edit-account', 'OPS_ADMIN'],
-      },
       dialog: {
         title: 'Activar cuenta',
         description: '{record.estructura} · {record.moneda} · {record.nro}',
@@ -135,9 +129,6 @@ export const OPS_BANKS_ACCOUNTS_MANIFEST: Manifest = {
       enable_when: { field_equals: { field: 'status', value: 'Activa' } },
       disable_reason: 'Solo aplica a cuentas activas',
       disable_tag: 'Estado',
-      capabilities: {
-        required_role_any_of: ['banks-accounts:edit-account', 'OPS_ADMIN'],
-      },
       dialog: {
         title: 'Desactivar cuenta',
         description: '{record.estructura} · {record.moneda} · {record.nro}',
@@ -157,21 +148,18 @@ export const OPS_BANKS_ACCOUNTS_MANIFEST: Manifest = {
   ],
 
   module_ctas: [
-    // ─── Primary · Nueva Cuenta ─────────────────────────────────────
+    // ─── Primary · Crear nueva Cuenta ───────────────────────────────
     {
       id: 'ops.banks_accounts.crear_cuenta',
       dimension: 'governance',
-      label: 'Nueva Cuenta',
+      label: 'Crear nueva Cuenta',
       description: 'Da de alta una nueva cuenta en el catálogo maestro.',
       icon: 'plus',
       is_module_cta: true,
       variant: 'primary',
       creates_record_concept: 'cuenta_banco',
-      capabilities: {
-        required_role_any_of: ['banks-accounts:create-account', 'OPS_ADMIN'],
-      },
       dialog: {
-        title: 'Nueva Cuenta',
+        title: 'Crear nueva Cuenta',
         description: 'Catálogo maestro de Sociedad → Estructura → Cuenta.',
         fields: [
           {
@@ -189,7 +177,7 @@ export const OPS_BANKS_ACCOUNTS_MANIFEST: Manifest = {
             catalog: 'ops.estructuras_bancos',
             required: true,
             placeholder: 'Elegí Banco / Estructura...',
-            hint: 'Si no encontrás la estructura, creala primero con la acción "Nueva Estructura".',
+            hint: 'Si no encontrás la estructura, creala primero con la acción "Crear nuevo Banco/Estructura".',
           },
           {
             id: 'tipoCuenta',
@@ -234,21 +222,18 @@ export const OPS_BANKS_ACCOUNTS_MANIFEST: Manifest = {
         toast: 'Cuenta creada en el catálogo',
       },
     },
-    // ─── Secondary · Nueva Estructura ───────────────────────────────
+    // ─── Secondary · Crear nuevo Banco/Estructura ───────────────────
     {
       id: 'ops.banks_accounts.crear_estructura',
       dimension: 'governance',
-      label: 'Nueva Estructura',
+      label: 'Crear nuevo Banco/Estructura',
       description: 'Da de alta un Banco / Exchange / ALyC / Custodio / PSP en el registro de Estructuras.',
       icon: 'building',
       is_module_cta: true,
       variant: 'secondary',
       creates_record_concept: 'estructura_banco',
-      capabilities: {
-        required_role_any_of: ['banks-accounts:create-structure', 'OPS_ADMIN'],
-      },
       dialog: {
-        title: 'Nueva Estructura',
+        title: 'Crear nuevo Banco/Estructura',
         description: 'Las Estructuras son globales — cualquier Sociedad puede abrir cuentas en una Estructura existente.',
         fields: [
           {

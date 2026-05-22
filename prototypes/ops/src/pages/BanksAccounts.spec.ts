@@ -136,8 +136,8 @@ describe('BanksAccounts page — happy path (OPS shape, no contable)', () => {
     const header = w.find('[data-testid="banks-accounts-main-cta"]');
     expect(header.exists()).toBe(true);
     // Both CTA labels surface through <ManifestModuleCTAs>
-    expect(header.text()).toContain('Nueva Cuenta');
-    expect(header.text()).toContain('Nueva Estructura');
+    expect(header.text()).toContain('Crear nueva Cuenta');
+    expect(header.text()).toContain('Crear nuevo Banco/Estructura');
   });
 
   it('renders 8 table headers without a Cuenta contable column', () => {
