@@ -1,6 +1,6 @@
 # Marco Legal — Infraestructura Regulatoria del Grupo Ardua
 
-Versión: 1.1 | Last updated: 2026-04-13
+Versión: 1.2 | Last updated: 2026-05-22
 Parte del Marco Legal, Operativo y Contable de los Productos y Servicios de Ardua.
 
 ---
@@ -21,8 +21,8 @@ El grupo Ardua está compuesto por cuatro entidades legales operativas:
 
 | Entidad | Tipo | Jurisdicción |
 |---|---|---|
-| Haz Pagos | PSP — Proveedor de Servicios de Pago | Argentina |
-| Circuit Pay | PSAV — Proveedor de Servicios de Activos Virtuales | Argentina |
+| Haz Pagos | PSP — Proveedor de Servicios de Pago (regulado por BCRA) | Argentina |
+| Circuit Pay | PSAV — Proveedor de Servicios de Activos Virtuales (regulado por CNV) | Argentina |
 | Ardua Solutions Corp | MSB — Money Services Business | Canadá |
 | Astra Ventures | VASP — Virtual Asset Service Provider | Polonia |
 
