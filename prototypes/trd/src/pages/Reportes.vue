@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { Search } from 'lucide-vue-next';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
+import { toast } from 'vue-sonner';
 import { Input } from '@/components/ui/input';
 import { Badge, type BadgeVariants } from '@/components/ui/badge';
 import EmptyState from '@/components/feedback/EmptyState.vue';
@@ -18,11 +20,12 @@ import { ManifestActionsMenu } from '@/components/manifest';
 import { useManifestModule } from '@/composables/useManifestModule';
 import { REPORTES_MANIFEST_KEY } from '@/manifests/framework.template.reportes.actions';
 import {
-  REPORTS_CATALOG,
-  REPORT_RUNS,
-  REPORT_CATEGORIES,
-  REPORT_CATEGORY_BY_KEY,
-} from '@/mocks/genericos/reportes';
+  listReportCategories,
+  listReportRuns,
+  listReports,
+  updateReport,
+  type ReportCategoryDef,
+} from '@/api/modules/reports';
 import { depsStatus } from '@/lib/reportes/depsStatus';
 import type {
   Periodicity,
@@ -43,7 +46,9 @@ import { cn } from '@/lib/cn';
 // Each sub-tab has its own KPI strip, its own filters, and its own body.
 //
 // Cross-app coordination: Generar dispatches REPORT_DEPENDENCY events
-// for blocked deps so other modules can subscribe and surface alerts.
+// for blocked deps. Destination apps subscribe and create a Tarea in
+// their Centro de Solicitudes (NOT an Alerta) — REPORT_DEPENDENCY is
+// human-intervention work to unblock generation.
 // ════════════════════════════════════════════════════════════════════
 
 const reportesMod = useManifestModule(REPORTES_MANIFEST_KEY);
@@ -87,8 +92,49 @@ const filterStatusModel = computed<string>({
   },
 });
 
-const reports = ref<Report[]>(REPORTS_CATALOG.map((r) => ({ ...r })));
-const runs = ref<ReportRun[]>(REPORT_RUNS.map((r) => ({ ...r })));
+// ─── Data — vue-query is the source of truth ─────────────────────────
+const REPORTS_KEY = ['reports'] as const;
+const RUNS_KEY = ['reportRuns'] as const;
+const queryClient = useQueryClient();
+
+const reportsQuery = useQuery({ queryKey: REPORTS_KEY, queryFn: listReports });
+const runsQuery = useQuery({ queryKey: RUNS_KEY, queryFn: listReportRuns });
+const categoriesQuery = useQuery({
+  queryKey: ['reportCategories'],
+  queryFn: listReportCategories,
+});
+
+const reports = computed<Report[]>(() => reportsQuery.data.value ?? []);
+const runs = computed<ReportRun[]>(() => runsQuery.data.value ?? []);
+const reportCategories = computed<ReportCategoryDef[]>(
+  () => categoriesQuery.data.value ?? [],
+);
+const reportCategoryByKey = computed<Record<string, ReportCategoryDef>>(() =>
+  Object.fromEntries(reportCategories.value.map((c) => [c.key, c])),
+);
+
+const updateMutation = useMutation({
+  mutationFn: (vars: { id: string; patch: Partial<Report> }) => {
+    const current = reports.value.find((r) => r.id === vars.id);
+    const merged = { ...(current ?? {}), ...vars.patch } as Report;
+    return updateReport(vars.id, merged);
+  },
+  onMutate: async ({ id, patch }) => {
+    await queryClient.cancelQueries({ queryKey: REPORTS_KEY });
+    const snapshot = queryClient.getQueryData<Report[]>(REPORTS_KEY);
+    queryClient.setQueryData<Report[]>(REPORTS_KEY, (old) =>
+      (old ?? []).map((r) => (r.id === id ? ({ ...r, ...patch } as Report) : r)),
+    );
+    return { snapshot };
+  },
+  onError: (_err, _vars, ctx) => {
+    if (ctx?.snapshot) queryClient.setQueryData(REPORTS_KEY, ctx.snapshot);
+    toast.error('No se pudo guardar el cambio. Se revirtió y resincronizó.');
+  },
+  onSettled: () => {
+    void queryClient.invalidateQueries({ queryKey: REPORTS_KEY });
+  },
+});
 
 // ─── Detail modal ────────────────────────────────────────────────────
 const detailOpen = ref(false);
@@ -246,7 +292,7 @@ function reportName(reportId: string): string {
 function reportCategory(reportId: string): string {
   const r = reports.value.find((x) => x.id === reportId);
   if (!r) return '';
-  return REPORT_CATEGORY_BY_KEY[r.category]?.label ?? r.category;
+  return reportCategoryByKey.value[r.category]?.label ?? r.category;
 }
 
 function unfulfilled(r: Report) {
@@ -270,16 +316,25 @@ onMounted(() => {
     }
     return undefined;
   });
-  reportesMod.registerAfterMutation(() => {
-    // mock-backed; nothing to invalidate.
+  reportesMod.registerDispatcher({
+    update: (recordId, patch) => {
+      updateMutation.mutate({
+        id: recordId,
+        patch: patch as Partial<Report>,
+      });
+    },
+    create: () => {
+      // Reportes manifest doesn't declare CTAs that create records.
+    },
   });
 });
 
 // ─── Card actions ────────────────────────────────────────────────────
 function generar(r: Report): void {
   // Block + emit REPORT_DEPENDENCY for any unfulfilled deps within their
-  // SLA window (depsStatus.blocked) — if so we surface the block via
-  // window event so destination apps can subscribe and create alerts.
+  // SLA window (depsStatus.blocked). The destination app subscribes and
+  // creates a Tarea in its Centro de Solicitudes (with auto_archive on
+  // dependency completion) — not an Alerta.
   const status = depsStatus(r, today.value);
   if (status && !status.ready) {
     for (const dep of unfulfilled(r)) {
@@ -399,8 +454,6 @@ function reportsForCategory(catKey: string): Report[] {
     <!-- L3 Catálogo -->
     <template v-if="tab === 'catalogo'">
       <div class="flex flex-wrap items-center gap-2" data-testid="reportes-catalogo-header">
-        <span class="text-sm font-bold text-t-2">Catálogo</span>
-        <div class="w-4" />
         <div class="relative">
           <Search class="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-t-4" />
           <Input
@@ -422,7 +475,7 @@ function reportsForCategory(catKey: string): Report[] {
           <SelectContent>
             <SelectItem :value="ALL">Categoría · Todas</SelectItem>
             <SelectItem
-              v-for="c in REPORT_CATEGORIES"
+              v-for="c in reportCategories"
               :key="c.key"
               :value="c.key"
             >
@@ -461,7 +514,7 @@ function reportsForCategory(catKey: string): Report[] {
         />
         <template v-else>
           <section
-            v-for="cat in REPORT_CATEGORIES"
+            v-for="cat in reportCategories"
             :key="cat.key"
             class="cat-section flex flex-col gap-2.5"
             :data-testid="`cat-section-${cat.key}`"
@@ -481,6 +534,7 @@ function reportsForCategory(catKey: string): Report[] {
                   v-for="r in reportsForCategory(cat.key)"
                   :key="r.id"
                   :report="r"
+                  :category="reportCategoryByKey[r.category]"
                   :now="today"
                   @click="openDetail"
                   @editar="editar"
@@ -497,8 +551,6 @@ function reportsForCategory(catKey: string): Report[] {
     <!-- L3 Ejecución -->
     <template v-else>
       <div class="flex flex-wrap items-center gap-2" data-testid="reportes-ejecucion-header">
-        <span class="text-sm font-bold text-t-2">Ejecución</span>
-        <div class="w-4" />
         <div class="relative">
           <Search class="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-t-4" />
           <Input
@@ -640,6 +692,7 @@ function reportsForCategory(catKey: string): Report[] {
       :open="detailOpen"
       :report="detailReport"
       :runs="runs"
+      :category-by-key="reportCategoryByKey"
       :now="today"
       @update:open="detailOpen = $event"
     />

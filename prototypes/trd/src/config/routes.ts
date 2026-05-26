@@ -15,7 +15,14 @@ export const ROUTE_PATHS = {
   INBOX: '/inbox',
   ALERTAS: '/alertas',
   REPORTES: '/reportes',
-  // Domain modules land here as their migrations are scoped.
+  // Domain modules (template examples).
+  MODULO_A: '/modulo-a',
+  MODULO_B: '/modulo-b',
+  MODULO_C: '/modulo-c',
+  // Component playground (dev mode only — gated in Sidebar by import.meta.env.DEV).
+  PLAYGROUND_FORMS: '/playground/forms',
+  PLAYGROUND_CHARTS: '/playground/charts',
+  PLAYGROUND_LAYOUT: '/playground/layout',
   NOT_FOUND: '/:pathMatch(.*)*',
 } as const;
 
@@ -25,6 +32,12 @@ export const ROUTE_NAMES = {
   INBOX: 'inbox',
   ALERTAS: 'alertas',
   REPORTES: 'reportes',
+  MODULO_A: 'modulo-a',
+  MODULO_B: 'modulo-b',
+  MODULO_C: 'modulo-c',
+  PLAYGROUND_FORMS: 'playground-forms',
+  PLAYGROUND_CHARTS: 'playground-charts',
+  PLAYGROUND_LAYOUT: 'playground-layout',
   NOT_FOUND: 'not-found',
 } as const;
 

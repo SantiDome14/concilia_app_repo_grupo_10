@@ -7,9 +7,10 @@ context: |
   ## Project: core-template-frontend
 
   Ardua's official frontend template for every core financial app (core-app,
-  core-lex, core-ops, core-trd, and future core apps). Serves three purposes:
+  core-lex, core-ops, core-trd, core-fin, and future core apps). Serves three
+  purposes:
     1. GitHub template repository — clonable via "Use this template".
-    2. Base commit for migrating the four existing Ardua core frontends.
+    2. Base commit for migrating the existing Ardua core frontends.
     3. Scaffold that allows backend-first developers to implement frontend
        features via Claude Code + OpenSpec without deep frontend expertise.
 
@@ -44,12 +45,15 @@ context: |
 
   ## Core capabilities (governed by openspec/specs/)
 
-  Tier 1 — enforceable from day 1:
-  - core-layout, core-navigation, core-data-tables, core-actions-menu,
-    core-modals, core-theming
-
-  Tier 2 — seed contracts, each app extends:
-  - core-forms, core-api-layer, core-auth, core-error-handling
+  The template ships 18 capabilities archived under `openspec/specs/`.
+  Run `npm run spec:list` for the current set. Highlights:
+  - Layout & navigation: core-layout, core-navigation, core-modulo-genericos
+  - Data & actions: core-data-tables, core-actions-menu, core-actions-manifest,
+    core-module-types
+  - Modals & forms: core-modals, core-forms, core-dynamic-forms,
+    core-multi-step-form
+  - Cross-cutting: core-theming, core-api-layer, core-auth, core-error-handling,
+    core-file-upload, core-charts, core-websocket-client
 
   ## Conventions
 
@@ -80,7 +84,7 @@ context: |
   - The proposal.md first line must reference the Jira REQ:
     `- Jira REQ: [REQ-XX](https://arduasolutions.atlassian.net/browse/REQ-XX)`
   - Module affected (if any) on the second line: `- Module: CLP` / `OPS` /
-    `TRD` / `FIN` / `LEX` / `COM`.
+    `TRD` / `FIN` / `LEX`.
 
   ## Quality gates
 

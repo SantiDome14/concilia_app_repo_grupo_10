@@ -2,7 +2,8 @@
 // API endpoint constants
 // ────────────────────────────────────────────────────────────────────
 // Centralized endpoint paths grouped by resource. Never hardcode a URL
-// in a module — always reference through here.
+// in a module — always reference through here. Every group has a
+// matching MSW handler array under `src/mocks/handlers/`.
 // ════════════════════════════════════════════════════════════════════
 
 export const ENDPOINTS = {
@@ -12,6 +13,62 @@ export const ENDPOINTS = {
     create: '/examples',
     update: (id: string) => `/examples/${id}`,
     delete: (id: string) => `/examples/${id}`,
+  },
+
+  // ─── Identity ───────────────────────────────────────────────
+  users: {
+    list: '/users',
+    me: '/users/me',
+  },
+
+  // ─── Cross-cutting standard modules (core-modulo-genericos) ─
+  dashboardKpis: {
+    list: '/dashboard-kpis',
+  },
+
+  solicitudes: {
+    list: '/solicitudes',
+    detail: (id: string) => `/solicitudes/${id}`,
+    create: '/solicitudes',
+    update: (id: string) => `/solicitudes/${id}`,
+  },
+
+  alertas: {
+    list: '/alertas',
+    detail: (id: string) => `/alertas/${id}`,
+    update: (id: string) => `/alertas/${id}`,
+  },
+
+  reports: {
+    list: '/reports',
+    detail: (id: string) => `/reports/${id}`,
+    update: (id: string) => `/reports/${id}`,
+    // Distinct top-level path so the `/reports/:id` handler doesn't
+    // catch /reports/categories as `id='categories'`.
+    categories: '/report-categories',
+    runs: {
+      list: '/report-runs',
+      detail: (id: string) => `/report-runs/${id}`,
+      create: '/report-runs',
+    },
+  },
+
+  // ─── FIN — Tesorería / Disponibilidades ────────────────────
+  fin: {
+    posicion: {
+      tree: '/fin/posicion',
+      kpis: '/fin/posicion/kpis',
+    },
+    movimientos: {
+      list: '/fin/movimientos',
+      kpis: '/fin/movimientos/kpis',
+    },
+    cola: {
+      list: '/fin/cola',
+      update: (id: string) => `/fin/cola/${id}`,
+    },
+    sociedades: '/fin/sociedades',
+    monedas: '/fin/monedas',
   },
 
   // ─── File-upload examples ───────────────────────────────────
@@ -34,6 +91,4 @@ export const ENDPOINTS = {
     createJob: '/swift/jobs',
     jobStatus: (id: string) => `/swift/jobs/${id}`,
   },
-
-  // Add more resources here: auth, users, ...
 } as const;

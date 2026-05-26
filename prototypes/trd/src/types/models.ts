@@ -13,6 +13,19 @@ export interface User {
   capabilities: string[];
 }
 
+/**
+ * Lightweight identity shape used across the standard modules
+ * (Inbox/Alertas/Reportes drawers, manifest dropdowns, comment authoring).
+ * Distinct from `User` (auth payload): consumers only need a display name,
+ * initials, and a coarse role tag.
+ */
+export interface UserProfile {
+  id: string;
+  name: string;
+  initials: string;
+  role: string;
+}
+
 /** Common status enum used across domain entities — apps extend as needed. */
 export type RecordStatus = 'ACTIVE' | 'PENDING' | 'INACTIVE';
 

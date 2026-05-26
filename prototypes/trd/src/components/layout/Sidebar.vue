@@ -6,11 +6,17 @@ import {
   Inbox as InboxIcon,
   BellRing,
   FileText,
+  List,
+  LayoutGrid,
+  Database,
   ChevronLeft,
   ChevronDown,
   Settings,
   HelpCircle,
   LogOut,
+  FlaskConical,
+  BarChart3,
+  Columns,
 } from 'lucide-vue-next';
 import { ROUTE_PATHS, ROUTE_NAMES } from '@/config/routes';
 import { useAuth } from '@/composables/useAuth';
@@ -34,6 +40,17 @@ interface NavItem {
   name: string;
   label: string;
   icon: typeof LayoutDashboard;
+  /**
+   * Marks the entry as a placeholder for a module that is not yet
+   * implemented. Renders a "Soon" badge next to the label (collapsed
+   * sidebars omit the badge; the tooltip switches to "<label>
+   * (Próximamente)").
+   *
+   * Use sparingly — a soon-flagged entry is still routable. Pair it
+   * with a `<ModuloSoon>` page or a route guard that surfaces the
+   * placeholder explicitly.
+   */
+  soon?: boolean;
 }
 
 interface NavBlock {
@@ -45,22 +62,60 @@ interface NavBlock {
 // MUST live at the top of the sidebar, NOT inside a <SidebarBlock>,
 // in this exact order: Dashboard → Inbox → Alertas → Reportes.
 const generics: NavItem[] = [
-  {
-    to: ROUTE_PATHS.DASHBOARD,
-    name: ROUTE_NAMES.DASHBOARD,
-    label: 'Dashboard',
-    icon: LayoutDashboard,
-  },
+  { to: ROUTE_PATHS.DASHBOARD, name: ROUTE_NAMES.DASHBOARD, label: 'Dashboard', icon: LayoutDashboard },
   { to: ROUTE_PATHS.INBOX, name: ROUTE_NAMES.INBOX, label: 'Inbox', icon: InboxIcon },
   { to: ROUTE_PATHS.ALERTAS, name: ROUTE_NAMES.ALERTAS, label: 'Alertas', icon: BellRing },
   { to: ROUTE_PATHS.REPORTES, name: ROUTE_NAMES.REPORTES, label: 'Reportes', icon: FileText },
 ];
 
-// Domain modules for this app land here as their migrations are scoped.
-// See `_core-template-frontend/MIGRATION-PLAYBOOK.md` "App derivation cleanup" —
-// derived apps do NOT carry the template's Módulo A/B/C examples nor the
-// component playground; those live only in `_core-template-frontend`.
-const blocks: NavBlock[] = [];
+const blocks: NavBlock[] = [
+  {
+    label: 'Bloque 1',
+    items: [
+      { to: ROUTE_PATHS.MODULO_A, name: ROUTE_NAMES.MODULO_A, label: 'Módulo A', icon: List },
+    ],
+  },
+  {
+    label: 'Bloque 2',
+    items: [
+      { to: ROUTE_PATHS.MODULO_B, name: ROUTE_NAMES.MODULO_B, label: 'Módulo B', icon: LayoutGrid },
+      { to: ROUTE_PATHS.MODULO_C, name: ROUTE_NAMES.MODULO_C, label: 'Módulo C', icon: Database },
+    ],
+  },
+];
+
+// Dev-only block: component playground. Gated by import.meta.env.DEV
+// so production builds (and apps cloned from this template) do NOT
+// inflate their sidebar nor their bundle with showcase pages.
+// The routes are always registered (they're code-split anyway), but
+// the entries are only rendered in dev.
+const devBlocks: NavBlock[] = import.meta.env.DEV
+  ? [
+      {
+        label: 'Componentes (dev)',
+        items: [
+          {
+            to: ROUTE_PATHS.PLAYGROUND_FORMS,
+            name: ROUTE_NAMES.PLAYGROUND_FORMS,
+            label: 'Forms',
+            icon: FlaskConical,
+          },
+          {
+            to: ROUTE_PATHS.PLAYGROUND_CHARTS,
+            name: ROUTE_NAMES.PLAYGROUND_CHARTS,
+            label: 'Charts',
+            icon: BarChart3,
+          },
+          {
+            to: ROUTE_PATHS.PLAYGROUND_LAYOUT,
+            name: ROUTE_NAMES.PLAYGROUND_LAYOUT,
+            label: 'Layout',
+            icon: Columns,
+          },
+        ],
+      },
+    ]
+  : [];
 
 const collapsed = ref(false);
 const accountOpen = ref(false);
@@ -119,7 +174,7 @@ function handleHelp(): void {
   <nav
     :class="
       cn(
-        'bg-surf fixed top-0 bottom-0 left-0 z-[600] flex min-h-screen flex-col gap-0.5 border-r border-b-1 px-2.5 py-4 transition-[width] duration-200',
+        'fixed left-0 top-0 bottom-0 z-[600] flex min-h-screen flex-col gap-0.5 border-r border-b-1 bg-surf px-2.5 py-4 transition-[width] duration-200',
         collapsed ? 'w-[60px]' : 'w-[200px]',
       )
     "
@@ -129,32 +184,34 @@ function handleHelp(): void {
       type="button"
       :class="
         cn(
-          'bg-card-2 text-t-3 hover:bg-card hover:text-t-1 absolute top-[18px] -right-2.5 z-[601] flex h-5 w-5 items-center justify-center rounded-full border border-b-3 transition-colors hover:border-b-3',
+          'absolute -right-2.5 top-[18px] z-[601] flex h-5 w-5 items-center justify-center rounded-full border border-b-3 bg-card-2 text-t-3 transition-colors hover:border-b-3 hover:bg-card hover:text-t-1',
         )
       "
       aria-label="Toggle sidebar"
       @click="toggleCollapsed"
     >
-      <ChevronLeft :class="cn('h-2.5 w-2.5 transition-transform', collapsed && 'rotate-180')" />
+      <ChevronLeft
+        :class="cn('h-2.5 w-2.5 transition-transform', collapsed && 'rotate-180')"
+      />
     </button>
 
     <!-- Brand -->
     <div
       :class="
         cn(
-          'mb-1.5 flex items-center gap-2.5 border-b border-b-1 px-2.5 pt-1.5 pb-[18px]',
+          'mb-1.5 flex items-center gap-2.5 border-b border-b-1 px-2.5 pb-[18px] pt-1.5',
           collapsed && 'justify-center gap-0 px-0',
         )
       "
     >
       <div
-        class="bg-brand flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md text-xs font-extrabold text-white"
+        class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-brand text-xs font-extrabold text-white"
       >
         A
       </div>
       <div v-if="!collapsed" class="flex flex-col gap-px">
-        <span class="text-t-1 text-[13px] font-bold tracking-tight">APP · Ardua</span>
-        <span class="text-t-4 text-[10px] font-medium">Tagline</span>
+        <span class="text-[13px] font-bold tracking-tight text-t-1">APP · Ardua</span>
+        <span class="text-[10px] font-medium text-t-4">Tagline</span>
       </div>
     </div>
 
@@ -167,8 +224,8 @@ function handleHelp(): void {
       :data-testid="`sidebar-generic-${item.name}`"
       :class="
         cn(
-          'text-t-3 hover:bg-card hover:text-t-2 flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors',
-          route.name === item.name && 'bg-brand-bg text-brand font-semibold',
+          'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium text-t-3 transition-colors hover:bg-card hover:text-t-2',
+          route.name === item.name && 'bg-brand-bg font-semibold text-brand',
           collapsed && 'justify-center gap-0 px-0 py-2.5',
         )
       "
@@ -178,10 +235,10 @@ function handleHelp(): void {
     </RouterLink>
 
     <!-- Blocks -->
-    <template v-for="block in blocks" :key="block.label">
+    <template v-for="block in [...blocks, ...devBlocks]" :key="block.label">
       <div
         v-if="!collapsed"
-        class="text-t-4 px-2.5 pt-3 pb-[5px] text-[9px] font-extrabold tracking-wider uppercase"
+        class="px-2.5 pb-[5px] pt-3 text-[9px] font-extrabold uppercase tracking-wider text-t-4"
       >
         {{ block.label }}
       </div>
@@ -189,17 +246,23 @@ function handleHelp(): void {
         v-for="item in block.items"
         :key="item.to"
         :to="item.to"
-        :title="item.label"
+        :title="item.soon ? `${item.label} (Próximamente)` : item.label"
         :class="
           cn(
-            'text-t-3 hover:bg-card hover:text-t-2 flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors',
-            route.name === item.name && 'bg-brand-bg text-brand font-semibold',
+            'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium text-t-3 transition-colors hover:bg-card hover:text-t-2',
+            route.name === item.name && 'bg-brand-bg font-semibold text-brand',
             collapsed && 'justify-center gap-0 px-0 py-2.5',
           )
         "
       >
         <component :is="item.icon" class="h-[15px] w-[15px] flex-shrink-0" />
-        <span v-if="!collapsed">{{ item.label }}</span>
+        <span v-if="!collapsed" class="flex-1 truncate">{{ item.label }}</span>
+        <span
+          v-if="!collapsed && item.soon"
+          class="rounded-sm border border-b-2 px-1 py-px text-[9px] font-bold uppercase tracking-wider text-t-4"
+        >
+          Soon
+        </span>
       </RouterLink>
     </template>
 
@@ -212,25 +275,28 @@ function handleHelp(): void {
         type="button"
         :class="
           cn(
-            'hover:bg-card flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 transition-colors',
+            'flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 transition-colors hover:bg-card',
             collapsed && 'justify-center gap-0 px-0',
           )
         "
         @click="toggleAccount"
       >
         <div
-          class="from-info flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br to-[#A78BFA] text-[10px] font-bold text-white"
+          class="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-info to-[#A78BFA] text-[10px] font-bold text-white"
         >
           {{ initials }}
         </div>
         <div v-if="!collapsed" class="min-w-0 flex-1 overflow-hidden text-left">
-          <div class="text-t-2 truncate text-xs font-semibold">{{ displayName }}</div>
-          <div class="text-t-4 truncate text-[10px]">{{ displayEmail }}</div>
+          <div class="truncate text-xs font-semibold text-t-2">{{ displayName }}</div>
+          <div class="truncate text-[10px] text-t-4">{{ displayEmail }}</div>
         </div>
         <ChevronDown
           v-if="!collapsed"
           :class="
-            cn('text-t-4 h-3 w-3 flex-shrink-0 transition-transform', accountOpen && 'rotate-180')
+            cn(
+              'h-3 w-3 flex-shrink-0 text-t-4 transition-transform',
+              accountOpen && 'rotate-180',
+            )
           "
         />
       </button>
@@ -238,11 +304,11 @@ function handleHelp(): void {
       <!-- Account menu -->
       <div
         v-if="accountOpen"
-        class="bg-card-2 absolute bottom-[66px] left-2.5 z-[200] w-[180px] rounded-lg border border-b-3 p-1.5 shadow-[0_-4px_24px_rgba(0,0,0,0.6)]"
+        class="absolute bottom-[66px] left-2.5 z-[200] w-[180px] rounded-lg border border-b-3 bg-card-2 p-1.5 shadow-[0_-4px_24px_rgba(0,0,0,0.6)]"
       >
         <button
           type="button"
-          class="text-t-2 hover:text-t-1 flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[13px] font-medium transition-colors hover:bg-white/[0.06]"
+          class="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[13px] font-medium text-t-2 transition-colors hover:bg-white/[0.06] hover:text-t-1"
           @click="handleSettings"
         >
           <Settings class="h-3.5 w-3.5 flex-shrink-0" />
@@ -250,16 +316,16 @@ function handleHelp(): void {
         </button>
         <button
           type="button"
-          class="text-t-2 hover:text-t-1 flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[13px] font-medium transition-colors hover:bg-white/[0.06]"
+          class="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[13px] font-medium text-t-2 transition-colors hover:bg-white/[0.06] hover:text-t-1"
           @click="handleHelp"
         >
           <HelpCircle class="h-3.5 w-3.5 flex-shrink-0" />
           Get Help
         </button>
-        <div class="bg-b-1 my-1 h-px" />
+        <div class="my-1 h-px bg-b-1" />
         <button
           type="button"
-          class="text-danger hover:bg-danger-bg flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[13px] font-medium transition-colors"
+          class="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[13px] font-medium text-danger transition-colors hover:bg-danger-bg"
           @click="handleLogout"
         >
           <LogOut class="h-3.5 w-3.5 flex-shrink-0" />

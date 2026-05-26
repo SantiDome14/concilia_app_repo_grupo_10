@@ -40,14 +40,22 @@ const groups = computed(() => groupByDay(sortedDesc.value, props.now));
 const hasEvents = computed(() => sortedDesc.value.length > 0);
 
 // Dot color per event kind. Falls back to neutral for unknown kinds.
+// The extended kinds (`assigned`, `taken`, `released`, `action_invoked`)
+// land here from the Inbox Solicitud lifecycle per `core-modulo-genericos`
+// Requirement: Solicitud assignee is distinct from owner.
 function dotClass(kind: TimelineEvent['kind']): string {
   switch (kind) {
     case 'state_change':
+    case 'taken':
+    case 'released':
       return 'bg-brand';
     case 'field_update':
+    case 'assigned':
       return 'bg-info';
     case 'comment_added':
       return 'bg-t-3';
+    case 'action_invoked':
+      return 'bg-success';
     case 'system':
       return 'bg-warning';
     default:

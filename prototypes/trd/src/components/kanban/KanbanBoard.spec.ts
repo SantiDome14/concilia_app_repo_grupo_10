@@ -178,11 +178,11 @@ describe('KanbanBoard', () => {
     expect(tab.text()).toContain('RO');
   });
 
-  it('emits "Organizando por: <label>" in the header when axis is set', () => {
+  it('emits "Agrupado por: <label>" in the header when axis is set', () => {
     const wrapper = mount(KanbanBoard, {
       props: { axis: makeAxis(), records: [] },
     });
-    expect(wrapper.text()).toContain('Organizando por: Workflow');
+    expect(wrapper.text()).toContain('Agrupado por: Workflow');
   });
 
   it('orders columns by `order` ascending even when declared out of order', () => {

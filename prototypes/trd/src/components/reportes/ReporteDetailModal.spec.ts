@@ -78,6 +78,11 @@ const STUBS = {
   DialogFooter: { template: '<div><slot /></div>' },
 };
 
+const CATEGORY_BY_KEY = {
+  INTERNO: { key: 'INTERNO', label: 'Internos', badgeClass: 'border-success/30 text-success' },
+  OPERATIVO: { key: 'OPERATIVO', label: 'Operativos', badgeClass: 'border-info/30 text-info' },
+};
+
 function mountModal(opts: {
   open?: boolean;
   report?: Report | null;
@@ -88,6 +93,7 @@ function mountModal(opts: {
       open: opts.open ?? true,
       report: opts.report ?? REPORT,
       runs: opts.runs ?? RUNS,
+      categoryByKey: CATEGORY_BY_KEY,
       now: TODAY,
     },
     global: { stubs: STUBS },

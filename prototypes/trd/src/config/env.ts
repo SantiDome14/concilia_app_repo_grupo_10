@@ -19,6 +19,23 @@ const envSchema = z.object({
   VITE_API_BASE_URL: z.string().url().default('http://localhost:3000/api'),
   VITE_API_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
 
+  /**
+   * Toggles MSW (Mock Service Worker) — when `true`, the worker intercepts
+   * every HTTP call leaving the app and responds with handlers defined in
+   * `src/mocks/handlers/`. When `false`, no worker is registered and every
+   * request flies to `VITE_API_BASE_URL`.
+   *
+   * Schema default is `'false'` (defensive: builds without an explicit
+   * value go to the real backend). The template ships `.env.local` with
+   * the flag set to `'true'` so a freshly-cloned repo runs end-to-end
+   * without any backend.
+   */
+  VITE_USE_MOCKS: z
+    .string()
+    .optional()
+    .default('false')
+    .transform((v) => v === 'true'),
+
   VITE_AUTH0_DOMAIN: z.string().optional().default(''),
   VITE_AUTH0_CLIENT_ID: z.string().optional().default(''),
   VITE_AUTH0_AUDIENCE: z.string().optional().default(''),

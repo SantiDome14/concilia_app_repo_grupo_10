@@ -269,6 +269,12 @@ Each legacy frontend (`core-app`, `core-lex`, `core-ops`, `core-trd`) migrates a
 
 ---
 
+## Mocks
+
+The template ships with **Mock Service Worker** enabled by default — `VITE_USE_MOCKS="true"` in `.env.local` — so `npm run dev` works end-to-end without any backend. Handlers live in `src/mocks/handlers/` and mutate the in-memory seed in `src/mocks/seed.ts`; a page refresh resets the seed. To point an app at a real backend, set `VITE_USE_MOCKS="false"` and update `VITE_API_BASE_URL`. See the "Data transport (mocks vs real)" section in [`CLAUDE.md`](./CLAUDE.md) for the full pattern.
+
+---
+
 ## License
 
 Internal Ardua repository — not for public distribution.

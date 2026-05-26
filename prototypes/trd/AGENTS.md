@@ -23,8 +23,8 @@ Its purpose is fourfold:
 
 - **Project name:** `core-template-frontend` (all lowercase, kebab-case).
 - **Parent organization:** Ardua Solutions.
-- **Derived apps:** `core-app`, `core-lex`, `core-ops`, `core-trd`, `core-fin`, `core-com` (naming convention: `core-<module>`).
-- In documentation and code, **always write module names in lowercase** (`ops`, `lex`, `trd`, `clp`, `fin`, `com`). Uppercase is only used in enums and in brand references (e.g. the L1 page header may display the module name in uppercase as a style choice, but the identifier is lowercase).
+- **Derived apps:** `core-app`, `core-lex`, `core-ops`, `core-trd`, `core-fin` (naming convention: `core-<module>`).
+- In documentation and code, **always write module names in lowercase** (`ops`, `lex`, `trd`, `clp`, `fin`). Uppercase is only used in enums and in brand references (e.g. the L1 page header may display the module name in uppercase as a style choice, but the identifier is lowercase).
 - **Exception:** capitalize only at the beginning of a sentence when grammatically required.
 
 ## Tech Stack
@@ -66,7 +66,7 @@ Its purpose is fourfold:
 - **Pages follow the L1/L2/L3 pattern** from `core-layout` (page header, KPI cards, section + data surface). L2 is optional, L1 and L3 are required.
 - **Three-level control framework.** L1 hosts segmentation (sub-tabs via `<Segmenter>`) + view toggle + Main CTA. L3 hosts search + granular filters. L2 KPIs are computed over the active segment + active filters. Period is a filter with UI privileges, not a separate conceptual category.
 - **Module views.** Each module declares the views it supports via `views: ('list' | 'cards' | 'kanban')[]`. `<ViewToggle>` renders only declared views; the toggle is hidden when only one view is declared. Tablero is state-driven (N columns = N declared module states); declaring `'kanban'` without a state machine is rejected at dev-time and removed from the toggle.
-- **Tables:** `useTable` for client-side data, `@tanstack/vue-query` for server-side. Hand-rolled pagination is forbidden.
+- **Tables:** `useTable` for client-side data, `@tanstack/vue-query` for server-side. Hand-rolled pagination state in page components is forbidden. The pagination footer MUST be rendered through `<TablePagination>` from `@/components/data-display` — page-rolled inline footers (Prev/Next buttons, custom page-size selectors) are rejected at review (see `core-data-tables` spec).
 - **Per-row actions:** shared `ActionsMenu.vue` portal component. Inline `<td>` dropdowns are forbidden.
 - **Actions are declared via the manifest engine** (`core-actions-manifest`). Hand-coded action arrays in pages are forbidden. Manifests are JSON-strict objects keyed by `app.module[.recordType]`. Pure-logic engine (types, predicate evaluator, capabilities, resolver, validator, imputation): `src/lib/manifest/`. Vue UI layer (deferred): `src/components/manifest/`.
 - **Modals:** three canonical types (Create, Detail, Edit) plus the destructive Confirmation dialog. Detail transitions to Edit via the `Editar` button.
@@ -74,30 +74,39 @@ Its purpose is fourfold:
 - **Route guards:** closure-based (`createAuthGuard(auth0)`). The legacy `router.setAuth0()` hack is forbidden.
 - **API layer:** a single shared axios instance. Token injection via `setAccessTokenGetter`. Errors normalized into `ApiError` with status helpers.
 - **Feedback:** `vue-sonner` toasts for ephemeral feedback; alert banners for persistent system-level messages; `EmptyState` and `Skeleton` components for empty and loading states.
+- **CTAs invoke capabilities, not execution routes ("Wizard of Oz" principle).** A CTA in one app of the financial-core (CLP, Pago Directo, etc.) targets a capability declared by the destination app (`ejecutar_retiro`, `validar_kyc`, …). The capability decides internally — at runtime — whether to satisfy the invocation via direct integration (immediate result, no Centro entry) or by creating a Solicitud/Tarea in the Centro de Solicitudes (eventual result; CTA subscribes to state). The CTA SHALL NOT couple to a specific path. Automating a previously-human capability MUST NOT require any change to the calling CTA's code. Contracted in `core-modulo-genericos` (Requirement: "External CTAs MUST invoke a capability of the target app, not a specific execution route").
+- **Centro de Solicitudes hosts human-intervention work only.** Pure programmatic jobs (sync, audit, normalization, cron) live in code as Task Definitions of Tecnología or equivalent — NOT as Solicitudes/Tareas of the Inbox. A programmatic job MAY declare opt-in fallback to the Centro: on failure, the system invokes the Centro endpoint with `source_app: 'system'` to escalate as a Solicitud/Tarea. Without the fallback, failures route to Observability alerts only. The Solicitud model SHALL NOT grow an `execution: manual | programmatic` discriminator — every record in the Centro is implicitly human-action work; the `kind: 'solicitud' | 'tarea'` discriminator captures the only relevant axis. Contracted in `core-modulo-genericos` (Requirement: "Centro de Solicitudes scope is exclusive to human-intervention work").
 
 For the full structural contract, see `openspec/specs/core-layout/spec.md`, `openspec/specs/core-navigation/spec.md`, and the other capability specs under `openspec/specs/`.
 
-## Current & Future Core Apps
+## Apps derived from this template
 
-### Current (legacy, pending migration)
+Every Ardua core frontend derives from this template via the "Use this template" flow. The current set:
 
 | App | Module prefix | Stack today | Migration status |
 |---|---|---|---|
 | `core-app` | CLP | Vue + JS, no TS | Not started |
 | `core-lex` | LEX | Vue + JS, no TS | Not started |
-| `core-ops` | OPS | Vue + JS, no TS | Not started |
+| `core-ops` | OPS | Vue + JS, no TS | **In progress** (6 capabilities archived, 249 tests, ~64% LOC reduction) |
 | `core-trd` | TRD | React + TS (strict off) | Not started (React → Vue) |
+| `core-fin` | FIN | n/a (new build) | **Baseline shipped** + `fin-disponibilidades` capability archived |
 
-### Planned / proposed
+Each migration / new build is its own OpenSpec change with a dedicated Jira REQ ticket. Per-prototype legacy inventory + decisions live in `prototypes/<app>/MIGRATION-NOTES.md`. Cross-prototype patterns validated across migrations live in [`MIGRATION-PLAYBOOK.md`](./MIGRATION-PLAYBOOK.md).
 
-- `core-fin` (FIN) — Finance & accounting operations
-- `core-com` (COM) — Commercial operations
+### Template ↔ prototype relationship (current bootstrap phase)
 
-Each migration is its own OpenSpec change with a dedicated Jira REQ ticket.
+The flow is **bidirectional** in this phase, not top-down. Concrete module requirements often land in a derived prototype FIRST (e.g. FIN gets a `daterange` DialogField type to satisfy `fin-disponibilidades`); the template absorbs the new primitive AFTERWARD once it's been validated in practice. Later, when enough modules exist to identify the common surface, the flow reverses (template-first → prototype propagation), but until then the prototypes lead.
+
+**Two important implications for any agent working on this repo:**
+
+1. **A prototype diverging from the template is NOT automatically "behind".** It may be ahead. Always check `git log` / `git blame` before deciding sync direction. Asking the framework owner (Yasmani) is faster than guessing.
+2. **The contract is "shared patterns, free implementation".** Prototypes consume the template's **patterns, conventions, components, primitives** — manifest engine, MSW transport, vue-query mutations, UI primitives, layout/L1-L2-L3 pattern, etc. — but they MAY ship their own module-specific implementations on top (e.g. `fin.disponibilidades.actions.ts` lives only in FIN; that's correct). What a prototype CANNOT do: invent a different transport, skip the manifest engine, or re-implement a primitive that already exists in the template.
+
+When you see drift between the template and a prototype, **don't reflexively "sync" the prototype to match the template byte-for-byte**. Identify what's a pattern violation (must fix) vs. what's prototype-specific implementation (leave alone).
 
 ## Documentation Hierarchy
 
-This repository operates on **three coordinated layers** for AI agents and developers. Each layer has a distinct role — none replaces the others.
+This repository operates on **four coordinated layers** for AI agents and developers. Each layer has a distinct role — none replaces the others.
 
 ### Layer 1 — Contracts (enforceable)
 
@@ -105,7 +114,7 @@ This repository operates on **three coordinated layers** for AI agents and devel
 **Format:** `### Requirement:` with SHALL/MUST + `#### Scenario:` in Gherkin GIVEN/WHEN/THEN
 **Enforcement:** `openspec validate --all --strict` in CI; a broken contract breaks the build.
 
-These are the **formal contracts** every app derived from this template MUST satisfy. There are 10 baseline capabilities (6 Tier 1, 4 Tier 2 seed), plus the new `core-actions-manifest` (Tier 1) currently in active migration via change `add-core-actions-manifest`. To browse them:
+These are the **formal contracts** every app derived from this template MUST satisfy. As of today the template ships **18 capabilities archived** in `openspec/specs/` (run `npm run spec:list` for the current set). To browse them:
 
 ```bash
 openspec list
@@ -120,7 +129,19 @@ openspec show core-layout
 
 Not validated by CI — but read by every AI agent on every session.
 
-### Layer 3 — Ardua-specific Skills (agent playbooks)
+### Layer 3 — Migration Playbook (cross-prototype patterns)
+
+**Where:** `MIGRATION-PLAYBOOK.md` (this file's sibling).
+**Scope:** patterns validated end-to-end by completed migrations (today: OPS — 6 capabilities, 249 tests, ~64 % LOC reduction). Architectural decisions, drill-down surface choice, refinement canon, antipattern list, PR review checklist.
+
+**Read this layer when:**
+- Scoping any `add-<app>-<module>` or `migrate-<legacy-page>` change.
+- Reviewing a migration PR (the layer's checklist is the canonical PR review).
+- Tempted to deviate from a playbook pattern (the deviation MUST be a `Decision N — ...` block in the change's `design.md` referencing the playbook pattern by name).
+
+The playbook is updated when a migration completes and surfaces a new pattern worth canonising. Per-prototype legacy inventory stays in `prototypes/<app>/MIGRATION-NOTES.md`; the playbook is the **cross-prototype** layer.
+
+### Layer 4 — Ardua-specific Skills (agent playbooks)
 
 **Where:** `.claude/skills/ardua-*/SKILL.md` (mirrored to `.cursor/skills/ardua-*/SKILL.md`)
 **Format:** YAML frontmatter + step-by-step Markdown
@@ -163,13 +184,13 @@ Every meaningful change in this repository flows through OpenSpec. The four comm
 
 ### When a change starts
 
-1. Create a working branch: `temp-open-spec/<change-slug>` (following tradingsuit convention).
+1. Create a working branch: `temp-open-spec/<change-slug>`.
 2. Run `/opsx:propose <change-slug>` from Claude Code.
 3. Fill the four artifacts with the agent's help. **Do not skip `design.md`** for non-trivial changes — it is where tradeoffs are captured.
 4. Every `proposal.md` starts with a Jira REQ frontmatter:
    ```markdown
    > Jira REQ: [REQ-XX](https://arduasolutions.atlassian.net/browse/REQ-XX)
-   > Module: CLP    # or OPS / TRD / FIN / LEX / COM / core-template
+   > Module: CLP    # or OPS / TRD / FIN / LEX / core-template
    ```
 5. The `proposal.md` H1 is the canonical source for the PR title.
 
@@ -257,7 +278,6 @@ Every meaningful change in this repository flows through OpenSpec. The four comm
   - `TRD` → blue `217 91% 60%`
   - `FIN` → green `142 71% 45%`
   - `CLP` → purple `258 90% 74%`
-  - `COM` → amber `38 92% 50%`
   - `LEX` → teal `172 66% 50%`
 - **Surface hierarchy:** `--bg` (outermost) → `--surf` (sidebar/topbar) → `--card-2` (cards) → `--card` (nested cards).
 - **Text ramp:** `--t1` (primary) → `--t4` (muted).
@@ -269,13 +289,91 @@ Every meaningful change in this repository flows through OpenSpec. The four comm
 - **`src/components/layout/`** — `AppShell`, `Sidebar`, `Topbar`. Structural components only.
 - **`src/components/ui/`** — Primitives (`Button`, `Input`, `Badge`). Each primitive uses `cva` for variants.
 - **`src/components/feedback/`** — `EmptyState`, `Skeleton`, `ActionsMenu`. Cross-cutting feedback components.
+- **`src/components/data-display/`** — `TablePagination`, `LineChart`, `BarChart`, `AreaChart`, `PieChart`, `FileUploadProgress`. Data-display primitives consumed by pages. `<TablePagination>` is the canonical client-side pagination surface paired with `useTable<T>()` (per `core-data-tables`).
 - **`src/pages/`** — Route-level page components. Every page follows L1/L2/L3.
 - **`src/composables/`** — Pure composition logic. No Vue component rendering.
 - **`src/plugins/`** — Setup functions for platform plugins (Pinia, Query, Auth0, LaunchDarkly).
 - **`src/lib/manifest/`** — Pure-logic actions-manifest engine (no Vue, no DOM). Public API in `src/lib/manifest/index.ts`.
-- **`src/components/manifest/`** (deferred) — `<ManifestDialog>`, `<ManifestField>`, `<ManifestModuleCTAs>`, `<ManifestBatchCTA>`. Wire the engine to the UI.
+- **`src/components/manifest/`** (deferred) — `<ManifestDialog>`, `<ManifestField>`, `<ManifestModuleCTAs>`, `<ManifestBatchCTA>`. Wire the engine to the UI. `ModuleCTA` declares an optional `variant?: 'primary' | 'secondary'` (default `'primary'`) that maps to the `<Button>` variant prop — use `'secondary'` for CTAs that are visually subordinated to a sibling primary (per `core-actions-manifest` spec).
 - **Never inline a dropdown menu in a `<td>` cell.** Use the shared `ActionsMenu.vue` portal.
 - **Never render more than 3 CTAs in a page header** (per `core-layout`). More actions belong in the row actions menu or in a future bulk-action bar.
+
+## Catalog registration
+
+Lookup fields in action manifests resolve their dropdown data through the **catalog registry** (`@/lib/manifest/catalog.ts`). Apps register one resolver per catalog id at boot via `setupCatalogs()` in `src/plugins/catalogs.ts`, invoked from `main.ts` after Pinia. Per `core-actions-manifest` Requirement 10:
+
+- Manifest declares `{ type: 'lookup', catalog: '<scope>.<entity>', catalog_filter?: … }`.
+- Engine calls `resolveCatalog(id, filter)` at dropdown-open time.
+- When the filter is `null` / `undefined` / `''`, the engine returns `[]` and the dropdown renders the "antecedent missing" empty state — the resolver MAY assume a non-empty filter when invoked.
+- When the field declares no `catalog_filter`, the engine invokes the resolver with NO argument; the resolver returns the full catalog.
+
+The template ships ONE demonstrative resolver (`framework.users`) plus a commented cascading-lookup example. Derived apps replace / extend these with their own data sources.
+
+## Data transport (mocks vs real)
+
+> ### 🔒 Hard rule — every page reads through HTTP, every mock lives in MSW
+>
+> **Pages NEVER import data from `src/mocks/`.** The directory exists for MSW handlers and seeds only — no top-level component is allowed to `import { FOO } from '@/mocks/...'`. The canonical path is page → `useQuery` / `useMutation` (`@tanstack/vue-query`) → module function in `src/api/modules/<domain>.ts` → `apiClient` (axios) → HTTP. When MSW is active the bytes come from `src/mocks/handlers/`; when it isn't they come from the real backend. The page can't tell the difference, and that is the entire point.
+>
+> If you see `import { ... } from '@/mocks/...'` in a page or component (anywhere outside `src/mocks/` itself) **reject the PR**.
+
+**Mock interception.** When `VITE_USE_MOCKS=true`, Mock Service Worker (`src/mocks/browser.ts`) registers a service worker that intercepts every outgoing `fetch`/XHR and routes matching URLs to the handlers in `src/mocks/handlers/`. Handlers mutate the seeds in `src/mocks/seed/*.ts` so CRUD round-trips are observable in the UI; a full page refresh resets the seed. Each handler waits a random 100-300 ms to keep loading-state UX honest.
+
+**Promoting to a real backend.** Set `VITE_USE_MOCKS="false"` and point `VITE_API_BASE_URL` at the real endpoint. **No other change is required.** MSW is a dev-time `devDependency`, so it never enters a production bundle even when the flag is left enabled by accident (dynamic import).
+
+**Layout.**
+
+```
+src/api/endpoints.ts              all paths, never hardcoded elsewhere
+src/api/modules/<domain>.ts       one typed function per endpoint
+src/mocks/seed/<domain>.ts        mutable in-memory data + reset helper
+src/mocks/handlers/<domain>.ts    HTTP handler array, references ENDPOINTS
+src/mocks/handlers/index.ts       barrel — derived apps extend
+src/mocks/browser.ts              setupWorker(...handlers)
+public/mockServiceWorker.js       generated by `npm run msw:init`
+```
+
+**Adding a new endpoint.**
+
+1. Declare the path in `src/api/endpoints.ts` under the relevant group.
+2. Add typed functions in `src/api/modules/<domain>.ts` calling `apiClient` with the new path.
+3. Create the seed in `src/mocks/seed/<domain>.ts` (`export let <domain>Seed: T[]` plus a `reset...()`).
+4. Create the handler in `src/mocks/handlers/<domain>.ts` referencing `ENDPOINTS.<group>.*` and using a leading `*` so the URL pattern is env-agnostic: `*${ENDPOINTS.foo.list}`.
+5. Wire the handler array into `src/mocks/handlers/index.ts`.
+6. Consume from pages via `useQuery({ queryKey, queryFn: list<Domain> })` and `useMutation({ mutationFn: update<Domain> })`.
+
+**Mutation pattern — vue-query native with optimistic updates.** Pages NEVER keep a local `ref` mirror of query data. Reads come straight from `query.data.value`; writes go through `useMutation` with the canonical three-hook pattern:
+
+- `onMutate` — cancel in-flight queries, snapshot the current cache, apply the optimistic patch via `queryClient.setQueryData(...)`. Return the snapshot in the context object.
+- `onError` — restore the snapshot, surface a `toast.error(...)`. The local UI rolls back automatically.
+- `onSettled` — `queryClient.invalidateQueries(...)` so the next refetch resolves any concurrent change made by other clients.
+
+This pattern guarantees that the UI is never lying about server state — failures roll back, network drops self-recover, and 409 conflicts surface on the next refetch. See `src/pages/Inbox.vue` for the canonical example.
+
+**Manifest engine ↔ mutations.** The manifest engine is pure: `applyAction` / `applyCTA` / `applyComposite` compute patches and dispatch them via `deps.dispatch.{update,create}` — they never mutate the input record. Pages plug `useMutation` into the engine by calling `module.registerDispatcher({ update, create })`. The dispatcher implementations call `mutation.mutate(...)`, which triggers the same optimistic-rollback flow used by every other mutation path. Drawer panels watch `query.data` (via a `computed` lookup by id) so optimistic patches surface in detail views for free, without a second source of truth.
+
+**Identity (current user).** `useCurrentUser()` returns the canonical `UserProfile` from `GET /users/me`. `useUsers()` returns the directory plus a sync `findUser(id)` helper. NEVER reference a "mock current user" constant — that pattern died with this rule.
+
+**Worker file.** `public/mockServiceWorker.js` is generated by `npm run msw:init` (already committed). Re-run after upgrading the `msw` dependency.
+
+**Antipattern (do not commit):**
+- Importing arrays / constants from `src/mocks/*` in a page or component.
+- Handler URL patterns hardcoded as raw strings instead of referencing `ENDPOINTS`.
+- Mutating a seed from anywhere outside `src/mocks/handlers/` or its `reset...()` helper.
+- A "current user" constant exported from `src/mocks/` or `src/config/`.
+- Keeping a local `ref<T[]>` mirror of `query.data.value` + `watch` to sync. The cache is the source of truth — read it directly.
+- Fire-and-forget `update<Domain>(...)` calls outside `useMutation`. Every write must go through a mutation so optimistic + rollback + refetch are wired uniformly.
+- Mutating engine-passed records inside the manifest engine (`applyAction`, `applyCTA`, `applyComposite`). The engine MUST stay pure — `setField(record, ...)` writes on the input record are a contract violation.
+
+## Placeholder modules
+
+Apps frequently need to surface modules that are scoped but not yet implemented (e.g. "Cobros" or "Plan de Cuentas" appearing in the Sidebar before the capability lands). The canonical pattern:
+
+- Declare the entry in the Sidebar's `blocks[]` with `soon: true` on the `NavItem`. The Sidebar renders a "Soon" badge next to the label (collapsed sidebars omit the badge; the tooltip switches to `<label> (Próximamente)`).
+- The route stays routable; the target page renders `<ModuloSoon>` (or the equivalent placeholder component the app declares) with `meta.soon = true`.
+- When the capability is scoped via its own OpenSpec change, the placeholder is replaced with the real page and the `soon: true` flag is removed in the same PR.
+
+The template ships the `NavItem.soon?: boolean` contract; derived apps own their own placeholder page component.
 
 ## Data Layer Conventions
 

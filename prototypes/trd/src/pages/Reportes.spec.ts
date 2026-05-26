@@ -66,6 +66,10 @@ async function mountReportes() {
   const wrapper = mount(Reportes, {
     global: { plugins: [router], stubs: POPOVER_STUBS },
   });
+  // Drain pending microtasks so vue-query data hydrates before assertions.
+  // Three queries (reports / runs / categories) each need a fetch → MSW
+  // response → vue-query update → reactive re-render cycle.
+  for (let i = 0; i < 10; i += 1) await flushPromises();
   return { wrapper, router };
 }
 

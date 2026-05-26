@@ -107,18 +107,18 @@ The `Dimension` type SHALL be the union `"imputacion" | "registro_contable" | "c
 
 ### Requirement: Predicate evaluator MUST implement the 8-form alphabet with multi-key AND-merge
 
-The predicate evaluator `evalPredicate(p, record)` SHALL recognize exactly eight predicate forms: `record_type_in`, `record_type_not_in`, `field_is_null`, `field_is_not_null`, `field_equals: { field, value }`, `field_in: { field, values }`, `all: Predicate[]`, `any: Predicate[]`. When a predicate object carries multiple keys from the alphabet, the evaluator MUST AND-merge them. When `p` is `null` or `undefined`, the result MUST be `true`. When `p` is an array, the evaluator MUST treat it as implicit AND. Unknown keys (anything outside the alphabet) MUST emit `devWarn('PREDICATES', 'unknown predicate key: ' + key)` and resolve to `true` in dev/prod; in strict mode (tests) the evaluator MUST throw. Field paths MUST be resolved via the `resolveField()` dot-path helper.
+The predicate evaluator `evalPredicate(p, record)` SHALL recognize exactly eight predicate forms: `record_concept_in`, `record_concept_not_in`, `field_is_null`, `field_is_not_null`, `field_equals: { field, value }`, `field_in: { field, values }`, `all: Predicate[]`, `any: Predicate[]`. The `record_concept_in` / `record_concept_not_in` forms read the record's `concept: string` field directly (the canonical business classifier per `core-modulo-genericos`); legacy fields `_record_type` and `tipo` are no longer consulted. When a predicate object carries multiple keys from the alphabet, the evaluator MUST AND-merge them. When `p` is `null` or `undefined`, the result MUST be `true`. When `p` is an array, the evaluator MUST treat it as implicit AND. Unknown keys (anything outside the alphabet) MUST emit `devWarn('PREDICATES', 'unknown predicate key: ' + key)` and resolve to `true` in dev/prod; in strict mode (tests) the evaluator MUST throw. Field paths MUST be resolved via the `resolveField()` dot-path helper.
 
 #### Scenario: All eight forms evaluate correctly
 
-- **GIVEN** a record `{ _record_type: "DEP", sociedad_id: "S-1", cliente_id: null }`
-- **WHEN** `evalPredicate({ record_type_in: ["DEP","RET"] }, record)` runs
+- **GIVEN** a record `{ concept: "DEP", sociedad_id: "S-1", cliente_id: null }`
+- **WHEN** `evalPredicate({ record_concept_in: ["DEP","RET"] }, record)` runs
 - **THEN** the result is `true`; AND `evalPredicate({ field_is_null: "cliente_id" }, record)` returns `true`; AND `evalPredicate({ field_equals: { field: "sociedad_id", value: "S-1" } }, record)` returns `true`
 
 #### Scenario: Multi-key predicate is AND-merged
 
-- **GIVEN** a record `{ _record_type: "DEP", cliente_id: null }`
-- **WHEN** `evalPredicate({ record_type_in: ["DEP"], field_is_null: "cliente_id" }, record)` runs
+- **GIVEN** a record `{ concept: "DEP", cliente_id: null }`
+- **WHEN** `evalPredicate({ record_concept_in: ["DEP"], field_is_null: "cliente_id" }, record)` runs
 - **THEN** the result is `true` (both keys satisfied); changing either key to a failing value flips the result to `false`
 
 #### Scenario: Null and array predicates short-circuit
@@ -129,11 +129,9 @@ The predicate evaluator `evalPredicate(p, record)` SHALL recognize exactly eight
 
 #### Scenario: Unknown key emits devWarn and resolves to true
 
-- **GIVEN** a predicate `{ record_type_in: ["DEP"], not_a_real_key: "X" }`
+- **GIVEN** a predicate `{ record_concept_in: ["DEP"], not_a_real_key: "X" }`
 - **WHEN** `evalPredicate()` runs in dev mode
 - **THEN** `devWarn('PREDICATES', 'unknown predicate key: not_a_real_key')` is emitted; the evaluator ignores the unknown key and returns the AND of the remaining valid keys; in strict mode the evaluator throws `ManifestError`
-
----
 
 ### Requirement: Capabilities check MUST use `required_role_any_of` only; `required_role_all_of` MUST be rejected
 
@@ -275,7 +273,7 @@ When a `Dialog` declares a `lookup` field with `catalog_filter`, the dropdown SH
 
 ### Requirement: on_confirm MUST execute update_fields, set_fields, recompute, audit, toast in canonical order
 
-The `on_confirm` block SHALL declare any subset of: `update_fields: string[]` (dot-paths to write from `formValues`), `set_fields: Record<string, unknown>` (literal writes; the magic string `"$now"` MUST be replaced by `Date.now()` at write time), `recompute: string[]` (tokens resolved through the recompute registry; v1 supports only `"imputacion"`, unknown tokens emit `devWarn` and are skipped), `audit: boolean` (default `true`; when `false` no audit entry is appended), `toast: string` (toast title; subtitle is generated per mode). The execution order on confirm MUST be: validate required fields → write `update_fields` (only declared fields persist; non-declared form values are discarded) → write `set_fields` → run recompute → emit audit (if `audit !== false`) → fire toast → run `afterMutation` hook → close dialog. The toast subtitle SHALL be: single → `"<record.id> — <record.nombre || record.label || ''>"`; batch → `"<N> registros actualizados"` (or `"<N> de <M>"` on partial success per Decision 12); composite → `"<record.id> → <stateLabel>"`; cta with `creates_record_type` → the new record's id.
+The `on_confirm` block SHALL declare any subset of: `update_fields: string[]` (dot-paths to write from `formValues`), `set_fields: Record<string, unknown>` (literal writes; the canonical magic-string alphabet is two values — `"$now"` MUST be replaced by `Date.now()` at write time AND `"$current_user"` MUST be replaced by the invoker's `user_id` at write time, sourced from the `userId: string` input on `applyAction` / `applyComposite` / `applyCTA`), `recompute: string[]` (tokens resolved through the recompute registry; v1 supports only `"imputacion"`, unknown tokens emit `devWarn` and are skipped), `audit: boolean` (default `true`; when `false` no audit entry is appended), `toast: string` (toast title; subtitle is generated per mode). The execution order on confirm MUST be: validate required fields → write `update_fields` (only declared fields persist; non-declared form values are discarded) → write `set_fields` → run recompute → emit audit (if `audit !== false`) → fire toast → run `afterMutation` hook → close dialog. The toast subtitle SHALL be: single → `"<record.id> — <record.nombre || record.label || ''>"`; batch → `"<N> registros actualizados"` (or `"<N> de <M>"` on partial success per Decision 12); composite → `"<record.id> → <stateLabel>"`; cta with `creates_record_type` → the new record's id.
 
 #### Scenario: update_fields writes only declared fields
 
@@ -289,6 +287,12 @@ The `on_confirm` block SHALL declare any subset of: `update_fields: string[]` (d
 - **WHEN** the confirm runs at time T
 - **THEN** `record.fin.intercompany === true` AND `record.fin.intercompany_at === T` (a numeric timestamp), not the string `"$now"`
 
+#### Scenario: $current_user magic substitutes the invoker's user_id at write time
+
+- **GIVEN** `on_confirm.set_fields: { "state": "en_proceso", "owner": "$current_user", "updated_at": "$now" }` AND the apply path is invoked with `userId: 'u-3'`
+- **WHEN** the confirm runs at time T
+- **THEN** `record.state === 'en_proceso'` AND `record.owner === 'u-3'` (not the string `"$current_user"`) AND `record.updated_at === T` — both magic strings substitute independently and atomically in the same `set_fields` block
+
 #### Scenario: audit:false suppresses the audit emit
 
 - **GIVEN** an action with `on_confirm.audit: false`
@@ -300,8 +304,6 @@ The `on_confirm` block SHALL declare any subset of: `update_fields: string[]` (d
 - **GIVEN** `on_confirm.recompute: ["imputacion", "conciliacion"]`; only `imputacion` is registered
 - **WHEN** the confirm runs in dev mode
 - **THEN** `imputacion` runs successfully; `conciliacion` is skipped; `devWarn('MANIFEST', 'unknown recompute token: conciliacion')` is emitted; in strict mode the apply path throws
-
----
 
 ### Requirement: Kanban-axis composite dialog MUST collect all dimension-matching actions, dedup fields on render, and run ONE recompute + ONE audit at the end
 
@@ -390,6 +392,42 @@ Manifests SHALL declare module-level CTAs in `manifest.module_ctas: ModuleCTA[]`
 - **GIVEN** a CTA with `creates_record_type: "movimiento_manual"`; creator registered; user fills + confirms
 - **WHEN** the apply path runs
 - **THEN** the creator returns `{ id: "M-9001", ... }`; `useAuditLog().append({ kind: "cta", action_id: cta.id, record_id: "M-9001", created_record_type: "movimiento_manual", is_module_cta: true, ... })` is called once
+
+### Requirement: ModuleCTA MUST support an optional `variant` field for visual hierarchy
+
+The `ModuleCTA` interface SHALL declare an optional `variant?: 'primary' | 'secondary'` field. When unspecified, the variant defaults to `'primary'`. `<ManifestModuleCTAs>` SHALL forward the variant to the underlying `<Button>` component via the `variant` prop. The cap-of-3 visible CTAs rule continues to apply regardless of variant.
+
+`variant: 'primary'` SHALL render the canonical brand-colored primary button (the default styling that already applies to module CTAs today). `variant: 'secondary'` SHALL render with the secondary `<Button>` appearance — visually subordinated to a primary on the same page header. Manifest authors MAY mix primary and secondary CTAs within the same `module_ctas[]` array.
+
+The variant SHALL NOT affect: the CTA's ordering in the inline / overflow split (cap-of-3 still applies positionally); the capability gate (`evalCapabilities()` still filters before rendering); the dialog rendering path (`<ManifestDialog>` in `mode: 'cta'`); the creator dispatch flow when `creates_record_type` is set.
+
+The variant SHALL be persisted in the audit log entry as `cta_variant` so downstream telemetry can attribute operator preference between primary and secondary actions.
+
+#### Scenario: Default variant is primary
+
+- **GIVEN** a `module_cta` declares `{ id: '...', label: 'Crear X' }` without a `variant` field
+- **WHEN** `<ManifestModuleCTAs>` renders the CTA
+- **THEN** the `<Button>` is mounted with `variant="primary"` (the canonical brand-colored button)
+
+#### Scenario: Explicit secondary variant renders the secondary button styling
+
+- **GIVEN** a `module_cta` declares `{ id: 'crear_banco', label: 'Crear nuevo Banco/Estructura', variant: 'secondary', ... }`
+- **WHEN** `<ManifestModuleCTAs>` renders the CTA
+- **THEN** the `<Button>` is mounted with `variant="secondary"` and renders with the secondary appearance (less prominent than a sibling primary)
+
+#### Scenario: Primary and secondary CTAs coexist in the same header
+
+- **GIVEN** a manifest declares two `module_ctas[]`: one with `variant: 'primary'` (Crear nueva Cuenta) and one with `variant: 'secondary'` (Crear nuevo Banco/Estructura)
+- **WHEN** the page header renders the CTAs
+- **THEN** the primary button uses the brand-colored appearance
+- **AND** the secondary button uses the secondary appearance
+- **AND** both render inline (no overflow) as long as the total CTA count is ≤ `maxVisible` (default 3)
+
+#### Scenario: Variant is included in the cta-kind audit entry
+
+- **GIVEN** an operator confirms a CTA with `variant: 'secondary'` and a registered creator
+- **WHEN** the apply path runs successfully
+- **THEN** `useAuditLog().append({ kind: 'cta', action_id, manifest_key, record_id, created_record_type, is_module_cta: true, cta_variant: 'secondary', ... })` is called once
 
 ---
 

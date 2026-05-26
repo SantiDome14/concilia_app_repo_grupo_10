@@ -12,7 +12,12 @@ import {
 } from '@/lib/websocket-client';
 
 // ─── Fake WebSocket implementation (jsdom doesn't ship a full one) ───
-class FakeWebSocket {
+// Extends EventTarget so MSW's WebSocket interceptor — which is installed
+// globally by `tests/setup.ts` and calls addEventListener on the "real"
+// WebSocket during passthrough — can interact with the stub without
+// throwing. The spec's own logic still drives the lifecycle via the
+// imperative `triggerOpen` / `receive` / `triggerClose` helpers.
+class FakeWebSocket extends EventTarget {
   static CONNECTING = 0 as const;
   static OPEN = 1 as const;
   static CLOSING = 2 as const;
@@ -28,6 +33,7 @@ class FakeWebSocket {
   sentFrames: string[] = [];
 
   constructor(url: string) {
+    super();
     this.url = url;
     FakeWebSocket.instances.push(this);
   }
