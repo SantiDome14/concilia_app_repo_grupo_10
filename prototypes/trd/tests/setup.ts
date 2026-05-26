@@ -24,6 +24,7 @@ import { server } from '@/mocks/server';
 import { resetAlertasSeed } from '@/mocks/seed/alertas';
 import { resetClientsSeed } from '@/mocks/seed/clients';
 import { resetLiquiditySeed } from '@/mocks/seed/liquidity';
+import { resetPriceAlertsSeed } from '@/mocks/seed/priceAlerts';
 import { resetQuotesSeed } from '@/mocks/seed/quotes';
 import { resetDashboardKpisSeed } from '@/mocks/seed/dashboardKpis';
 import { resetSeed as resetExamplesSeed } from '@/mocks/seed/examples';
@@ -66,6 +67,7 @@ afterEach(() => {
   resetClientsSeed();
   resetQuotesSeed();
   resetLiquiditySeed();
+  resetPriceAlertsSeed();
   resetDashboardKpisSeed();
   resetExamplesSeed();
   resetFinSeed();

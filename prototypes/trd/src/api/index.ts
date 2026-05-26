@@ -5,3 +5,4 @@ export * as exampleApi from './modules/example';
 export * as clientsApi from './modules/clients';
 export * as quotesApi from './modules/quotes';
 export * as liquidityApi from './modules/liquidity';
+export * as priceAlertsApi from './modules/priceAlerts';

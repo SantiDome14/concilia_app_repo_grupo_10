@@ -21,6 +21,7 @@ export const ROUTE_PATHS = {
   // Catálogos
   CLIENTS: '/clients',
   CLIENT_DETAIL: '/clients/:id',
+  INSIGHTS: '/insights',
   NOT_FOUND: '/:pathMatch(.*)*',
 } as const;
 
@@ -34,6 +35,7 @@ export const ROUTE_NAMES = {
   PROVEEDORES: 'proveedores',
   CLIENTS: 'clients',
   CLIENT_DETAIL: 'client-detail',
+  INSIGHTS: 'insights',
   NOT_FOUND: 'not-found',
 } as const;
 

@@ -114,6 +114,17 @@ export const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: ROUTE_PATHS.INSIGHTS,
+    name: ROUTE_NAMES.INSIGHTS,
+    component: () => import('@/pages/Insights.vue'),
+    meta: {
+      requiresAuth: true,
+      layout: 'shell',
+      breadcrumb: 'Insights',
+      block: 'Catálogos',
+    },
+  },
+  {
     path: ROUTE_PATHS.NOT_FOUND,
     name: ROUTE_NAMES.NOT_FOUND,
     component: () => import('@/pages/NotFound.vue'),

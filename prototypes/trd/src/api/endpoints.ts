@@ -76,6 +76,19 @@ export const ENDPOINTS = {
     providers: '/providers',
   },
 
+  // ─── TRD — Catálogos / Alertas de precio (price-trigger rules) ─
+  // NOTE: legacy backend is `VITE_TRADING_API_BASE_URL` (separate
+  // Lambda). For the prototype the single apiClient intercepts via
+  // MSW; promotion to real backend uses single-client + per-module
+  // base-URL config per MIGRATION-NOTES §15 Decision A.
+  priceAlerts: {
+    list: '/alerts',
+    detail: (id: string) => `/alerts/${id}`,
+    create: '/alerts',
+    update: (id: string) => `/alerts/${id}`,
+    delete: (id: string) => `/alerts/${id}`,
+  },
+
   // ─── FIN — Tesorería / Disponibilidades ────────────────────
   fin: {
     posicion: {
