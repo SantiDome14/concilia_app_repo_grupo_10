@@ -124,6 +124,36 @@ export const routes: RouteRecordRaw[] = [
       block: 'Catálogos',
     },
   },
+  // ─── Catálogos — placeholders (soon) ───────────────────────────────
+  // Registered in the IA so the sidebar entries route somewhere; the
+  // implementations land via dedicated capabilities (`add-trd-bots`,
+  // `add-trd-lotes-rfq`). The route itself stays through the
+  // implementation — only the `component` swap + `meta.soon` removal
+  // marks the capability as shipped.
+  {
+    path: ROUTE_PATHS.BOTS,
+    name: ROUTE_NAMES.BOTS,
+    component: () => import('@/pages/ModuloSoon.vue'),
+    meta: {
+      requiresAuth: true,
+      layout: 'shell',
+      breadcrumb: 'Bots',
+      block: 'Catálogos',
+      soon: true,
+    },
+  },
+  {
+    path: ROUTE_PATHS.LOTS,
+    name: ROUTE_NAMES.LOTS,
+    component: () => import('@/pages/ModuloSoon.vue'),
+    meta: {
+      requiresAuth: true,
+      layout: 'shell',
+      breadcrumb: 'Lotes',
+      block: 'Catálogos',
+      soon: true,
+    },
+  },
   {
     path: ROUTE_PATHS.NOT_FOUND,
     name: ROUTE_NAMES.NOT_FOUND,

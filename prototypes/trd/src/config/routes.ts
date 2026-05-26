@@ -22,6 +22,8 @@ export const ROUTE_PATHS = {
   CLIENTS: '/clients',
   CLIENT_DETAIL: '/clients/:id',
   INSIGHTS: '/insights',
+  BOTS: '/bots',
+  LOTS: '/lots',
   NOT_FOUND: '/:pathMatch(.*)*',
 } as const;
 
@@ -36,6 +38,8 @@ export const ROUTE_NAMES = {
   CLIENTS: 'clients',
   CLIENT_DETAIL: 'client-detail',
   INSIGHTS: 'insights',
+  BOTS: 'bots',
+  LOTS: 'lots',
   NOT_FOUND: 'not-found',
 } as const;
 
