@@ -1,12 +1,22 @@
 import { computed, type Ref } from 'vue';
-import { keepPreviousData, useQuery } from '@tanstack/vue-query';
 import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/vue-query';
+import {
+  cancelQuote,
   getQuote,
   getQuoteActivities,
   listQuotes,
+  updateQuote,
   type ListQuotesParams,
+  type UpdateQuotePayload,
 } from '@/api/modules/quotes';
 import type { ApiError } from '@/types/api';
+import type { PaginatedResponse } from '@/types/api';
+import type { Quote } from '@/types/quote';
 
 // ════════════════════════════════════════════════════════════════════
 // useQuotesList / useQuote / useQuoteActivities
@@ -48,3 +58,126 @@ export function useQuoteActivities(id: Ref<string>) {
     staleTime: 30_000,
   });
 }
+
+// ─── Mutations ────────────────────────────────────────────────────
+// Both mutations apply optimistic updates to the detail-cache entry
+// (`['quotes', 'detail', id]`) AND patch matching rows inside the
+// paginated list caches (`['quotes', 'list', ...]`). The page
+// reads through the cache, so optimistic patches reflect in the
+// list immediately without a refetch round-trip.
+
+function patchListsOptimistically(
+  queryClient: ReturnType<typeof useQueryClient>,
+  id: string,
+  apply: (q: Quote) => Quote,
+): { listSnapshots: [readonly unknown[], PaginatedResponse<Quote> | undefined][] } {
+  const listSnapshots = queryClient.getQueriesData<PaginatedResponse<Quote>>({
+    queryKey: ['quotes', 'list'],
+  });
+  for (const [key, data] of listSnapshots) {
+    if (!data) continue;
+    queryClient.setQueryData<PaginatedResponse<Quote>>(key, {
+      ...data,
+      data: data.data.map((q) => (q.id === id ? apply(q) : q)),
+    });
+  }
+  return { listSnapshots };
+}
+
+interface UpdateQuoteArgs {
+  id: string;
+  patch: UpdateQuotePayload;
+}
+
+export function useUpdateQuote() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, patch }: UpdateQuoteArgs) => updateQuote(id, patch),
+
+    onMutate: async ({ id, patch }) => {
+      const detailKey = ['quotes', 'detail', id] as const;
+      await queryClient.cancelQueries({ queryKey: detailKey });
+      await queryClient.cancelQueries({ queryKey: ['quotes', 'list'] });
+
+      const detailSnapshot = queryClient.getQueryData<Quote>(detailKey);
+      const apply = (q: Quote): Quote => ({
+        ...q,
+        ...(patch.notes !== undefined && { notes: patch.notes }),
+        ...(patch.liquidate_date !== undefined && {
+          liquidate_date: patch.liquidate_date,
+        }),
+        ...(patch.status !== undefined && { status: patch.status }),
+      });
+
+      if (detailSnapshot) {
+        queryClient.setQueryData<Quote>(detailKey, apply(detailSnapshot));
+      }
+      const { listSnapshots } = patchListsOptimistically(queryClient, id, apply);
+
+      return { detailKey, detailSnapshot, listSnapshots };
+    },
+
+    onError: (_err, _vars, ctx) => {
+      if (!ctx) return;
+      if (ctx.detailSnapshot) {
+        queryClient.setQueryData(ctx.detailKey, ctx.detailSnapshot);
+      }
+      for (const [key, data] of ctx.listSnapshots) {
+        queryClient.setQueryData(key, data);
+      }
+    },
+
+    onSettled: (_data, _err, { id }) => {
+      void queryClient.invalidateQueries({ queryKey: ['quotes', 'detail', id] });
+      void queryClient.invalidateQueries({ queryKey: ['quotes', 'list'] });
+      void queryClient.invalidateQueries({
+        queryKey: ['quotes', 'activities', id],
+      });
+    },
+  });
+}
+
+export function useCancelQuote() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => cancelQuote(id),
+
+    onMutate: async (id) => {
+      const detailKey = ['quotes', 'detail', id] as const;
+      await queryClient.cancelQueries({ queryKey: detailKey });
+      await queryClient.cancelQueries({ queryKey: ['quotes', 'list'] });
+
+      const detailSnapshot = queryClient.getQueryData<Quote>(detailKey);
+      const apply = (q: Quote): Quote => ({ ...q, status: 'CANCELLED' });
+
+      if (detailSnapshot) {
+        queryClient.setQueryData<Quote>(detailKey, apply(detailSnapshot));
+      }
+      const { listSnapshots } = patchListsOptimistically(queryClient, id, apply);
+
+      return { detailKey, detailSnapshot, listSnapshots };
+    },
+
+    onError: (_err, _id, ctx) => {
+      if (!ctx) return;
+      if (ctx.detailSnapshot) {
+        queryClient.setQueryData(ctx.detailKey, ctx.detailSnapshot);
+      }
+      for (const [key, data] of ctx.listSnapshots) {
+        queryClient.setQueryData(key, data);
+      }
+    },
+
+    onSettled: (_data, _err, id) => {
+      void queryClient.invalidateQueries({ queryKey: ['quotes', 'detail', id] });
+      void queryClient.invalidateQueries({ queryKey: ['quotes', 'list'] });
+      void queryClient.invalidateQueries({
+        queryKey: ['quotes', 'activities', id],
+      });
+    },
+  });
+}
+
+export type { UpdateQuotePayload };

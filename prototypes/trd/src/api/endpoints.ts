@@ -65,6 +65,7 @@ export const ENDPOINTS = {
   quotes: {
     list: '/quotes',
     detail: (id: string) => `/quotes/${id}`,
+    update: (id: string) => `/quotes/${id}`,
     activities: (id: string) => `/quotes/${id}/activities`,
   },
 

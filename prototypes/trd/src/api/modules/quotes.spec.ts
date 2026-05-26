@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
+  cancelQuote,
   listQuotes,
   getQuote,
   getQuoteActivities,
+  updateQuote,
 } from './quotes';
 import { ApiError } from '@/types/api';
 
@@ -137,5 +139,55 @@ describe('getQuoteActivities', () => {
     const acts = await getQuoteActivities('q_004');
     expect(Array.isArray(acts)).toBe(true);
     expect(acts.length).toBe(0);
+  });
+});
+
+describe('updateQuote', () => {
+  it('updates notes + liquidate_date and appends activity events', async () => {
+    const updated = await updateQuote('q_001', {
+      notes: 'Nota nueva',
+      liquidate_date: '2026-06-15T18:00:00Z',
+    });
+    expect(updated.notes).toBe('Nota nueva');
+    expect(updated.liquidate_date).toBe('2026-06-15T18:00:00Z');
+
+    const acts = await getQuoteActivities('q_001');
+    // Initial event + 2 field_update events from the PATCH.
+    const fieldUpdates = acts.filter((a) => a.kind === 'field_update');
+    expect(fieldUpdates.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('clears notes when passed null', async () => {
+    const updated = await updateQuote('q_011', { notes: null });
+    expect(updated.notes).toBeNull();
+  });
+
+  it('throws ApiError(isNotFound) on missing id', async () => {
+    try {
+      await updateQuote('does-not-exist', { notes: 'x' });
+      expect.fail('expected throw');
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiError);
+      expect((err as ApiError).isNotFound).toBe(true);
+    }
+  });
+});
+
+describe('cancelQuote', () => {
+  it('transitions the status to CANCELLED and appends a state_change activity', async () => {
+    const updated = await cancelQuote('q_001');
+    expect(updated.status).toBe('CANCELLED');
+
+    const acts = await getQuoteActivities('q_001');
+    const stateChanges = acts.filter((a) => a.kind === 'state_change');
+    // Initial state_change + new cancellation event.
+    expect(stateChanges.length).toBeGreaterThanOrEqual(2);
+    expect(stateChanges.some((a) => a.label.includes('cancelada'))).toBe(true);
+  });
+
+  it('is idempotent when called twice', async () => {
+    await cancelQuote('q_002');
+    const second = await cancelQuote('q_002');
+    expect(second.status).toBe('CANCELLED');
   });
 });

@@ -67,3 +67,26 @@ export async function getQuoteActivities(id: string): Promise<QuoteActivity[]> {
   );
   return data;
 }
+
+export interface UpdateQuotePayload {
+  notes?: string | null;
+  /** ISO-8601 string or `null` to clear. */
+  liquidate_date?: string | null;
+  /** Status transitions allowed via this endpoint: ACCEPTED, CANCELLED, COMPLETED. */
+  status?: 'ACCEPTED' | 'CANCELLED' | 'COMPLETED';
+}
+
+export async function updateQuote(
+  id: string,
+  payload: UpdateQuotePayload,
+): Promise<Quote> {
+  const { data } = await apiClient.patch<Quote>(
+    ENDPOINTS.quotes.update(id),
+    payload,
+  );
+  return data;
+}
+
+export async function cancelQuote(id: string): Promise<Quote> {
+  return updateQuote(id, { status: 'CANCELLED' });
+}

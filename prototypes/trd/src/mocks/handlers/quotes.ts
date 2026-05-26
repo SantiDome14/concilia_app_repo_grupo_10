@@ -20,12 +20,34 @@ import { delay, http, HttpResponse, type HttpHandler } from 'msw';
 import { ENDPOINTS } from '@/api/endpoints';
 import { randomDelayMs } from '../util';
 import type { PaginatedResponse } from '@/types/api';
-import { ACTIVE_QUOTE_STATUSES, type Quote, type QuoteStatus } from '@/types/quote';
+import { ACTIVE_QUOTE_STATUSES, type Quote, type QuoteActivity, type QuoteStatus } from '@/types/quote';
 import { quoteActivitiesSeed, quotesSeed } from '../seed/quotes';
 
 const LIST = `*${ENDPOINTS.quotes.list}`;
 const DETAIL = `*${ENDPOINTS.quotes.detail(':id')}`;
+const UPDATE = `*${ENDPOINTS.quotes.update(':id')}`;
 const ACTIVITIES = `*${ENDPOINTS.quotes.activities(':id')}`;
+
+let activityIdCounter = 9000;
+function nextActivityId(): string {
+  activityIdCounter += 1;
+  return `qa_gen_${activityIdCounter}`;
+}
+
+interface UpdateBody {
+  notes?: string | null;
+  liquidate_date?: string | null;
+  status?: QuoteStatus;
+}
+
+function appendActivity(quoteId: string, event: Omit<QuoteActivity, 'id' | 'at'>): void {
+  if (!quoteActivitiesSeed[quoteId]) quoteActivitiesSeed[quoteId] = [];
+  quoteActivitiesSeed[quoteId].push({
+    id: nextActivityId(),
+    at: new Date().toISOString(),
+    ...event,
+  });
+}
 
 function notFound(id: string) {
   return HttpResponse.json(
@@ -106,6 +128,62 @@ export const quoteHandlers: HttpHandler[] = [
     const id = String(params.id);
     const quote = quotesSeed.find((qu) => qu.id === id);
     return quote ? HttpResponse.json(quote) : notFound(id);
+  }),
+
+  http.patch(UPDATE, async ({ request, params }) => {
+    await delay(randomDelayMs());
+    const id = String(params.id);
+    const idx = quotesSeed.findIndex((qu) => qu.id === id);
+    if (idx === -1) return notFound(id);
+
+    const patch = (await request.json()) as UpdateBody;
+    const before = quotesSeed[idx];
+    const next: Quote = {
+      ...before,
+      ...(patch.notes !== undefined && { notes: patch.notes }),
+      ...(patch.liquidate_date !== undefined && {
+        liquidate_date: patch.liquidate_date,
+      }),
+      ...(patch.status !== undefined && { status: patch.status }),
+    };
+    quotesSeed[idx] = next;
+
+    // Append activity events for visible transitions.
+    if (patch.status && patch.status !== before.status) {
+      appendActivity(id, {
+        actor_id: 'u_juan',
+        actor_name: 'Juan Pérez',
+        kind: 'state_change',
+        label:
+          patch.status === 'CANCELLED'
+            ? 'Cotización cancelada'
+            : `Cambio de estado: ${before.status} → ${patch.status}`,
+      });
+    }
+    if (
+      patch.notes !== undefined &&
+      patch.notes !== before.notes
+    ) {
+      appendActivity(id, {
+        actor_id: 'u_juan',
+        actor_name: 'Juan Pérez',
+        kind: 'field_update',
+        label: 'Notas actualizadas',
+      });
+    }
+    if (
+      patch.liquidate_date !== undefined &&
+      patch.liquidate_date !== before.liquidate_date
+    ) {
+      appendActivity(id, {
+        actor_id: 'u_juan',
+        actor_name: 'Juan Pérez',
+        kind: 'field_update',
+        label: 'Fecha de liquidación actualizada',
+      });
+    }
+
+    return HttpResponse.json(next);
   }),
 
   http.get(ACTIVITIES, async ({ params }) => {

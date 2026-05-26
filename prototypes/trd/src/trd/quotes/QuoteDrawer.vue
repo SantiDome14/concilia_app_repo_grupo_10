@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, toRef } from 'vue';
-import { AlertCircle } from 'lucide-vue-next';
+import { computed, ref, toRef } from 'vue';
+import { AlertCircle, Pencil, XCircle } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Drawer, Timeline } from '@/components/drawer';
 import Skeleton from '@/components/feedback/Skeleton.vue';
@@ -9,6 +9,8 @@ import type { BadgeVariants } from '@/components/ui/badge';
 import type { QuoteStatus } from '@/types/quote';
 import type { ApiError } from '@/types/api';
 import QuoteSummary from './QuoteSummary.vue';
+import CancelQuoteConfirm from './CancelQuoteConfirm.vue';
+import EditQuoteModal from './EditQuoteModal.vue';
 
 // ════════════════════════════════════════════════════════════════════
 // <QuoteDrawer> — workflow-typed detail surface for an OTC Quote
@@ -75,6 +77,17 @@ const isNotFound = computed(() => {
   const err = quoteQuery.error.value as ApiError | null;
   return !!err && 'isNotFound' in err && err.isNotFound;
 });
+
+// Mutations are only valid while the quote is in PENDING or
+// ACCEPTED — terminal states (COMPLETED, CANCELLED) freeze the
+// record per the legacy lifecycle.
+const canMutate = computed(() => {
+  const status = quoteQuery.data.value?.status;
+  return status === 'PENDING' || status === 'ACCEPTED';
+});
+
+const cancelOpen = ref(false);
+const editOpen = ref(false);
 </script>
 
 <template>
@@ -113,6 +126,27 @@ const isNotFound = computed(() => {
       <QuoteSummary :quote="quoteQuery.data.value" />
     </template>
 
+    <!-- Primary actions — visible only for mutable statuses -->
+    <template v-if="quoteQuery.data.value && canMutate" #primary-actions>
+      <Button
+        variant="secondary"
+        size="sm"
+        data-testid="quote-edit-trigger"
+        @click="editOpen = true"
+      >
+        <Pencil class="mr-1.5 h-3.5 w-3.5" /> Editar
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        class="text-danger hover:text-danger"
+        data-testid="quote-cancel-trigger"
+        @click="cancelOpen = true"
+      >
+        <XCircle class="mr-1.5 h-3.5 w-3.5" /> Cancelar cotización
+      </Button>
+    </template>
+
     <!-- Timeline slot — activity log -->
     <template v-if="quoteQuery.data.value" #timeline>
       <div class="flex flex-col gap-3">
@@ -144,4 +178,15 @@ const isNotFound = computed(() => {
       </div>
     </template>
   </Drawer>
+
+  <CancelQuoteConfirm
+    :open="cancelOpen"
+    :quote="quoteQuery.data.value ?? null"
+    @update:open="(v: boolean) => (cancelOpen = v)"
+  />
+  <EditQuoteModal
+    :open="editOpen"
+    :quote="quoteQuery.data.value ?? null"
+    @update:open="(v: boolean) => (editOpen = v)"
+  />
 </template>
