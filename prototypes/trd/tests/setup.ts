@@ -23,6 +23,7 @@ if (typeof globalThis.ProgressEvent === 'undefined') {
 import { server } from '@/mocks/server';
 import { resetAlertasSeed } from '@/mocks/seed/alertas';
 import { resetClientsSeed } from '@/mocks/seed/clients';
+import { resetQuotesSeed } from '@/mocks/seed/quotes';
 import { resetDashboardKpisSeed } from '@/mocks/seed/dashboardKpis';
 import { resetSeed as resetExamplesSeed } from '@/mocks/seed/examples';
 import { resetFinSeed } from '@/mocks/seed/fin';
@@ -62,6 +63,7 @@ afterEach(() => {
   queryClient.clear();
   resetAlertasSeed();
   resetClientsSeed();
+  resetQuotesSeed();
   resetDashboardKpisSeed();
   resetExamplesSeed();
   resetFinSeed();

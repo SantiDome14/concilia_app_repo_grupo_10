@@ -17,6 +17,7 @@ import { clientHandlers } from './clients';
 import { dashboardKpisHandlers } from './dashboardKpis';
 import { exampleHandlers } from './examples';
 import { finHandlers } from './fin';
+import { quoteHandlers } from './quotes';
 import { reportHandlers } from './reports';
 import { solicitudHandlers } from './solicitudes';
 import { userHandlers } from './users';
@@ -30,4 +31,5 @@ export const handlers = [
   ...reportHandlers,
   ...finHandlers,
   ...clientHandlers,
+  ...quoteHandlers,
 ];

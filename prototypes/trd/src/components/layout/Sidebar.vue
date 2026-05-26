@@ -7,6 +7,7 @@ import {
   BellRing,
   FileText,
   Users,
+  TrendingUp,
   ChevronLeft,
   ChevronDown,
   Settings,
@@ -63,9 +64,20 @@ const generics: NavItem[] = [
   { to: ROUTE_PATHS.REPORTES, name: ROUTE_NAMES.REPORTES, label: 'Reportes', icon: FileText },
 ];
 
-// TRD domain blocks land here as each `add-trd-*` OpenSpec change
-// archives (see TASKS-TRD.md for the migration board).
+// TRD domain blocks land here as each capability ships (see
+// TASKS-TRD.md for the migration board).
 const blocks: NavBlock[] = [
+  {
+    label: 'Mesa de Dinero',
+    items: [
+      {
+        to: ROUTE_PATHS.QUOTES,
+        name: ROUTE_NAMES.QUOTES,
+        label: 'Quotes',
+        icon: TrendingUp,
+      },
+    ],
+  },
   {
     label: 'Catálogos',
     items: [

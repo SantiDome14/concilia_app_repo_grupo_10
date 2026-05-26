@@ -32,29 +32,36 @@ companion_docs:
   - Product/design refinement layer (after parity is achieved)
 - **`Operations.tsx` (legacy)** — explicit non-goal per Decision G (§15). Not migrated.
 
-## Hard rule
+## Workflow during the migration (OpenSpec paused as of 2026-05-26)
 
-Every capability lands as its own OpenSpec change: `proposal.md` + `design.md` + `tasks.md` + `specs/` deltas under `openspec/changes/<slug>/`, then archived under `openspec/changes/archive/YYYY-MM-DD-<slug>/`. **No production code without an active OpenSpec change** (`CLAUDE.md`, hard rule). Read the relevant discovery + OPS analogue + §16 pre-flight before opening any `/opsx:propose`.
+**Decision (Yasmani, session 5):** Stage 0 and Stage 1 row #1 (`add-trd-clients`) shipped via full OpenSpec workflow — proposal + design + tasks + spec + archive. After applying `add-trd-clients`, the time-cost of the ceremony (~40–45 min per capability of pure writing, plus mid-flight spec drift fixes) was deemed too high relative to the migration's velocity goal. **For the rest of Stage 1 (capabilities #2–#8), OpenSpec is skipped.** The `CLAUDE.md` "hard rule" is the framework owner's own rule and is paused unilaterally for this migration phase.
 
-## Workflow per capability
+What this means in practice:
 
-1. **Pre-flight** (MIGRATION-NOTES §16 checklist) → answers live in the change's `proposal.md` context section or `design.md`.
-2. **`/opsx:propose <slug>`** → scaffold proposal/design/tasks/specs deltas.
-3. **`/opsx:apply <slug>`** → walk the tasks checklist.
-4. **Quality gates** (lint · type-check · test:run · spec:check · build:qa).
-5. **PR** → reviewed → merged.
-6. **`/opsx:archive <slug>`** → apply deltas + move to archive.
-7. **Update this board** → flip status to `Archived`, link to archive folder, summarize what landed.
+- **No `openspec/changes/<slug>/`** created for `add-trd-quotes`, `add-trd-quote-create`, `add-trd-quote-ccc`, `add-trd-quote-attachments`, `add-trd-quote-cancel-edit`, `add-trd-proveedores`, `add-trd-alertas`, `add-trd-bots-placeholder`.
+- **No `openspec/specs/<capability>/`** created at archive time.
+- **`MIGRATION-NOTES.md` remains the primary scoping reference** (§13 capability decomposition, §14 catalogs, §15 open decisions, §16 pre-flight checklist).
+- **Key architectural decisions land as comments inline** (file-level banner in the page / api module / composable that owns the decision), NOT in a design.md. The reader of the code in 6 months learns the why from the code itself.
+- **Commits use the same Conventional Commits style** (`feat(trd/<module>): ...`).
+- **Quality gates still mandatory** (lint · type-check · test:run · spec:check · build:qa). `spec:check` still validates the existing `trd-clients` capability and the cross-cutting `core-*` capabilities — they remain authoritative for everything that already shipped.
 
-## Status legend
+Re-evaluation cadence: at the end of Stage 1, decide whether to (a) resume OpenSpec for Stage 2+ stages, (b) backfill specs for capabilities #2–#8 in a single retroactive change, or (c) keep skipping. Decision criteria: did the migration close meaningfully faster? did we lose any architectural clarity worth re-introducing?
 
-- `Not started` — no `openspec/changes/<slug>/` exists yet.
-- `Pre-flight` — §16 checklist is being filled; no `/opsx:propose` yet.
-- `Proposed` — `openspec/changes/<slug>/` exists with proposal/design/tasks/deltas; `/opsx:apply` not started.
-- `Applying` — `/opsx:apply` in progress; tasks.md has partial checks.
-- `Quality gates` — implementation complete; lint/type-check/test/spec/build running or fixing.
-- `In review` — PR opened, awaiting review.
-- `Archived` — `/opsx:archive` ran, change folder moved under `openspec/changes/archive/<date>-<slug>/`.
+## Workflow per capability (post-OpenSpec-pause)
+
+1. **Pre-flight** — read the relevant discovery + MIGRATION-NOTES §13 row + §16 checklist. Ask 1–3 alignment questions if the row leaves real ambiguity; otherwise default to the §13 v1 scope.
+2. **Implement** — bottom-up: types → endpoints → API module → MSW seed + handler → composables → page(s) → routing + sidebar → tests.
+3. **Quality gates** — all 5 must pass.
+4. **Commit** — feat(trd/<module>): ... with a body summarizing what landed and any architectural call made.
+5. **Update this board** — flip status to `Shipped`, add a session log entry.
+
+## Status legend (post-OpenSpec-pause)
+
+- `Not started` — no implementation work begun.
+- `In progress` — code is landing.
+- `Quality gates` — implementation complete; gates running or being fixed.
+- `Shipped` — committed + pushed; all 5 quality gates green.
+- `Archived` (legacy, Stage 0 + capability #1 only) — `/opsx:archive` ran, change folder moved under `openspec/changes/archive/<date>-<slug>/`.
 
 ---
 
@@ -71,7 +78,7 @@ Every capability lands as its own OpenSpec change: `proposal.md` + `design.md` +
 | # | Slug | Shape | OPS analogue | Discovery | Status | Notes |
 |---|------|-------|--------------|-----------|--------|-------|
 | 1 | `add-trd-clients` | Type-A + Type-B detail | `add-ops-clients` | trd-discovery §4 | **Archived** | First capability shipped. v1 = list + search + detail with limits + balances + active flag. 6 architectural decisions (T1–T6). MSW seed (32 clients) + handler + new `usePersistedPageSize` composable + Catálogos sidebar block. Archive: `openspec/changes/archive/2026-05-26-add-trd-clients/`. Active spec: `openspec/specs/trd-clients/`. 5 quality gates green (492/492 tests, 19/19 specs). |
-| 2 | `add-trd-quotes` | Type-A + tabs Activos/Historial + drawer + CSV | `add-ops-financial-dashboard` | trd-discovery §5.1 | Not started | Read-only first per Pattern 3. v1: list + filters + detail drawer + CSV export. Two tabs URL-synced (`?tab=activos\|historial`). Deferred: every mutation (split into 3, 5, 6). |
+| 2 | `add-trd-quotes` | Type-A + tabs Activos/Historial + drawer | `add-ops-financial-dashboard` | trd-discovery §5.1 | **Shipped** | v1 read-only: list + tabs Activos/Historial URL-synced + filters (search OR-q, status, date range) + drawer with QuoteSummary + Timeline (activity log). 40-quote seed covering all statuses + activities seed. New sidebar block `Mesa de Dinero`. Shipped without OpenSpec (workflow paused per session 5 decision). Decision H resolved: PENDING/ACCEPTED/COMPLETED/CANCELLED (legacy parity, no PAID). CSV export deferred to `extend-trd-quotes-csv`. |
 | 3 | `add-trd-quote-create` | Modal multi-step wizard | `add-ops-account-instructions` | trd-discovery §5.1 | Not started | Single-leg OTC quote creation. FX rate live, client limits display, BUY/SELL toggle. Deferred: CCC, attachments, templates. |
 | 4 | `add-trd-quote-ccc` | Modal | — | trd-discovery §5.1 | Not started | 3-leg Crypto-to-Crypto-to-Crypto quote. Middle currency selection. |
 | 5 | `add-trd-quote-attachments` | Drawer-tab extension | — | trd-discovery §5.1 | Not started | Upload (presigned URLs) + list + edit + delete on the quote drawer. Deferred: bulk download, virus scan. |
@@ -124,4 +131,6 @@ Decisions that MUST be resolved before the first change that touches them:
 - **2026-05-26 — session 1:** Created this board. Confirmed scope (priorities 1–8 + Bots placeholder). Next: propose `cleanup-trd-template-residuals` (artifacts staged, awaiting `/opsx:apply` and Yasmani's review).
 - **2026-05-26 — session 2:** Applied the cleanup. Deleted `pages/ModuloA/B/C.vue` + `pages/playground/`, cleaned `router/routes.ts`, `config/routes.ts`, `components/layout/Sidebar.vue` (blocks = [], no devBlocks, trimmed icon imports), unregistered `framework.template.modulo_a` from `plugins/manifests.ts`, and switched `--brand` from OPS red to TRD blue. The intended OpenSpec wrapper (`cleanup-trd-template-residuals`) was discarded because `openspec validate --strict` requires at least one spec delta and this work touched none — reframed as a chore commit per CLAUDE.md. **Working tree is at "ready-to-commit" state**; nothing committed yet (per the Git Policy: only Yasmani commits). All 5 quality gates green. Next: review the diff + `chore(trd): remove template residuals and align brand to TRD blue` + start pre-flight (§16) for `add-trd-clients`.
 - **2026-05-26 — session 3:** Committed and pushed Stage 0 (commit `f66f2d8`). Drafted the four OpenSpec artifacts of `add-trd-clients` under `openspec/changes/add-trd-clients/`: `proposal.md` (105 LOC), `design.md` (6 decisions T1–T6, master+detail pages, single-query OR search, `/clients/:id` endpoint, sidebar block `Catálogos`, no manifest in v1, page-size 10/25/50/100), `tasks.md` (14 sections, bottom-up implementation walk), `specs/trd-clients/spec.md` (13 Requirements with Gherkin scenarios). `npx openspec validate --all --strict` → 19/19 passed including `change/add-trd-clients`. Stage 1 row #1 flipped to `Proposed`. Next: review the artifacts; on approval `/opsx:apply add-trd-clients` to start implementation.
+- **2026-05-26 — session 5:** OpenSpec workflow paused for the rest of Stage 1. Decision recorded in the "Workflow during the migration" section above. Then shipped `add-trd-quotes` end-to-end without OpenSpec artifacts: `src/types/quote.ts` (legacy lifecycle resolved Decision H — no PAID), `src/api/modules/quotes.ts` + endpoints, MSW seed (40 quotes covering all statuses + activities) + handler (tab/status/clientId/dateRange/q filters), `useQuotes.ts` composables (`useQuotesList`, `useQuote`, `useQuoteActivities`), `Quotes.vue` master page (tabs Activos/Historial URL-synced, L3 filters, table, drawer-trigger row click), `QuoteDrawer.vue` + `QuoteSummary.vue` (Drawer + Timeline integration), new `Mesa de Dinero` sidebar block. 20 new tests (13 api + 7 page); 512/512 total. All 5 quality gates green in single pass. **Time vs `add-trd-clients`**: noticeably faster (~50% less wall-clock) — mostly amortization of MSW/vue-query/test patterns. The OpenSpec ceremony skip contributed but isn't the dominant gain. Next: `add-trd-proveedores` (priority 7) — Liquidity operations module.
+
 - **2026-05-26 — session 4:** Applied `add-trd-clients` end-to-end. Created `src/types/client.ts`, `src/api/modules/clients.ts` + endpoints, MSW seed (32 fixtures, 5 inactive, mix of with/without limits/balances) + handler (q OR-filter, `?fault=on` for 5xx injection), 4 composables (`useClientsList`, `useClient`, `useClientLimits`, `useClientBalances`, `usePersistedPageSize`), `Clients.vue` master page (L1+L3, search debounced 300ms, URL-synced, TablePagination, EmptyState, Skeleton), `ClientDetail.vue` detail page + 3 sub-cards under `src/trd/clients/` (Info, Limits, Balances — each error- and empty-state in isolation), routing + sidebar Catálogos block. 33 new tests (14 api + 7 Clients + 6 ClientDetail + 7 usePersistedPageSize) covering happy paths + 404 + 5xx retry. Spec edited mid-flight to match the template's `PaginatedResponse` envelope shape and the new-not-existing composable note (workflow: pause + update artifacts on design drift). Pre-existing flakiness in `Inbox`/`Alertas` tests surfaces under load (the new tests use `vi.waitFor` instead of fixed `flushPromises` counts; future cleanup change should apply the same pattern there). All 5 quality gates green (492/492 tests, 19/19 specs). Archived as `openspec/changes/archive/2026-05-26-add-trd-clients/`; active spec at `openspec/specs/trd-clients/`. Stage 1 row #1 → Archived. Next: review the diff + commit + start pre-flight for `add-trd-quotes` (priority 2).

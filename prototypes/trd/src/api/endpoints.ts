@@ -61,6 +61,13 @@ export const ENDPOINTS = {
     balances: (id: string) => `/clients/${id}/balances`,
   },
 
+  // ─── TRD — Mesa de Dinero / Quotes ─────────────────────────
+  quotes: {
+    list: '/quotes',
+    detail: (id: string) => `/quotes/${id}`,
+    activities: (id: string) => `/quotes/${id}/activities`,
+  },
+
   // ─── FIN — Tesorería / Disponibilidades ────────────────────
   fin: {
     posicion: {

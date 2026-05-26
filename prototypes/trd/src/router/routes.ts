@@ -67,6 +67,18 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/Reportes.vue'),
     meta: { requiresAuth: true, layout: 'shell', breadcrumb: 'Reportes' },
   },
+  // ─── Domain modules — Mesa de Dinero ───────────────────────────────
+  {
+    path: ROUTE_PATHS.QUOTES,
+    name: ROUTE_NAMES.QUOTES,
+    component: () => import('@/pages/Quotes.vue'),
+    meta: {
+      requiresAuth: true,
+      layout: 'shell',
+      breadcrumb: 'Quotes',
+      block: 'Mesa de Dinero',
+    },
+  },
   // ─── Domain modules — Catálogos ────────────────────────────────────
   {
     path: ROUTE_PATHS.CLIENTS,

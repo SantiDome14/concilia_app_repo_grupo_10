@@ -1,7 +1,7 @@
 ---
 status: legacy reference — NOT a contract
 created_at: 2026-05-07
-updated_at: 2026-05-26 (cleanup of template residuals + add-trd-clients archived)
+updated_at: 2026-05-26 (cleanup + add-trd-clients archived + add-trd-quotes shipped no-OpenSpec)
 source_repo: /Users/yasmani/projects/core-trd-frontend
 source_stack: React 18 + TypeScript (target stack: Vue 3 + TypeScript)
 discovery_sources_of_truth:

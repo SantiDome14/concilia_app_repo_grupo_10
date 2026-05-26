@@ -15,6 +15,8 @@ export const ROUTE_PATHS = {
   INBOX: '/inbox',
   ALERTAS: '/alertas',
   REPORTES: '/reportes',
+  // Mesa de Dinero
+  QUOTES: '/quotes',
   // Catálogos
   CLIENTS: '/clients',
   CLIENT_DETAIL: '/clients/:id',
@@ -27,6 +29,7 @@ export const ROUTE_NAMES = {
   INBOX: 'inbox',
   ALERTAS: 'alertas',
   REPORTES: 'reportes',
+  QUOTES: 'quotes',
   CLIENTS: 'clients',
   CLIENT_DETAIL: 'client-detail',
   NOT_FOUND: 'not-found',
