@@ -6,17 +6,11 @@ import {
   Inbox as InboxIcon,
   BellRing,
   FileText,
-  List,
-  LayoutGrid,
-  Database,
   ChevronLeft,
   ChevronDown,
   Settings,
   HelpCircle,
   LogOut,
-  FlaskConical,
-  BarChart3,
-  Columns,
 } from 'lucide-vue-next';
 import { ROUTE_PATHS, ROUTE_NAMES } from '@/config/routes';
 import { useAuth } from '@/composables/useAuth';
@@ -68,54 +62,10 @@ const generics: NavItem[] = [
   { to: ROUTE_PATHS.REPORTES, name: ROUTE_NAMES.REPORTES, label: 'Reportes', icon: FileText },
 ];
 
-const blocks: NavBlock[] = [
-  {
-    label: 'Bloque 1',
-    items: [
-      { to: ROUTE_PATHS.MODULO_A, name: ROUTE_NAMES.MODULO_A, label: 'Módulo A', icon: List },
-    ],
-  },
-  {
-    label: 'Bloque 2',
-    items: [
-      { to: ROUTE_PATHS.MODULO_B, name: ROUTE_NAMES.MODULO_B, label: 'Módulo B', icon: LayoutGrid },
-      { to: ROUTE_PATHS.MODULO_C, name: ROUTE_NAMES.MODULO_C, label: 'Módulo C', icon: Database },
-    ],
-  },
-];
-
-// Dev-only block: component playground. Gated by import.meta.env.DEV
-// so production builds (and apps cloned from this template) do NOT
-// inflate their sidebar nor their bundle with showcase pages.
-// The routes are always registered (they're code-split anyway), but
-// the entries are only rendered in dev.
-const devBlocks: NavBlock[] = import.meta.env.DEV
-  ? [
-      {
-        label: 'Componentes (dev)',
-        items: [
-          {
-            to: ROUTE_PATHS.PLAYGROUND_FORMS,
-            name: ROUTE_NAMES.PLAYGROUND_FORMS,
-            label: 'Forms',
-            icon: FlaskConical,
-          },
-          {
-            to: ROUTE_PATHS.PLAYGROUND_CHARTS,
-            name: ROUTE_NAMES.PLAYGROUND_CHARTS,
-            label: 'Charts',
-            icon: BarChart3,
-          },
-          {
-            to: ROUTE_PATHS.PLAYGROUND_LAYOUT,
-            name: ROUTE_NAMES.PLAYGROUND_LAYOUT,
-            label: 'Layout',
-            icon: Columns,
-          },
-        ],
-      },
-    ]
-  : [];
+// TRD domain blocks land here as each `add-trd-*` OpenSpec change
+// archives (see TASKS-TRD.md for the migration board). Until then the
+// sidebar shows only the four cross-cutting generics declared above.
+const blocks: NavBlock[] = [];
 
 const collapsed = ref(false);
 const accountOpen = ref(false);
@@ -235,7 +185,7 @@ function handleHelp(): void {
     </RouterLink>
 
     <!-- Blocks -->
-    <template v-for="block in [...blocks, ...devBlocks]" :key="block.label">
+    <template v-for="block in blocks" :key="block.label">
       <div
         v-if="!collapsed"
         class="px-2.5 pb-[5px] pt-3 text-[9px] font-extrabold uppercase tracking-wider text-t-4"

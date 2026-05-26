@@ -19,16 +19,16 @@ import {
   REPORTES_MANIFEST,
   REPORTES_MANIFEST_KEY,
 } from '@/manifests/framework.template.reportes.actions';
-import {
-  MODULO_A_MANIFEST,
-  MODULO_A_MANIFEST_KEY,
-} from '@/manifests/framework.template.modulo_a.actions';
 import { useManifestRegistryStore } from '@/stores/manifestRegistry';
 
+// TRD domain manifests register here as each `add-trd-*` OpenSpec
+// change archives. The `framework.template.modulo_a` manifest remains
+// in `src/manifests/` as the canonical fixture used by the engine's
+// unit tests (`validateManifest.spec.ts`), but it is NOT registered at
+// boot — no domain page consumes it.
 export function setupManifests(): void {
   const registry = useManifestRegistryStore();
   registry.register(INBOX_MANIFEST_KEY, INBOX_MANIFEST);
   registry.register(ALERTAS_MANIFEST_KEY, ALERTAS_MANIFEST);
   registry.register(REPORTES_MANIFEST_KEY, REPORTES_MANIFEST);
-  registry.register(MODULO_A_MANIFEST_KEY, MODULO_A_MANIFEST);
 }
