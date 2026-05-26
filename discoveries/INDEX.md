@@ -2,7 +2,7 @@
 
 > Catálogo navegable de los discoveries existentes. Para entender la convención de naming, los estados y el ciclo de vida, ver [`README.md`](./README.md).
 >
-> Última actualización: **2026-05-20** · **24 discoveries** + **2 artefactos de soporte**
+> Última actualización: **2026-05-26** · **25 discoveries** + **2 artefactos de soporte**
 
 ---
 
@@ -29,6 +29,7 @@ Hipótesis focalizadas en un módulo específico dentro de una aplicación.
 
 | Archivo | Nombre | Estado | Owner | Última act. | Propaga a |
 |---|---|---|---|---|---|
+| [`trd-quotes-discovery.md`](./trd-quotes-discovery.md) | TRD — Módulo Quotes | En investigación | Santino Domeniconi | 2026-05-26 | `features/trd/trd-quotes.md` |
 | [`fin-tesoreria-disponibilidades-discovery.md`](./fin-tesoreria-disponibilidades-discovery.md) | FIN · Tesorería · Disponibilidades — modelo conceptual del módulo | En investigación | Yasmani Rodriguez | 2026-05-20 | `features/fin/fin-tesoreria-disponibilidades.md` · [REQ-50](https://arduasolutions.atlassian.net/browse/REQ-50) |
 | [`lex-alertas-discovery.md`](./lex-alertas-discovery.md) | LEX — Módulo Alertas · Discovery Document | En investigación | Yasmani Rodriguez | 2026-04-24 | _—_ |
 | [`lex-limites-discovery.md`](./lex-limites-discovery.md) | LEX — Límites · Discovery Document | En investigación | Yasmani Rodriguez | 2026-04-23 | _—_ |
