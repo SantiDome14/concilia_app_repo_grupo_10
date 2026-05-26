@@ -79,6 +79,17 @@ export const routes: RouteRecordRaw[] = [
       block: 'Mesa de Dinero',
     },
   },
+  {
+    path: ROUTE_PATHS.PROVEEDORES,
+    name: ROUTE_NAMES.PROVEEDORES,
+    component: () => import('@/pages/Proveedores.vue'),
+    meta: {
+      requiresAuth: true,
+      layout: 'shell',
+      breadcrumb: 'Proveedores',
+      block: 'Mesa de Dinero',
+    },
+  },
   // ─── Domain modules — Catálogos ────────────────────────────────────
   {
     path: ROUTE_PATHS.CLIENTS,

@@ -68,6 +68,14 @@ export const ENDPOINTS = {
     activities: (id: string) => `/quotes/${id}/activities`,
   },
 
+  // ─── TRD — Mesa de Dinero / Proveedores de Liquidez ────────
+  liquidity: {
+    list: '/liquidity-operations',
+    detail: (id: string) => `/liquidity-operations/${id}`,
+    activities: (id: string) => `/liquidity-operations/${id}/activities`,
+    providers: '/providers',
+  },
+
   // ─── FIN — Tesorería / Disponibilidades ────────────────────
   fin: {
     posicion: {

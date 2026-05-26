@@ -17,6 +17,7 @@ export const ROUTE_PATHS = {
   REPORTES: '/reportes',
   // Mesa de Dinero
   QUOTES: '/quotes',
+  PROVEEDORES: '/proveedores',
   // Catálogos
   CLIENTS: '/clients',
   CLIENT_DETAIL: '/clients/:id',
@@ -30,6 +31,7 @@ export const ROUTE_NAMES = {
   ALERTAS: 'alertas',
   REPORTES: 'reportes',
   QUOTES: 'quotes',
+  PROVEEDORES: 'proveedores',
   CLIENTS: 'clients',
   CLIENT_DETAIL: 'client-detail',
   NOT_FOUND: 'not-found',
