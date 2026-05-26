@@ -381,11 +381,11 @@ El resto de la metadata queda igual (Tipo, Prioridad, Carácter). Todo el body (
 
 **Patrón del summary según tipo de REQ:**
 
-| Variante                        | Patrón                                            | Ejemplo                                          |
-| ------------------------------- | ------------------------------------------------- | ------------------------------------------------ |
-| REQ por aplicación              | `[Verbo] [APP] — [Capacidad]`                     | "Expandir TRD — Gestión de Exposición FX"        |
-| REQ transversal por dominio     | `[Verbo] [DOMINIO] — [Capacidad]`                 | "Integrar KYC — Verificación Automatizada de Identidad" |
-| REQ transversal del core        | `[MÓDULO] — Infraestructura Transversal del Core` | "INBOX — Infraestructura Transversal del Core"   |
+| Variante                    | Patrón                                            | Ejemplo                                                 |
+| --------------------------- | ------------------------------------------------- | ------------------------------------------------------- |
+| REQ por aplicación          | `[Verbo] [APP] — [Capacidad]`                     | "Expandir TRD — Gestión de Exposición FX"               |
+| REQ transversal por dominio | `[Verbo] [DOMINIO] — [Capacidad]`                 | "Integrar KYC — Verificación Automatizada de Identidad" |
+| REQ transversal del core    | `[MÓDULO] — Infraestructura Transversal del Core` | "INBOX — Infraestructura Transversal del Core"          |
 
 **Verbos canónicos:**
 
@@ -584,12 +584,28 @@ El challenge es **objetivo y basado en evidencia**. No se challengea por challen
 - Pregunta retórica sin propósito funcional
 - **Pregunta técnica que invade ownership de Desarrollo** (ej: "¿qué endpoint usamos?", "¿esto se hace en backend o frontend?", "¿con qué framework?"). El stakeholder es no técnico; el challenge se construye siempre en términos funcionales (qué debe pasar, no cómo se implementa). Ver sección "Foco funcional, no técnico".
 
-**Publicación del challenge:**
+**Publicación del challenge — requiere aprobación explícita del PM:**
 
-- **Con hilo de Slack** → publicar en el hilo usando `Slack:slack_send_message` con `thread_ts` del hilo original. Usar el formato limpio definido en la sección "Formato de mensajes a Slack".
-- **Sin hilo** → presentar en el chat con el mismo formato.
+El challenge **nunca se publica directamente** en el hilo de Slack. El usuario de este skill (PM) es responsable del tono, el alcance y el momento del envío hacia el stakeholder, por lo que cualquier mensaje que vaya al hilo tiene que pasar antes por su revisión. El skill propone; el PM autoriza.
 
-Si el challenge requiere investigación adicional → ejecutar la investigación primero, publicar hallazgos en el hilo/chat, y luego formular las preguntas.
+Flujo de publicación:
+
+1. **Construir** el challenge usando el formato definido en "Formato de mensajes a Slack — Template Challenge".
+2. **Presentar al PM en el chat**, mostrando:
+   - El challenge completo, exactamente como se publicaría (mismo formato, mismas secciones)
+   - El destino propuesto (hilo de Slack del REQ, identificado por `thread_ts` y `channel_id`) si existe; o "no hay hilo asociado" en su defecto
+   - La pregunta explícita: _"¿Lo publico así, querés ajustar algo, o lo manejamos solo en chat?"_
+3. **Esperar respuesta del PM.** Tres caminos válidos:
+   - **Aprobado** → continuar al paso 4
+   - **Ajustes** → aplicar los cambios pedidos (reformular preguntas, sumar/quitar puntos, cambiar tono, recortar) y volver al paso 2 con la versión revisada. Iterar hasta que el PM apruebe
+   - **Cancelar publicación** → no enviar nada al hilo. El intercambio se resuelve en el chat con el PM y se entra al Paso 5 con sus respuestas como input
+4. **Publicar solo tras aprobación explícita:**
+   - **Con hilo** → usar `Slack:slack_send_message` con el `thread_ts` del hilo original
+   - **Sin hilo** → la "publicación" siempre fue el chat con el PM; no hay envío externo
+
+Si el challenge requiere investigación adicional → ejecutar la investigación primero, presentar al PM en el chat los hallazgos + las preguntas resultantes, y recién ahí entrar al flujo de aprobación.
+
+**Por qué esta regla existe:** el hilo del REQ es comunicación oficial del área de Producto hacia el stakeholder. Una pregunta mal formulada, publicada antes de tiempo, o sin contexto del PM, puede confundir al stakeholder, forzar respuestas apresuradas, o desalinear lo que el PM ya tenía planeado conversar offline. La revisión previa es barata y protege la relación con el área.
 
 #### Modo Express — extraer contexto y identificar cuestiones pendientes
 
@@ -725,6 +741,7 @@ Todos los mensajes a Slack siguen un formato limpio y escaneable, optimizado par
 - **Jerarquía**: contexto verificado arriba, challenges/acciones en el medio, notas al final
 - **CTAs destacadas**: cada pregunta accionable marcada con `▸` y en negrita
 - **Distinción**: 🔍 para challenges, 📌 para notas informativas, ✅ para cierre completo, ⚡ para cierre Express
+- **Sin firma de autoría**: no agregar `Sent using @Claude`, `_Sent using @Claude_`, `— enviado por Claude`, ni ninguna variante de atribución al final del mensaje. El conector de Slack ya inserta su propia firma automáticamente cuando el mensaje sale vía MCP — duplicarla en el body genera dos firmas seguidas en el hilo, una en cursiva y otra plana, que ensucian la lectura. Cualquier instinto de "cerrar con atribución" se ignora: el cuerpo del mensaje termina con su última línea funcional (un CTA, un cierre, un emoji) y nada después.
 
 ### Template — Challenge de enriquecimiento (modo Detallado)
 
@@ -844,6 +861,8 @@ El enriquecimiento **no genera discoveries por default**. Los discoveries captur
 - **No toca el AM espejo en modos Detallado ni Express** — el skill opera exclusivamente sobre el REQ del tablero PRODUCTS en esos modos. En modo Refactorización sí actualiza descripción y summary del AM espejo para mantener consistencia con el REQ (el status del AM nunca se toca).
 - No omite la carga del knowledge base (con o sin hilo, en cualquier modo)
 - No actualiza Jira sin confirmación explícita del usuario
+- **No publica challenges en el hilo de Slack sin aprobación explícita del PM** — el challenge siempre se presenta primero en el chat para revisión, ajustes o cancelación
+- **No agrega firmas de autoría en los mensajes a Slack** — el conector ya pone la suya automáticamente; cualquier `Sent using @Claude` o variante adicional al final del body genera firma duplicada en el hilo
 - No asume nada que no esté documentado
 - No crea discoveries que nacen y mueren en la misma sesión
 - En modo Express, no construye challenge al stakeholder — solo registra cuestiones pendientes si emergen
@@ -879,7 +898,11 @@ El enriquecimiento **no genera discoveries por default**. Los discoveries captur
 [Modo?]
    DETALLADO:
       → Construir challenge basado en evidencia
-      → Publicar challenge en hilo (o chat)
+      → Presentar challenge al PM en el chat para revisión
+      → PM aprueba / pide ajustes / cancela publicación
+         · Ajustes → iterar y volver a presentar
+         · Cancelar → resolver en chat, sin envío externo
+      → (si aprueba) Publicar challenge en el hilo
       → Esperar respuesta del stakeholder
       → Resolver Tipo A / aplicar Tipo B
    EXPRESS:
