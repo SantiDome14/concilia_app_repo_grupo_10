@@ -53,6 +53,14 @@ export const ENDPOINTS = {
     },
   },
 
+  // ─── TRD — Catálogos / Clientes ────────────────────────────
+  clients: {
+    list: '/clients',
+    detail: (id: string) => `/clients/${id}`,
+    limits: (id: string) => `/clients/${id}/limits`,
+    balances: (id: string) => `/clients/${id}/balances`,
+  },
+
   // ─── FIN — Tesorería / Disponibilidades ────────────────────
   fin: {
     posicion: {

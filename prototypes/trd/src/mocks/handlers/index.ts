@@ -13,6 +13,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 import { alertaHandlers } from './alertas';
+import { clientHandlers } from './clients';
 import { dashboardKpisHandlers } from './dashboardKpis';
 import { exampleHandlers } from './examples';
 import { finHandlers } from './fin';
@@ -28,4 +29,5 @@ export const handlers = [
   ...alertaHandlers,
   ...reportHandlers,
   ...finHandlers,
+  ...clientHandlers,
 ];

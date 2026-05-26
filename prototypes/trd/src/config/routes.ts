@@ -15,7 +15,9 @@ export const ROUTE_PATHS = {
   INBOX: '/inbox',
   ALERTAS: '/alertas',
   REPORTES: '/reportes',
-  // Domain modules land here as each `add-trd-*` change archives.
+  // Catálogos
+  CLIENTS: '/clients',
+  CLIENT_DETAIL: '/clients/:id',
   NOT_FOUND: '/:pathMatch(.*)*',
 } as const;
 
@@ -25,6 +27,8 @@ export const ROUTE_NAMES = {
   INBOX: 'inbox',
   ALERTAS: 'alertas',
   REPORTES: 'reportes',
+  CLIENTS: 'clients',
+  CLIENT_DETAIL: 'client-detail',
   NOT_FOUND: 'not-found',
 } as const;
 

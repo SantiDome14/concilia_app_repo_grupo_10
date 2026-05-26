@@ -6,6 +6,7 @@ import {
   Inbox as InboxIcon,
   BellRing,
   FileText,
+  Users,
   ChevronLeft,
   ChevronDown,
   Settings,
@@ -63,9 +64,20 @@ const generics: NavItem[] = [
 ];
 
 // TRD domain blocks land here as each `add-trd-*` OpenSpec change
-// archives (see TASKS-TRD.md for the migration board). Until then the
-// sidebar shows only the four cross-cutting generics declared above.
-const blocks: NavBlock[] = [];
+// archives (see TASKS-TRD.md for the migration board).
+const blocks: NavBlock[] = [
+  {
+    label: 'Catálogos',
+    items: [
+      {
+        to: ROUTE_PATHS.CLIENTS,
+        name: ROUTE_NAMES.CLIENTS,
+        label: 'Clientes',
+        icon: Users,
+      },
+    ],
+  },
+];
 
 const collapsed = ref(false);
 const accountOpen = ref(false);

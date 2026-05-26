@@ -67,8 +67,29 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/Reportes.vue'),
     meta: { requiresAuth: true, layout: 'shell', breadcrumb: 'Reportes' },
   },
-  // ─── Domain modules ────────────────────────────────────────────────
-  // Populated as each `add-trd-*` OpenSpec change archives.
+  // ─── Domain modules — Catálogos ────────────────────────────────────
+  {
+    path: ROUTE_PATHS.CLIENTS,
+    name: ROUTE_NAMES.CLIENTS,
+    component: () => import('@/pages/Clients.vue'),
+    meta: {
+      requiresAuth: true,
+      layout: 'shell',
+      breadcrumb: 'Clientes',
+      block: 'Catálogos',
+    },
+  },
+  {
+    path: ROUTE_PATHS.CLIENT_DETAIL,
+    name: ROUTE_NAMES.CLIENT_DETAIL,
+    component: () => import('@/pages/ClientDetail.vue'),
+    meta: {
+      requiresAuth: true,
+      layout: 'shell',
+      breadcrumb: 'Cliente',
+      block: 'Catálogos',
+    },
+  },
   {
     path: ROUTE_PATHS.NOT_FOUND,
     name: ROUTE_NAMES.NOT_FOUND,
