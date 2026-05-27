@@ -2,7 +2,7 @@
 
 > Catálogo navegable de los discoveries existentes. Para entender la convención de naming, los estados y el ciclo de vida, ver [`README.md`](./README.md).
 >
-> Última actualización: **2026-05-26** · **26 discoveries** + **2 artefactos de soporte**
+> Última actualización: **2026-05-26** · **26 discoveries** + **3 artefactos de soporte**
 
 ---
 
@@ -103,6 +103,7 @@ Archivos que viven en `discoveries/` pero **no son discoveries** — son insumos
 
 | Archivo | Propósito | Discovery asociado |
 |---|---|---|
+| [`ask-ardua-gmail-bandejas-compartidas-guia-implementacion.md`](./ask-ardua-gmail-bandejas-compartidas-guia-implementacion.md) | Guía paso a paso para replicar el workaround de reenvío + etiquetas a otras áreas (Legal, Finance, etc.). Incluye tabla de configuración por área y diferencia con la solución definitiva del REQ-39 | [`ask-ardua-gmail-bandejas-compartidas-discovery.md`](./ask-ardua-gmail-bandejas-compartidas-discovery.md) |
 | [`fin-tesoreria-disponibilidades.html`](./fin-tesoreria-disponibilidades.html) | Simulador interactivo del modelo conceptual de Disponibilidades — 16 eventos T0→T15 con tres perspectivas sincronizadas, asientos contables adscriptos a sociedad, collapsibles por sociedad en la lente de Tesorería, y 8vo grupo contable Patrimonio operativo con saldo de apertura. HTML standalone para validación con stakeholders. **No es el prototipo del módulo** | [`fin-tesoreria-disponibilidades-discovery.md`](./fin-tesoreria-disponibilidades-discovery.md) |
 | [`core-modulos-transversales-briefing-tech.md`](./core-modulos-transversales-briefing-tech.md) | Briefing técnico para Claude Design — Refinamiento del set transversal del core | [`core-modulos-transversales-discovery.md`](./core-modulos-transversales-discovery.md) |
 
