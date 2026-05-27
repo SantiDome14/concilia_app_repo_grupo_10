@@ -9,6 +9,7 @@ import type { BadgeVariants } from '@/components/ui/badge';
 import type { QuoteStatus } from '@/types/quote';
 import type { ApiError } from '@/types/api';
 import QuoteSummary from './QuoteSummary.vue';
+import QuoteAttachmentsSection from './QuoteAttachmentsSection.vue';
 import CancelQuoteConfirm from './CancelQuoteConfirm.vue';
 import EditQuoteModal from './EditQuoteModal.vue';
 
@@ -124,6 +125,9 @@ const editOpen = ref(false);
     <!-- Loaded -->
     <template v-else-if="quoteQuery.data.value">
       <QuoteSummary :quote="quoteQuery.data.value" />
+      <div class="mt-6">
+        <QuoteAttachmentsSection :quote-id="quoteId" :can-mutate="canMutate" />
+      </div>
     </template>
 
     <!-- Primary actions — visible only for mutable statuses -->

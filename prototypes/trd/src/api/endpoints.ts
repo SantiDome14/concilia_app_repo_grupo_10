@@ -68,6 +68,14 @@ export const ENDPOINTS = {
     create: '/quotes',
     update: (id: string) => `/quotes/${id}`,
     activities: (id: string) => `/quotes/${id}/activities`,
+    attachments: {
+      list: (quoteId: string) => `/quotes/${quoteId}/attachments`,
+      create: (quoteId: string) => `/quotes/${quoteId}/attachments`,
+      update: (quoteId: string, attachmentId: string) =>
+        `/quotes/${quoteId}/attachments/${attachmentId}`,
+      delete: (quoteId: string, attachmentId: string) =>
+        `/quotes/${quoteId}/attachments/${attachmentId}`,
+    },
   },
 
   // ─── TRD — Mesa de Dinero / Proveedores de Liquidez ────────

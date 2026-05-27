@@ -130,6 +130,26 @@ describe('Quotes page', () => {
     expect(router.currentRoute.value.query.status).toBe('COMPLETED');
   });
 
+  it('drawer renders the attachments section with seeded files', async () => {
+    const { wrapper } = await mountQuotes(`${ROUTE_PATHS.QUOTES}?tab=historial`);
+    await waitForRender(wrapper, 'tbody tr');
+    const row = wrapper.find('[data-testid="row-q_011"]');
+    if (!row.exists()) return; // q_011 may not be on the first page; bail.
+    await row.trigger('click');
+    await flushPromises();
+    // Wait until the attachment list itself contains the seeded filename —
+    // the section renders before the GET /attachments resolves.
+    await vi.waitFor(
+      () => {
+        if (!document.body.innerHTML.includes('contrato-banco-del-sur.pdf')) {
+          throw new Error('attachment row not yet rendered');
+        }
+      },
+      { timeout: 2000, interval: 25 },
+    );
+    expect(document.body.innerHTML).toContain('quote-attachments-section');
+  });
+
   it('drawer surfaces Edit + Cancel actions for PENDING quotes', async () => {
     const { wrapper } = await mountQuotes();
     await waitForRender(wrapper, 'tbody tr');

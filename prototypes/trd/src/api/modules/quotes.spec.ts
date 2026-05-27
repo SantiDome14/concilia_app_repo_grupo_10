@@ -2,10 +2,14 @@ import { describe, it, expect } from 'vitest';
 import {
   cancelQuote,
   createQuote,
+  createQuoteAttachment,
+  deleteQuoteAttachment,
   listQuotes,
+  listQuoteAttachments,
   getQuote,
   getQuoteActivities,
   updateQuote,
+  updateQuoteAttachment,
 } from './quotes';
 import { ApiError } from '@/types/api';
 
@@ -256,5 +260,79 @@ describe('cancelQuote', () => {
     await cancelQuote('q_002');
     const second = await cancelQuote('q_002');
     expect(second.status).toBe('CANCELLED');
+  });
+});
+
+describe('Quote attachments', () => {
+  it('lists pre-seeded attachments for a known quote', async () => {
+    const list = await listQuoteAttachments('q_011');
+    expect(list.length).toBe(1);
+    expect(list[0].filename).toBe('contrato-banco-del-sur.pdf');
+  });
+
+  it('returns an empty array for a quote with no attachments', async () => {
+    const list = await listQuoteAttachments('q_001');
+    expect(list).toEqual([]);
+  });
+
+  it('returns 404 for an unknown quote id', async () => {
+    try {
+      await listQuoteAttachments('does-not-exist');
+      expect.fail('expected throw');
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiError);
+      expect((err as ApiError).isNotFound).toBe(true);
+    }
+  });
+
+  it('createQuoteAttachment persists metadata + activity event', async () => {
+    const before = await listQuoteAttachments('q_001');
+    const att = await createQuoteAttachment('q_001', {
+      filename: 'wire-confirmation.png',
+      size: 12_345,
+      mime: 'image/png',
+      comment: 'Screenshot',
+    });
+    expect(att.id).toMatch(/^qatt_gen_/);
+    expect(att.uploaded_by).toBeTruthy();
+    expect(att.comment).toBe('Screenshot');
+
+    const after = await listQuoteAttachments('q_001');
+    expect(after.length).toBe(before.length + 1);
+
+    const acts = await getQuoteActivities('q_001');
+    expect(acts.some((a) => a.label.includes('Adjunto agregado'))).toBe(true);
+  });
+
+  it('updateQuoteAttachment patches only the comment', async () => {
+    const updated = await updateQuoteAttachment('q_011', 'qatt_011_01', {
+      comment: 'Nuevo comentario',
+    });
+    expect(updated.comment).toBe('Nuevo comentario');
+    expect(updated.filename).toBe('contrato-banco-del-sur.pdf');
+  });
+
+  it('updateQuoteAttachment throws ApiError when attachment id is unknown', async () => {
+    try {
+      await updateQuoteAttachment('q_011', 'does-not-exist', {
+        comment: 'x',
+      });
+      expect.fail('expected throw');
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiError);
+      expect((err as ApiError).status).toBe(404);
+    }
+  });
+
+  it('deleteQuoteAttachment removes the row + appends activity event', async () => {
+    const before = await listQuoteAttachments('q_022');
+    const target = before[0];
+    await deleteQuoteAttachment('q_022', target.id);
+    const after = await listQuoteAttachments('q_022');
+    expect(after.length).toBe(before.length - 1);
+    expect(after.some((a) => a.id === target.id)).toBe(false);
+
+    const acts = await getQuoteActivities('q_022');
+    expect(acts.some((a) => a.label.includes('Adjunto eliminado'))).toBe(true);
   });
 });

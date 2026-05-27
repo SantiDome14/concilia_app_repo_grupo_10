@@ -12,7 +12,7 @@
 // (cancelled / pending early-stage quotes may have an empty timeline).
 // ════════════════════════════════════════════════════════════════════
 
-import type { Quote, QuoteActivity } from '@/types/quote';
+import type { Quote, QuoteActivity, QuoteAttachment } from '@/types/quote';
 
 const initialQuotes: Quote[] = [
   // ─── Activos (Pending) ─────────────────────────────────────────────
@@ -97,11 +97,65 @@ const initialActivities: Record<string, QuoteActivity[]> = {
   ],
 };
 
+// Pre-populated attachments — three quotes ship with an attachment so
+// the drawer surface has something to render on first inspection.
+const initialAttachments: Record<string, QuoteAttachment[]> = {
+  q_011: [
+    {
+      id: 'qatt_011_01',
+      filename: 'contrato-banco-del-sur.pdf',
+      size: 184_320,
+      mime: 'application/pdf',
+      comment: 'Contrato marco firmado por ambas partes',
+      uploaded_at: '2026-05-20T10:30:00Z',
+      uploaded_by: 'María López',
+    },
+  ],
+  q_022: [
+    {
+      id: 'qatt_022_01',
+      filename: 'kyc-tecnologica-patagonia.pdf',
+      size: 92_416,
+      mime: 'application/pdf',
+      comment: null,
+      uploaded_at: '2026-05-02T11:30:00Z',
+      uploaded_by: 'Juan Pérez',
+    },
+    {
+      id: 'qatt_022_02',
+      filename: 'confirmacion-wire.png',
+      size: 48_233,
+      mime: 'image/png',
+      comment: 'Screenshot del wire de confirmación',
+      uploaded_at: '2026-05-03T09:15:00Z',
+      uploaded_by: 'Juan Pérez',
+    },
+  ],
+  q_006: [
+    {
+      id: 'qatt_006_01',
+      filename: 'leg-1-de-ccc.pdf',
+      size: 71_904,
+      mime: 'application/pdf',
+      comment: 'Documento de la primera pata del CCC',
+      uploaded_at: '2026-05-25T14:50:00Z',
+      uploaded_by: 'María López',
+    },
+  ],
+};
+
 export let quotesSeed: Quote[] = structuredClone(initialQuotes);
 export let quoteActivitiesSeed: Record<string, QuoteActivity[]> =
   structuredClone(initialActivities);
+export let quoteAttachmentsSeed: Record<string, QuoteAttachment[]> =
+  structuredClone(initialAttachments);
 
 let quoteIdCounter = initialQuotes.length;
+let attachmentIdCounter = 9000;
+export function nextAttachmentId(): string {
+  attachmentIdCounter += 1;
+  return `qatt_gen_${attachmentIdCounter}`;
+}
 
 /** Generate a stable, monotonically-incrementing quote id (q_041, q_042, …). */
 export function nextQuoteId(): string {
@@ -112,5 +166,7 @@ export function nextQuoteId(): string {
 export function resetQuotesSeed(): void {
   quotesSeed = structuredClone(initialQuotes);
   quoteActivitiesSeed = structuredClone(initialActivities);
+  quoteAttachmentsSeed = structuredClone(initialAttachments);
   quoteIdCounter = initialQuotes.length;
+  attachmentIdCounter = 9000;
 }

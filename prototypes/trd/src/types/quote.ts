@@ -57,6 +57,25 @@ export interface Quote {
 }
 
 /**
+ * Attachment metadata persisted on a quote. v1 is metadata-only —
+ * the prototype does NOT store the actual file bytes; the real upload
+ * via `useFileUpload` + presigned URLs lands as
+ * `extend-trd-quote-attachments-upload`.
+ */
+export interface QuoteAttachment {
+  id: string;
+  filename: string;
+  /** Bytes. */
+  size: number;
+  /** MIME type best-effort from the picker. */
+  mime: string;
+  /** Optional operator comment describing the attachment. */
+  comment: string | null;
+  uploaded_at: string;
+  uploaded_by: string;
+}
+
+/**
  * One row of the quote's activity log (`GET /quotes/:id/activities`).
  * Maps 1:1 onto the cross-cutting `TimelineEvent` shape used by the
  * shared `<Drawer>` / `<Timeline>` components; the API module performs

@@ -20,8 +20,14 @@ import { delay, http, HttpResponse, type HttpHandler } from 'msw';
 import { ENDPOINTS } from '@/api/endpoints';
 import { randomDelayMs } from '../util';
 import type { PaginatedResponse } from '@/types/api';
-import { ACTIVE_QUOTE_STATUSES, type Quote, type QuoteActivity, type QuoteStatus } from '@/types/quote';
-import { nextQuoteId, quoteActivitiesSeed, quotesSeed } from '../seed/quotes';
+import { ACTIVE_QUOTE_STATUSES, type Quote, type QuoteActivity, type QuoteAttachment, type QuoteStatus } from '@/types/quote';
+import {
+  nextAttachmentId,
+  nextQuoteId,
+  quoteActivitiesSeed,
+  quoteAttachmentsSeed,
+  quotesSeed,
+} from '../seed/quotes';
 import { clientsSeed } from '../seed/clients';
 
 const LIST = `*${ENDPOINTS.quotes.list}`;
@@ -29,6 +35,21 @@ const DETAIL = `*${ENDPOINTS.quotes.detail(':id')}`;
 const CREATE = `*${ENDPOINTS.quotes.create}`;
 const UPDATE = `*${ENDPOINTS.quotes.update(':id')}`;
 const ACTIVITIES = `*${ENDPOINTS.quotes.activities(':id')}`;
+const ATTACHMENTS_LIST = `*${ENDPOINTS.quotes.attachments.list(':id')}`;
+const ATTACHMENTS_CREATE = `*${ENDPOINTS.quotes.attachments.create(':id')}`;
+const ATTACHMENT_UPDATE = `*${ENDPOINTS.quotes.attachments.update(':id', ':attachmentId')}`;
+const ATTACHMENT_DELETE = `*${ENDPOINTS.quotes.attachments.delete(':id', ':attachmentId')}`;
+
+function attachmentNotFound(id: string) {
+  return HttpResponse.json(
+    {
+      message: `Attachment "${id}" not found`,
+      code: 'ATTACHMENT_NOT_FOUND',
+      details: { id },
+    },
+    { status: 404 },
+  );
+}
 
 let activityIdCounter = 9000;
 function nextActivityId(): string {
@@ -244,5 +265,82 @@ export const quoteHandlers: HttpHandler[] = [
     if (!quotesSeed.some((qu) => qu.id === id)) return notFound(id);
     const activities = quoteActivitiesSeed[id] ?? [];
     return HttpResponse.json(activities);
+  }),
+
+  // ─── Attachments ────────────────────────────────────────────────
+  http.get(ATTACHMENTS_LIST, async ({ params }) => {
+    await delay(randomDelayMs());
+    const id = String(params.id);
+    if (!quotesSeed.some((qu) => qu.id === id)) return notFound(id);
+    const list = quoteAttachmentsSeed[id] ?? [];
+    return HttpResponse.json(list);
+  }),
+
+  http.post(ATTACHMENTS_CREATE, async ({ request, params }) => {
+    await delay(randomDelayMs());
+    const id = String(params.id);
+    if (!quotesSeed.some((qu) => qu.id === id)) return notFound(id);
+
+    const body = (await request.json()) as {
+      filename: string;
+      size: number;
+      mime: string;
+      comment?: string | null;
+    };
+    const att: QuoteAttachment = {
+      id: nextAttachmentId(),
+      filename: body.filename,
+      size: body.size,
+      mime: body.mime,
+      comment: body.comment ?? null,
+      uploaded_at: new Date().toISOString(),
+      uploaded_by: 'Juan Pérez',
+    };
+    if (!quoteAttachmentsSeed[id]) quoteAttachmentsSeed[id] = [];
+    quoteAttachmentsSeed[id].push(att);
+    appendActivity(id, {
+      actor_id: 'u_juan',
+      actor_name: 'Juan Pérez',
+      kind: 'system',
+      label: `Adjunto agregado: ${body.filename}`,
+    });
+    return HttpResponse.json(att, { status: 201 });
+  }),
+
+  http.patch(ATTACHMENT_UPDATE, async ({ request, params }) => {
+    await delay(randomDelayMs());
+    const quoteId = String(params.id);
+    const attachmentId = String(params.attachmentId);
+    if (!quotesSeed.some((qu) => qu.id === quoteId)) return notFound(quoteId);
+    const list = quoteAttachmentsSeed[quoteId] ?? [];
+    const idx = list.findIndex((a) => a.id === attachmentId);
+    if (idx === -1) return attachmentNotFound(attachmentId);
+
+    const patch = (await request.json()) as { comment?: string | null };
+    const updated: QuoteAttachment = {
+      ...list[idx],
+      ...(patch.comment !== undefined && { comment: patch.comment }),
+    };
+    list[idx] = updated;
+    return HttpResponse.json(updated);
+  }),
+
+  http.delete(ATTACHMENT_DELETE, async ({ params }) => {
+    await delay(randomDelayMs());
+    const quoteId = String(params.id);
+    const attachmentId = String(params.attachmentId);
+    if (!quotesSeed.some((qu) => qu.id === quoteId)) return notFound(quoteId);
+    const list = quoteAttachmentsSeed[quoteId] ?? [];
+    const idx = list.findIndex((a) => a.id === attachmentId);
+    if (idx === -1) return attachmentNotFound(attachmentId);
+
+    const [removed] = list.splice(idx, 1);
+    appendActivity(quoteId, {
+      actor_id: 'u_juan',
+      actor_name: 'Juan Pérez',
+      kind: 'system',
+      label: `Adjunto eliminado: ${removed.filename}`,
+    });
+    return new HttpResponse(null, { status: 204 });
   }),
 ];

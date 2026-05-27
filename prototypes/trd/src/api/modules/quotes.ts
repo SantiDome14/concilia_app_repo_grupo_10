@@ -4,6 +4,7 @@ import type { PaginatedResponse } from '@/types/api';
 import type {
   Quote,
   QuoteActivity,
+  QuoteAttachment,
   QuoteStatus,
   QuoteTab,
 } from '@/types/quote';
@@ -110,4 +111,58 @@ export async function updateQuote(
 
 export async function cancelQuote(id: string): Promise<Quote> {
   return updateQuote(id, { status: 'CANCELLED' });
+}
+
+// ─── Attachments ────────────────────────────────────────────────
+// v1 is metadata-only. The full presigned-URL upload flow lands as
+// `extend-trd-quote-attachments-upload`.
+
+export interface CreateAttachmentPayload {
+  filename: string;
+  size: number;
+  mime: string;
+  comment?: string | null;
+}
+
+export interface UpdateAttachmentPayload {
+  comment?: string | null;
+}
+
+export async function listQuoteAttachments(
+  quoteId: string,
+): Promise<QuoteAttachment[]> {
+  const { data } = await apiClient.get<QuoteAttachment[]>(
+    ENDPOINTS.quotes.attachments.list(quoteId),
+  );
+  return data;
+}
+
+export async function createQuoteAttachment(
+  quoteId: string,
+  payload: CreateAttachmentPayload,
+): Promise<QuoteAttachment> {
+  const { data } = await apiClient.post<QuoteAttachment>(
+    ENDPOINTS.quotes.attachments.create(quoteId),
+    payload,
+  );
+  return data;
+}
+
+export async function updateQuoteAttachment(
+  quoteId: string,
+  attachmentId: string,
+  payload: UpdateAttachmentPayload,
+): Promise<QuoteAttachment> {
+  const { data } = await apiClient.patch<QuoteAttachment>(
+    ENDPOINTS.quotes.attachments.update(quoteId, attachmentId),
+    payload,
+  );
+  return data;
+}
+
+export async function deleteQuoteAttachment(
+  quoteId: string,
+  attachmentId: string,
+): Promise<void> {
+  await apiClient.delete(ENDPOINTS.quotes.attachments.delete(quoteId, attachmentId));
 }
