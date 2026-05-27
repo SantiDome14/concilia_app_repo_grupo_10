@@ -21,10 +21,12 @@ import { ENDPOINTS } from '@/api/endpoints';
 import { randomDelayMs } from '../util';
 import type { PaginatedResponse } from '@/types/api';
 import { ACTIVE_QUOTE_STATUSES, type Quote, type QuoteActivity, type QuoteStatus } from '@/types/quote';
-import { quoteActivitiesSeed, quotesSeed } from '../seed/quotes';
+import { nextQuoteId, quoteActivitiesSeed, quotesSeed } from '../seed/quotes';
+import { clientsSeed } from '../seed/clients';
 
 const LIST = `*${ENDPOINTS.quotes.list}`;
 const DETAIL = `*${ENDPOINTS.quotes.detail(':id')}`;
+const CREATE = `*${ENDPOINTS.quotes.create}`;
 const UPDATE = `*${ENDPOINTS.quotes.update(':id')}`;
 const ACTIVITIES = `*${ENDPOINTS.quotes.activities(':id')}`;
 
@@ -128,6 +130,56 @@ export const quoteHandlers: HttpHandler[] = [
     const id = String(params.id);
     const quote = quotesSeed.find((qu) => qu.id === id);
     return quote ? HttpResponse.json(quote) : notFound(id);
+  }),
+
+  http.post(CREATE, async ({ request }) => {
+    await delay(randomDelayMs());
+    const payload = (await request.json()) as {
+      client_id: string;
+      operation: 'BUY' | 'SELL';
+      origin_currency: string;
+      origin_amount: string;
+      destination_currency: string;
+      destination_amount: string;
+      exchange_rate: string;
+      term: 'T0' | 'T+1' | 'T+2';
+      notes?: string | null;
+      liquidate_date?: string | null;
+    };
+    const client = clientsSeed.find((c) => c.id === payload.client_id);
+    if (!client) {
+      return HttpResponse.json(
+        { message: 'Client not found', code: 'CLIENT_NOT_FOUND' },
+        { status: 422 },
+      );
+    }
+    const now = new Date().toISOString();
+    const quote: Quote = {
+      id: nextQuoteId(),
+      client_id: client.id,
+      client_name: client.name,
+      ardua_docket: client.ardua_docket,
+      operation: payload.operation,
+      origin_currency: payload.origin_currency,
+      origin_amount: payload.origin_amount,
+      destination_currency: payload.destination_currency,
+      destination_amount: payload.destination_amount,
+      exchange_rate: payload.exchange_rate,
+      term: payload.term,
+      status: 'PENDING',
+      created_at: now,
+      liquidate_date: payload.liquidate_date ?? null,
+      notes: payload.notes ?? null,
+      ccc_group_id: null,
+    };
+    quotesSeed.push(quote);
+    appendActivity(quote.id, {
+      actor_id: 'u_juan',
+      actor_name: 'Juan Pérez',
+      kind: 'state_change',
+      label: 'Cotización creada en estado PENDING',
+    });
+    return HttpResponse.json(quote, { status: 201 });
   }),
 
   http.patch(UPDATE, async ({ request, params }) => {

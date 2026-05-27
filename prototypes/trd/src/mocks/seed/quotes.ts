@@ -101,7 +101,16 @@ export let quotesSeed: Quote[] = structuredClone(initialQuotes);
 export let quoteActivitiesSeed: Record<string, QuoteActivity[]> =
   structuredClone(initialActivities);
 
+let quoteIdCounter = initialQuotes.length;
+
+/** Generate a stable, monotonically-incrementing quote id (q_041, q_042, …). */
+export function nextQuoteId(): string {
+  quoteIdCounter += 1;
+  return `q_${String(quoteIdCounter).padStart(3, '0')}`;
+}
+
 export function resetQuotesSeed(): void {
   quotesSeed = structuredClone(initialQuotes);
   quoteActivitiesSeed = structuredClone(initialActivities);
+  quoteIdCounter = initialQuotes.length;
 }

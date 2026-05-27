@@ -147,6 +147,26 @@ describe('Quotes page', () => {
     );
   });
 
+  it('renders the Nueva cotización primary CTA in the L1 header', async () => {
+    const { wrapper } = await mountQuotes();
+    const cta = wrapper.find('[data-testid="quotes-create-trigger"]');
+    expect(cta.exists()).toBe(true);
+    expect(cta.text()).toContain('Nueva cotización');
+  });
+
+  it('clicking the CTA opens the CreateQuoteModal', async () => {
+    const { wrapper } = await mountQuotes();
+    await wrapper.find('[data-testid="quotes-create-trigger"]').trigger('click');
+    await flushPromises();
+    await vi.waitFor(
+      () => {
+        if (!document.body.innerHTML.includes('create-quote-modal'))
+          throw new Error('modal not yet rendered');
+      },
+      { timeout: 2000, interval: 25 },
+    );
+  });
+
   it('drawer hides Edit + Cancel actions for COMPLETED quotes (terminal state)', async () => {
     const { wrapper } = await mountQuotes(`${ROUTE_PATHS.QUOTES}?tab=historial`);
     await waitForRender(wrapper, 'tbody tr');

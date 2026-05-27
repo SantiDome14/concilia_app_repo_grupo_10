@@ -68,6 +68,27 @@ export async function getQuoteActivities(id: string): Promise<QuoteActivity[]> {
   return data;
 }
 
+export interface CreateQuotePayload {
+  client_id: string;
+  operation: 'BUY' | 'SELL';
+  origin_currency: string;
+  origin_amount: string;
+  destination_currency: string;
+  destination_amount: string;
+  exchange_rate: string;
+  term: 'T0' | 'T+1' | 'T+2';
+  notes?: string | null;
+  liquidate_date?: string | null;
+}
+
+export async function createQuote(payload: CreateQuotePayload): Promise<Quote> {
+  const { data } = await apiClient.post<Quote>(
+    ENDPOINTS.quotes.create,
+    payload,
+  );
+  return data;
+}
+
 export interface UpdateQuotePayload {
   notes?: string | null;
   /** ISO-8601 string or `null` to clear. */

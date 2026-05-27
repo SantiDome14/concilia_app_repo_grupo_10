@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   cancelQuote,
+  createQuote,
   listQuotes,
   getQuote,
   getQuoteActivities,
@@ -169,6 +170,72 @@ describe('updateQuote', () => {
     } catch (err) {
       expect(err).toBeInstanceOf(ApiError);
       expect((err as ApiError).isNotFound).toBe(true);
+    }
+  });
+});
+
+describe('createQuote', () => {
+  it('creates a PENDING quote and assigns a fresh id', async () => {
+    const before = await listQuotes({ tab: 'activos', page: 1, pageSize: 100 });
+    const created = await createQuote({
+      client_id: 'cl_001',
+      operation: 'BUY',
+      origin_currency: 'ARS',
+      origin_amount: '1000000',
+      destination_currency: 'USD',
+      destination_amount: '1000',
+      exchange_rate: '1000',
+      term: 'T0',
+      notes: 'Test quote',
+      liquidate_date: '2026-06-01T18:00:00Z',
+    });
+    expect(created.id).toMatch(/^q_\d{3}$/);
+    expect(created.status).toBe('PENDING');
+    expect(created.client_name).toBe('ACME S.A.');
+    expect(created.notes).toBe('Test quote');
+
+    const after = await listQuotes({ tab: 'activos', page: 1, pageSize: 100 });
+    expect(after.pagination.total).toBe(before.pagination.total + 1);
+    expect(after.data.some((q) => q.id === created.id)).toBe(true);
+  });
+
+  it('appends a state_change activity event on creation', async () => {
+    const created = await createQuote({
+      client_id: 'cl_002',
+      operation: 'SELL',
+      origin_currency: 'USD',
+      origin_amount: '5000',
+      destination_currency: 'ARS',
+      destination_amount: '4950000',
+      exchange_rate: '990',
+      term: 'T+1',
+      notes: null,
+      liquidate_date: null,
+    });
+    const acts = await getQuoteActivities(created.id);
+    expect(acts.length).toBe(1);
+    expect(acts[0].kind).toBe('state_change');
+    expect(acts[0].label).toContain('creada');
+  });
+
+  it('rejects with 422 when client_id is unknown', async () => {
+    try {
+      await createQuote({
+        client_id: 'does-not-exist',
+        operation: 'BUY',
+        origin_currency: 'ARS',
+        origin_amount: '1000',
+        destination_currency: 'USD',
+        destination_amount: '1',
+        exchange_rate: '1000',
+        term: 'T0',
+        notes: null,
+        liquidate_date: null,
+      });
+      expect.fail('expected throw');
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiError);
+      expect((err as ApiError).status).toBe(422);
     }
   });
 });

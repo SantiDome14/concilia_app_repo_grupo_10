@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { Search } from 'lucide-vue-next';
+import { Plus, Search } from 'lucide-vue-next';
 import { refDebounced } from '@vueuse/core';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge, type BadgeVariants } from '@/components/ui/badge';
 import {
@@ -16,6 +17,7 @@ import EmptyState from '@/components/feedback/EmptyState.vue';
 import Skeleton from '@/components/feedback/Skeleton.vue';
 import TablePagination from '@/components/data-display/TablePagination.vue';
 import QuoteDrawer from '@/trd/quotes/QuoteDrawer.vue';
+import CreateQuoteModal from '@/trd/quotes/CreateQuoteModal.vue';
 import { useQuotesList } from '@/composables/useQuotes';
 import {
   usePersistedPageSize,
@@ -76,6 +78,7 @@ const page = ref<number>(readPage(route.query.page));
 const pageSize = persistedPageSize;
 const drawerQuoteId = ref<string | null>(null);
 const drawerOpen = ref(false);
+const createOpen = ref(false);
 
 // Constrain status options based on the active tab — Activos can only
 // surface PENDING / ACCEPTED; selecting a terminal state inside Activos
@@ -206,6 +209,14 @@ const isInitialLoading = computed(
           Operaciones OTC de compra y venta de FX que la Mesa ejecuta con clientes.
         </p>
       </div>
+      <Button
+        variant="primary"
+        data-testid="quotes-create-trigger"
+        @click="createOpen = true"
+      >
+        <Plus class="mr-1.5 h-4 w-4" />
+        Nueva cotización
+      </Button>
     </header>
 
     <!-- Tabs -->
@@ -389,6 +400,12 @@ const isInitialLoading = computed(
       :open="drawerOpen"
       :quote-id="drawerQuoteId"
       @update:open="(v: boolean) => (drawerOpen = v)"
+    />
+
+    <!-- Create modal -->
+    <CreateQuoteModal
+      :open="createOpen"
+      @update:open="(v: boolean) => (createOpen = v)"
     />
   </div>
 </template>

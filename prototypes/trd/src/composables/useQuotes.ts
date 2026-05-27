@@ -7,10 +7,12 @@ import {
 } from '@tanstack/vue-query';
 import {
   cancelQuote,
+  createQuote,
   getQuote,
   getQuoteActivities,
   listQuotes,
   updateQuote,
+  type CreateQuotePayload,
   type ListQuotesParams,
   type UpdateQuotePayload,
 } from '@/api/modules/quotes';
@@ -180,4 +182,16 @@ export function useCancelQuote() {
   });
 }
 
-export type { UpdateQuotePayload };
+export function useCreateQuote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createQuote,
+    onSettled: () => {
+      // Invalidate every paginated list; the created quote enters
+      // PENDING so the Activos tab and the Historial tab both refetch.
+      void queryClient.invalidateQueries({ queryKey: ['quotes', 'list'] });
+    },
+  });
+}
+
+export type { CreateQuotePayload, UpdateQuotePayload };
