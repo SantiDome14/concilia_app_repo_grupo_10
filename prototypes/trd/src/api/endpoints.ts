@@ -66,6 +66,7 @@ export const ENDPOINTS = {
     list: '/quotes',
     detail: (id: string) => `/quotes/${id}`,
     create: '/quotes',
+    createCcc: '/quotes/ccc',
     update: (id: string) => `/quotes/${id}`,
     activities: (id: string) => `/quotes/${id}/activities`,
     attachments: {

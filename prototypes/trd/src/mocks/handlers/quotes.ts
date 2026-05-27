@@ -33,6 +33,7 @@ import { clientsSeed } from '../seed/clients';
 const LIST = `*${ENDPOINTS.quotes.list}`;
 const DETAIL = `*${ENDPOINTS.quotes.detail(':id')}`;
 const CREATE = `*${ENDPOINTS.quotes.create}`;
+const CREATE_CCC = `*${ENDPOINTS.quotes.createCcc}`;
 const UPDATE = `*${ENDPOINTS.quotes.update(':id')}`;
 const ACTIVITIES = `*${ENDPOINTS.quotes.activities(':id')}`;
 const ATTACHMENTS_LIST = `*${ENDPOINTS.quotes.attachments.list(':id')}`;
@@ -151,6 +152,107 @@ export const quoteHandlers: HttpHandler[] = [
     const id = String(params.id);
     const quote = quotesSeed.find((qu) => qu.id === id);
     return quote ? HttpResponse.json(quote) : notFound(id);
+  }),
+
+  http.post(CREATE_CCC, async ({ request }) => {
+    await delay(randomDelayMs());
+    const payload = (await request.json()) as {
+      client_id: string;
+      operation: 'BUY' | 'SELL';
+      origin_currency: string;
+      middle_currency: string;
+      destination_currency: string;
+      origin_amount: string;
+      exchange_rate_1: string;
+      exchange_rate_2: string;
+      term: 'T0' | 'T+1' | 'T+2';
+      notes?: string | null;
+      liquidate_date?: string | null;
+    };
+    const client = clientsSeed.find((c) => c.id === payload.client_id);
+    if (!client) {
+      return HttpResponse.json(
+        { message: 'Client not found', code: 'CLIENT_NOT_FOUND' },
+        { status: 422 },
+      );
+    }
+    const now = new Date().toISOString();
+    const groupId = `ccc_${Date.now().toString(36)}`;
+    const orig = Number(payload.origin_amount);
+    const rate1 = Number(payload.exchange_rate_1);
+    const rate2 = Number(payload.exchange_rate_2);
+    const middleAmount = (orig * rate1).toFixed(8).replace(/\.?0+$/, '');
+    const destAmount = (orig * rate1 * rate2).toFixed(8).replace(/\.?0+$/, '');
+
+    const baseFields = {
+      client_id: client.id,
+      client_name: client.name,
+      ardua_docket: client.ardua_docket,
+      operation: payload.operation,
+      term: payload.term,
+      status: 'PENDING' as const,
+      created_at: now,
+      liquidate_date: payload.liquidate_date ?? null,
+      notes: payload.notes ?? null,
+      ccc_group_id: groupId,
+    };
+
+    const leg1: Quote = {
+      ...baseFields,
+      id: nextQuoteId(),
+      origin_currency: payload.origin_currency,
+      origin_amount: payload.origin_amount,
+      destination_currency: payload.middle_currency,
+      destination_amount: middleAmount,
+      exchange_rate: payload.exchange_rate_1,
+    };
+    const leg2: Quote = {
+      ...baseFields,
+      id: nextQuoteId(),
+      origin_currency: payload.middle_currency,
+      origin_amount: middleAmount,
+      destination_currency: payload.destination_currency,
+      destination_amount: destAmount,
+      exchange_rate: payload.exchange_rate_2,
+    };
+    // Leg 3 is the "consolidated" view (origin → destination) — same
+    // ccc_group_id, presented as the user-visible operation; the legacy
+    // exposes this as the row that the master list collapses into.
+    const compositeRate = (rate1 * rate2).toString();
+    const leg3: Quote = {
+      ...baseFields,
+      id: nextQuoteId(),
+      origin_currency: payload.origin_currency,
+      origin_amount: payload.origin_amount,
+      destination_currency: payload.destination_currency,
+      destination_amount: destAmount,
+      exchange_rate: compositeRate,
+    };
+
+    quotesSeed.push(leg1, leg2, leg3);
+    appendActivity(leg1.id, {
+      actor_id: 'u_juan',
+      actor_name: 'Juan Pérez',
+      kind: 'state_change',
+      label: `Cotización CCC creada (leg 1/3) — ${payload.origin_currency} → ${payload.middle_currency}`,
+    });
+    appendActivity(leg2.id, {
+      actor_id: 'u_juan',
+      actor_name: 'Juan Pérez',
+      kind: 'state_change',
+      label: `Cotización CCC creada (leg 2/3) — ${payload.middle_currency} → ${payload.destination_currency}`,
+    });
+    appendActivity(leg3.id, {
+      actor_id: 'u_juan',
+      actor_name: 'Juan Pérez',
+      kind: 'state_change',
+      label: `Cotización CCC creada (consolidado 3/3) — ${payload.origin_currency} → ${payload.destination_currency}`,
+    });
+
+    return HttpResponse.json(
+      { ccc_group_id: groupId, legs: [leg1, leg2, leg3] },
+      { status: 201 },
+    );
   }),
 
   http.post(CREATE, async ({ request }) => {

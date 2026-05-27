@@ -90,6 +90,38 @@ export async function createQuote(payload: CreateQuotePayload): Promise<Quote> {
   return data;
 }
 
+export interface CreateCCCQuotePayload {
+  client_id: string;
+  operation: 'BUY' | 'SELL';
+  origin_currency: string;
+  middle_currency: string;
+  destination_currency: string;
+  /** Decimal string. */
+  origin_amount: string;
+  /** Decimal string — origin → middle. */
+  exchange_rate_1: string;
+  /** Decimal string — middle → destination. */
+  exchange_rate_2: string;
+  term: 'T0' | 'T+1' | 'T+2';
+  notes?: string | null;
+  liquidate_date?: string | null;
+}
+
+export interface CreateCCCQuoteResponse {
+  ccc_group_id: string;
+  legs: Quote[];
+}
+
+export async function createCCCQuote(
+  payload: CreateCCCQuotePayload,
+): Promise<CreateCCCQuoteResponse> {
+  const { data } = await apiClient.post<CreateCCCQuoteResponse>(
+    ENDPOINTS.quotes.createCcc,
+    payload,
+  );
+  return data;
+}
+
 export interface UpdateQuotePayload {
   notes?: string | null;
   /** ISO-8601 string or `null` to clear. */

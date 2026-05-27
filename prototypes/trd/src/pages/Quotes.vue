@@ -18,6 +18,7 @@ import Skeleton from '@/components/feedback/Skeleton.vue';
 import TablePagination from '@/components/data-display/TablePagination.vue';
 import QuoteDrawer from '@/trd/quotes/QuoteDrawer.vue';
 import CreateQuoteModal from '@/trd/quotes/CreateQuoteModal.vue';
+import CreateCCCQuoteModal from '@/trd/quotes/CreateCCCQuoteModal.vue';
 import { useQuotesList } from '@/composables/useQuotes';
 import {
   usePersistedPageSize,
@@ -79,6 +80,7 @@ const pageSize = persistedPageSize;
 const drawerQuoteId = ref<string | null>(null);
 const drawerOpen = ref(false);
 const createOpen = ref(false);
+const cccOpen = ref(false);
 
 // Constrain status options based on the active tab — Activos can only
 // surface PENDING / ACCEPTED; selecting a terminal state inside Activos
@@ -209,14 +211,23 @@ const isInitialLoading = computed(
           Operaciones OTC de compra y venta de FX que la Mesa ejecuta con clientes.
         </p>
       </div>
-      <Button
-        variant="primary"
-        data-testid="quotes-create-trigger"
-        @click="createOpen = true"
-      >
-        <Plus class="mr-1.5 h-4 w-4" />
-        Nueva cotización
-      </Button>
+      <div class="flex items-center gap-2">
+        <Button
+          variant="secondary"
+          data-testid="quotes-create-ccc-trigger"
+          @click="cccOpen = true"
+        >
+          Nueva CCC
+        </Button>
+        <Button
+          variant="primary"
+          data-testid="quotes-create-trigger"
+          @click="createOpen = true"
+        >
+          <Plus class="mr-1.5 h-4 w-4" />
+          Nueva cotización
+        </Button>
+      </div>
     </header>
 
     <!-- Tabs -->
@@ -349,7 +360,17 @@ const isInitialLoading = computed(
             :data-testid="`row-${q.id}`"
             @click="openDrawer(q.id)"
           >
-            <td class="px-[18px] py-2.5 font-mono text-xs text-t-3">{{ q.id }}</td>
+            <td class="px-[18px] py-2.5 font-mono text-xs text-t-3">
+              {{ q.id }}
+              <Badge
+                v-if="q.ccc_group_id"
+                variant="info"
+                class="ml-1"
+                :title="`Grupo CCC ${q.ccc_group_id}`"
+              >
+                CCC
+              </Badge>
+            </td>
             <td class="px-3.5 py-2.5 text-[13px] font-semibold text-t-2">
               {{ q.client_name }}
               <span v-if="q.ardua_docket" class="ml-1 font-mono text-xs text-t-4">({{ q.ardua_docket }})</span>
@@ -406,6 +427,10 @@ const isInitialLoading = computed(
     <CreateQuoteModal
       :open="createOpen"
       @update:open="(v: boolean) => (createOpen = v)"
+    />
+    <CreateCCCQuoteModal
+      :open="cccOpen"
+      @update:open="(v: boolean) => (cccOpen = v)"
     />
   </div>
 </template>

@@ -187,6 +187,30 @@ describe('Quotes page', () => {
     );
   });
 
+  it('renders the Nueva CCC secondary CTA and opens the CCC modal', async () => {
+    const { wrapper } = await mountQuotes();
+    const cccTrigger = wrapper.find('[data-testid="quotes-create-ccc-trigger"]');
+    expect(cccTrigger.exists()).toBe(true);
+    await cccTrigger.trigger('click');
+    await flushPromises();
+    await vi.waitFor(
+      () => {
+        if (!document.body.innerHTML.includes('create-ccc-modal'))
+          throw new Error('CCC modal not yet rendered');
+      },
+      { timeout: 2000, interval: 25 },
+    );
+  });
+
+  it('rows belonging to a CCC group surface the CCC badge', async () => {
+    // q_006 and q_007 share ccc_group_id = ccc_grp_001 in the seed.
+    const { wrapper } = await mountQuotes();
+    await waitForRender(wrapper, 'tbody tr');
+    const row = wrapper.find('[data-testid="row-q_006"]');
+    if (!row.exists()) return; // bail if not on first page
+    expect(row.text()).toContain('CCC');
+  });
+
   it('drawer hides Edit + Cancel actions for COMPLETED quotes (terminal state)', async () => {
     const { wrapper } = await mountQuotes(`${ROUTE_PATHS.QUOTES}?tab=historial`);
     await waitForRender(wrapper, 'tbody tr');

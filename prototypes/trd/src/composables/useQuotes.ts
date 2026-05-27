@@ -7,11 +7,13 @@ import {
 } from '@tanstack/vue-query';
 import {
   cancelQuote,
+  createCCCQuote,
   createQuote,
   getQuote,
   getQuoteActivities,
   listQuotes,
   updateQuote,
+  type CreateCCCQuotePayload,
   type CreateQuotePayload,
   type ListQuotesParams,
   type UpdateQuotePayload,
@@ -194,4 +196,14 @@ export function useCreateQuote() {
   });
 }
 
-export type { CreateQuotePayload, UpdateQuotePayload };
+export function useCreateCCCQuote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createCCCQuote,
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ['quotes', 'list'] });
+    },
+  });
+}
+
+export type { CreateCCCQuotePayload, CreateQuotePayload, UpdateQuotePayload };

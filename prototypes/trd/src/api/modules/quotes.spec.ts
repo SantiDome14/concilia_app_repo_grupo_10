@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   cancelQuote,
+  createCCCQuote,
   createQuote,
   createQuoteAttachment,
   deleteQuoteAttachment,
@@ -232,6 +233,102 @@ describe('createQuote', () => {
         destination_currency: 'USD',
         destination_amount: '1',
         exchange_rate: '1000',
+        term: 'T0',
+        notes: null,
+        liquidate_date: null,
+      });
+      expect.fail('expected throw');
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiError);
+      expect((err as ApiError).status).toBe(422);
+    }
+  });
+});
+
+describe('createCCCQuote', () => {
+  it('creates three quote legs sharing a ccc_group_id', async () => {
+    const res = await createCCCQuote({
+      client_id: 'cl_001',
+      operation: 'BUY',
+      origin_currency: 'USD',
+      middle_currency: 'USDC',
+      destination_currency: 'USDT',
+      origin_amount: '10000',
+      exchange_rate_1: '1',
+      exchange_rate_2: '0.999',
+      term: 'T0',
+      notes: 'CCC test',
+      liquidate_date: null,
+    });
+    expect(res.legs.length).toBe(3);
+    expect(res.ccc_group_id).toMatch(/^ccc_/);
+    for (const leg of res.legs) {
+      expect(leg.ccc_group_id).toBe(res.ccc_group_id);
+      expect(leg.status).toBe('PENDING');
+      expect(leg.client_name).toBe('ACME S.A.');
+    }
+    // Leg 1: USD → USDC.
+    expect(res.legs[0].origin_currency).toBe('USD');
+    expect(res.legs[0].destination_currency).toBe('USDC');
+    // Leg 2: USDC → USDT.
+    expect(res.legs[1].origin_currency).toBe('USDC');
+    expect(res.legs[1].destination_currency).toBe('USDT');
+    // Leg 3: consolidated USD → USDT.
+    expect(res.legs[2].origin_currency).toBe('USD');
+    expect(res.legs[2].destination_currency).toBe('USDT');
+  });
+
+  it('persists the three legs into the list', async () => {
+    const before = await listQuotes({ tab: 'activos', page: 1, pageSize: 100 });
+    await createCCCQuote({
+      client_id: 'cl_002',
+      operation: 'SELL',
+      origin_currency: 'USDT',
+      middle_currency: 'USDC',
+      destination_currency: 'USD',
+      origin_amount: '5000',
+      exchange_rate_1: '1.001',
+      exchange_rate_2: '1',
+      term: 'T+1',
+      notes: null,
+      liquidate_date: null,
+    });
+    const after = await listQuotes({ tab: 'activos', page: 1, pageSize: 100 });
+    expect(after.pagination.total).toBe(before.pagination.total + 3);
+  });
+
+  it('appends one CCC activity event per leg', async () => {
+    const res = await createCCCQuote({
+      client_id: 'cl_005',
+      operation: 'BUY',
+      origin_currency: 'ARS',
+      middle_currency: 'USDC',
+      destination_currency: 'USDT',
+      origin_amount: '1000000',
+      exchange_rate_1: '0.001',
+      exchange_rate_2: '0.999',
+      term: 'T0',
+      notes: null,
+      liquidate_date: null,
+    });
+    for (const leg of res.legs) {
+      const acts = await getQuoteActivities(leg.id);
+      expect(acts.length).toBe(1);
+      expect(acts[0].label).toContain('CCC');
+    }
+  });
+
+  it('rejects with 422 when client_id is unknown', async () => {
+    try {
+      await createCCCQuote({
+        client_id: 'does-not-exist',
+        operation: 'BUY',
+        origin_currency: 'USD',
+        middle_currency: 'USDC',
+        destination_currency: 'USDT',
+        origin_amount: '1',
+        exchange_rate_1: '1',
+        exchange_rate_2: '1',
         term: 'T0',
         notes: null,
         liquidate_date: null,
