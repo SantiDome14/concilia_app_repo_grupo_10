@@ -2,7 +2,7 @@
 
 > Catálogo navegable de los discoveries existentes. Para entender la convención de naming, los estados y el ciclo de vida, ver [`README.md`](./README.md).
 >
-> Última actualización: **2026-05-26** · **26 discoveries** + **3 artefactos de soporte**
+> Última actualización: **2026-05-27** · **27 discoveries** + **3 artefactos de soporte**
 
 ---
 
@@ -54,11 +54,12 @@ Hipótesis sobre una funcionalidad específica dentro de un módulo.
 
 Hipótesis sobre capacidades que aparecen en varios productos con la misma semántica. Su conclusión propaga típicamente a `features/common/`.
 
-| Archivo | Nombre | Estado | Owner | Última act. |
-|---|---|---|---|---|
-| [`ardua-api-documentation-discovery.md`](./ardua-api-documentation-discovery.md) | Ardua API Documentation — Portal público de documentación de las APIs | En investigación | Yasmani Rodriguez | 2026-05-15 |
-| [`release-awareness-discovery.md`](./release-awareness-discovery.md) | Release Awareness — banner y modal de nuevas funcionalidades | Concluida | Santino Domeniconi | 2026-05-08 |
-| [`ventanas-de-mantenimiento-discovery.md`](./ventanas-de-mantenimiento-discovery.md) | Ventanas de Mantenimiento — Comunicación proactiva al usuario | Concluida | Santino Domeniconi | 2026-05-08 |
+| Archivo | Nombre | Estado | Owner | Última act. | Propaga a |
+|---|---|---|---|---|---|
+| [`operatoria-rulo-discovery.md`](./operatoria-rulo-discovery.md) | Operatoria del rulo — Pipeline ARS → Stablecoins | Concluida | Santino Domeniconi | 2026-05-27 | `features/common/operatoria-rulo.md` · `entities/haz-pagos.md` · `entities/circuit-pay.md` |
+| [`ardua-api-documentation-discovery.md`](./ardua-api-documentation-discovery.md) | Ardua API Documentation — Portal público de documentación de las APIs | En investigación | Yasmani Rodriguez | 2026-05-15 | _—_ |
+| [`release-awareness-discovery.md`](./release-awareness-discovery.md) | Release Awareness — banner y modal de nuevas funcionalidades | Concluida | Santino Domeniconi | 2026-05-08 | _—_ |
+| [`ventanas-de-mantenimiento-discovery.md`](./ventanas-de-mantenimiento-discovery.md) | Ventanas de Mantenimiento — Comunicación proactiva al usuario | Concluida | Santino Domeniconi | 2026-05-08 | _—_ |
 
 ---
 
