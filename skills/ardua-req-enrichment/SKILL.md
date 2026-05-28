@@ -1,13 +1,13 @@
 ---
 name: ardua-req-enrichment
-description: 'Enriquece un requerimiento existente en Jira (proyecto REQ) tomando como base el hilo de Slack vinculado al ticket y la base de conocimiento del proyecto (framework, entities, discoveries, features). Soporta tres modos: Detallado (con challenge al stakeholder), Express (formateo directo, sin challenge) y Refactorización (revisión post-promoción que actualiza también el AM espejo del tablero MAIN). Produce un requerimiento estructurado en formato REQ-1. Activar cuando el usuario diga "enriquecer un requerimiento", "quiero enriquecer el REQ-XX", "mejorar un ticket", "refactorizar el REQ-XX" o similar. Si el usuario indica el modo ("express", "detallado" o "refactorización") en el prompt inicial, usarlo directamente; si no, preguntarlo. Si no se proporciona el key del REQ, solicitarlo antes de continuar.'
+description: "Enriquece un requerimiento existente en Jira (proyecto PWI) tomando como base el hilo de Slack vinculado al ticket y la base de conocimiento del proyecto (framework, entities, discoveries, features). Soporta tres modos: Detallado (con challenge al stakeholder), Express (formateo directo, sin challenge) y Refactorización (revisión post-promoción que actualiza también el AM espejo del tablero MAIN). Produce un requerimiento estructurado en formato PWI-1. Activar cuando el usuario diga \"enriquecer un requerimiento\", \"quiero enriquecer el PWI-XX\", \"mejorar un ticket\", \"refactorizar el PWI-XX\" o similar. Si el usuario indica el modo (\"express\", \"detallado\" o \"refactorización\") en el prompt inicial, usarlo directamente; si no, preguntarlo. Si no se proporciona el key del PWI, solicitarlo antes de continuar."
 ---
 
 # Skill: Enriquecimiento de Requerimientos
 
 ## Propósito
 
-Convertir un requerimiento capturado (típicamente por Miles vía Slack) en un requerimiento estructurado en formato REQ-1, listo para desarrollo. El enriquecimiento opera en tres modos según la profundidad de análisis necesaria, la urgencia de tramitación y si el REQ ya pasó al ciclo de desarrollo.
+Convertir un requerimiento capturado (típicamente por Miles vía Slack) en un requerimiento estructurado en formato PWI-1, listo para desarrollo. El enriquecimiento opera en tres modos según la profundidad de análisis necesaria, la urgencia de tramitación y si el PWI ya pasó al ciclo de desarrollo.
 
 **Principio central:** el hilo de Slack del requerimiento es su contexto base. Todo lo que ocurra durante el enriquecimiento (preguntas, challenges, hallazgos) debe quedar registrado en ese hilo. Fuera del hilo, técnicamente estamos fuera del requerimiento.
 
@@ -28,7 +28,7 @@ Los requerimientos enriquecidos se dirigen a dos audiencias: **stakeholders no t
 
 **Esto aplica a TODO lo que produce el skill:**
 
-- La descripción enriquecida del REQ.
+- La descripción enriquecida del PWI.
 - Los challenges al stakeholder en Slack (Paso 4 modo Detallado).
 - Los comentarios y notas que el skill publique.
 - La sección de "Cuestiones pendientes" en modo Express.
@@ -39,9 +39,9 @@ Los requerimientos enriquecidos se dirigen a dos audiencias: **stakeholders no t
 - Modelos de datos, estructuras de tablas, nombres de campos a nivel base de datos.
 - Frameworks, librerías, stacks técnicos.
 - Decisiones de arquitectura (cómo se sincronizan dos sistemas, qué patrón de diseño usar, dónde correr una tarea).
-- **Nombres literales de componentes del frontend** en angle brackets (`<ManifestActionsMenu>`, `<ClosureModal>`, `<KpiCard>`, etc.). En el REQ hablamos de "menú de acciones", "modal de cierre", "KPI card" como conceptos producto, no como handles del código.
+- **Nombres literales de componentes del frontend** en angle brackets (`<ManifestActionsMenu>`, `<ClosureModal>`, `<KpiCard>`, etc.). En el PWI hablamos de "menú de acciones", "modal de cierre", "KPI card" como conceptos producto, no como handles del código.
 - **TypeScript inline** (interfaces, type aliases, código de cualquier tipo). Los discriminadores y estructuras van como tablas funcionales o prosa con campos nombrados, sin `interface { ... }`.
-- **Performance budgets con números concretos** en milisegundos o cantidades exactas (FMP < 1s, evaluación < 5ms, cap blando = 200 cards). Los SLAs de performance se acuerdan en refinement con Tecnología, no en el REQ. El REQ puede decir "performance preserva fluidez para el volumen esperado" sin números.
+- **Performance budgets con números concretos** en milisegundos o cantidades exactas (FMP < 1s, evaluación < 5ms, cap blando = 200 cards). Los SLAs de performance se acuerdan en refinement con Tecnología, no en el PWI. El PWI puede decir "performance preserva fluidez para el volumen esperado" sin números.
 - **Referencias a especificaciones internas, OpenSpec o nomenclatura interna del template** ("core-modals", "L1/L2/L3", "Type A/Type B"). Eso vive en documentación de Tecnología.
 
 **Excepción acotada:** si una **dependencia arquitectónica conocida** afecta el scope (por ejemplo: "esta capacidad depende de que primero se incorpore el módulo X"), referenciarla a nivel funcional sin entrar en cómo se implementa.
@@ -73,25 +73,25 @@ Formateo directo del requerimiento para tramitarlo inmediatamente a Sent to Dev,
 
 ### Refactorización (post-promoción)
 
-Aplica sobre REQs que **ya están en `SENT TO DEV`** (o estados posteriores) y necesitan ser revisados, limpiados o realineados después de pasar al ciclo de desarrollo. Casos típicos:
+Aplica sobre PWIs que **ya están en `SENT TO DEV`** (o estados posteriores) y necesitan ser revisados, limpiados o realineados después de pasar al ciclo de desarrollo. Casos típicos:
 
 - Limpiar filtración técnica que se coló en una iteración previa (componentes literales del frontend, TypeScript inline, performance budgets, nomenclatura interna).
-- Alinear el REQ post-refactor de modelo del producto (cambia el modelo, los REQs ya promovidos quedan desalineados).
+- Alinear el PWI post-refactor de modelo del producto (cambia el modelo, los PWIs ya promovidos quedan desalineados).
 - Consolidar decisiones tomadas con stakeholders después de la promoción.
 
 A diferencia de Detallado y Express, este modo:
 
 - **Preserva el status `SENT TO DEV`.** No transiciona el ticket en ningún caso.
-- **Propaga TODOS los cambios al AM espejo** del tablero MAIN. La automation que crea el AM solo se dispara una vez (al primer pase a `SENT TO DEV`); cualquier cambio posterior al REQ no se propaga automáticamente. El skill actualiza AM manualmente — descripción y summary — para mantener consistencia REQ ↔ AM.
-- **Alinea el summary del AM con el summary del REQ** (mismo string exacto).
-- **No usa Slack para challenge ni cierre.** Los REQs en `SENT TO DEV` ya pasaron por enrichment original; las decisiones del refactor se validan con el PM directamente en el chat antes de ejecutar.
-- **Sigue las mismas reglas de "Foco funcional, no técnico"** y el template REQ-1 completo (Resumen, Contexto, Objetivo, Alcance, Fuera de alcance, Criterios, Dependencias, Espejo en MAIN, Solicitante).
+- **Propaga TODOS los cambios al AM espejo** del tablero MAIN. La automation que crea el AM solo se dispara una vez (al primer pase a `SENT TO DEV`); cualquier cambio posterior al PWI no se propaga automáticamente. El skill actualiza AM manualmente — descripción y summary — para mantener consistencia PWI ↔ AM.
+- **Alinea el summary del AM con el summary del PWI** (mismo string exacto).
+- **No usa Slack para challenge ni cierre.** Los PWIs en `SENT TO DEV` ya pasaron por enrichment original; las decisiones del refactor se validan con el PM directamente en el chat antes de ejecutar.
+- **Sigue las mismas reglas de "Foco funcional, no técnico"** y el template PWI-1 completo (Resumen, Contexto, Objetivo, Alcance, Fuera de alcance, Criterios, Dependencias, Espejo en MAIN, Solicitante).
 
-Refactorización es operativamente delicado — afecta dos tickets en simultáneo. Validar con el PM owner del REQ el alcance del refactor antes de aplicar.
+Refactorización es operativamente delicado — afecta dos tickets en simultáneo. Validar con el PM owner del PWI el alcance del refactor antes de aplicar.
 
 ### Selección del modo
 
-**Si el usuario indica el modo en el prompt inicial** (ej: _"enriquecé express el REQ-44"_, _"hacé un enriquecimiento detallado del REQ-23"_, _"refactorizá el REQ-71"_) → usar directamente ese modo.
+**Si el usuario indica el modo en el prompt inicial** (ej: _"enriquecé express el PWI-44"_, _"hacé un enriquecimiento detallado del PWI-23"_, _"refactorizá el PWI-71"_) → usar directamente ese modo.
 
 **Si el modo no queda claro** → al inicio del flujo, usar `ask_user_input`:
 
@@ -101,31 +101,33 @@ ask_user_input(
   options: [
     "Detallado — análisis profundo con challenge al stakeholder",
     "Express — formateo directo para mover el ticket a Sent to Dev",
-    "Refactorización — revisar un REQ ya en SENT TO DEV (también actualiza el AM espejo)"
+    "Refactorización — revisar un PWI ya en SENT TO DEV (también actualiza el AM espejo)"
   ]
 )
 ```
 
-**Validación de pre-condición — modo Refactorización:** si el modo elegido es Refactorización, verificar que el status del REQ sea `SENT TO DEV`, `READY FOR DEV`, `IN DEVELOPMENT` o `DONE`. Si está en un estado anterior, informar al usuario y proponer Detallado/Express. Si está en `DONE`, validar con el PM si el refactor todavía tiene sentido o si conviene crear un REQ nuevo.
+**Validación de pre-condición — modo Refactorización:** si el modo elegido es Refactorización, verificar que el status del PWI sea `SENT TO DEV`, `READY FOR DEV`, `IN DEVELOPMENT` o `DONE`. Si está en un estado anterior, informar al usuario y proponer Detallado/Express. Si está en `DONE`, validar con el PM si el refactor todavía tiene sentido o si conviene crear un PWI nuevo.
 
 ---
 
-## Ciclo de vida del requerimiento (tablero REQ ↔ tablero AM)
+## Ciclo de vida del requerimiento (tablero PWI ↔ tablero AM)
 
 Un requerimiento existe en **dos tableros de Jira con sincronización automática** entre ellos. Entender este flujo es clave para no confundir lo que el skill puede tocar y lo que no.
 
+> **⚠️ Migración en curso — TECHNOLOGY/TWI:** cuando se active el tablero **TECHNOLOGY**, el espejo del PWI dejará de crearse en MAIN (`AM-XXXX`) y pasará a crearse en TECHNOLOGY (`TWI-XXXX`). Hasta que eso ocurra, el flujo vigente es el descripto a continuación (espejo en AM). Cuando se complete la migración, actualizar este skill reemplazando todas las referencias a `AM-XXXX` / tablero MAIN / proyecto AM por `TWI-XXXX` / tablero TECHNOLOGY / proyecto TWI.
+
 ### Tableros involucrados
 
-- **PRODUCTS (proyecto REQ)** — tablero del área de Producto. Acá nace el requerimiento (Miles lo captura desde Slack), se enriquece, y se gestiona el ciclo desde la perspectiva del producto.
-- **MAIN (proyecto AM)** — tablero del área de Tecnología. Acá se ejecuta la implementación.
+- **PRODUCTS (proyecto PWI)** — tablero del área de Producto. Acá nace el requerimiento (Miles lo captura desde Slack), se enriquece, y se gestiona el ciclo desde la perspectiva del producto.
+- **MAIN (proyecto AM)** — tablero de IT. Acá se ejecuta la implementación. *(Futuro: será reemplazado por el tablero TECHNOLOGY / proyecto TWI como destino del espejo.)*
 
 ### Estados del tablero PRODUCTS y su ownership
 
 | Estado           | Ownership         | Significado                                                                                              |
 | ---------------- | ----------------- | -------------------------------------------------------------------------------------------------------- |
-| `BACKLOG`        | Producto          | REQ capturado por Miles, sin enriquecer todavía                                                          |
+| `BACKLOG`        | Producto          | PWI capturado por Miles, sin enriquecer todavía                                                          |
 | `IN ANALYSIS`    | Producto          | Enriquecimiento en proceso (challenges abiertos, validaciones con stakeholder)                           |
-| `IN PROGRESS`    | Producto          | Solo para **tasks internas del área de Producto** (no aplica al flujo estándar de un REQ de stakeholder) |
+| `IN PROGRESS`    | Producto          | Solo para **tasks internas del área de Producto** (no aplica al flujo estándar de un PWI de stakeholder) |
 | `BLOCKED`        | Producto          | Bloqueado por dependencia externa al área                                                                |
 | `DEPRECATED`     | Producto          | Requerimiento descartado o absorbido por otro                                                            |
 | `SENT TO DEV`    | Espejado desde AM | Se disparó la automation y el espejo en AM fue creado                                                    |
@@ -137,15 +139,15 @@ Los cuatro estados de la mitad inferior **no son ownership de Producto** — ref
 
 ### El momento clave: pasar a `SENT TO DEV`
 
-Cuando el PM transiciona el REQ a `SENT TO DEV` (manualmente, no lo hace el skill), se dispara una **automation que crea un ticket espejo en el tablero AM**, vinculado al REQ con relación `causes` y heredando la descripción enriquecida. El espejo arranca en `TO REFINEMENT` (primer estado del workflow de AM). Desde ese punto, los estados `SENT TO DEV`, `READY FOR DEV`, `IN DEVELOPMENT` y `DONE` del REQ se mueven según se mueva el AM espejo.
+Cuando el PM transiciona el PWI a `SENT TO DEV` (manualmente, no lo hace el skill), se dispara una **automation que crea un ticket espejo en el tablero AM**, vinculado al PWI con relación `causes` y heredando la descripción enriquecida. El espejo arranca en `TO REFINEMENT` (primer estado del workflow de AM). Desde ese punto, los estados `SENT TO DEV`, `READY FOR DEV`, `IN DEVELOPMENT` y `DONE` del PWI se mueven según se mueva el AM espejo.
 
-El tablero AM tiene su propio set de estados, más granulares que los cuatro reflejados en el REQ (incluye etapas internas de refinamiento técnico, desarrollo y code review). El skill no necesita conocer ese mapping en detalle — basta con entender que **los cuatro estados sincronizados del REQ son una vista resumida del progreso real en AM**.
+El tablero AM tiene su propio set de estados, más granulares que los cuatro reflejados en el PWI (incluye etapas internas de refinamiento técnico, desarrollo y code review). El skill no necesita conocer ese mapping en detalle — basta con entender que **los cuatro estados sincronizados del PWI son una vista resumida del progreso real en AM**.
 
 ### Implicancia directa para el enriquecimiento
 
 La descripción enriquecida que produce este skill **es la base sobre la que Desarrollo va a trabajar** — no es solo documentación de Producto. Esto refuerza tres reglas:
 
-1. **El enriquecimiento debe estar completo antes de transicionar a `SENT TO DEV`.** Después, cualquier ajuste implica intervenir tanto el REQ como el AM espejo, lo cual es operativamente caro.
+1. **El enriquecimiento debe estar completo antes de transicionar a `SENT TO DEV`.** Después, cualquier ajuste implica intervenir tanto el PWI como el AM espejo, lo cual es operativamente caro.
 2. **El contenido debe ser funcionalmente claro** para que Desarrollo pueda traducirlo a definición técnica sin ambigüedad (ver sección "Foco funcional, no técnico").
 3. **El skill nunca transiciona el ticket.** La transición a `SENT TO DEV` la hace el PM manualmente después de revisar el enriquecimiento — porque dispara la creación del espejo en AM, que es un evento operativo significativo.
 
@@ -228,7 +230,7 @@ updated_at: YYYY-MM-DD
 **Para el enriquecimiento:**
 
 - Filtrar los discoveries por el campo `features:` del frontmatter para encontrar los que afectan la aplicación del requerimiento (`[CLP]`, `[LEX, FIN]`, `[COMMON]`, etc.).
-- Priorizar los `status: En investigación` — capturan hipótesis abiertas y blockers activos que pueden impactar el scope del REQ.
+- Priorizar los `status: En investigación` — capturan hipótesis abiertas y blockers activos que pueden impactar el scope del PWI.
 - Leer los `Concluida` o `Descartada` solo si el requerimiento referencia una decisión consolidada y se necesita entender cómo se llegó a ella.
 
 **Naming convention:**
@@ -240,7 +242,7 @@ updated_at: YYYY-MM-DD
 
 **Discovery-First Principle:** si el requerimiento implica trabajo de investigación o validación de hipótesis y no existe ningún discovery relacionado, proponer crearlo **antes de avanzar** con el enriquecimiento, no al cierre:
 
-> _"No encontré discovery relacionado con [aplicación/módulo o tema]. Como el requerimiento implica hipótesis a validar, tiene sentido abrir el discovery antes de enriquecer el REQ. ¿Arrancamos con un discovery básico y después retomamos?"_
+> _"No encontré discovery relacionado con [aplicación/módulo o tema]. Como el requerimiento implica hipótesis a validar, tiene sentido abrir el discovery antes de enriquecer el PWI. ¿Arrancamos con un discovery básico y después retomamos?"_
 
 Este principio **no aplica** a requerimientos que son ajustes puntuales, bugs o cambios sobre features ya consolidadas — solo cuando hay genuino trabajo de investigación pendiente.
 
@@ -255,7 +257,7 @@ Carpeta con **un proyecto frontend autocontenido por producto** (`prototypes/clp
 **Cómo usar `prototypes/` en el enriquecimiento:**
 
 - Leer `<KB_ROOT>/prototypes/[aplicacion]/README.md` cuando existe — documenta el stack, el alcance actual del prototipo, qué hipótesis valida y qué referencias hay a `features/[aplicacion]/`.
-- Identificar si la feature del requerimiento ya tiene representación visual en el prototipo. Si la tiene, referenciarla en el campo `Prototipo` del REQ-1 (ver "Formato de referencia").
+- Identificar si la feature del requerimiento ya tiene representación visual en el prototipo. Si la tiene, referenciarla en el campo `Prototipo` del PWI-1 (ver "Formato de referencia").
 - Si la feature **no** está representada y el requerimiento la consolida, anotarlo como acción posterior — la iteración del prototipo se hace por separado, no es parte del enriquecimiento.
 
 El prototipo refleja **el ideal acordado**, no producción. Se itera junto con `features/[aplicacion]/`: cuando una feature se agrega/cambia en features, se itera el prototipo.
@@ -266,9 +268,9 @@ Usar `Notion:notion-search` con términos clave del requerimiento. Teamspace ID:
 
 ---
 
-## Formato de referencia: REQ-1
+## Formato de referencia: PWI-1
 
-El requerimiento enriquecido sigue la estructura de REQ-1, el estándar establecido:
+El requerimiento enriquecido sigue la estructura de PWI-1, el estándar establecido:
 
 ```
 **Requerimiento:** [Nombre]
@@ -281,7 +283,7 @@ El requerimiento enriquecido sigue la estructura de REQ-1, el estándar establec
 ---
 
 ## Resumen
-[2-3 párrafos densos. Qué es el REQ, qué cambia, propiedades estructurales clave del modelo si las hay, y qué entrega concretamente. Permite que un lector entienda el REQ sin leerlo completo.]
+[2-3 párrafos densos. Qué es el PWI, qué cambia, propiedades estructurales clave del modelo si las hay, y qué entrega concretamente. Permite que un lector entienda el PWI sin leerlo completo.]
 
 ---
 
@@ -300,7 +302,7 @@ funcionales clave y prerequisitos sin resolver si son relevantes para el diseño
 
 ## Alcance funcional
 
-### 1. [Sección — típicamente el modelo conceptual si el REQ introduce uno]
+### 1. [Sección — típicamente el modelo conceptual si el PWI introduce uno]
 [Descripción funcional — nivel "el sistema hace X cuando el usuario hace Y". Sin datos
 técnicos, sin endpoints, sin modelos de datos, sin TypeScript.]
 
@@ -322,8 +324,8 @@ técnicos, sin endpoints, sin modelos de datos, sin TypeScript.]
 ---
 
 ## Dependencias
-- [REQ-XX o sistema externo — qué provee, por qué este REQ lo necesita o, si aplica, qué consume este REQ desde aquí]
-- [REQ-XX o sistema externo — ...]
+- [PWI-XX o sistema externo — qué provee, por qué este PWI lo necesita o, si aplica, qué consume este PWI desde aquí]
+- [PWI-XX o sistema externo — ...]
 
 ---
 
@@ -342,7 +344,7 @@ Estas quedaron identificadas durante el enriquecimiento pero no se profundizaron
 
 Delivery story: **AM-XXXX**.
 
-[Nota opcional sobre qué entrega este REQ vs. qué entregan REQs por área cuando aplica.]
+[Nota opcional sobre qué entrega este PWI vs. qué entregan PWIs por área cuando aplica.]
 
 ---
 
@@ -350,9 +352,9 @@ Delivery story: **AM-XXXX**.
 **Prototipo:** [referencia dentro de prototypes/[aplicacion]/ — ruta interna como /proveedores-de-liquidez, URL desplegada, o nombre del componente/vista] ← solo si la feature ya está representada en prototypes/[aplicacion]/
 ```
 
-**Variant B — REQ transversal del core**
+**Variant B — PWI transversal del core**
 
-Para REQs que entregan infraestructura transversal del core (consumida por todas las aplicaciones, no asociada a una sola), reemplazar el bloque `Aplicación` + `Módulo` de la metadata por una sola línea:
+Para PWIs que entregan infraestructura transversal del core (consumida por todas las aplicaciones, no asociada a una sola), reemplazar el bloque `Aplicación` + `Módulo` de la metadata por una sola línea:
 
 `**Sistema:** CORE (transversal)`
 
@@ -363,29 +365,29 @@ El resto de la metadata queda igual (Tipo, Prioridad, Carácter). Todo el body (
 **Reglas sobre los campos de metadata:**
 
 - **Aplicación (Variant A):** siempre indicar la aplicación del core (TRD, OPS, LEX, CLP, FIN). Para productos transversales con nombre propio (Prime Desk RFQ, Ardua PnL Report, etc.), usar el nombre del producto en vez de una aplicación del core.
-- **Módulo (Variant A):** opcional, solo cuando el requerimiento afecta un módulo específico dentro de una aplicación. Si el REQ es transversal a toda la aplicación, omitir el campo.
-- **Sistema (Variant B):** valor canónico `CORE (transversal)` para infraestructura transversal del core. No se usa esta variante para REQs por aplicación.
-- **Modo de enriquecimiento:** campo **opcional**, no incluido en el template por default. Se omite en REQs grandes y consolidados producidos en modo Detallado o Refactorización (su presencia en la descripción final no aporta valor al lector). Incluirlo solo en REQs producidos en modo Express, como trazabilidad de proceso — especialmente cuando hay sección de "Cuestiones pendientes".
+- **Módulo (Variant A):** opcional, solo cuando el requerimiento afecta un módulo específico dentro de una aplicación. Si el PWI es transversal a toda la aplicación, omitir el campo.
+- **Sistema (Variant B):** valor canónico `CORE (transversal)` para infraestructura transversal del core. No se usa esta variante para PWIs por aplicación.
+- **Modo de enriquecimiento:** campo **opcional**, no incluido en el template por default. Se omite en PWIs grandes y consolidados producidos en modo Detallado o Refactorización (su presencia en la descripción final no aporta valor al lector). Incluirlo solo en PWIs producidos en modo Express, como trazabilidad de proceso — especialmente cuando hay sección de "Cuestiones pendientes".
 
 **Reglas sobre las secciones nuevas del body:**
 
-- **Resumen:** primero después de la metadata. 2-3 párrafos densos. Cuenta qué es el REQ, qué cambia, las propiedades estructurales clave si las hay, y qué entrega concretamente. Permite que un lector entienda el REQ sin leerlo completo.
-- **Dependencias:** lista de REQs o sistemas externos que este REQ necesita o que dependen de él. Una línea por dependencia, con prosa que aclara la dirección (qué provee / qué consume). Si el REQ es transversal habilitante, los consumidores se mencionan en esta misma lista identificándolos como tales.
-- **Espejo en MAIN:** una línea con `Delivery story: AM-XXXX` referenciando el ticket espejo. Si el REQ se entrega en partes (parte por este REQ + partes por REQs por área, por ejemplo), agregar una nota corta aclarando el reparto.
+- **Resumen:** primero después de la metadata. 2-3 párrafos densos. Cuenta qué es el PWI, qué cambia, las propiedades estructurales clave si las hay, y qué entrega concretamente. Permite que un lector entienda el PWI sin leerlo completo.
+- **Dependencias:** lista de PWIs o sistemas externos que este PWI necesita o que dependen de él. Una línea por dependencia, con prosa que aclara la dirección (qué provee / qué consume). Si el PWI es transversal habilitante, los consumidores se mencionan en esta misma lista identificándolos como tales.
+- **Espejo en MAIN:** una línea con `Delivery story: AM-XXXX` referenciando el ticket espejo. Si el PWI se entrega en partes (parte por este PWI + partes por PWIs por área, por ejemplo), agregar una nota corta aclarando el reparto.
 
 ---
 
 ## Convenciones de naming
 
-**El summary del REQ y el campo `Requerimiento:` de la descripción son idénticos.** Coincidencia exacta. Hay automation de Jira planeada para enforce esta regla en el futuro; mientras tanto, el skill garantiza la coincidencia al actualizar Jira.
+**El summary del PWI y el campo `Requerimiento:` de la descripción son idénticos.** Coincidencia exacta. Hay automation de Jira planeada para enforce esta regla en el futuro; mientras tanto, el skill garantiza la coincidencia al actualizar Jira.
 
-**Patrón del summary según tipo de REQ:**
+**Patrón del summary según tipo de PWI:**
 
 | Variante                    | Patrón                                            | Ejemplo                                                 |
 | --------------------------- | ------------------------------------------------- | ------------------------------------------------------- |
-| REQ por aplicación          | `[Verbo] [APP] — [Capacidad]`                     | "Expandir TRD — Gestión de Exposición FX"               |
-| REQ transversal por dominio | `[Verbo] [DOMINIO] — [Capacidad]`                 | "Integrar KYC — Verificación Automatizada de Identidad" |
-| REQ transversal del core    | `[MÓDULO] — Infraestructura Transversal del Core` | "INBOX — Infraestructura Transversal del Core"          |
+| PWI por aplicación          | `[Verbo] [APP] — [Capacidad]`                     | "Expandir TRD — Gestión de Exposición FX"               |
+| PWI transversal por dominio | `[Verbo] [DOMINIO] — [Capacidad]`                 | "Integrar KYC — Verificación Automatizada de Identidad" |
+| PWI transversal del core    | `[MÓDULO] — Infraestructura Transversal del Core` | "INBOX — Infraestructura Transversal del Core"          |
 
 **Verbos canónicos:**
 
@@ -397,18 +399,18 @@ El resto de la metadata queda igual (Tipo, Prioridad, Carácter). Todo el body (
 
 ---
 
-## Patrones de construcción del REQ
+## Patrones de construcción del PWI
 
-Cuatro patrones recurrentes en REQs producto-grade. Aplicarlos cuando corresponda — no son obligatorios en todos los REQs, pero cuando aplican, comunican mejor.
+Cuatro patrones recurrentes en PWIs producto-grade. Aplicarlos cuando corresponda — no son obligatorios en todos los PWIs, pero cuando aplican, comunican mejor.
 
 ### Modelo conceptual al inicio del Alcance funcional
 
-Cuando el REQ introduce o consolida un modelo del dominio (entidades, discriminadores, relaciones), dedicar la **§1 del Alcance funcional** a explicarlo en prosa + tablas funcionales, sin código. Esto permite que el resto del Alcance se lea sobre una base entendida.
+Cuando el PWI introduce o consolida un modelo del dominio (entidades, discriminadores, relaciones), dedicar la **§1 del Alcance funcional** a explicarlo en prosa + tablas funcionales, sin código. Esto permite que el resto del Alcance se lea sobre una base entendida.
 
-**Ejemplos canónicos** (del set REQ-81):
+**Ejemplos canónicos** (del set PWI-81):
 
-- **REQ-68 (Acciones)** — la distinción entre `record_mutation` y `function_invocation` se explica como tabla con columnas "Tipo | Qué hace | Ejemplos típicos", sin TypeScript.
-- **REQ-69 (Vistas)** — la transición drag-drop se documenta como "literalmente una acción del manifest" — propiedad estructural del modelo, en prosa, sin contrato de código.
+- **PWI-68 (Acciones)** — la distinción entre `record_mutation` y `function_invocation` se explica como tabla con columnas "Tipo | Qué hace | Ejemplos típicos", sin TypeScript.
+- **PWI-69 (Vistas)** — la transición drag-drop se documenta como "literalmente una acción del manifest" — propiedad estructural del modelo, en prosa, sin contrato de código.
 
 ### Tablas funcionales sobre TypeScript
 
@@ -418,21 +420,21 @@ Regla práctica: si tu instinto es escribir `interface X { ... }`, parar y conve
 
 ### Iconografía conceptual permitida
 
-El REQ puede declarar iconografía a nivel concepto cuando sirve para comunicar comportamiento:
+El PWI puede declarar iconografía a nivel concepto cuando sirve para comunicar comportamiento:
 
 - ✓ para "completar/marcar"
 - ↗ para "invocar otra cosa"
 - Otros íconos cuando aporten claridad funcional
 
-Lo que **no** va en el REQ: atar la iconografía a un componente del frontend ni declarar la librería de íconos (ej: "usamos lucide-react vX"). El visual fino se cierra en refinement con Diseño.
+Lo que **no** va en el PWI: atar la iconografía a un componente del frontend ni declarar la librería de íconos (ej: "usamos lucide-react vX"). El visual fino se cierra en refinement con Diseño.
 
 ### Detalle visual diferido a refinement
 
-Cuando el REQ define el contrato funcional de un componente pero el detalle visual fino (paleta, ejes, tooltips, animaciones, layout) requiere Diseño + Tecnología, **incluir nota explícita en la sección correspondiente**:
+Cuando el PWI define el contrato funcional de un componente pero el detalle visual fino (paleta, ejes, tooltips, animaciones, layout) requiere Diseño + Tecnología, **incluir nota explícita en la sección correspondiente**:
 
-> _El detalle visual final del componente queda a definir en refinement con Diseño + Tecnología. El contrato a nivel REQ es [...]._
+> _El detalle visual final del componente queda a definir en refinement con Diseño + Tecnología. El contrato a nivel PWI es [...]._
 
-Esto evita hand-rolling un mockup detallado en el REQ. El REQ define **qué hace el componente y qué tipos soporta**; el visual lo cierra Diseño en refinement.
+Esto evita hand-rolling un mockup detallado en el PWI. El PWI define **qué hace el componente y qué tipos soporta**; el visual lo cierra Diseño en refinement.
 
 Aplica especialmente a: componentes de chart, surfaces nuevas, layouts complejos, microinteracciones.
 
@@ -444,9 +446,9 @@ Aplica especialmente a: componentes de chart, surfaces nuevas, layouts complejos
 
 #### 0a. Key del requerimiento
 
-Si el usuario no proporcionó el key del REQ → preguntar:
+Si el usuario no proporcionó el key del PWI → preguntar:
 
-> _"¿Cuál es el key del requerimiento que querés enriquecer? (ej: REQ-44)"_
+> _"¿Cuál es el key del requerimiento que querés enriquecer? (ej: PWI-44)"_
 
 No continuar hasta tener el key.
 
@@ -555,7 +557,7 @@ Independientemente del modo o de si hay hilo, cargar la base de conocimiento cor
 
 6. **Consultar la representación visual** en `prototypes/`:
    - Si existe `<KB_ROOT>/prototypes/[aplicacion]/README.md`, leerlo para entender el alcance actual del prototipo y qué vistas/módulos refleja.
-   - Identificar si la feature del requerimiento ya está representada visualmente. Si lo está, capturar la referencia (ruta interna o URL desplegada) para el campo `Prototipo` del REQ-1.
+   - Identificar si la feature del requerimiento ya está representada visualmente. Si lo está, capturar la referencia (ruta interna o URL desplegada) para el campo `Prototipo` del PWI-1.
 
 7. Complementar con `Notion:notion-search` si los pasos anteriores no alcanzaron.
 
@@ -593,7 +595,7 @@ Flujo de publicación:
 1. **Construir** el challenge usando el formato definido en "Formato de mensajes a Slack — Template Challenge".
 2. **Presentar al PM en el chat**, mostrando:
    - El challenge completo, exactamente como se publicaría (mismo formato, mismas secciones)
-   - El destino propuesto (hilo de Slack del REQ, identificado por `thread_ts` y `channel_id`) si existe; o "no hay hilo asociado" en su defecto
+   - El destino propuesto (hilo de Slack del PWI, identificado por `thread_ts` y `channel_id`) si existe; o "no hay hilo asociado" en su defecto
    - La pregunta explícita: _"¿Lo publico así, querés ajustar algo, o lo manejamos solo en chat?"_
 3. **Esperar respuesta del PM.** Tres caminos válidos:
    - **Aprobado** → continuar al paso 4
@@ -605,7 +607,7 @@ Flujo de publicación:
 
 Si el challenge requiere investigación adicional → ejecutar la investigación primero, presentar al PM en el chat los hallazgos + las preguntas resultantes, y recién ahí entrar al flujo de aprobación.
 
-**Por qué esta regla existe:** el hilo del REQ es comunicación oficial del área de Producto hacia el stakeholder. Una pregunta mal formulada, publicada antes de tiempo, o sin contexto del PM, puede confundir al stakeholder, forzar respuestas apresuradas, o desalinear lo que el PM ya tenía planeado conversar offline. La revisión previa es barata y protege la relación con el área.
+**Por qué esta regla existe:** el hilo del PWI es comunicación oficial del área de Producto hacia el stakeholder. Una pregunta mal formulada, publicada antes de tiempo, o sin contexto del PM, puede confundir al stakeholder, forzar respuestas apresuradas, o desalinear lo que el PM ya tenía planeado conversar offline. La revisión previa es barata y protege la relación con el área.
 
 #### Modo Express — extraer contexto y identificar cuestiones pendientes
 
@@ -648,33 +650,33 @@ En modo Express este paso no aplica — saltar directamente al Paso 6.
 
 ### Paso 6 — Generar el requerimiento enriquecido
 
-Producir el requerimiento completo siguiendo la estructura REQ-1 (ver sección "Formato de referencia").
+Producir el requerimiento completo siguiendo la estructura PWI-1 (ver sección "Formato de referencia").
 
 **Principio que atraviesa todo Paso 6:** el contenido es **funcional**, no técnico. Describir qué hace el sistema y por qué, nunca cómo se implementa (ver sección "Foco funcional, no técnico"). El skill **traduce** lo que aparezca técnico en el hilo o en el knowledge base; no lo replica.
 
 **Reglas de contenido:**
 
-- **Metadata:** usar Variant A (Aplicación + Módulo opcional) para REQs por aplicación o producto transversal con nombre propio. Usar Variant B (`Sistema: CORE (transversal)`) para REQs de infraestructura transversal del core. Ver "Convenciones de naming" para el patrón del summary correspondiente.
+- **Metadata:** usar Variant A (Aplicación + Módulo opcional) para PWIs por aplicación o producto transversal con nombre propio. Usar Variant B (`Sistema: CORE (transversal)`) para PWIs de infraestructura transversal del core. Ver "Convenciones de naming" para el patrón del summary correspondiente.
 
-- **Resumen:** 2-3 párrafos densos al inicio del body, después de la metadata. Cuenta qué es el REQ, qué cambia, las propiedades estructurales clave si las hay, y qué entrega concretamente. Si el REQ introduce un modelo conceptual, anticipar las entidades clave acá — el detalle va en §1 del Alcance funcional (ver "Patrones de construcción del REQ").
+- **Resumen:** 2-3 párrafos densos al inicio del body, después de la metadata. Cuenta qué es el PWI, qué cambia, las propiedades estructurales clave si las hay, y qué entrega concretamente. Si el PWI introduce un modelo conceptual, anticipar las entidades clave acá — el detalle va en §1 del Alcance funcional (ver "Patrones de construcción del PWI").
 
 - **Contexto:** Situación actual, problema e impacto operativo. Si hay dependencias o prerequisitos sin resolver que afectan el scope, referenciarlos a nivel funcional ("la capacidad depende de que primero se incorpore X"), no técnico.
 
 - **Objetivo:** Bullets que responden _"¿para qué se construye esto?"_. Cada bullet es un resultado esperado. No describe el qué sino el para qué.
 
-- **Alcance funcional:** Secciones numeradas con título claro y descripción funcional. **Sin terminología técnica** — sin nombres de endpoints, sin métodos HTTP, sin modelos de datos, sin estructuras de tablas, sin frameworks ni librerías, sin componentes literales del frontend, sin TypeScript inline, sin performance budgets numéricos. Nivel: _"el sistema hace X cuando el usuario hace Y"_. Si el REQ introduce un modelo del dominio, la §1 se dedica a explicarlo en prosa + tablas funcionales (ver "Patrones de construcción del REQ").
+- **Alcance funcional:** Secciones numeradas con título claro y descripción funcional. **Sin terminología técnica** — sin nombres de endpoints, sin métodos HTTP, sin modelos de datos, sin estructuras de tablas, sin frameworks ni librerías, sin componentes literales del frontend, sin TypeScript inline, sin performance budgets numéricos. Nivel: _"el sistema hace X cuando el usuario hace Y"_. Si el PWI introduce un modelo del dominio, la §1 se dedica a explicarlo en prosa + tablas funcionales (ver "Patrones de construcción del PWI").
 
 - **Fuera de alcance (v1):** Lo que está explícitamente fuera. Incluir elementos que podrían generar confusión. Separar V1 de roadmap futuro si hay versiones definidas.
 
 - **Criterios de aceptación:** Condiciones observables y verificables, expresadas en términos de comportamiento del sistema desde la perspectiva del usuario o del stakeholder. Sin ambigüedad. Formato: _"El sistema [hace X] cuando [condición]"_ o _"[Elemento] muestra/permite/impide [comportamiento]"_. Nunca formular un criterio en términos de implementación (ej: ❌ _"el endpoint responde 200"_; ✅ _"la operación se confirma al usuario"_).
 
-- **Dependencias:** lista de REQs o sistemas externos que este REQ necesita o que dependen de él. Una línea por dependencia con prosa que aclara la dirección (qué provee este REQ a quién, o qué consume desde dónde). Si el REQ es transversal habilitante, los consumidores se listan acá identificándolos como tales.
+- **Dependencias:** lista de PWIs o sistemas externos que este PWI necesita o que dependen de él. Una línea por dependencia con prosa que aclara la dirección (qué provee este PWI a quién, o qué consume desde dónde). Si el PWI es transversal habilitante, los consumidores se listan acá identificándolos como tales.
 
 - **Cuestiones pendientes de revisión (solo Express, condicional):** incluir la sección `## 🔍 Cuestiones pendientes de revisión` si durante el Paso 4 emergieron cuestiones sin resolver. Si no hay, omitir la sección completa.
 
-- **Espejo en MAIN:** una línea con `Delivery story: AM-XXXX`. Si el REQ todavía no se transicionó a `SENT TO DEV` (modos Detallado/Express), no hay AM asignado aún: usar `Delivery story: pendiente (se asigna al promover a SENT TO DEV)` o coordinar con el PM para completar el campo después de la transición. En modo Refactorización el AM ya existe — usar el key real obtenido via `issuelinks`.
+- **Espejo en MAIN:** una línea con `Delivery story: AM-XXXX`. Si el PWI todavía no se transicionó a `SENT TO DEV` (modos Detallado/Express), no hay AM asignado aún: usar `Delivery story: pendiente (se asigna al promover a SENT TO DEV)` o coordinar con el PM para completar el campo después de la transición. En modo Refactorización el AM ya existe — usar el key real obtenido via `issuelinks`.
 
-- **Modo de enriquecimiento (campo opcional):** no incluir en el template por default. Agregar solo en REQs Express como trazabilidad de proceso, especialmente si hay sección de "Cuestiones pendientes". En REQs Detallados o Refactorización grandes y consolidados, omitir — no aporta valor al lector final.
+- **Modo de enriquecimiento (campo opcional):** no incluir en el template por default. Agregar solo en PWIs Express como trazabilidad de proceso, especialmente si hay sección de "Cuestiones pendientes". En PWIs Detallados o Refactorización grandes y consolidados, omitir — no aporta valor al lector final.
 
 - **Solicitante:** Inferido del hilo de Slack (quién envió a Miles) o del ticket si no hay hilo.
 
@@ -700,23 +702,23 @@ Esperar confirmación explícita.
 
 ### Paso 8 — Actualizar Jira y cerrar
 
-**Actualizar el REQ en Jira:**
+**Actualizar el PWI en Jira:**
 Usar `Atlassian:editJiraIssue` con `contentFormat: adf`. La descripción debe ser un objeto ADF válido (`type: doc`, `version: 1`, content array). No usar `contentFormat: markdown` para descriptions — no persiste de forma confiable.
 
-Si el modo es Refactorización y el summary del REQ cambia, actualizar también el campo `summary` en la misma llamada para mantener consistencia con el campo `Requerimiento:` de la descripción.
+Si el modo es Refactorización y el summary del PWI cambia, actualizar también el campo `summary` en la misma llamada para mantener consistencia con el campo `Requerimiento:` de la descripción.
 
 **Sub-flujo solo en modo Refactorización — actualizar el AM espejo:**
 
-La automation que crea el AM espejo solo se dispara una vez (al primer pase a `SENT TO DEV`). Cualquier cambio posterior al REQ no se propaga automáticamente, por lo que el skill actualiza AM manualmente:
+La automation que crea el AM espejo solo se dispara una vez (al primer pase a `SENT TO DEV`). Cualquier cambio posterior al PWI no se propaga automáticamente, por lo que el skill actualiza AM manualmente:
 
-1. **Encontrar el AM espejo.** Leer los `issuelinks` del REQ vía `Atlassian:getJiraIssue` con `fields=["issuelinks"]`. Filtrar el link cuyo `type.outward == "causes"` y tomar `outwardIssue.key`. Ese es el AM espejo (proyecto MAIN, mismo `cloudId`: `53eec1f8-a156-4af9-bc3a-d6142b50e0cc`).
-2. **Construir la descripción del AM.** Usar el mismo cuerpo enriquecido que se acaba de guardar en la descripción del REQ — idéntico, sin modificaciones adicionales. La consistencia entre REQ y AM se garantiza porque ambos comparten el mismo contenido.
+1. **Encontrar el AM espejo.** Leer los `issuelinks` del PWI vía `Atlassian:getJiraIssue` con `fields=["issuelinks"]`. Filtrar el link cuyo `type.outward == "causes"` y tomar `outwardIssue.key`. Ese es el AM espejo (proyecto MAIN, mismo `cloudId`: `53eec1f8-a156-4af9-bc3a-d6142b50e0cc`).
+2. **Construir la descripción del AM.** Usar el mismo cuerpo enriquecido que se acaba de guardar en la descripción del PWI — idéntico, sin modificaciones adicionales. La consistencia entre PWI y AM se garantiza porque ambos comparten el mismo contenido.
 3. **Actualizar el AM** vía `Atlassian:editJiraIssue` sobre el key del AM:
    - `description` con el cuerpo construido (formato ADF).
-   - `summary` igualado al summary del REQ (mismo string exacto).
+   - `summary` igualado al summary del PWI (mismo string exacto).
 4. **No transicionar el AM.** El skill no toca el status del AM bajo ninguna circunstancia. Si Desarrollo ya movió el AM a un estado posterior (IN REFINEMENT, EN CURSO, etc.), el refactor solo actualiza descripción y summary; el progreso de desarrollo no se pierde.
 
-**IMPORTANTE — no transicionar el REQ.** El skill solo actualiza la descripción del REQ. La transición a `SENT TO DEV` (u otro estado) la hace el PM manualmente desde Jira, **porque ese pase dispara la automation que crea el ticket espejo en el tablero AM** (proyecto de Tecnología) con relación `causes` y heredando la descripción enriquecida. Ver sección "Ciclo de vida del requerimiento (tablero REQ ↔ tablero AM)" para el detalle del flujo. En modo Refactorización el REQ ya está en `SENT TO DEV` o posterior — nunca se transiciona en ningún caso.
+**IMPORTANTE — no transicionar el PWI.** El skill solo actualiza la descripción del PWI. La transición a `SENT TO DEV` (u otro estado) la hace el PM manualmente desde Jira, **porque ese pase dispara la automation que crea el ticket espejo en el tablero AM** (proyecto de Tecnología) con relación `causes` y heredando la descripción enriquecida. Ver sección "Ciclo de vida del requerimiento (tablero PWI ↔ tablero AM)" para el detalle del flujo. En modo Refactorización el PWI ya está en `SENT TO DEV` o posterior — nunca se transiciona en ningún caso.
 
 **Cierre en Slack/chat:**
 
@@ -724,7 +726,7 @@ La automation que crea el AM espejo solo se dispara una vez (al primer pase a `S
 - **Detallado sin hilo** → confirmar en chat + recomendar vincular hilo para futuras iteraciones
 - **Express con hilo** → publicar cierre Express en el hilo (incluyendo sección de cuestiones pendientes si existen)
 - **Express sin hilo** → confirmar en chat + recomendar vincular hilo
-- **Refactorización** → **silencio total en Slack**. Confirmar al PM en el chat con un mensaje corto: _"Refactor aplicado. REQ-XX actualizado en Jira y AM-XXXX espejo sincronizado (descripción + summary alineados, sin transicionar)."_
+- **Refactorización** → **silencio total en Slack**. Confirmar al PM en el chat con un mensaje corto: _"Refactor aplicado. PWI-XX actualizado en Jira y AM-XXXX espejo sincronizado (descripción + summary alineados, sin transicionar)."_
 
 **Flaguear al cierre** (en cualquier modo):
 
@@ -777,7 +779,7 @@ Antes de estructurarlo, necesito confirmar [N] punto(s) de scope.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-Cuando confirmes C1–CN, estructuro el requerimiento en formato REQ-1 y actualizo Jira.
+Cuando confirmes C1–CN, estructuro el requerimiento en formato PWI-1 y actualizo Jira.
 ```
 
 **Reglas de uso:**
@@ -843,8 +845,8 @@ El enriquecimiento **no genera discoveries por default**. Los discoveries captur
 
 | Escenario                                                                                                                                                | Qué hacer                                                                                                                                                         |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| La información específica del REQ emerge durante el proceso                                                                                              | Va al ticket de Jira — es lo que ya hace el enriquecimiento                                                                                                       |
-| Información que **trasciende el REQ** emerge (decisión arquitectónica, blocker que afecta otras features del producto, hipótesis nueva sobre el dominio) | Proponer **actualizar un discovery existente** que cubra el dominio (filtrando por `features:` del frontmatter). Si no existe, proponer crearlo (Discovery-First) |
+| La información específica del PWI emerge durante el proceso                                                                                              | Va al ticket de Jira — es lo que ya hace el enriquecimiento                                                                                                       |
+| Información que **trasciende el PWI** emerge (decisión arquitectónica, blocker que afecta otras features del producto, hipótesis nueva sobre el dominio) | Proponer **actualizar un discovery existente** que cubra el dominio (filtrando por `features:` del frontmatter). Si no existe, proponer crearlo (Discovery-First) |
 
 **No se crean discoveries para cerrarlos en la misma sesión.** Si un discovery se crea durante el enriquecimiento, permanece `En investigación` y evoluciona en sesiones futuras. Cuando madura, sus conclusiones se **propagan a los feature files correspondientes** en `features/[aplicacion]/` (regla crítica del framework: un aprendizaje validado que no actualiza `features/` es una fuga).
 
@@ -854,11 +856,11 @@ El enriquecimiento **no genera discoveries por default**. Los discoveries captur
 
 - **No usa terminología técnica** (endpoints, métodos HTTP, modelos de datos, frameworks, librerías, stacks, decisiones arquitectónicas) en ningún output: ni en la descripción enriquecida, ni en challenges, ni en comentarios. La definición técnica es ownership de Desarrollo.
 - **No usa componentes del frontend, interfaces TypeScript, performance budgets numéricos ni referencias a especificaciones internas** (OpenSpec, nomenclatura del template, L1/L2/L3, Type A/Type B) en ningún output. Esos elementos viven en documentación de Tecnología.
-- **No define el detalle visual fino** (paleta, ejes, tooltips, animaciones, layout exacto) — queda diferido a refinement con Diseño + Tecnología. Ver "Patrones de construcción del REQ — Detalle visual diferido a refinement".
+- **No define el detalle visual fino** (paleta, ejes, tooltips, animaciones, layout exacto) — queda diferido a refinement con Diseño + Tecnología. Ver "Patrones de construcción del PWI — Detalle visual diferido a refinement".
 - **No define cómo se implementa una capacidad** — solo qué hace el sistema y por qué. Ver sección "Foco funcional, no técnico".
 - No toma decisiones de scope sin respaldo en el knowledge base
-- **No transiciona el ticket en Jira** — ni el REQ ni el AM espejo, en ningún modo. La transición del REQ a `SENT TO DEV` la hace el PM manualmente y dispara la creación del ticket espejo en el tablero AM. El status del AM lo gestiona Desarrollo.
-- **No toca el AM espejo en modos Detallado ni Express** — el skill opera exclusivamente sobre el REQ del tablero PRODUCTS en esos modos. En modo Refactorización sí actualiza descripción y summary del AM espejo para mantener consistencia con el REQ (el status del AM nunca se toca).
+- **No transiciona el ticket en Jira** — ni el PWI ni el AM espejo, en ningún modo. La transición del PWI a `SENT TO DEV` la hace el PM manualmente y dispara la creación del ticket espejo en el tablero AM. El status del AM lo gestiona Desarrollo.
+- **No toca el AM espejo en modos Detallado ni Express** — el skill opera exclusivamente sobre el PWI del tablero PRODUCTS en esos modos. En modo Refactorización sí actualiza descripción y summary del AM espejo para mantener consistencia con el PWI (el status del AM nunca se toca).
 - No omite la carga del knowledge base (con o sin hilo, en cualquier modo)
 - No actualiza Jira sin confirmación explícita del usuario
 - **No publica challenges en el hilo de Slack sin aprobación explícita del PM** — el challenge siempre se presenta primero en el chat para revisión, ajustes o cancelación
@@ -873,7 +875,7 @@ El enriquecimiento **no genera discoveries por default**. Los discoveries captur
 ## Diagrama del flujo
 
 ```
-[Key del REQ + modo (Detallado / Express)]
+[Key del PWI + modo (Detallado / Express)]
       ↓
 [Resolver KB_ROOT vía Filesystem:list_allowed_directories — silencioso]
       ↓
@@ -891,7 +893,7 @@ El enriquecimiento **no genera discoveries por default**. Los discoveries captur
    • prototypes/[aplicacion]/README.md (si existe — para referencia visual)
    • Notion (complementario)
       ↓
-[¿El REQ implica investigación de hipótesis sin discovery existente?]
+[¿El PWI implica investigación de hipótesis sin discovery existente?]
    SÍ → Proponer crear discovery antes de avanzar (Discovery-First)
    NO → Continuar
       ↓
@@ -910,11 +912,11 @@ El enriquecimiento **no genera discoveries por default**. Los discoveries captur
       → Identificar cuestiones pendientes (si emergen)
       → No construir challenge
    REFACTORIZACIÓN:
-      → Validar pre-condición (REQ en SENT TO DEV o posterior)
+      → Validar pre-condición (PWI en SENT TO DEV o posterior)
       → Validar alcance del refactor con el PM en el chat
       → Sin Slack en ningún momento
       ↓
-[Generar requerimiento enriquecido — formato REQ-1]
+[Generar requerimiento enriquecido — formato PWI-1]
    • Metadata: Variant A (Aplicación/Módulo) o Variant B (Sistema: CORE)
    • Resumen, Dependencias, Espejo en MAIN (secciones estándar)
    • Sección "Cuestiones pendientes" solo si Express + cuestiones
@@ -924,7 +926,7 @@ El enriquecimiento **no genera discoveries por default**. Los discoveries captur
 [Confirmar → Actualizar Jira (ADF, SIN transicionar)]
    REFACTORIZACIÓN además:
       → Buscar AM espejo vía issuelinks (outward "causes")
-      → Actualizar AM description (idéntica al REQ) + summary
+      → Actualizar AM description (idéntica al PWI) + summary
       ↓
 [Publicar cierre]
    DETALLADO con hilo  → ✅ cierre detallado en hilo
@@ -939,8 +941,8 @@ El enriquecimiento **no genera discoveries por default**. Los discoveries captur
       ↓
 [Handoff al Product Manager] (solo Detallado/Express)
    El PM revisa el enriquecimiento y, cuando confirma, transiciona
-   el REQ a SENT TO DEV → automation crea ticket espejo en AM con
+   el PWI a SENT TO DEV → automation crea ticket espejo en AM con
    relación `causes` y descripción heredada. Skill ya terminó.
-   (En Refactorización no hay handoff externo: REQ y AM ya quedaron
+   (En Refactorización no hay handoff externo: PWI y AM ya quedaron
     sincronizados; no hay transición de estado pendiente.)
 ```

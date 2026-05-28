@@ -16,7 +16,7 @@ description: >
 
 ## Propósito
 
-Guiar a cualquier persona de Ardua en la formulación de un requerimiento de negocio de forma clara y estructurada, sin tecnicismos. El foco es entender el **problema real** detrás de la necesidad — no la solución. Al finalizar, derivar al canal de Slack del área correspondiente mencionando a @Miles para que tramite la creación del ticket en Jira.
+Guiar a cualquier persona de Ardua en la formulación de un requerimiento de negocio de forma clara y estructurada, sin tecnicismos. El foco es entender el **problema real** detrás de la necesidad — no la solución. Al finalizar, derivar al canal de Slack del área correspondiente mencionando a @Miles para que tramite la creación del PWI (Product Work Item) en Jira.
 
 ---
 
@@ -229,7 +229,7 @@ Usar `slack_send_message` con el `channel_id` correspondiente al área inferida.
 
 Una vez enviado el mensaje, cerrar siempre con este mensaje al usuario:
 
-> *"✅ Listo, tu requerimiento fue enviado al canal [#canal]. Miles va a tramitar la creación del ticket en Jira.*
+> *"✅ Listo, tu requerimiento fue enviado al canal [#canal]. Miles va a tramitar la creación del PWI (Product Work Item) en Jira.*
 >
 > *Si tenés evidencia para sumar (capturas, documentos, datos, grabaciones), adjuntala directamente en el hilo que se va a crear en ese canal — así queda todo junto al requerimiento."*
 
@@ -239,6 +239,6 @@ Una vez enviado el mensaje, cerrar siempre con este mensaje al usuario:
 
 - No define la solución técnica
 - No estima esfuerzo ni prioridad técnica
-- No crea el ticket en Jira (eso es responsabilidad de Miles)
+- No crea el PWI en Jira (eso es responsabilidad de Miles)
 - No opina sobre viabilidad del requerimiento
 - No transfiere archivos a Slack (el usuario los adjunta en el hilo)
