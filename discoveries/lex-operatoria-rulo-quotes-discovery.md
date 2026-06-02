@@ -145,6 +145,12 @@ Dos cálculos independientes activados por selección de filas mediante columnas
 
 **Fuente:** iteración con Camila Cattaneo (2026-05-21).
 
+### D-12 — Columna "Tipo de TC" eliminada: Ardua opera un único tipo de TC
+
+La columna "Tipo de TC" (MEP / CCL) se elimina de la tabla de quotes. Ardua opera un único tipo de TC, por lo que el campo no aporta información diferencial para Legal — siempre tendría el mismo valor.
+
+**Fuente:** confirmación de Santiago Ahmed (2026-06-02). Reflejado en PWI-53.
+
 ---
 
 ## Hipótesis abiertas
