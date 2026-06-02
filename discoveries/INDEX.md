@@ -2,7 +2,7 @@
 
 > Catálogo navegable de los discoveries existentes. Para entender la convención de naming, los estados y el ciclo de vida, ver [`README.md`](./README.md).
 >
-> Última actualización: **2026-05-27** · **27 discoveries** + **3 artefactos de soporte**
+> Última actualización: **2026-06-02** · **28 discoveries** + **3 artefactos de soporte**
 
 ---
 
@@ -43,6 +43,7 @@ Hipótesis sobre una funcionalidad específica dentro de un módulo.
 
 | Archivo | Nombre | Estado | Owner | Última act. | Propaga a |
 |---|---|---|---|---|---|
+| [`lex-clientes-informacion-contacto-discovery.md`](./lex-clientes-informacion-contacto-discovery.md) | LEX — Información de Contacto del Legajo (Clientes) · Discovery Document | En investigación | Yasmani Rodriguez | 2026-06-02 | `features/lex/lex-clientes-informacion-contacto.md` · `features/lex/README.md` |
 | [`lex-operatoria-rulo-quotes-discovery.md`](./lex-operatoria-rulo-quotes-discovery.md) | LEX — Visibilidad de quotes del rulo en el detalle de cliente | Concluida | Santino Domeniconi | 2026-05-20 | `features/lex/README.md` |
 | [`lex-clientes-export-altas-legales-discovery.md`](./lex-clientes-export-altas-legales-discovery.md) | LEX — Export automático de clientes onboardeados a planillas de Altas Legales | Concluida | Santino Domeniconi | 2026-05-19 | `features/lex/lex-clientes-export-altas-legales.md` · `features/lex/README.md` |
 | [`portal-clientes-mail-bienvenida-discovery.md`](./portal-clientes-mail-bienvenida-discovery.md) | CLP — Actualización del mail de bienvenida al nuevo branding | Concluida | Santino Domeniconi | 2026-05-19 | `features/clp/clp-mail-bienvenida.md` · `features/clp/README.md` |

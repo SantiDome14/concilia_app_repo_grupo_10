@@ -1,6 +1,6 @@
 # LEX — Legal & Compliance
 
-> Última actualización: 2026-05-04
+> Última actualización: 2026-06-02
 > Estado: En definición progresiva
 
 ---
@@ -17,6 +17,7 @@
 
 | Módulo | Estado | Feature file | Referencias |
 |---|---|---|---|
+| Clientes | Producción | `lex-clientes-export-altas-legales.md` · `lex-clientes-informacion-contacto.md` (en definición) | `discoveries/lex-clientes-informacion-contacto-discovery.md` · `discoveries/lex-clientes-export-altas-legales-discovery.md` |
 | Alertas | _En discovery_ | _Pendiente_ | `discoveries/lex-alertas-discovery.md` |
 | Límites | _En discovery_ | _Pendiente_ | `discoveries/lex-limites-discovery.md` |
 | _Otros por completar_ | _—_ | _—_ | _—_ |
