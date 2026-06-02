@@ -52,7 +52,7 @@ Esto valida que el modelo es operativamente viable. La API no inventa un flujo n
 
 **Canal operativo actual**: grupo de WhatsApp "documentacion clientes CNT" para el intercambio de documentacion entre equipos. Estado: existente pero no formalizado.
 
-**Proto-proceso en Trello**: cuando el referenciador es Centaurus, la documentacion del cliente se adjunta directamente en la tarjeta de Trello y Compliance (Facu Arce) no solicita documentacion adicional porque ya viene incluida. Pendiente confirmar con Nico si este flujo es consistente y cuales son exactamente los documentos que adjunta Centaurus.
+**Proto-proceso en Trello**: el tag Centaurus en referenciadores es el punto de entrada — cuando llega un cliente referenciado por Centaurus se crea una tarjeta en Trello y desde ahí arranca el pedido de documentación. El pedido **no** está centralizado: se coordina por mail, por WhatsApp (grupo "documentación clientes CNT") y posiblemente por un canal de Slack al que el equipo Comercial no tiene acceso. La coordinación es multi-canal y no estandarizada — ese es el problema concreto que la API viene a resolver. **El MVP no es "evitar pedir docs" sino automatizar y centralizar ese pedido disperso.**
 
 **Implicancia sobre el perfil inversor CNV:** el hecho de que Centaurus ya acepte legajos de Ardua como base sugiere que el gap del perfil inversor lo resuelve Centaurus directamente con el cliente. No es un bloqueante tecnico para la Etapa 1 — es una responsabilidad que queda del lado de Centaurus.
 
@@ -65,12 +65,12 @@ Esto valida que el modelo es operativamente viable. La API no inventa un flujo n
 | P-01 | ¿Que producto o servicio de Ardua usan los clientes de Centaurus? | ✅ Respondida — transacciones (FX, pagos, cables) | Entidad contraparte probable: Ardua Solutions Corp |
 | P-02 | ¿Que producto o servicio de Centaurus usan los clientes de Ardua? | ✅ Respondida — compra/venta de activos (acciones, CEDEARs, bonos, FCI) | Instrumentos de mercado de capitales vía ALyC |
 | P-03 | ¿Cual es la entidad de Ardua que firma con Centaurus? | ⏳ Pendiente confirmacion formal | Probable: Ardua Solutions Corp. Restriccion de diseno del marco legal |
-| P-04 | ¿Que datos puntuales faltan y se piden hoy cuando falta informacion? | ⏳ Pendiente — confirmar con Nico y Facu Arce | Define exactamente los campos que la API debe exponer |
+| P-04 | ¿Qué datos puntuales faltan y se piden hoy cuando falta información? | ⏳ Bloqueada en documentos — Facu Arce pasa requisitos de Ardua (por tipo); Santi Ahmed consigue requisitos de Centaurus. El cruce define el gap exacto. | Define exactamente los campos que la API debe exponer |
 | P-05 | ¿El flujo hoy es principalmente Ardua → Centaurus, o tambien viene gente de Centaurus → Ardua? | ✅ Respondida — flujo dominante es Centaurus → Ardua (~10 clientes/mes) | Etapa 1 es la prioridad de desarrollo |
-| P-06 | ¿El tag Centaurus en Trello referenciadores implica que Compliance no pide documentacion adicional? | ⏳ Pendiente confirmacion con Nico | Si se confirma, ese flujo es el MVP de la integracion |
-| P-07 | ¿Que documentacion adjunta Centaurus en Trello exactamente? ¿Es siempre el set completo o varia por cliente? | ⏳ Pendiente — Facu Arce envia los requisitos diferenciados hoy | Define si hay gap de datos en el flujo actual |
-| P-08 | ¿Los T&C de Ardua con el cliente autorizan compartir datos con terceros como Centaurus? | ⏳ Pendiente — Camila Legal | Viabilidad legal del intercambio automatizado via API |
-| P-09 | ¿Hay contrato firmado entre Ardua y Centaurus, o el acuerdo es informal? | ⏳ Pendiente — Facundo Vasques o quien maneje la relacion comercial | Marco contractual necesario antes de operar la API a escala |
+| P-06 | ¿El tag Centaurus en Trello referenciadores implica que Compliance no pide documentación adicional? | ✅ Respondida — el tag es el disparador del proceso, no lo elimina. Desde Trello se coordina el pedido de documentación por mail, WhatsApp y posiblemente Slack (canal sin acceso para Nico). | El MVP es reemplazar ese flujo multi-canal disperso, no evitar el pedido de docs. |
+| P-07 | ¿Qué documentación adjunta Centaurus en Trello exactamente? ¿Es siempre el set completo o varía por cliente? | ⏳ Bloqueada — mismos documentos que P-04: Facu Arce (requisitos Ardua) + Santi Ahmed (requisitos Centaurus). | Define si hay gap de datos en el flujo actual |
+| P-08 | ¿Los T&C de Ardua con el cliente autorizan compartir datos con terceros como Centaurus? | ✅ Respondida — los T&C no están redactados. Cuando se redacten, el área Legal debe incluir el clause de compartir datos con terceros (qué datos, con quién, con qué fin). Prerequisito bloqueante para escalar la API. | Viabilidad legal del intercambio automatizado vía API |
+| P-09 | ¿Hay contrato firmado entre Ardua y Centaurus, o el acuerdo es informal? | ✅ Respondida — no hay contrato firmado al 2026-06-02. Antecedente: ya se formalizó este tipo de acuerdo con ADCAP (no es un template, es un precedente). El contrato con Centaurus se redacta desde cero cuando corresponda. | Marco contractual necesario antes de operar la API a escala |
 
 ---
 
@@ -149,8 +149,26 @@ La integracion con Centaurus implicaria un tercer canal o la extension de uno de
 | 2026-06-02 | Los clientes usan Ardua para transacciones y Centaurus para activos | P-01 y P-02 respondidas |
 | 2026-06-02 | Canal de intercambio: grupo WhatsApp "documentacion clientes CNT" (no formalizado) | El canal actual no es escalable — la API lo reemplaza |
 | 2026-06-02 | Volumen: ~10 clientes de Centaurus → Ardua en el ultimo mes | P-05 respondida, flujo dominante es Etapa 1 |
-| 2026-06-02 | Proto-proceso en Trello: tag Centaurus en referenciadores evita que Compliance pida doc adicional | Pendiente confirmar con Nico — si se confirma, es el MVP de la integracion |
+| 2026-06-02 | Proto-proceso en Trello: el tag Centaurus es el disparador del pedido de documentación, no lo elimina. Coordinación multi-canal: mail, WhatsApp y posible Slack. | El MVP de la integración es centralizar y automatizar ese pedido disperso |
+| 2026-06-02 | P-06 cerrada (fuente: Nico, Comercial): el flujo de pedido de docs es multi-canal y no estandarizado | Define el problema concreto que la API resuelve en Etapa 1 |
+| 2026-06-02 | P-04 y P-07: resolución documental pendiente — Facu Arce (requisitos Ardua por tipo) + Santi Ahmed (requisitos Centaurus) | El cruce de ambos documentos define el gap exacto de datos |
+| 2026-06-02 | T&C de Ardua no están redactados (P-08). El área Legal debe incluir clause de datos con terceros al redactarlos. | Prerequisito bloqueante para operar la API a escala |
+| 2026-06-02 | No hay contrato firmado Ardua–Centaurus (P-09). Antecedente: acuerdo ADCAP ya formalizado en su momento. | Prerequisito bloqueante para operar la API a escala. Se redacta desde cero cuando corresponda. |
 | 2026-06-02 | Facu Arce (Legales) va a pasar los requisitos diferenciados por tipo de onboarding (PSP vs PSAV vs Ardua) | Pendiente recibir — define el gap de datos exacto por tipo de cliente |
+
+---
+
+## Prerequisitos para la integración API
+
+Condiciones que deben estar resueltas antes de que la API pueda operar a escala. No bloquean el mapeo de gap ni el desarrollo exploratorio, pero sí bloquean el go-live.
+
+| # | Prerequisito | Estado | Área responsable |
+|---|---|---|---|
+| PRE-01 | T&C de Ardua redactados con clause explícito de datos con terceros (qué datos, con quién, con qué fin) | ❌ Bloqueante — T&C no redactados | Legal |
+| PRE-02 | Contrato firmado entre Ardua y Centaurus | ❌ Bloqueante — no hay contrato al 2026-06-02 | Legal / Comercial |
+| PRE-03 | Entidad de Ardua contraparte confirmada (P-03) | ⏳ Pendiente confirmación formal | Legal / CTO |
+| PRE-04 | LEX con capacidad de exponer datos del legajo vía API | ⏳ Pendiente evaluación técnica (Mati) | Tecnología |
+| PRE-05 | Identificador común entre sistemas Ardua y Centaurus para el mismo cliente | ⏳ Pendiente evaluación técnica (Mati) | Tecnología |
 
 ---
 
