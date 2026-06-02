@@ -31,7 +31,7 @@ Al inicio de esta investigacion el producto concreto que se ofrece al cliente fi
 
 ## Hipotesis central
 
-> Una integracion API bidireccional entre Ardua y Centaurus puede eliminar la friccion de onboarding para clientes que quieran operar en ambas plataformas. Para que sea operable desde el dia 1, los gaps normativos (perfil inversor CNV, sujeto obligado UIF) y los gaps de datos (Ardua no captura todo lo que Centaurus necesita, y viceversa) deben estar resueltos antes del desarrollo.
+> Una integracion API bidireccional entre Ardua y Centaurus puede habilitar a los clientes de cada plataforma a usar los servicios de la otra sin friccion. El modelo no implica clientes compartidos ni legajo compartido — cada plataforma mantiene sus propios clientes. Lo que se intercambia son los datos de onboarding necesarios para que cada plataforma habilite al cliente. Para que sea operable desde el dia 1, los gaps de datos entre ambos procesos de onboarding deben estar resueltos, y la integracion de Ardua con la API de Centaurus debe estar implementada.
 
 ---
 
@@ -155,6 +155,9 @@ La integracion con Centaurus implicaria un tercer canal o la extension de uno de
 | 2026-06-02 | T&C de Ardua no están redactados (P-08). El área Legal debe incluir clause de datos con terceros al redactarlos. | Prerequisito bloqueante para operar la API a escala |
 | 2026-06-02 | No hay contrato firmado Ardua–Centaurus (P-09). Antecedente: acuerdo ADCAP ya formalizado en su momento. | Prerequisito bloqueante para operar la API a escala. Se redacta desde cero cuando corresponda. |
 | 2026-06-02 | Facu Arce (Legales) va a pasar los requisitos diferenciados por tipo de onboarding (PSP vs PSAV vs Ardua) | Pendiente recibir — define el gap de datos exacto por tipo de cliente |
+| 2026-06-02 | El modelo del partnership no es de clientes compartidos ni legajo compartido — es intercambio de datos de onboarding para habilitar acceso a los servicios de cada plataforma | Reframe completo del modelo. Impacta el scope de ambos REQs |
+| 2026-06-02 | Centaurus ya tiene una API disponible. Ardua debe adaptarse a su documentacion para la Etapa 2 | Etapa 2: Ardua se integra a la API existente de Centaurus |
+| 2026-06-02 | REQs formalizados en Jira: PWI-69 (Etapa 1) y PWI-70 (Etapa 2) | Primera formalizacion del scope en Jira |
 
 ---
 
