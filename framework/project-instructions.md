@@ -283,7 +283,7 @@ The goal is not to "be right", but to **learn faster than the problem evolves**.
 
 ## 11. Session Protocol
 
-This system operates on a **shared, version-controlled knowledge base** living in the `atlas-ai-product-management-framework` Git repository. **GitHub is the single source of truth.** Every PM works against a local clone of the repository; the system reads and writes to the local filesystem, and changes are persisted to GitHub via Git.
+This system operates on a **shared, version-controlled knowledge base** living in the `products` Git repository. **GitHub is the single source of truth.** Every PM works against a local clone of the repository; the system reads and writes to the local filesystem, and changes are persisted to GitHub via Git.
 
 Every session must follow the phases below.
 
@@ -319,6 +319,8 @@ At the start of every session, or when the work touches a specific core applicat
 6. **`skills/`** — Consulted **only** when the session involves creating, modifying, or invoking a Claude Skill (e.g., `ardua-req-definition`, `ardua-req-enrichment`, `ardua-process-documentation`). Each subfolder contains a packaged skill with its `SKILL.md` and supporting assets. Not consulted for general product context.
 
 7. **`workflows/`** — Consulted **only** when the session involves implementing adjustments or improvements to the n8n workflows of the Miles Slack agent. Contains exported JSON files of active workflows. Not consulted for general product context.
+
+8. **`repositories/` (external reference, read-only)** — Container of the **real frontend repositories owned by Technology** (`core-app-frontend`, `core-lex-frontend`, `core-ops-frontend`, `core-tes-frontend`, `core-trd-frontend`). This is **not** part of the `products` repository — it lives as a sibling folder on the PM's local machine and is versioned independently by Technology. The system may **read** from it as a reference when it adds value: to understand how something is actually implemented, to contrast a definition against the real codebase during a discovery, or to ground a feature spec in the existing implementation. **The system never writes to `repositories/`** — the *how* is Technology's ownership (§3.5). When a discovery or definition draws on the real code, the reference may be cited in the body of the discovery or feature file. Consulted on demand, not as part of the default reading sequence.
 
 **Dynamic inventory:** The contents of all folders evolve over time. The system must **list the folder contents** at the start of each session and work with whatever files currently exist — it must never assume a fixed file list.
 
@@ -456,7 +458,7 @@ At the end of a productive session (if decisions, scope changes, new findings, o
 6. Provide the PM with a ready-to-execute Git command block to persist the changes to GitHub:
 
    ```bash
-   cd /path/to/atlas-ai-product-management-framework
+   cd /path/to/products
    git add -A
    git status --short
    git commit -m "<conventional commit message>"
@@ -474,7 +476,7 @@ If the session generated no persistable changes, no closing action is required.
 ### 11.6 Repository Reference
 
 ```
-atlas-ai-product-management-framework/
+products/
 ├── README.md                 → Repository overview, structure, and onboarding
 ├── CODEOWNERS                → Approval gates (framework/ reserved to Head of Product)
 ├── CONTRIBUTING.md           → Conventions, naming rules, contribution flow
@@ -482,6 +484,7 @@ atlas-ai-product-management-framework/
 │
 ├── framework/                → Foundational constraints (gated by CODEOWNERS)
 │                               Legal, operational, accounting, mission, vision, values, team
+│                               Includes jira.md (canonical PRODUCT/TECHNOLOGY board model)
 │                               Updated only when the underlying reality changes
 │                               Includes this document (project-instructions.md)
 │
@@ -510,3 +513,5 @@ atlas-ai-product-management-framework/
 ```
 
 **Single source of truth:** GitHub. Every PM works against a local clone. Changes are propagated via Git (`pull` at session start, `commit + push` at session close).
+
+**External reference (not part of this repository):** A sibling folder `repositories/` lives alongside `products/` on each PM's local machine and holds the **real frontend repositories owned by Technology** (`core-app-frontend`, `core-lex-frontend`, `core-ops-frontend`, `core-tes-frontend`, `core-trd-frontend`). It is versioned independently by Technology, is **never written to** by this system (§3.5), and is consulted **read-only** as a reference in discoveries and definitions when grounding work in the real implementation adds value (see §11.1, step 8). It is intentionally absent from the tree above because it is not part of the `products` repository.

@@ -1,6 +1,6 @@
 ---
 name: ardua-req-enrichment
-description: "Enriquece un requerimiento existente en Jira (proyecto PWI) tomando como base el hilo de Slack vinculado al ticket y la base de conocimiento del proyecto (framework, entities, discoveries, features). Soporta tres modos: Detallado (con challenge al stakeholder), Express (formateo directo, sin challenge) y Refactorización (revisión post-promoción que actualiza también el AM espejo del tablero MAIN). Produce un requerimiento estructurado en formato PWI-1. Activar cuando el usuario diga \"enriquecer un requerimiento\", \"quiero enriquecer el PWI-XX\", \"mejorar un ticket\", \"refactorizar el PWI-XX\" o similar. Si el usuario indica el modo (\"express\", \"detallado\" o \"refactorización\") en el prompt inicial, usarlo directamente; si no, preguntarlo. Si no se proporciona el key del PWI, solicitarlo antes de continuar."
+description: "Enriquece un requerimiento existente en Jira (proyecto PWI) tomando como base el hilo de Slack vinculado al ticket y la base de conocimiento del proyecto (framework, entities, discoveries, features). Soporta tres modos: Detallado (con challenge al stakeholder), Express (formateo directo, sin challenge) y Refactorización (revisión post-promoción que actualiza también el EWI espejo del tablero TECHNOLOGY). Produce un requerimiento estructurado en formato PWI-1. Activar cuando el usuario diga \"enriquecer un requerimiento\", \"quiero enriquecer el PWI-XX\", \"mejorar un ticket\", \"refactorizar el PWI-XX\" o similar. Si el usuario indica el modo (\"express\", \"detallado\" o \"refactorización\") en el prompt inicial, usarlo directamente; si no, preguntarlo. Si no se proporciona el key del PWI, solicitarlo antes de continuar."
 ---
 
 # Skill: Enriquecimiento de Requerimientos
@@ -82,10 +82,10 @@ Aplica sobre PWIs que **ya están en `SENT TO DEV`** (o estados posteriores) y n
 A diferencia de Detallado y Express, este modo:
 
 - **Preserva el status `SENT TO DEV`.** No transiciona el ticket en ningún caso.
-- **Propaga TODOS los cambios al AM espejo** del tablero MAIN. La automation que crea el AM solo se dispara una vez (al primer pase a `SENT TO DEV`); cualquier cambio posterior al PWI no se propaga automáticamente. El skill actualiza AM manualmente — descripción y summary — para mantener consistencia PWI ↔ AM.
-- **Alinea el summary del AM con el summary del PWI** (mismo string exacto).
+- **Propaga TODOS los cambios al EWI espejo** del tablero TECHNOLOGY. La automation que crea el EWI solo se dispara una vez (al primer pase a `SENT TO DEV`); cualquier cambio posterior al PWI no se propaga automáticamente. El skill actualiza EWI manualmente — descripción y summary — para mantener consistencia PWI ↔ EWI.
+- **Alinea el summary del EWI con el summary del PWI** (mismo string exacto).
 - **No usa Slack para challenge ni cierre.** Los PWIs en `SENT TO DEV` ya pasaron por enrichment original; las decisiones del refactor se validan con el PM directamente en el chat antes de ejecutar.
-- **Sigue las mismas reglas de "Foco funcional, no técnico"** y el template PWI-1 completo (Resumen, Contexto, Objetivo, Alcance, Fuera de alcance, Criterios, Dependencias, Espejo en MAIN, Solicitante).
+- **Sigue las mismas reglas de "Foco funcional, no técnico"** y el template PWI-1 completo (Resumen, Contexto, Objetivo, Alcance, Fuera de alcance, Criterios, Dependencias, Solicitante).
 
 Refactorización es operativamente delicado — afecta dos tickets en simultáneo. Validar con el PM owner del PWI el alcance del refactor antes de aplicar.
 
@@ -101,7 +101,7 @@ ask_user_input(
   options: [
     "Detallado — análisis profundo con challenge al stakeholder",
     "Express — formateo directo para mover el ticket a Sent to Dev",
-    "Refactorización — revisar un PWI ya en SENT TO DEV (también actualiza el AM espejo)"
+    "Refactorización — revisar un PWI ya en SENT TO DEV (también actualiza el EWI espejo)"
   ]
 )
 ```
@@ -110,52 +110,58 @@ ask_user_input(
 
 ---
 
-## Ciclo de vida del requerimiento (tablero PWI ↔ tablero AM)
+## Ciclo de vida del work item (tablero PWI ↔ tablero EWI)
 
-Un requerimiento existe en **dos tableros de Jira con sincronización automática** entre ellos. Entender este flujo es clave para no confundir lo que el skill puede tocar y lo que no.
+> **Fuente canónica:** el modelo completo de proyectos, boards, tipos de work item y ciclo de vida vive en `framework/jira.md`. Esta sección resume solo lo que el enriquecimiento necesita saber. Ante cualquier divergencia, prevalece `framework/jira.md`.
 
-> **⚠️ Migración en curso — TECHNOLOGY/TWI:** cuando se active el tablero **TECHNOLOGY**, el espejo del PWI dejará de crearse en MAIN (`AM-XXXX`) y pasará a crearse en TECHNOLOGY (`TWI-XXXX`). Hasta que eso ocurra, el flujo vigente es el descripto a continuación (espejo en AM). Cuando se complete la migración, actualizar este skill reemplazando todas las referencias a `AM-XXXX` / tablero MAIN / proyecto AM por `TWI-XXXX` / tablero TECHNOLOGY / proyecto TWI.
+Un work item del área de Producto vive en el proyecto **PRODUCT (PWI)**. Cuando se trata de un Requirement (el flujo tradicional) y el PM lo mueve a `SENT TO DEV`, una automatización crea un **espejo en el proyecto TECHNOLOGY (EWI)**. Entender este flujo es clave para no confundir lo que el skill puede tocar y lo que no.
 
-### Tableros involucrados
+### Sobre qué opera el enriquecimiento
 
-- **PRODUCTS (proyecto PWI)** — tablero del área de Producto. Acá nace el requerimiento (Miles lo captura desde Slack), se enriquece, y se gestiona el ciclo desde la perspectiva del producto.
-- **MAIN (proyecto AM)** — tablero de IT. Acá se ejecuta la implementación. *(Futuro: será reemplazado por el tablero TECHNOLOGY / proyecto TWI como destino del espejo.)*
+El enriquecimiento **no está atado al issue type**. Puede aplicarse a un Requirement, a un Work Automation, a una Activity o a cualquier otro work item de PWI. Lo que cambia según el tipo es si existe (o no) un espejo en EWI a sincronizar:
 
-### Estados del tablero PRODUCTS y su ownership
+- **Requirement** — al pasar a `SENT TO DEV` genera espejo en EWI. El modo Refactorización sincroniza ese espejo (ver Paso 8).
+- **Work Automation, Activities y otros** — ejecutados por Producto, **no generan espejo en EWI**. El enriquecimiento opera solo sobre el work item de PWI; el sub-flujo de sincronización del espejo no corre.
 
-| Estado           | Ownership         | Significado                                                                                              |
-| ---------------- | ----------------- | -------------------------------------------------------------------------------------------------------- |
-| `BACKLOG`        | Producto          | PWI capturado por Miles, sin enriquecer todavía                                                          |
-| `IN ANALYSIS`    | Producto          | Enriquecimiento en proceso (challenges abiertos, validaciones con stakeholder)                           |
-| `IN PROGRESS`    | Producto          | Solo para **tasks internas del área de Producto** (no aplica al flujo estándar de un PWI de stakeholder) |
-| `BLOCKED`        | Producto          | Bloqueado por dependencia externa al área                                                                |
-| `DEPRECATED`     | Producto          | Requerimiento descartado o absorbido por otro                                                            |
-| `SENT TO DEV`    | Espejado desde AM | Se disparó la automation y el espejo en AM fue creado                                                    |
-| `READY FOR DEV`  | Espejado desde AM | Refleja el estado del AM espejo                                                                          |
-| `IN DEVELOPMENT` | Espejado desde AM | Refleja el estado del AM espejo                                                                          |
-| `DONE`           | Espejado desde AM | Refleja el estado del AM espejo                                                                          |
+Regla operativa: el sub-flujo que toca el espejo en EWI **solo se ejecuta cuando el espejo existe** (se detecta por el vínculo `causes` / `is caused by`). Si no hay espejo, el enriquecimiento termina en PWI.
 
-Los cuatro estados de la mitad inferior **no son ownership de Producto** — reflejan literalmente cómo se mueve el ticket espejo en el tablero de Tecnología.
+### Estados del tablero PRODUCT y su ownership
 
-### El momento clave: pasar a `SENT TO DEV`
+| Estado           | Ownership          | Significado                                                                                              |
+| ---------------- | ------------------ | -------------------------------------------------------------------------------------------------------- |
+| `BACKLOG`        | Producto           | Work item capturado (ej: por Miles), sin enriquecer todavía                                              |
+| `IN ANALYSIS`    | Producto           | Enriquecimiento en proceso (challenges abiertos, validaciones con stakeholder)                           |
+| `IN PROGRESS`    | Producto           | Para tasks internas del área de Producto que ejecuta Producto y no van a Tecnología                      |
+| `BLOCKED`        | Producto           | Bloqueado por dependencia externa al área                                                                |
+| `DEPRECATED`     | Producto           | Work item descartado o absorbido por otro                                                                |
+| `SENT TO DEV`    | Espejado desde EWI | (Solo Requirements) Se disparó la automation y el espejo en EWI fue creado                               |
+| `READY FOR DEV`  | Espejado desde EWI | Refleja el estado del espejo en EWI                                                                       |
+| `IN DEVELOPMENT` | Espejado desde EWI | Refleja el estado del espejo en EWI                                                                       |
+| `DONE`           | Espejado desde EWI | Refleja el estado del espejo en EWI                                                                       |
 
-Cuando el PM transiciona el PWI a `SENT TO DEV` (manualmente, no lo hace el skill), se dispara una **automation que crea un ticket espejo en el tablero AM**, vinculado al PWI con relación `causes` y heredando la descripción enriquecida. El espejo arranca en `TO REFINEMENT` (primer estado del workflow de AM). Desde ese punto, los estados `SENT TO DEV`, `READY FOR DEV`, `IN DEVELOPMENT` y `DONE` del PWI se mueven según se mueva el AM espejo.
+Los cuatro estados de la mitad inferior **no son ownership de Producto** — reflejan literalmente cómo se mueve el espejo en el tablero de Tecnología.
 
-El tablero AM tiene su propio set de estados, más granulares que los cuatro reflejados en el PWI (incluye etapas internas de refinamiento técnico, desarrollo y code review). El skill no necesita conocer ese mapping en detalle — basta con entender que **los cuatro estados sincronizados del PWI son una vista resumida del progreso real en AM**.
+### El momento clave: pasar a `SENT TO DEV` (solo Requirements)
+
+Cuando el PM transiciona un Requirement a `SENT TO DEV` (manualmente, no lo hace el skill), se dispara una **automation que crea una Épica espejo en EWI**, vinculada al Requirement con relación `causes` y heredando la descripción enriquecida. La Épica arranca en `TO REFINEMENT`, en el **board de Refinement** de EWI.
+
+EWI tiene dos boards (ver `framework/jira.md`): Refinement (solo Épicas, para el refinamiento técnico) y Development (Stories/Tasks/Subtasks, para la ejecución). Cuando el refinamiento se completa y la Épica pasa a `READY FOR DEV`, una automatización **cambia su issue type de Épica a Story** (y el de sus hijos de Task a Subtask): el work item desaparece del board de Refinement y aparece en el de Development. El mismo EWI-XX persiste — solo cambia de tipo — y el Requirement en PWI sigue asociado a él sin importar su nuevo tipo.
+
+Para el enriquecimiento esto importa en un solo punto: **al buscar el espejo, hacerlo por el vínculo `causes` / `is caused by`, nunca asumiendo que es una Épica** — puede ya haberse transformado en Story.
 
 ### Implicancia directa para el enriquecimiento
 
-La descripción enriquecida que produce este skill **es la base sobre la que Desarrollo va a trabajar** — no es solo documentación de Producto. Esto refuerza tres reglas:
+La descripción enriquecida que produce este skill **es la base sobre la que Desarrollo va a trabajar** (cuando hay espejo) — no es solo documentación de Producto. Esto refuerza tres reglas:
 
-1. **El enriquecimiento debe estar completo antes de transicionar a `SENT TO DEV`.** Después, cualquier ajuste implica intervenir tanto el PWI como el AM espejo, lo cual es operativamente caro.
+1. **El enriquecimiento debe estar completo antes de transicionar a `SENT TO DEV`.** Después, cualquier ajuste implica intervenir tanto el work item de PWI como el espejo en EWI, lo cual es operativamente caro.
 2. **El contenido debe ser funcionalmente claro** para que Desarrollo pueda traducirlo a definición técnica sin ambigüedad (ver sección "Foco funcional, no técnico").
-3. **El skill nunca transiciona el ticket.** La transición a `SENT TO DEV` la hace el PM manualmente después de revisar el enriquecimiento — porque dispara la creación del espejo en AM, que es un evento operativo significativo.
+3. **El skill nunca transiciona el ticket.** La transición a `SENT TO DEV` la hace el PM manualmente después de revisar el enriquecimiento — porque dispara la creación del espejo en EWI, que es un evento operativo significativo.
 
 ---
 
 ## Base de conocimientos del proyecto
 
-Las fuentes de conocimiento viven en el repositorio `atlas-ai-product-management-framework`, que cada integrante del área de Producto clona en su máquina. La ruta concreta varía por usuario y sistema operativo (macOS, Windows, Linux); se resuelve dinámicamente en el Paso 0c y se referencia en este skill como `<KB_ROOT>`. Antes de cargar cada carpeta, listar su contenido con `Filesystem:list_directory` — no asumir qué archivos existen.
+Las fuentes de conocimiento viven en el repositorio `products`, que cada integrante del área de Producto clona en su máquina. La ruta concreta varía por usuario y sistema operativo (macOS, Windows, Linux); se resuelve dinámicamente en el Paso 0c y se referencia en este skill como `<KB_ROOT>`. Antes de cargar cada carpeta, listar su contenido con `Filesystem:list_directory` — no asumir qué archivos existen.
 
 **Requisito de entorno:** este skill depende del Filesystem MCP para leer el repositorio clonado, por lo que solo opera en Claude Desktop.
 
@@ -340,14 +346,6 @@ Estas quedaron identificadas durante el enriquecimiento pero no se profundizaron
 
 ---
 
-## Espejo en MAIN
-
-Delivery story: **AM-XXXX**.
-
-[Nota opcional sobre qué entrega este PWI vs. qué entregan PWIs por área cuando aplica.]
-
----
-
 **Solicitante:** [Nombre — Rol]
 **Prototipo:** [referencia dentro de prototypes/[aplicacion]/ — ruta interna como /proveedores-de-liquidez, URL desplegada, o nombre del componente/vista] ← solo si la feature ya está representada en prototypes/[aplicacion]/
 ```
@@ -358,7 +356,7 @@ Para PWIs que entregan infraestructura transversal del core (consumida por todas
 
 `**Sistema:** CORE (transversal)`
 
-El resto de la metadata queda igual (Tipo, Prioridad, Carácter). Todo el body (Resumen, Contexto, ... , Espejo en MAIN, Solicitante) se construye exactamente igual que en Variant A.
+El resto de la metadata queda igual (Tipo, Prioridad, Carácter). Todo el body (Resumen, Contexto, ... , Solicitante) se construye exactamente igual que en Variant A.
 
 ---
 
@@ -373,7 +371,6 @@ El resto de la metadata queda igual (Tipo, Prioridad, Carácter). Todo el body (
 
 - **Resumen:** primero después de la metadata. 2-3 párrafos densos. Cuenta qué es el PWI, qué cambia, las propiedades estructurales clave si las hay, y qué entrega concretamente. Permite que un lector entienda el PWI sin leerlo completo.
 - **Dependencias:** lista de PWIs o sistemas externos que este PWI necesita o que dependen de él. Una línea por dependencia, con prosa que aclara la dirección (qué provee / qué consume). Si el PWI es transversal habilitante, los consumidores se mencionan en esta misma lista identificándolos como tales.
-- **Espejo en MAIN:** una línea con `Delivery story: AM-XXXX` referenciando el ticket espejo. Si el PWI se entrega en partes (parte por este PWI + partes por PWIs por área, por ejemplo), agregar una nota corta aclarando el reparto.
 
 ---
 
@@ -460,18 +457,19 @@ Si el modo no está claro → usar `ask_user_input` (ver sección "Selección de
 
 #### 0c. Resolver `KB_ROOT` (silencioso)
 
-Resolver dinámicamente la ubicación del repositorio `atlas-ai-product-management-framework` en la máquina del usuario. **No comentar este paso en el chat** — se ejecuta por debajo y `KB_ROOT` se utiliza internamente en todos los pasos siguientes.
+Resolver dinámicamente la ubicación del repositorio `products` en la máquina del usuario. **No comentar este paso en el chat** — se ejecuta por debajo y `KB_ROOT` se utiliza internamente en todos los pasos siguientes.
+
+El nombre de carpeta `products` es genérico y puede colisionar con otras carpetas, por lo que la resolución **no se basa en el nombre** sino en la **estructura interna del repo**. Un directorio es `KB_ROOT` si contiene simultáneamente las subcarpetas `framework/`, `discoveries/` y `features/` (firma estructural del repo del framework).
 
 1. Llamar a `Filesystem:list_allowed_directories`.
-2. Buscar entre las rutas devueltas una cuyo último segmento sea exactamente `atlas-ai-product-management-framework`. Esa ruta es `KB_ROOT`.
-3. Si no aparece directamente:
-   - Probar `Filesystem:search_files` con pattern `atlas-ai-product-management-framework` desde el primer allowed directory.
-   - Si tampoco aparece, recién entonces preguntar al usuario:
-     > _"No encuentro el repo `atlas-ai-product-management-framework` entre los directorios accesibles. ¿Podés pasarme la ruta donde lo tenés clonado, o agregarlo a las allowed directories del Filesystem MCP?"_
+2. Para cada ruta devuelta, listar su contenido con `Filesystem:list_directory` y verificar si contiene las tres subcarpetas firma (`framework/`, `discoveries/`, `features/`). La primera ruta que las contenga es `KB_ROOT`.
+3. Si ninguna allowed directory las contiene directamente, listar las subcarpetas de cada allowed directory y repetir la verificación un nivel más abajo (el repo puede estar clonado dentro de una carpeta contenedora).
+4. Si aún no aparece, recién entonces preguntar al usuario:
+   > _"No encuentro el repo `products` (la carpeta con `framework/`, `discoveries/` y `features/`) entre los directorios accesibles. ¿Podés pasarme la ruta donde lo tenés clonado, o agregarlo a las allowed directories del Filesystem MCP?"_
 
 **Notas:**
 
-- El nombre del repo es estable entre integrantes (es el default de `git clone`), por lo que el match por nombre de carpeta funciona tanto en macOS, Windows como Linux.
+- La verificación por estructura es robusta entre sistemas operativos (macOS, Windows, Linux) y no depende de que la carpeta conserve el nombre `products` — funciona aunque el usuario la haya clonado con otro nombre.
 - Si el Filesystem MCP no está disponible (ej: claude.ai web/mobile), informar al usuario que el skill requiere Claude Desktop y detener el flujo.
 
 A partir de este punto, todas las referencias a `<KB_ROOT>/` en el skill se interpretan como la ruta resuelta.
@@ -674,8 +672,6 @@ Producir el requerimiento completo siguiendo la estructura PWI-1 (ver sección "
 
 - **Cuestiones pendientes de revisión (solo Express, condicional):** incluir la sección `## 🔍 Cuestiones pendientes de revisión` si durante el Paso 4 emergieron cuestiones sin resolver. Si no hay, omitir la sección completa.
 
-- **Espejo en MAIN:** una línea con `Delivery story: AM-XXXX`. Si el PWI todavía no se transicionó a `SENT TO DEV` (modos Detallado/Express), no hay AM asignado aún: usar `Delivery story: pendiente (se asigna al promover a SENT TO DEV)` o coordinar con el PM para completar el campo después de la transición. En modo Refactorización el AM ya existe — usar el key real obtenido via `issuelinks`.
-
 - **Modo de enriquecimiento (campo opcional):** no incluir en el template por default. Agregar solo en PWIs Express como trazabilidad de proceso, especialmente si hay sección de "Cuestiones pendientes". En PWIs Detallados o Refactorización grandes y consolidados, omitir — no aporta valor al lector final.
 
 - **Solicitante:** Inferido del hilo de Slack (quién envió a Miles) o del ticket si no hay hilo.
@@ -707,18 +703,18 @@ Usar `Atlassian:editJiraIssue` con `contentFormat: adf`. La descripción debe se
 
 Si el modo es Refactorización y el summary del PWI cambia, actualizar también el campo `summary` en la misma llamada para mantener consistencia con el campo `Requerimiento:` de la descripción.
 
-**Sub-flujo solo en modo Refactorización — actualizar el AM espejo:**
+**Sub-flujo solo en modo Refactorización — actualizar el EWI espejo:**
 
-La automation que crea el AM espejo solo se dispara una vez (al primer pase a `SENT TO DEV`). Cualquier cambio posterior al PWI no se propaga automáticamente, por lo que el skill actualiza AM manualmente:
+La automation que crea el EWI espejo solo se dispara una vez (al primer pase a `SENT TO DEV`). Cualquier cambio posterior al PWI no se propaga automáticamente, por lo que el skill actualiza EWI manualmente:
 
-1. **Encontrar el AM espejo.** Leer los `issuelinks` del PWI vía `Atlassian:getJiraIssue` con `fields=["issuelinks"]`. Filtrar el link cuyo `type.outward == "causes"` y tomar `outwardIssue.key`. Ese es el AM espejo (proyecto MAIN, mismo `cloudId`: `53eec1f8-a156-4af9-bc3a-d6142b50e0cc`).
-2. **Construir la descripción del AM.** Usar el mismo cuerpo enriquecido que se acaba de guardar en la descripción del PWI — idéntico, sin modificaciones adicionales. La consistencia entre PWI y AM se garantiza porque ambos comparten el mismo contenido.
-3. **Actualizar el AM** vía `Atlassian:editJiraIssue` sobre el key del AM:
+1. **Encontrar el EWI espejo.** Leer los `issuelinks` del PWI vía `Atlassian:getJiraIssue` con `fields=["issuelinks"]`. Filtrar el link cuyo `type.outward == "causes"` y tomar `outwardIssue.key`. Ese es el EWI espejo (proyecto TECHNOLOGY, mismo `cloudId`: `53eec1f8-a156-4af9-bc3a-d6142b50e0cc`). **No asumir el issue type del espejo:** según su avance puede ser todavía una Épica (board de Refinement) o ya haberse transformado en Story (board de Development) — ver `framework/jira.md`. Si no existe ningún link `causes` (ej: el work item es una Activity sin espejo), no hay nada que sincronizar: el refactor termina en PWI.
+2. **Construir la descripción del EWI.** Usar el mismo cuerpo enriquecido que se acaba de guardar en la descripción del PWI — idéntico, sin modificaciones adicionales. La consistencia entre PWI y EWI se garantiza porque ambos comparten el mismo contenido.
+3. **Actualizar el EWI** vía `Atlassian:editJiraIssue` sobre el key del EWI:
    - `description` con el cuerpo construido (formato ADF).
    - `summary` igualado al summary del PWI (mismo string exacto).
-4. **No transicionar el AM.** El skill no toca el status del AM bajo ninguna circunstancia. Si Desarrollo ya movió el AM a un estado posterior (IN REFINEMENT, EN CURSO, etc.), el refactor solo actualiza descripción y summary; el progreso de desarrollo no se pierde.
+4. **No transicionar el EWI.** El skill no toca el status del EWI bajo ninguna circunstancia. Si Desarrollo ya movió el EWI a un estado posterior (IN REFINEMENT, EN CURSO, etc.), el refactor solo actualiza descripción y summary; el progreso de desarrollo no se pierde.
 
-**IMPORTANTE — no transicionar el PWI.** El skill solo actualiza la descripción del PWI. La transición a `SENT TO DEV` (u otro estado) la hace el PM manualmente desde Jira, **porque ese pase dispara la automation que crea el ticket espejo en el tablero AM** (proyecto de Tecnología) con relación `causes` y heredando la descripción enriquecida. Ver sección "Ciclo de vida del requerimiento (tablero PWI ↔ tablero AM)" para el detalle del flujo. En modo Refactorización el PWI ya está en `SENT TO DEV` o posterior — nunca se transiciona en ningún caso.
+**IMPORTANTE — no transicionar el PWI.** El skill solo actualiza la descripción del PWI. La transición a `SENT TO DEV` (u otro estado) la hace el PM manualmente desde Jira, **porque ese pase dispara la automation que crea el ticket espejo en el tablero EWI** (proyecto de Tecnología) con relación `causes` y heredando la descripción enriquecida. Ver sección "Ciclo de vida del work item (tablero PWI ↔ tablero EWI)" para el detalle del flujo. En modo Refactorización el PWI ya está en `SENT TO DEV` o posterior — nunca se transiciona en ningún caso.
 
 **Cierre en Slack/chat:**
 
@@ -726,7 +722,7 @@ La automation que crea el AM espejo solo se dispara una vez (al primer pase a `S
 - **Detallado sin hilo** → confirmar en chat + recomendar vincular hilo para futuras iteraciones
 - **Express con hilo** → publicar cierre Express en el hilo (incluyendo sección de cuestiones pendientes si existen)
 - **Express sin hilo** → confirmar en chat + recomendar vincular hilo
-- **Refactorización** → **silencio total en Slack**. Confirmar al PM en el chat con un mensaje corto: _"Refactor aplicado. PWI-XX actualizado en Jira y AM-XXXX espejo sincronizado (descripción + summary alineados, sin transicionar)."_
+- **Refactorización** → **silencio total en Slack**. Confirmar al PM en el chat con un mensaje corto: _"Refactor aplicado. PWI-XX actualizado en Jira y EWI-XXXX espejo sincronizado (descripción + summary alineados, sin transicionar)."_
 
 **Flaguear al cierre** (en cualquier modo):
 
@@ -859,8 +855,8 @@ El enriquecimiento **no genera discoveries por default**. Los discoveries captur
 - **No define el detalle visual fino** (paleta, ejes, tooltips, animaciones, layout exacto) — queda diferido a refinement con Diseño + Tecnología. Ver "Patrones de construcción del PWI — Detalle visual diferido a refinement".
 - **No define cómo se implementa una capacidad** — solo qué hace el sistema y por qué. Ver sección "Foco funcional, no técnico".
 - No toma decisiones de scope sin respaldo en el knowledge base
-- **No transiciona el ticket en Jira** — ni el PWI ni el AM espejo, en ningún modo. La transición del PWI a `SENT TO DEV` la hace el PM manualmente y dispara la creación del ticket espejo en el tablero AM. El status del AM lo gestiona Desarrollo.
-- **No toca el AM espejo en modos Detallado ni Express** — el skill opera exclusivamente sobre el PWI del tablero PRODUCTS en esos modos. En modo Refactorización sí actualiza descripción y summary del AM espejo para mantener consistencia con el PWI (el status del AM nunca se toca).
+- **No transiciona el ticket en Jira** — ni el PWI ni el EWI espejo, en ningún modo. La transición del PWI a `SENT TO DEV` la hace el PM manualmente y dispara la creación del ticket espejo en el tablero EWI. El status del EWI lo gestiona Desarrollo.
+- **No toca el EWI espejo en modos Detallado ni Express** — el skill opera exclusivamente sobre el work item del proyecto PRODUCT en esos modos. En modo Refactorización sí actualiza descripción y summary del EWI espejo para mantener consistencia con el PWI (el status del EWI nunca se toca).
 - No omite la carga del knowledge base (con o sin hilo, en cualquier modo)
 - No actualiza Jira sin confirmación explícita del usuario
 - **No publica challenges en el hilo de Slack sin aprobación explícita del PM** — el challenge siempre se presenta primero en el chat para revisión, ajustes o cancelación
@@ -918,15 +914,15 @@ El enriquecimiento **no genera discoveries por default**. Los discoveries captur
       ↓
 [Generar requerimiento enriquecido — formato PWI-1]
    • Metadata: Variant A (Aplicación/Módulo) o Variant B (Sistema: CORE)
-   • Resumen, Dependencias, Espejo en MAIN (secciones estándar)
+   • Resumen, Dependencias (secciones estándar)
    • Sección "Cuestiones pendientes" solo si Express + cuestiones
       ↓
 [Presentar al usuario]
       ↓
 [Confirmar → Actualizar Jira (ADF, SIN transicionar)]
    REFACTORIZACIÓN además:
-      → Buscar AM espejo vía issuelinks (outward "causes")
-      → Actualizar AM description (idéntica al PWI) + summary
+      → Buscar EWI espejo vía issuelinks (outward "causes")
+      → Actualizar EWI description (idéntica al PWI) + summary
       ↓
 [Publicar cierre]
    DETALLADO con hilo  → ✅ cierre detallado en hilo
@@ -941,8 +937,8 @@ El enriquecimiento **no genera discoveries por default**. Los discoveries captur
       ↓
 [Handoff al Product Manager] (solo Detallado/Express)
    El PM revisa el enriquecimiento y, cuando confirma, transiciona
-   el PWI a SENT TO DEV → automation crea ticket espejo en AM con
+   el PWI a SENT TO DEV → automation crea ticket espejo en EWI con
    relación `causes` y descripción heredada. Skill ya terminó.
-   (En Refactorización no hay handoff externo: PWI y AM ya quedaron
+   (En Refactorización no hay handoff externo: PWI y EWI ya quedaron
     sincronizados; no hay transición de estado pendiente.)
 ```
