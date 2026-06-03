@@ -7,6 +7,7 @@ created_at: 2026-05-20
 updated_at: 2026-06-03
 propagates_to:
   - features/lex/README.md
+  - features/lex/lex-operatoria-quotes.md
 ---
 
 # LEX — Visibilidad de quotes del rulo en el detalle de cliente
