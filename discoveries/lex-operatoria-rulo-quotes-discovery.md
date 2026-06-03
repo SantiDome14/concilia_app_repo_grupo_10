@@ -86,19 +86,20 @@ En validación presencial con Camila (2026-05-20), la vista B (tabla transaccion
 
 **Fuente:** validación presencial con Camila Cattaneo (2026-05-20).
 
-### D-07 — Tabla con 7 columnas de datos y 2 columnas de selección intercaladas
+### D-07 — Tabla con 6 columnas de datos y 2 columnas de selección intercaladas
 
 | # | Columna | Tipo | Descripción |
 |---|---|---|---|
 | 1 | Fecha | Dato | Fecha y hora del quote |
 | 2 | Tipo de trade | Dato | BUY / SELL |
-| 3 | Tipo de TC | Dato | MEP / CCL |
-| 4 | Valor del TC | Dato | Valor numérico del tipo de cambio aplicado por Mesa al cerrar la operación |
-| 5 | Promediar TC | Selección | Checkbox por fila — sin master checkbox en el header |
-| 6 | Monto fiat | Dato | Monto con moneda como prefijo inline (ej. `ARS 42.518.400,00`, `USD 12.500,00`). Formato `###.###.###,##` |
-| 7 | Total Fiat | Selección | Checkbox por fila — con master checkbox en el header |
-| 8 | Monto crypto | Dato | Monto con tipo de crypto como prefijo inline (ej. `USDC 36.420,00`). Moneda en gris, monto alineado a la derecha. Formato `###.###.###,##` |
-| 9 | Comitente | Dato | Docket del cliente como badge (AS en violeta / CIR en azul) |
+| 3 | Valor del TC | Dato | Valor numérico del tipo de cambio aplicado por Mesa al cerrar la operación |
+| 4 | Promediar TC | Selección | Checkbox por fila — sin master checkbox en el header |
+| 5 | Monto fiat | Dato | Monto con moneda como prefijo inline (ej. `ARS 42.518.400,00`, `USD 12.500,00`). Formato `###.###.###,##` |
+| 6 | Total Fiat | Selección | Checkbox por fila — con master checkbox en el header |
+| 7 | Monto crypto | Dato | Monto con tipo de crypto como prefijo inline (ej. `USDC 36.420,00`). Moneda en gris, monto alineado a la derecha. Formato `###.###.###,##` |
+| 8 | Comitente | Dato | Docket del cliente como badge (AS en violeta / CIR en azul) |
+
+**Nota:** la columna "Tipo de TC" (MEP / CCL) fue eliminada en iteración 2026-06-03. Ardua opera un único tipo de TC — la distinción MEP/CCL no es aplicable. Confirmación: Santiago Ahmed (2026-06-03).
 
 La columna `Promediar TC` está ubicada inmediatamente a la derecha de `Valor del TC`. La columna `Total Fiat` está ubicada inmediatamente a la derecha de `Monto fiat`.
 
@@ -190,3 +191,4 @@ Dos cálculos independientes activados por selección de filas mediante columnas
 | 2026-05-20 | Tabla reducida a 7 columnas: "Moneda fiat" eliminada (rulo opera solo en ARS → renombrada a "Monto fiat (ARS)"). "Tipo de crypto" eliminada e integrada como prefijo inline en "Monto crypto". |
 | 2026-05-21 | Iteración con Camila: moneda fiat puede ser ARS o USD (no solo ARS). Dos modos de filtro incorporados (por meses y por fecha exacta con exclusión mutua). D-11 cerrada: cálculos por selección de filas (Total Fiat y Promedio de TC con chips independientes en footer). Sección renombrada de "Rulo" a "Quotes". REQ-82 actualizado en Jira. |
 | 2026-06-03 | Hipótesis de gestión documental identificada a partir de observación directa con Camila (carpetas locales por quote). Capturada en `lex-operatoria-documentacion-discovery.md`. |
+| 2026-06-03 | Columna "Tipo de TC" eliminada de D-07 y del feature file: Ardua opera un único tipo de TC, la distinción MEP/CCL no aplica. Confirmación: Santiago Ahmed (2026-06-03). Tickets PWI-53 y EWI-125 actualizados. |

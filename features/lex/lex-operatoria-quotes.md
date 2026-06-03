@@ -39,18 +39,17 @@ Detalle de cliente → Tab Operatoria → Sección "Quotes"
 
 ## Tabla de historial
 
-Cada fila = un quote. 7 columnas de datos + 1 columna de selección, todas provenientes de TRD.
+Cada fila = un quote. 6 columnas de datos + 1 columna de selección, todas provenientes de TRD.
 
 | # | Columna | Tipo | Formato |
 |---|---|---|---|
 | 1 | Fecha | Dato | Fecha y hora del quote |
 | 2 | Tipo de trade | Dato | `BUY` / `SELL` |
-| 3 | Tipo de TC | Dato | `MEP` / `CCL` |
-| 4 | Valor del TC | Dato | Numérico `#,###,###.##` |
-| 5 | Monto fiat | Dato | Moneda como prefijo inline · `ARS 42,518,400.00` / `USD 12,500.00` · formato `#,###,###.##` |
-| 6 | Total Fiat | Selección | Checkbox por fila — master checkbox en header (3 estados: marcado / indeterminado / vacío) |
-| 7 | Monto crypto | Dato | Tipo de crypto como prefijo inline en gris · `USDC 36,420.00` · monto alineado a la derecha |
-| 8 | Comitente | Dato | Docket como badge: `AS` violeta / `CIR` azul |
+| 3 | Valor del TC | Dato | Numérico `#,###,###.##` |
+| 4 | Monto fiat | Dato | Moneda como prefijo inline · `ARS 42,518,400.00` / `USD 12,500.00` · formato `#,###,###.##` |
+| 5 | Total Fiat | Selección | Checkbox por fila — master checkbox en header (3 estados: marcado / indeterminado / vacío) |
+| 6 | Monto crypto | Dato | Tipo de crypto como prefijo inline en gris · `USDC 36,420.00` · monto alineado a la derecha |
+| 7 | Comitente | Dato | Docket como badge: `AS` violeta / `CIR` azul |
 
 **Footer:** chip de cálculo anclado al pie de la columna `Total Fiat`. No hay header de totales — el footer muestra únicamente el chip activo cuando hay filas seleccionadas.
 
