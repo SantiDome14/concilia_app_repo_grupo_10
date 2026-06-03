@@ -129,7 +129,7 @@ Regla operativa: el sub-flujo que toca el espejo en EWI **solo se ejecuta cuando
 
 | Estado           | Ownership          | Significado                                                                                              |
 | ---------------- | ------------------ | -------------------------------------------------------------------------------------------------------- |
-| `BACKLOG`        | Producto           | Work item capturado (ej: por Miles), sin enriquecer todavía                                              |
+| `TO DO`          | Producto           | Work item capturado (ej: por Miles), sin enriquecer todavía                                              |
 | `IN ANALYSIS`    | Producto           | Enriquecimiento en proceso (challenges abiertos, validaciones con stakeholder)                           |
 | `IN PROGRESS`    | Producto           | Para tasks internas del área de Producto que ejecuta Producto y no van a Tecnología                      |
 | `BLOCKED`        | Producto           | Bloqueado por dependencia externa al área                                                                |
@@ -404,10 +404,10 @@ Cuatro patrones recurrentes en PWIs producto-grade. Aplicarlos cuando correspond
 
 Cuando el PWI introduce o consolida un modelo del dominio (entidades, discriminadores, relaciones), dedicar la **§1 del Alcance funcional** a explicarlo en prosa + tablas funcionales, sin código. Esto permite que el resto del Alcance se lea sobre una base entendida.
 
-**Ejemplos canónicos** (del set PWI-81):
+**Cómo se ve en la práctica:**
 
-- **PWI-68 (Acciones)** — la distinción entre `record_mutation` y `function_invocation` se explica como tabla con columnas "Tipo | Qué hace | Ejemplos típicos", sin TypeScript.
-- **PWI-69 (Vistas)** — la transición drag-drop se documenta como "literalmente una acción del manifest" — propiedad estructural del modelo, en prosa, sin contrato de código.
+- Cuando el modelo tiene un **discriminador central** (un tipo que parte el comportamiento en dos o más ramas), explicarlo como tabla con columnas "Tipo | Qué hace | Ejemplos típicos", sin TypeScript ni `interface`. El lector entiende la distinción antes de entrar al detalle de cada rama.
+- Cuando una mecánica del producto es en realidad **una instancia de otra ya definida** (ej: una interacción de UI que por debajo es la misma operación que una acción del catálogo), documentarla como propiedad estructural en prosa — "X es literalmente una Y" — sin bajar al contrato de código. Comunica la economía del modelo sin acoplar el PWI a la implementación.
 
 ### Tablas funcionales sobre TypeScript
 
