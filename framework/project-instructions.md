@@ -189,15 +189,15 @@ The `features/common/` folder follows the same structure (`README.md` + per-capa
 
 Discoveries cover a broad range of inquiries, not just product features. The framework recognizes seven categories based on the **nature of what is being investigated**:
 
-| Category | Naming pattern | Example | `features:` frontmatter |
-|---|---|---|---|
-| Product — application (umbrella) | `[aplicacion]-discovery.md` | `clp-discovery.md` | `[CLP]` |
-| Product — module | `[aplicacion]-[modulo]-discovery.md` | `lex-alertas-discovery.md` | `[LEX]` |
-| Product — functionality | `[aplicacion]-[modulo]-[funcionalidad]-discovery.md` | `fin-reporteria-pnl-discovery.md` | `[FIN]` |
-| Product — transversal feature | `[feature]-discovery.md` | `centro-de-alertas-discovery.md` | `[COMMON]` |
-| Cross-core architecture | `core-[topic]-discovery.md` | `core-modulos-transversales-discovery.md` | `[CORE]` |
-| Internal infrastructure | `[topic]-discovery.md` | `observabilidad-discovery.md` | `[]` |
-| Process / tooling / methodology | `[topic]-discovery.md` | `jira-sla-discovery.md` | `[]` |
+| Category                         | Naming pattern                                       | Example                                   | `features:` frontmatter |
+| -------------------------------- | ---------------------------------------------------- | ----------------------------------------- | ----------------------- |
+| Product — application (umbrella) | `[aplicacion]-discovery.md`                          | `clp-discovery.md`                        | `[CLP]`                 |
+| Product — module                 | `[aplicacion]-[modulo]-discovery.md`                 | `lex-alertas-discovery.md`                | `[LEX]`                 |
+| Product — functionality          | `[aplicacion]-[modulo]-[funcionalidad]-discovery.md` | `fin-reporteria-pnl-discovery.md`         | `[FIN]`                 |
+| Product — transversal feature    | `[feature]-discovery.md`                             | `centro-de-alertas-discovery.md`          | `[COMMON]`              |
+| Cross-core architecture          | `core-[topic]-discovery.md`                          | `core-modulos-transversales-discovery.md` | `[CORE]`                |
+| Internal infrastructure          | `[topic]-discovery.md`                               | `observabilidad-discovery.md`             | `[]`                    |
+| Process / tooling / methodology  | `[topic]-discovery.md`                               | `jira-sla-discovery.md`                   | `[]`                    |
 
 **Notes:**
 
@@ -330,14 +330,14 @@ If a core application or module in focus has no `features/[aplicacion]/README.md
 
 The system must propose updating files when any of the following events occur:
 
-| Event | File to update |
-| ----- | -------------- |
-| A new hypothesis is captured | `discoveries/[name]-discovery.md` (new or existing) + `discoveries/INDEX.md` |
-| A hypothesis is validated, discarded, or refined | `discoveries/[name]-discovery.md` AND propagation to the destination(s) declared in `propagates_to:` (see §5.1) + `discoveries/INDEX.md` |
-| A scope or design decision is made | `features/[aplicacion]/[...].md` (the affected feature or the global README) |
-| The state of a product changes (new module, deprecated module, milestone) | `features/[aplicacion]/README.md` |
-| A prototype is created or iterated | `prototypes/[aplicacion]/` (the corresponding files inside the project folder) |
-| New information about an entity surfaces | `entities/[nombre-entidad].md` |
+| Event                                                                     | File to update                                                                                                                           |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| A new hypothesis is captured                                              | `discoveries/[name]-discovery.md` (new or existing) + `discoveries/INDEX.md`                                                             |
+| A hypothesis is validated, discarded, or refined                          | `discoveries/[name]-discovery.md` AND propagation to the destination(s) declared in `propagates_to:` (see §5.1) + `discoveries/INDEX.md` |
+| A scope or design decision is made                                        | `features/[aplicacion]/[...].md` (the affected feature or the global README)                                                             |
+| The state of a product changes (new module, deprecated module, milestone) | `features/[aplicacion]/README.md`                                                                                                        |
+| A prototype is created or iterated                                        | `prototypes/[aplicacion]/` (the corresponding files inside the project folder)                                                           |
+| New information about an entity surfaces                                  | `entities/[nombre-entidad].md`                                                                                                           |
 
 **Critical propagation rule:** when a discovery concludes, the system must **always propose propagating** the conclusion to wherever the solution lives — `features/`, `framework/`, `entities/`, `workflows/`, `skills/`, or any combination thereof — as declared in the discovery's `propagates_to:` field. A concluded discovery whose conclusion did not propagate to its declared destination(s) is a leak.
 
@@ -398,15 +398,15 @@ When a single discovery propagates to multiple destinations, the propagation ste
 
 Discovery naming follows the seven categories defined in §5.4. Choose the narrowest pattern that fits the scope of the hypothesis being investigated:
 
-| Category | Pattern | Example |
-|---|---|---|
-| Product — application (umbrella) | `[aplicacion]-discovery.md` | `clp-discovery.md` |
-| Product — module | `[aplicacion]-[modulo]-discovery.md` | `lex-alertas-discovery.md` |
-| Product — functionality | `[aplicacion]-[modulo]-[funcionalidad]-discovery.md` | `fin-reporteria-pnl-discovery.md` |
-| Product — transversal feature | `[feature]-discovery.md` | `centro-de-alertas-discovery.md` |
-| Cross-core architecture | `core-[topic]-discovery.md` | `core-modulos-transversales-discovery.md` |
-| Internal infrastructure | `[topic]-discovery.md` | `observabilidad-discovery.md` |
-| Process / tooling / methodology | `[topic]-discovery.md` | `jira-sla-discovery.md` |
+| Category                         | Pattern                                              | Example                                   |
+| -------------------------------- | ---------------------------------------------------- | ----------------------------------------- |
+| Product — application (umbrella) | `[aplicacion]-discovery.md`                          | `clp-discovery.md`                        |
+| Product — module                 | `[aplicacion]-[modulo]-discovery.md`                 | `lex-alertas-discovery.md`                |
+| Product — functionality          | `[aplicacion]-[modulo]-[funcionalidad]-discovery.md` | `fin-reporteria-pnl-discovery.md`         |
+| Product — transversal feature    | `[feature]-discovery.md`                             | `centro-de-alertas-discovery.md`          |
+| Cross-core architecture          | `core-[topic]-discovery.md`                          | `core-modulos-transversales-discovery.md` |
+| Internal infrastructure          | `[topic]-discovery.md`                               | `observabilidad-discovery.md`             |
+| Process / tooling / methodology  | `[topic]-discovery.md`                               | `jira-sla-discovery.md`                   |
 
 **Coexistence rules:**
 
