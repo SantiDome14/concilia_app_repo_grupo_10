@@ -2,7 +2,7 @@
 
 > Catálogo navegable de los discoveries existentes. Para entender la convención de naming, los estados y el ciclo de vida, ver [`README.md`](./README.md).
 >
-> Última actualización: **2026-06-02** · **28 discoveries** + **3 artefactos de soporte**
+> Última actualización: **2026-06-03** · **29 discoveries** + **3 artefactos de soporte**
 
 ---
 
@@ -44,7 +44,8 @@ Hipótesis sobre una funcionalidad específica dentro de un módulo.
 | Archivo | Nombre | Estado | Owner | Última act. | Propaga a |
 |---|---|---|---|---|---|
 | [`lex-clientes-informacion-contacto-discovery.md`](./lex-clientes-informacion-contacto-discovery.md) | LEX — Información de Contacto del Legajo (Clientes) · Discovery Document | En investigación | Yasmani Rodriguez | 2026-06-02 | `features/lex/lex-clientes-informacion-contacto.md` · `features/lex/README.md` |
-| [`lex-operatoria-rulo-quotes-discovery.md`](./lex-operatoria-rulo-quotes-discovery.md) | LEX — Visibilidad de quotes del rulo en el detalle de cliente | Concluida | Santino Domeniconi | 2026-05-20 | `features/lex/README.md` |
+| [`lex-operatoria-documentacion-discovery.md`](./lex-operatoria-documentacion-discovery.md) | LEX — Gestión documental de clientes en el detalle de cliente | En investigación | Santino Domeniconi | 2026-06-03 | _—_ |
+| [`lex-operatoria-rulo-quotes-discovery.md`](./lex-operatoria-rulo-quotes-discovery.md) | LEX — Visibilidad de quotes del rulo en el detalle de cliente | Concluida | Santino Domeniconi | 2026-06-03 | `features/lex/README.md` |
 | [`lex-clientes-export-altas-legales-discovery.md`](./lex-clientes-export-altas-legales-discovery.md) | LEX — Export automático de clientes onboardeados a planillas de Altas Legales | Concluida | Santino Domeniconi | 2026-05-19 | `features/lex/lex-clientes-export-altas-legales.md` · `features/lex/README.md` |
 | [`portal-clientes-mail-bienvenida-discovery.md`](./portal-clientes-mail-bienvenida-discovery.md) | CLP — Actualización del mail de bienvenida al nuevo branding | Concluida | Santino Domeniconi | 2026-05-19 | `features/clp/clp-mail-bienvenida.md` · `features/clp/README.md` |
 | [`fin-reporteria-pnl-discovery.md`](./fin-reporteria-pnl-discovery.md) | Reporte de P&L (FIN · PnL Skill) — Session Context | Concluida | Yasmani Rodriguez | 2026-05-17 | `skills/ardua-pnl-report/SKILL.md` |

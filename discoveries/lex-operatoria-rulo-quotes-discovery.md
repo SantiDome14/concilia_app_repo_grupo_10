@@ -4,7 +4,7 @@ features: [LEX]
 status: Concluida
 owner: Santino Domeniconi
 created_at: 2026-05-20
-updated_at: 2026-05-21
+updated_at: 2026-06-03
 propagates_to:
   - features/lex/README.md
 ---
@@ -147,7 +147,7 @@ Dos cálculos independientes activados por selección de filas mediante columnas
 
 ## Hipótesis abiertas
 
-_Ninguna. Todas las hipótesis fueron resueltas al 2026-05-21._
+- **Gestión documental:** Legal gestiona la documentación de cada cliente (SWIFT, facturas, comprobantes) en carpetas locales organizadas por quote. La hipótesis de llevar esa gestión al detalle de cliente en LEX está capturada en [`lex-operatoria-documentacion-discovery.md`](./lex-operatoria-documentacion-discovery.md) (estado: En investigación).
 
 ---
 
@@ -188,3 +188,4 @@ _Ninguna. Todas las hipótesis fueron resueltas al 2026-05-21._
 | 2026-05-20 | Columna renombrada de "Número de TC" a "Valor del TC". Wireframe final `LEX_-_Operatoria_Rulo.html` generado y aprobado. Disponible en `prototypes/lex/wireframes/`. |
 | 2026-05-20 | Tabla reducida a 7 columnas: "Moneda fiat" eliminada (rulo opera solo en ARS → renombrada a "Monto fiat (ARS)"). "Tipo de crypto" eliminada e integrada como prefijo inline en "Monto crypto". |
 | 2026-05-21 | Iteración con Camila: moneda fiat puede ser ARS o USD (no solo ARS). Dos modos de filtro incorporados (por meses y por fecha exacta con exclusión mutua). D-11 cerrada: cálculos por selección de filas (Total Fiat y Promedio de TC con chips independientes en footer). Sección renombrada de "Rulo" a "Quotes". REQ-82 actualizado en Jira. |
+| 2026-06-03 | Hipótesis de gestión documental identificada a partir de observación directa con Camila (carpetas locales por quote). Capturada en `lex-operatoria-documentacion-discovery.md`. |
