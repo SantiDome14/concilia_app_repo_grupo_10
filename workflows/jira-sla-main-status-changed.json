@@ -1,61 +1,208 @@
 {
-  "id": "DkiCVByDHEU9dR0h",
   "name": "jira-sla-main-status-changed",
-  "active": true,
-  "versionId": "29413972-8ead-4126-9391-0d32d0a937d3",
-  "createdAt": "2026-05-21T20:08:31.459Z",
-  "updatedAt": "2026-05-22T13:22:52.654Z",
-  "trigger": {
-    "type": "webhook",
-    "path": "/webhook/jira-sla-main-status-changed",
-    "method": "POST"
-  },
-  "description": "Triggered by Jira Automation when a ticket in the AM (MAIN) project changes status. Filters non-AM projects and events without a status change. Finds the corresponding row in SLA Tickets MAIN Notion DB (29f85f16) by Ticket Key. Calculates days spent in the previous status (decimal, based on Entered [Status] dates) and accumulates them in the Days in [Status] field. Updates Current Status, Flow, IT Flow?, Last Updated, and Entered [new status] date on the main row. Creates a new changelog entry in SLA Changelog MAIN DB (d2f2eb78) with full transition data.",
   "nodes": [
-    "Trigger — Jira MAIN Status Changed",
-    "Respond — Acknowledge",
-    "Extract Status Change",
-    "Should Skip?",
-    "Ignore — Not Relevant",
-    "Find Ticket in Notion",
-    "Calculate Days & Build Payloads",
-    "Ticket Found?",
-    "Ignore — Ticket Not Found",
-    "Update Ticket — SLA Tickets MAIN",
-    "Create Changelog Entry — MAIN"
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "jira-sla-main-status-changed",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook",
+      "name": "Trigger — Jira MAIN Status Changed",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-1000, 0],
+      "webhookId": "jira-sla-main-status-changed"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\": true}",
+        "options": {}
+      },
+      "id": "node-ack",
+      "name": "Respond — Acknowledge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [-768, -160]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// EXTRACT STATUS CHANGE EVENT FROM JIRA MAIN WEBHOOK\n// ============================================================\nconst body = $input.item.json.body || $input.item.json;\nconst issue = body.issue || {};\nconst fields = issue.fields || {};\nconst changelog = body.changelog || {};\nconst changelogItems = changelog.items || [];\n\nconst key = issue.key || '';\nconst projectKey = (fields.project && fields.project.key) || key.split('-')[0];\n\n// Only process AM project\nif (projectKey !== 'AM') {\n  return [{ json: { skip: true, reason: 'Not an AM ticket', key } }];\n}\n\n// Find the status change item\nconst statusChange = changelogItems.find(item => item.field === 'status');\nif (!statusChange) {\n  return [{ json: { skip: true, reason: 'No status change found', key } }];\n}\n\nconst fromStatus = statusChange.fromString || '';\nconst toStatus = statusChange.toString || '';\nconst changedAt = body.timestamp\n  ? new Date(body.timestamp).toISOString().split('T')[0]\n  : new Date().toISOString().split('T')[0];\n\nconst summary = fields.summary || '';\nconst issueType = (fields.issuetype && fields.issuetype.name) || '';\nconst assignee = (fields.assignee && fields.assignee.displayName) || '';\nconst jiraUrl = `https://arduasolutions.atlassian.net/browse/${key}`;\n\nlet tipo = 'Story';\nif (['Task', 'Sub-task'].includes(issueType)) tipo = 'Task IT';\nelse if (issueType === 'Epic') tipo = 'Epic';\n\nconst getResponsable = (status) => ['Done', 'DEPRECATED'].includes(status) ? 'Ninguno' : 'IT';\n\nconst statusToEnteredField = {\n  'Backlog':        'Entered Backlog',\n  'TO REFINEMENT':  'Entered TO REFINEMENT',\n  'IN REFINEMENT':  'Entered IN REFINEMENT',\n  'To Do':          'Entered To Do',\n  'In Progress':    'Entered In Progress',\n  'STAND BY':       'Entered STAND BY',\n  'CODE REVIEW':    'Entered CODE REVIEW',\n  'Done':           'Entered Done',\n  'DEPRECATED':     'Entered DEPRECATED'\n};\n\nconst statusToDaysField = {\n  'Backlog':        'Days in Backlog',\n  'TO REFINEMENT':  'Days in TO REFINEMENT',\n  'IN REFINEMENT':  'Days in IN REFINEMENT',\n  'To Do':          'Days in To Do',\n  'In Progress':    'Days in In Progress',\n  'STAND BY':       'Days in STAND BY',\n  'CODE REVIEW':    'Days in CODE REVIEW',\n  'Done':           'Days in Done',\n  'DEPRECATED':     'Days in DEPRECATED'\n};\n\nreturn [{\n  json: {\n    skip: false,\n    key,\n    summary,\n    tipo,\n    fromStatus,\n    toStatus,\n    changedAt,\n    assignee,\n    jiraUrl,\n    responsableFrom: getResponsable(fromStatus),\n    responsableTo: getResponsable(toStatus),\n    enteredFieldTo: statusToEnteredField[toStatus] || null,\n    daysFieldFrom: statusToDaysField[fromStatus] || null\n  }\n}];"
+      },
+      "id": "node-extract",
+      "name": "Extract Status Change",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-768, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-skip",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-should-skip",
+      "name": "Should Skip?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-544, 0]
+    },
+    {
+      "parameters": {},
+      "id": "node-ignore",
+      "name": "Ignore — Not Relevant",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [-320, -160]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/databases/29f85f16-cf46-43a3-af3e-ac6c20bf56e1/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"filter\": {\n    \"property\": \"Ticket Key\",\n    \"title\": { \"equals\": \"{{ $json.key }}\" }\n  }\n}",
+        "options": {}
+      },
+      "id": "node-find-ticket",
+      "name": "Find Ticket in Notion",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-320, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// CALCULATE DAYS IN PREVIOUS STATUS & BUILD PAYLOADS\n// ============================================================\nconst notionResults = $input.item.json.results || [];\nconst extract = $('Extract Status Change').item.json;\n\nif (notionResults.length === 0) {\n  return [{ json: { skip: true, reason: 'Ticket not found in Notion', key: extract.key } }];\n}\n\nconst page = notionResults[0];\nconst pageId = page.id;\nconst props = page.properties || {};\n\n// Get fecha entrada of the FROM status\nconst statusToEnteredField = {\n  'Backlog':        'Entered Backlog',\n  'TO REFINEMENT':  'Entered TO REFINEMENT',\n  'IN REFINEMENT':  'Entered IN REFINEMENT',\n  'To Do':          'Entered To Do',\n  'In Progress':    'Entered In Progress',\n  'STAND BY':       'Entered STAND BY',\n  'CODE REVIEW':    'Entered CODE REVIEW',\n  'Done':           'Entered Done',\n  'DEPRECATED':     'Entered DEPRECATED'\n};\n\nconst statusToDaysField = {\n  'Backlog':        'Days in Backlog',\n  'TO REFINEMENT':  'Days in TO REFINEMENT',\n  'IN REFINEMENT':  'Days in IN REFINEMENT',\n  'To Do':          'Days in To Do',\n  'In Progress':    'Days in In Progress',\n  'STAND BY':       'Days in STAND BY',\n  'CODE REVIEW':    'Days in CODE REVIEW',\n  'Done':           'Days in Done',\n  'DEPRECATED':     'Days in DEPRECATED'\n};\n\n// Calculate days in fromStatus\nconst fromFechaKey = statusToEnteredField[extract.fromStatus];\nlet diasEnEstadoAnterior = 0;\nlet fechaEntradaAnterior = extract.changedAt;\n\nif (fromFechaKey && props[fromFechaKey] && props[fromFechaKey].date && props[fromFechaKey].date.start) {\n  fechaEntradaAnterior = props[fromFechaKey].date.start;\n  const fechaEntrada = new Date(fechaEntradaAnterior);\n  const fechaSalida = new Date(extract.changedAt);\n  const diffMs = fechaSalida - fechaEntrada;\n  diasEnEstadoAnterior = Math.max(0, Math.round((diffMs / (1000 * 60 * 60 * 24)) * 10) / 10);\n}\n\n// Build update properties for SLA — Tickets MAIN\nconst updateProperties = {\n  'Current Status': { select: { name: extract.toStatus } },\n  'Flow':           { select: { name: extract.responsableTo } },\n  'IT Flow?':       { checkbox: extract.responsableTo === 'IT' },\n  'Last Updated':   { date: { start: extract.changedAt } },\n  'Days in Current Status': { number: 0 }\n};\n\n// Update dias en fromStatus\nconst diasFromKey = statusToDaysField[extract.fromStatus];\nif (diasFromKey) {\n  updateProperties[diasFromKey] = { number: diasEnEstadoAnterior };\n}\n\n// Set fecha entrada for toStatus\nconst fechaToKey = statusToEnteredField[extract.toStatus];\nif (fechaToKey) {\n  updateProperties[fechaToKey] = { date: { start: extract.changedAt } };\n}\n\n// Build changelog entry\nconst transitionId = `${extract.key}-${extract.fromStatus}-${extract.toStatus}-${extract.changedAt}`;\n\nconst changelogProperties = {\n  'Transition ID':         { title: [{ text: { content: transitionId } }] },\n  'Ticket Key':            { rich_text: [{ text: { content: extract.key } }] },\n  'Type':                  { select: { name: extract.tipo } },\n  'Previous Status':       { rich_text: [{ text: { content: extract.fromStatus } }] },\n  'New Status':            { rich_text: [{ text: { content: extract.toStatus } }] },\n  'Previous Status Owner': { select: { name: extract.responsableFrom } },\n  'New Status Owner':      { select: { name: extract.responsableTo } },\n  'Entry Date':            { date: { start: fechaEntradaAnterior } },\n  'Exit Date':             { date: { start: extract.changedAt } },\n  'Days in Status':        { number: diasEnEstadoAnterior },\n  'Jira URL':              { url: extract.jiraUrl }\n};\n\nreturn [{\n  json: {\n    skip: false,\n    pageId,\n    updateProperties,\n    changelogProperties,\n    key: extract.key\n  }\n}];"
+      },
+      "id": "node-calculate",
+      "name": "Calculate Days & Build Payloads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-96, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-skip2",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-skip-calc",
+      "name": "Ticket Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [128, 0]
+    },
+    {
+      "parameters": {},
+      "id": "node-ignore2",
+      "name": "Ignore — Ticket Not Found",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [352, -160]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.notion.com/v1/pages/{{ $json.pageId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"properties\": {{ JSON.stringify($json.updateProperties) }}\n}",
+        "options": {}
+      },
+      "id": "node-update-ticket",
+      "name": "Update Ticket — SLA Tickets MAIN",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [352, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/pages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"parent\": { \"database_id\": \"d2f2eb78-2011-4da2-9b4f-d3a4402fede\" },\n  \"properties\": {{ JSON.stringify($('Calculate Days & Build Payloads').item.json.changelogProperties) }}\n}",
+        "options": {}
+      },
+      "id": "node-create-changelog",
+      "name": "Create Changelog Entry — MAIN",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [576, 0]
+    }
   ],
-  "filters": {
-    "project": "AM",
-    "requires_status_change": true
+  "connections": {
+    "Trigger — Jira MAIN Status Changed": {
+      "main": [
+        [
+          { "node": "Respond — Acknowledge", "type": "main", "index": 0 },
+          { "node": "Extract Status Change", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Extract Status Change": {
+      "main": [
+        [{ "node": "Should Skip?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Should Skip?": {
+      "main": [
+        [{ "node": "Ignore — Not Relevant", "type": "main", "index": 0 }],
+        [{ "node": "Find Ticket in Notion", "type": "main", "index": 0 }]
+      ]
+    },
+    "Find Ticket in Notion": {
+      "main": [
+        [{ "node": "Calculate Days & Build Payloads", "type": "main", "index": 0 }]
+      ]
+    },
+    "Calculate Days & Build Payloads": {
+      "main": [
+        [{ "node": "Ticket Found?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Ticket Found?": {
+      "main": [
+        [{ "node": "Ignore — Ticket Not Found", "type": "main", "index": 0 }],
+        [{ "node": "Update Ticket — SLA Tickets MAIN", "type": "main", "index": 0 }]
+      ]
+    },
+    "Update Ticket — SLA Tickets MAIN": {
+      "main": [
+        [{ "node": "Create Changelog Entry — MAIN", "type": "main", "index": 0 }]
+      ]
+    }
   },
-  "notion_dbs": {
-    "sla_tickets": "29f85f16-cf46-43a3-af3e-ac6c20bf56e1",
-    "changelog": "d2f2eb78-2011-4da2-9b4f-d7a6ae8e1f84"
-  },
-  "responsable_logic": {
-    "IT": "default",
-    "Ninguno": ["Done", "DEPRECATED"]
-  },
-  "status_fields": {
-    "Backlog": "Entered Backlog",
-    "TO REFINEMENT": "Entered TO REFINEMENT",
-    "IN REFINEMENT": "Entered IN REFINEMENT",
-    "To Do": "Entered To Do",
-    "In Progress": "Entered In Progress",
-    "STAND BY": "Entered STAND BY",
-    "CODE REVIEW": "Entered CODE REVIEW",
-    "Done": "Entered Done",
-    "DEPRECATED": "Entered DEPRECATED"
-  },
-  "days_fields": {
-    "Backlog": "Days in Backlog",
-    "TO REFINEMENT": "Days in TO REFINEMENT",
-    "IN REFINEMENT": "Days in IN REFINEMENT",
-    "To Do": "Days in To Do",
-    "In Progress": "Days in In Progress",
-    "STAND BY": "Days in STAND BY",
-    "CODE REVIEW": "Days in CODE REVIEW",
-    "Done": "Days in Done",
-    "DEPRECATED": "Days in DEPRECATED"
+  "settings": { "executionOrder": "v1" },
+  "meta": {
+    "description": "Triggered by Jira webhook on status change in AM (MAIN) project. Updates SLA — Tickets MAIN and creates entry in SLA — Changelog MAIN."
   }
 }
