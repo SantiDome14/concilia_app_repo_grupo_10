@@ -5,6 +5,7 @@ status: En investigación
 owner: Santino Domeniconi
 created_at: 2026-06-04
 updated_at: 2026-06-04
+validated_by: Facundo Vásques (Trading Desk)
 propagates_to:
   - features/trd/trd-clientes.md
 ---
@@ -49,7 +50,9 @@ Al hacer clic en una fila, se expande hacia abajo mostrando saldos y límites en
 
 Al hacer clic en una fila de cliente, se abre un panel lateral desde la derecha (slide-in) que muestra todos los datos de ese cliente sin desplazar el contenido principal.
 
-**Validado con el área de Trading Desk mediante wireframe interactivo.** Ganó sobre las otras dos opciones.
+**Validado con Facundo Vásques (Trading Desk) mediante wireframe interactivo en dos rondas.** Ganó sobre las otras dos opciones.
+
+**Combinación ganadora:** Panel lateral · Variante B (con quote) · Color por moneda activado. El wireframe incluye variantes de patrón y de contenido; Tecnología debe implementar exclusivamente esta combinación.
 
 **Justificación:**
 - El flujo es lineal: el trader selecciona un cliente, revisa su posición, y decide si cotiza o no. Un panel lateral acompaña ese flujo sin perder el contexto de la lista.
@@ -91,11 +94,12 @@ Validadas mediante revisión de wireframe iterativo (dos rondas).
 
 ### Botón de acción
 - Label: "Crear Quote"
-- Estilo: outline sobrio (borde `white/10`, texto blanco, hover `white/8` bg) — no violeta saturado
-- Comportamiento: redirige al módulo Quotes y abre directamente el formulario de creación de quote con el cliente pre-cargado. La creación ocurre en Quotes — no desde Clientes.
+- Estilo: CTA primario (fondo violeta sólido)
+- Comportamiento: redirige al módulo Quotes y abre directamente la card de creación de quote con el cliente pre-cargado. La creación ocurre en Quotes — no desde Clientes.
+- Restricción (Facundo Vásques): la card de creación de quote en Quotes no se modifica como parte de este requerimiento.
 
 ### Confirmación de scope
-El módulo Clientes es estrictamente de solo lectura. La creación de quotes no se inicia desde Clientes — el botón "Crear Quote" actúa como shortcut de navegación que lleva al operador directamente al formulario de creación en Quotes, con el cliente pre-cargado. Decisión confirmada con el área de Trading Desk.
+El módulo Clientes es estrictamente de solo lectura. La creación de quotes no se inicia desde Clientes — el botón "Crear Quote" actúa como shortcut de navegación que lleva al operador directamente a la card de creación en Quotes, con el cliente pre-cargado. Confirmado con Facundo Vásques. La card de creación de quote en Quotes queda fuera del alcance de este requerimiento.
 
 ---
 
@@ -103,7 +107,7 @@ El módulo Clientes es estrictamente de solo lectura. La creación de quotes no 
 
 https://claude.ai/design/p/de8ec9f4-56a2-4a9d-8de2-943b62568bb4?file=Clientes+-+Saldos+y+L%C3%ADmites.html
 
-Versión activa: sidebar deslizante (única opción en el wireframe tras revisión con el área).
+Tecnología debe implementar: **Panel lateral + Variante B (con quote) + Color por moneda activado**. Las demás variantes del wireframe quedan como registro de lo evaluado.
 
 ---
 
@@ -111,6 +115,6 @@ Versión activa: sidebar deslizante (única opción en el wireframe tras revisi�
 
 | # | Acción | Estado |
 |---|---|---|
-| 1 | Wireframe final actualizado con mejoras estéticas (badges, color semántico, progress bar) | En curso |
+| 1 | Wireframe validado — combinación ganadora confirmada con Facundo Vásques | ✅ Completo |
 | 2 | Handoff a Tecnología (PWI-64 → EWI espejo) | Pendiente |
 | 3 | Crear `features/trd/trd-clientes.md` una vez el módulo llegue a producción | Pendiente |
