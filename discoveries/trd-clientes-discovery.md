@@ -6,6 +6,7 @@ owner: Santino Domeniconi
 created_at: 2026-06-04
 updated_at: 2026-06-04
 validated_by: Facundo Vásques (Trading Desk)
+validated_by: Facundo Vásques (Trading Desk)
 propagates_to:
   - features/trd/trd-clientes.md
 ---
@@ -53,6 +54,9 @@ Al hacer clic en una fila de cliente, se abre un panel lateral desde la derecha 
 **Validado con Facundo Vásques (Trading Desk) mediante wireframe interactivo en dos rondas.** Ganó sobre las otras dos opciones.
 
 **Combinación ganadora:** Panel lateral · Variante B (con quote) · Color por moneda activado. El wireframe incluye variantes de patrón y de contenido; Tecnología debe implementar exclusivamente esta combinación.
+**Validado con Facundo Vásques (Trading Desk) mediante wireframe interactivo en dos rondas.** Ganó sobre las otras dos opciones.
+
+**Combinación ganadora:** Panel lateral · Variante B (con quote) · Color por moneda activado. El wireframe incluye variantes de patrón y de contenido; Tecnología debe implementar exclusivamente esta combinación.
 **Justificación:**
 - El flujo es lineal: el trader selecciona un cliente, revisa su posición, y decide si cotiza o no. Un panel lateral acompaña ese flujo sin perder el contexto de la lista.
 - La lista de clientes queda visible al fondo, lo que permite cambiar de cliente sin cerrar el panel (próximo clic reemplaza el contenido).
@@ -94,8 +98,12 @@ Validadas mediante revisión de wireframe iterativo (dos rondas).
 - Estilo: CTA primario (fondo violeta sólido)
 - Comportamiento: redirige al módulo Quotes y abre directamente la card de creación de quote con el cliente pre-cargado. La creación ocurre en Quotes — no desde Clientes.
 - Restricción (Facundo Vásques): la card de creación de quote en Quotes no se modifica como parte de este requerimiento.
+- Estilo: CTA primario (fondo violeta sólido)
+- Comportamiento: redirige al módulo Quotes y abre directamente la card de creación de quote con el cliente pre-cargado. La creación ocurre en Quotes — no desde Clientes.
+- Restricción (Facundo Vásques): la card de creación de quote en Quotes no se modifica como parte de este requerimiento.
 
 ### Confirmación de scope
+El módulo Clientes es estrictamente de solo lectura. La creación de quotes no se inicia desde Clientes — el botón "Crear Quote" actúa como shortcut de navegación que lleva al operador directamente a la card de creación en Quotes, con el cliente pre-cargado. Confirmado con Facundo Vásques. La card de creación de quote en Quotes queda fuera del alcance de este requerimiento.
 El módulo Clientes es estrictamente de solo lectura. La creación de quotes no se inicia desde Clientes — el botón "Crear Quote" actúa como shortcut de navegación que lleva al operador directamente a la card de creación en Quotes, con el cliente pre-cargado. Confirmado con Facundo Vásques. La card de creación de quote en Quotes queda fuera del alcance de este requerimiento.
 
 ---
@@ -104,6 +112,7 @@ El módulo Clientes es estrictamente de solo lectura. La creación de quotes no 
 
 https://claude.ai/design/p/de8ec9f4-56a2-4a9d-8de2-943b62568bb4?file=_original%2FClientes+-+Saldos+y+L%C3%ADmites+%28v1%29.html 
 
+Tecnología debe implementar: **Panel lateral + Variante B (con quote) + Color por moneda activado**. Las demás variantes del wireframe quedan como registro de lo evaluado.
 Tecnología debe implementar: **Panel lateral + Variante B (con quote) + Color por moneda activado**. Las demás variantes del wireframe quedan como registro de lo evaluado.
 
 ---
