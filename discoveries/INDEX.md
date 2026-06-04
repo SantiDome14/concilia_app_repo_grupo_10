@@ -2,7 +2,7 @@
 
 > Catálogo navegable de los discoveries existentes. Para entender la convención de naming, los estados y el ciclo de vida, ver [`README.md`](./README.md).
 >
-> Última actualización: **2026-06-04** · **30 discoveries** + **3 artefactos de soporte**
+> Última actualización: **2026-06-04** · **31 discoveries** + **3 artefactos de soporte**
 
 ---
 
@@ -29,6 +29,7 @@ Hipótesis focalizadas en un módulo específico dentro de una aplicación.
 
 | Archivo | Nombre | Estado | Owner | Última act. | Propaga a |
 |---|---|---|---|---|---|
+| [`ops-whitelist-cbu-discovery.md`](./ops-whitelist-cbu-discovery.md) | OPS — Whitelist CBU/CVU: identificación de banco y etiquetas | En investigación | Santino Domeniconi | 2026-06-04 | _—_ |
 | [`trd-clientes-discovery.md`](./trd-clientes-discovery.md) | TRD — Módulo Clientes · Visualización de saldos y límites | En investigación | Santino Domeniconi | 2026-06-04 | `features/trd/trd-clientes.md` |
 | [`trd-quotes-discovery.md`](./trd-quotes-discovery.md) | TRD — Módulo Quotes | En investigación | Santino Domeniconi | 2026-05-26 | `features/trd/trd-quotes.md` |
 | [`fin-tesoreria-disponibilidades-discovery.md`](./fin-tesoreria-disponibilidades-discovery.md) | FIN · Tesorería · Disponibilidades — modelo conceptual del módulo | En investigación | Yasmani Rodriguez | 2026-05-20 | `features/fin/fin-tesoreria-disponibilidades.md` · [REQ-50](https://arduasolutions.atlassian.net/browse/REQ-50) |
