@@ -1,52 +1,443 @@
 {
-  "id": "oAFCmrntS6da6cCA",
-  "name": "miles-slack-event-router",
-  "active": true,
-  "versionId": "56b4cc6a-1430-4943-88f3-272ebaef3067",
-  "createdAt": "2026-03-25T21:42:22.944Z",
-  "updatedAt": "2026-04-24T17:44:29.365Z",
-  "trigger": {
-    "type": "webhook",
-    "path": "/webhook/slack-events",
-    "method": "POST"
-  },
-  "description": "Entry point for all Slack events from the Miles Slack app. Performs URL verification, filters edits/deletes/bots, and routes to the appropriate handler based on event type: Claude REQ messages, app mentions (in-thread or top-level), and thread replies all flow to miles-conversation-handler via the req-conversation webhook.",
+  "name": "[MILES] Slack Event Router",
   "nodes": [
-    "Trigger — Slack Events",
-    "Is URL Verification?",
-    "Respond — URL Verification",
-    "Respond — Acknowledge Event",
-    "Is Edit or Delete?",
-    "Ignore — Edit or Delete",
-    "Is Bot Message?",
-    "Is Claude REQ Message?",
-    "Forward Claude REQ to Handler",
-    "Ignore",
-    "Is App Mention?",
-    "Is Mention In Thread?",
-    "Forward Mention In Thread to Handler",
-    "Has Context?",
-    "Is Claude Signature?",
-    "Forward Claude Human-Posted to Handler",
-    "Forward Mention Context to Handler",
-    "Get Mention User Info",
-    "Reply to @Miles Mention",
-    "Ignore — No Context",
-    "Is Malformed Miles Mention?",
-    "Forward Malformed Mention to Handler",
-    "Is Thread Reply?",
-    "Forward to Conversation Handler",
-    "Ignore — Not a Thread Reply"
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "slack-events",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "39658588-c923-4351-acb2-6cbc7b10b885",
+      "name": "Trigger — Slack Events",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [24352, 9984],
+      "webhookId": "miles-slack-events"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1 },
+          "conditions": [{ "id": "cond-challenge", "leftValue": "={{ $json.body.type }}", "rightValue": "url_verification", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "936443fd-f37a-4d1c-8eb9-31bfa421a401",
+      "name": "Is URL Verification?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [24576, 9984]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ challenge: $json.body.challenge }) }}",
+        "options": {}
+      },
+      "id": "3e368ec1-6e6d-4f5d-b2be-4a848f8b704a",
+      "name": "Respond — URL Verification",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [24816, 9840]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\": true}",
+        "options": {}
+      },
+      "id": "621ef146-4164-425b-bdcc-cb333e5ef84d",
+      "name": "Respond — Acknowledge Event",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [24816, 10128]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            { "id": "cond-subtype-changed", "leftValue": "={{ $json.body.event.subtype }}", "rightValue": "message_changed", "operator": { "type": "string", "operation": "equals" } },
+            { "id": "cond-subtype-deleted", "leftValue": "={{ $json.body.event.subtype }}", "rightValue": "message_deleted", "operator": { "type": "string", "operation": "equals" } },
+            { "id": "cond-edited-flag",     "leftValue": "={{ $json.body.event.edited }}", "rightValue": "", "operator": { "type": "object", "operation": "exists" } }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "d97fb1d0-78e6-405c-a43b-bd0a103bcf4e",
+      "name": "Is Edit or Delete?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [25040, 10128]
+    },
+    {
+      "parameters": {},
+      "id": "494bcbc9-ced6-42b9-8248-2115d0f777db",
+      "name": "Ignore — Edit or Delete",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [25040, 10336]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "id": "cond-bot", "leftValue": "={{ $json.body.event.bot_id }}", "rightValue": "", "operator": { "type": "string", "operation": "exists" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7cbbf074-f60a-4aaf-affd-8ecb7571cec7",
+      "name": "Is Bot Message?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [25264, 10128]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-claude-user",
+              "leftValue": "={{ $json.body.event.username }}",
+              "rightValue": "Claude",
+              "operator": { "type": "string", "operation": "equals" }
+            },
+            {
+              "id": "cond-req-channel",
+              "leftValue": "={{ (() => { const reqChannels = ['C0AJ2599DA6','C0AJ67HK0ES','C0AK2PW5BGQ','C0AKNPCNNSU','C0AJMRFP0TD','C0ARDGP8134']; return reqChannels.includes($json.body.event.channel); })() }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            },
+            {
+              "id": "cond-sent-using",
+              "leftValue": "={{ (() => { const t = $json.body.event.text || ''; const signatures = ['Sent using','Sent with','Sent via','Sent from','Sent by','Enviado usando','Enviado mediante','Enviado con','Enviado vía','Enviado via','Enviado por','Enviado desde']; return signatures.some(s => t.includes(s)); })() }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            },
+            {
+              "id": "cond-is-parent-message",
+              "leftValue": "={{ !$json.body.event.thread_ts || ($json.body.event.thread_ts === $json.body.event.ts) }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "38803320-c13a-491b-9481-200600b2ef6b",
+      "name": "Is Claude REQ Message?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [25536, 9760]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.arduasolutions.com/webhook/req-conversation",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ thread_ts: $json.body.event.ts, channel_id: $json.body.event.channel, user_id: $json.body.event.user, message_text: $json.body.event.text, source: 'claude' }) }}",
+        "options": {}
+      },
+      "id": "dd80aeb8-2402-45b5-83b8-ed8a937d8d96",
+      "name": "Forward Claude REQ to Handler",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [25744, 9616]
+    },
+    {
+      "parameters": {},
+      "id": "21a033ec-aee6-4bc5-b1fe-c87f4c6c99d5",
+      "name": "Ignore",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [25744, 9904]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "id": "cond-mention", "leftValue": "={{ $json.body.event.type }}", "rightValue": "app_mention", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e2dadf3b-6226-4aa0-ab14-ca4f8c8e1c22",
+      "name": "Is App Mention?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [25552, 10384]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "id": "cond-mention-thread", "leftValue": "={{ $json.body.event.thread_ts }}", "rightValue": "", "operator": { "type": "string", "operation": "exists" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4f34d3da-2357-4303-8663-3a4d67302f39",
+      "name": "Is Mention In Thread?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [25744, 10112]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.arduasolutions.com/webhook/req-conversation",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ thread_ts: $json.body.event.thread_ts, channel_id: $json.body.event.channel, user_id: $json.body.event.user, message_text: $json.body.event.text.replace(/<@[A-Z0-9]+>/g, '').trim(), source: 'mention' }) }}",
+        "options": {}
+      },
+      "id": "47fa15f6-5686-45e8-94f5-1161515172f1",
+      "name": "Forward Mention In Thread to Handler",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [25984, 9984]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{
+            "id": "cond-has-context",
+            "leftValue": "={{ (() => { const text = $('Trigger — Slack Events').item.json.body.event.text || ''; const stripped = text.replace(/<@[A-Z0-9]+>/g, '').trim(); return stripped.length > 10; })() }}",
+            "rightValue": true,
+            "operator": { "type": "boolean", "operation": "true" }
+          }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e504c019-c73c-45be-a30e-6b2f64866590",
+      "name": "Has Context?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [25984, 10240]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [{
+            "id": "cond-claude-signature",
+            "leftValue": "={{ (() => { const text = $('Trigger — Slack Events').item.json.body.event.text || ''; const signatures = ['Sent using','Sent with','Sent via','Sent from','Sent by','Enviado usando','Enviado mediante','Enviado con','Enviado vía','Enviado via','Enviado por','Enviado desde']; const hasSig = signatures.some(s => text.includes(s)); return hasSig && text.includes('U0AHZHTQE22'); })() }}",
+            "rightValue": true,
+            "operator": { "type": "boolean", "operation": "true" }
+          }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8dc03333-5c70-480b-ad53-f4047b4569e3",
+      "name": "Is Claude Signature?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [26224, 10016]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.arduasolutions.com/webhook/req-conversation",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ thread_ts: $('Trigger — Slack Events').item.json.body.event.ts, channel_id: $('Trigger — Slack Events').item.json.body.event.channel, user_id: $('Trigger — Slack Events').item.json.body.event.user, message_text: $('Trigger — Slack Events').item.json.body.event.text, source: 'claude' }) }}",
+        "options": {}
+      },
+      "id": "0bb4584b-5bcc-45c0-91e0-7cf65f14aec9",
+      "name": "Forward Claude Human-Posted to Handler",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [26464, 9872]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.arduasolutions.com/webhook/req-conversation",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ thread_ts: $('Trigger — Slack Events').item.json.body.event.ts, channel_id: $('Trigger — Slack Events').item.json.body.event.channel, user_id: $('Trigger — Slack Events').item.json.body.event.user, message_text: $('Trigger — Slack Events').item.json.body.event.text.replace(/<@[A-Z0-9]+>/g, '').trim(), source: 'mention' }) }}",
+        "options": {}
+      },
+      "id": "628d28d9-0768-4e56-a783-430f75461619",
+      "name": "Forward Mention Context to Handler",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [26224, 10128]
+    },
+    {
+      "parameters": {
+        "url": "https://slack.com/api/users.info",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendQuery": true,
+        "queryParameters": { "parameters": [{ "name": "user", "value": "={{ $json.body.event.user }}" }] },
+        "options": {}
+      },
+      "id": "5734517a-635d-45a6-ab22-1314494a21f0",
+      "name": "Get Mention User Info",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [26224, 10352],
+      "credentials": { "slackApi": { "id": "BCycvSbTaX6nUIo1", "name": "Slack API — Miles" } }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": { "__rl": true, "value": "={{ $('Trigger — Slack Events').item.json.body.event.channel }}", "mode": "id" },
+        "text": "=Hola *{{ $('Get Mention User Info').item.json.user.profile.first_name }}* 👋\n\n¿En qué puedo ayudarte? Contame qué necesitás:\n\n• Crear un nuevo requerimiento\n• Consultar el estado de un requerimiento\n• Ver los requerimientos de tu área",
+        "otherOptions": {
+          "thread_ts": { "replyValues": { "thread_ts": "={{ $('Trigger — Slack Events').item.json.body.event.ts }}" } },
+          "mrkdwn": true
+        }
+      },
+      "id": "01f81677-b468-447e-ac13-5edb5776e1e9",
+      "name": "Reply to @Miles Mention",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [26464, 10352],
+      "webhookId": "03ec7cf2-201c-4fc8-b82a-70a18a3eb701",
+      "credentials": { "slackApi": { "id": "BCycvSbTaX6nUIo1", "name": "Slack API — Miles" } }
+    },
+    {
+      "parameters": {},
+      "id": "bf57a57d-6e04-4834-8056-e2f4381b7c5c",
+      "name": "Ignore — No Context",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [26496, 10608]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-malformed-req-channel",
+              "leftValue": "={{ (() => { const reqChannels = ['C0AJ2599DA6','C0AJ67HK0ES','C0AK2PW5BGQ','C0AKNPCNNSU','C0AJMRFP0TD','C0ARDGP8134']; return reqChannels.includes($json.body.event.channel); })() }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            },
+            {
+              "id": "cond-malformed-mentions-miles",
+              "leftValue": "={{ (() => { const t = $json.body.event.text || ''; return t.includes('U0ANEJ5BRPZ') && !t.includes('<@U0ANEJ5BRPZ'); })() }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            },
+            {
+              "id": "cond-malformed-top-level",
+              "leftValue": "={{ !$json.body.event.thread_ts }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            },
+            {
+              "id": "cond-malformed-has-claude-sig",
+              "leftValue": "={{ (() => { const t = $json.body.event.text || ''; const sigs = ['Sent using','Sent with','Sent via','Sent from','Sent by','Enviado usando','Enviado mediante','Enviado con','Enviado vía','Enviado via','Enviado por','Enviado desde']; return sigs.some(s => t.includes(s)) && t.includes('U0AHZHTQE22'); })() }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "116b4664-b510-40e9-a22a-bae15746ccea",
+      "name": "Is Malformed Miles Mention?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [25744, 10560]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.arduasolutions.com/webhook/req-conversation",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ thread_ts: $json.body.event.ts, channel_id: $json.body.event.channel, user_id: $json.body.event.user, message_text: $json.body.event.text, source: 'claude' }) }}",
+        "options": {}
+      },
+      "id": "3e423311-a3ee-4f27-bcf8-c2210bf58153",
+      "name": "Forward Malformed Mention to Handler",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [25984, 10432]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            { "id": "cond-thread-exists",    "leftValue": "={{ $json.body.event.thread_ts }}", "rightValue": "", "operator": { "type": "string", "operation": "exists" } },
+            { "id": "cond-thread-diff",      "leftValue": "={{ $json.body.event.thread_ts }}", "rightValue": "={{ $json.body.event.ts }}", "operator": { "type": "string", "operation": "notEquals" } },
+            { "id": "cond-not-miles-mention","leftValue": "={{ ($json.body.event.text || '').includes('<@U0ANEJ5BRPZ>') }}", "rightValue": false, "operator": { "type": "boolean", "operation": "equals" } }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "81a44526-e012-425a-b1b3-61dc4d76f0b6",
+      "name": "Is Thread Reply?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [25744, 10752]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.arduasolutions.com/webhook/req-conversation",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ thread_ts: $json.body.event.thread_ts, channel_id: $json.body.event.channel, user_id: $json.body.event.user, message_text: $json.body.event.text, user_name: $json.body.event.user, source: 'thread_reply' }) }}",
+        "options": {}
+      },
+      "id": "fefd5c6a-27be-4f9f-af87-71f55e4bea3b",
+      "name": "Forward to Conversation Handler",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [25984, 10624]
+    },
+    {
+      "parameters": {},
+      "id": "0d425e5b-c6d4-4611-901f-b44f5dc078ea",
+      "name": "Ignore — Not a Thread Reply",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [25968, 10928]
+    }
   ],
-  "req_channels": [
-    "C0AJ2599DA6",
-    "C0AJ67HK0ES",
-    "C0AK2PW5BGQ",
-    "C0AKNPCNNSU",
-    "C0AJMRFP0TD",
-    "C0ARDGP8134"
-  ],
-  "downstream_webhooks": [
-    "https://n8n.arduasolutions.com/webhook/req-conversation"
+  "pinData": {},
+  "connections": {
+    "Trigger — Slack Events":         { "main": [[{ "node": "Is URL Verification?", "type": "main", "index": 0 }]] },
+    "Is URL Verification?":           { "main": [[{ "node": "Respond — URL Verification", "type": "main", "index": 0 }], [{ "node": "Respond — Acknowledge Event", "type": "main", "index": 0 }]] },
+    "Respond — Acknowledge Event":    { "main": [[{ "node": "Is Edit or Delete?", "type": "main", "index": 0 }]] },
+    "Is Edit or Delete?":             { "main": [[{ "node": "Ignore — Edit or Delete", "type": "main", "index": 0 }], [{ "node": "Is Bot Message?", "type": "main", "index": 0 }]] },
+    "Is Bot Message?":                { "main": [[{ "node": "Is Claude REQ Message?", "type": "main", "index": 0 }], [{ "node": "Is App Mention?", "type": "main", "index": 0 }]] },
+    "Is Claude REQ Message?":         { "main": [[{ "node": "Forward Claude REQ to Handler", "type": "main", "index": 0 }], [{ "node": "Ignore", "type": "main", "index": 0 }]] },
+    "Is App Mention?":                { "main": [[{ "node": "Is Mention In Thread?", "type": "main", "index": 0 }], [{ "node": "Is Malformed Miles Mention?", "type": "main", "index": 0 }]] },
+    "Is Mention In Thread?":          { "main": [[{ "node": "Forward Mention In Thread to Handler", "type": "main", "index": 0 }], [{ "node": "Has Context?", "type": "main", "index": 0 }]] },
+    "Has Context?":                   { "main": [[{ "node": "Is Claude Signature?", "type": "main", "index": 0 }], [{ "node": "Get Mention User Info", "type": "main", "index": 0 }]] },
+    "Is Claude Signature?":           { "main": [[{ "node": "Forward Claude Human-Posted to Handler", "type": "main", "index": 0 }], [{ "node": "Forward Mention Context to Handler", "type": "main", "index": 0 }]] },
+    "Get Mention User Info":          { "main": [[{ "node": "Reply to @Miles Mention", "type": "main", "index": 0 }]] },
+    "Reply to @Miles Mention":        { "main": [[{ "node": "Ignore — No Context", "type": "main", "index": 0 }]] },
+    "Is Malformed Miles Mention?":    { "main": [[{ "node": "Forward Malformed Mention to Handler", "type": "main", "index": 0 }], [{ "node": "Is Thread Reply?", "type": "main", "index": 0 }]] },
+    "Is Thread Reply?":               { "main": [[{ "node": "Forward to Conversation Handler", "type": "main", "index": 0 }], [{ "node": "Ignore — Not a Thread Reply", "type": "main", "index": 0 }]] }
+  },
+  "active": true,
+  "settings": { "executionOrder": "v1", "availableInMCP": true },
+  "versionId": "0a82625f-e359-4eee-b4d3-1237b984f0a3",
+  "meta": { "templateCredsSetupCompleted": true, "instanceId": "95944be45d5aa5e5565d656a14e718ed8b92e30102ad1bd3fcad4cf1b1c2f383" },
+  "id": "oAFCmrntS6da6cCA",
+  "tags": [
+    { "updatedAt": "2026-04-01T15:49:24.440Z", "createdAt": "2026-04-01T15:49:24.440Z", "id": "PUW9bm4KdcIVVs8y", "name": "product-manager-app" },
+    { "updatedAt": "2026-03-25T20:09:56.359Z", "createdAt": "2026-03-25T20:09:56.439Z", "id": "m3quhhGHST3hiHGb", "name": "miles" }
   ]
 }
