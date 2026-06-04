@@ -92,11 +92,10 @@ Validadas mediante revisión de wireframe iterativo (dos rondas).
 ### Botón de acción
 - Label: "Crear Quote"
 - Estilo: outline sobrio (borde `white/10`, texto blanco, hover `white/8` bg) — no violeta saturado
-- Comportamiento: redirige al módulo Quotes con el cliente pre-filtrado. No inicia ninguna acción dentro de Clientes.
-- Leyenda bajo el botón: "Vista de solo lectura · el quote se crea en el flujo de Quotes"
+- Comportamiento: redirige al módulo Quotes y abre directamente el formulario de creación de quote con el cliente pre-cargado. La creación ocurre en Quotes — no desde Clientes.
 
 ### Confirmación de scope
-El módulo Clientes es estrictamente de solo lectura. La decisión de no iniciar quotes desde Clientes fue explícitamente confirmada con el área de Trading Desk en esta misma validación.
+El módulo Clientes es estrictamente de solo lectura. La creación de quotes no se inicia desde Clientes — el botón "Crear Quote" actúa como shortcut de navegación que lleva al operador directamente al formulario de creación en Quotes, con el cliente pre-cargado. Decisión confirmada con el área de Trading Desk.
 
 ---
 
