@@ -17,7 +17,7 @@ Entender el estado actual del módulo de deposit instructions en OPS, la viabili
 
 ## Contexto
 
-PWI-44 fue capturado por Miles el 27/05/2026 a partir de un requerimiento de Francisco Peñé (Operations). El problema: las deposit instructions (Account Confirmation Letter) se completan de forma manual. El operador reemplaza las X del template con los dígitos del docket del cliente y copia la dirección manualmente desde el legajo en LEX. El proceso genera riesgo de errores tipográficos en datos bancarios SWIFT.
+PWI-44 fue capturado por Miles el 27/05/2026 a partir de un requerimiento de Francisco Peñé (Operations). El problema: las deposit instructions (Account Confirmation Letter) se completan de forma manual. El operador obtiene los dos datos críticos accediendo al legajo del cliente en LEX (página a la que Operations tiene acceso): los dígitos del Docket AS para construir el account number (anteponiendo `512`) y la dirección del cliente para completar el campo correspondiente. Ambos datos viven en LEX, no en OPS. El proceso genera riesgo de errores tipográficos en datos bancarios SWIFT.
 
 Volumen: entre 10 y 30 instrucciones por semana, todos los días, con proyección de crecimiento.
 
@@ -50,6 +50,8 @@ Las dos variables nuevas de PWI-44 serían adiciones al catálogo del backend. S
 ### H2 · Patrón del account number — alineado con el modelo de dockets
 
 El patrón `512` + 6 dígitos del Docket AS está alineado con la arquitectura del modelo de clientes documentada en `features/ops/ops-cuentas-operativas-del-cliente.md`. El Docket de Ardua Solutions Corp es el ancla operativa de imputación para todos los flujos.
+
+**Origen del dato confirmado (04/06/2026):** el operador de OPS accede al legajo del cliente en LEX para leer el Docket AS. La nueva variable `{account_number}` debe por tanto leer ese campo desde LEX — no desde OPS — exactamente igual que `{client_address}`. Ambas variables tienen la misma fuente de datos: el legajo del cliente en LEX.
 
 **Punto pendiente de refinement técnico:** el comportamiento de `{docket}` respecto al prefijo no está confirmado. Si `{docket}` resuelve el código completo (`AS005468`), el account number requiere una nueva variable computada que extraiga los dígitos y agregue `512`. Si ya resuelve solo los 6 dígitos numéricos (`005468`), el operador podría escribir `512{docket}` directamente en el `default_value`. Esta distinción no va al PWI — es una decisión de Tecnología en refinement.
 
@@ -88,6 +90,6 @@ El composable `useInstructions.js` expone una función `createAccountInstruction
 
 ## Notas
 
-- El feature file `features/ops/ops-deposit-instructions.md` no existe aún. Se crea cuando el PWI alcance Sent to Dev.
+- El feature file `features/ops/ops-deposit-instructions.md` fue creado en la sesión del 04/06/2026 (discovery concluido, feature propagado).
 - P-03 y P-04 son decisiones de implementación técnica — no afectan el scope del PWI. Quedan para refinement con Tecnología.
 - La variable se llama `{client_address}` (no `{address}`) — nombre final confirmado en el enriquecimiento.
