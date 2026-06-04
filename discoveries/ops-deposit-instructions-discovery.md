@@ -1,7 +1,7 @@
 ---
 name: OPS — Deposit Instructions · Variables automáticas
 features: [OPS]
-status: En investigación
+status: Concluida
 owner: Santino Domeniconi
 created_at: 2026-06-04
 updated_at: 2026-06-04
@@ -53,18 +53,15 @@ El patrón `512` + 6 dígitos del Docket AS está alineado con la arquitectura d
 
 **Punto pendiente de refinement técnico:** el comportamiento de `{docket}` respecto al prefijo no está confirmado. Si `{docket}` resuelve el código completo (`AS005468`), el account number requiere una nueva variable computada que extraiga los dígitos y agregue `512`. Si ya resuelve solo los 6 dígitos numéricos (`005468`), el operador podría escribir `512{docket}` directamente en el `default_value`. Esta distinción no va al PWI — es una decisión de Tecnología en refinement.
 
-### H3 · La dirección en LEX es un campo de texto libre único — hallazgo de alcance
+### H3 · La dirección en LEX es un campo de texto libre — con convención de formato establecida
 
 La dirección del cliente en LEX se almacena en un campo único `client.address` (`FormClientUpdate.vue`, `Details.vue`). Es un `input type="text"` sin subcomponentes estructurados. No existen campos separados para Street, City, State, Zip, Country.
 
-Esto tiene impacto directo en el scope de la variable de dirección solicitada. El formato "Street, City, State, Zip, Country" que describe el requerimiento **no puede resolverse automáticamente** desde el modelo actual. Hay dos caminos posibles:
+Sin embargo, la práctica operativa del equipo de Operations establece una convención de formato consistente para el ingreso de direcciones: `Street: [val], City: [val], State: [val], Zip: [val], Country: [val]`. Esta convención es suficiente para que el backend pueda parsear el campo y extraer los valores sin sus etiquetas.
 
-| Opción | Descripción | Impacto |
-|---|---|---|
-| **A — Variable simple** | `{address}` inserta `client.address` tal como está cargado en el legajo. El formato depende de cómo el operador haya ingresado la dirección. | Sin cambios en LEX. Scope acotado. |
-| **B — Campos estructurados en LEX** | Se agregan campos separados de dirección al modelo de cliente en LEX (Street, City, State, Zip, Country). La variable los concatena en orden. | Requiere cambios en el modelo de datos, formulario de alta y formulario de edición de LEX. Scope significativamente mayor. Implica un REQ separado para LEX. |
+Ejemplo real observado en producción: `Street: 1680 Moldes, City: Buenos Aires, State: Ciudad Autónoma de Buenos Aires, Zip: C1426, Country: AR`.
 
-La elección entre A y B está pendiente de confirmación con Francisco Peñé — es el C2 del challenge en curso.
+**Conclusión — Opción A confirmada:** la variable `{client_address}` puede resolverse parseando el string existente y entregando los valores sin etiquetas, sin cambios en LEX. El manejo de casos donde la dirección no sigue la convención (cliente sin onboarding completo) queda a definir con Tecnología en refinement; operacionalmente, si la dirección no sigue el formato no se genera la instrucción.
 
 ### H4 · Endpoint `/account-instruction` — propósito pendiente de confirmar
 
@@ -76,21 +73,21 @@ El composable `useInstructions.js` expone una función `createAccountInstruction
 
 | # | Pregunta | Para quién | Estado |
 |---|---|---|---|
-| P-01 | ¿Podés adjuntar el PDF del Account Confirmation Letter al hilo de PWI-44? | Francisco Peñé (Operations) | Pendiente — challenge enviado |
-| P-02 | ¿La variable de dirección debe insertar `client.address` como está (Opción A) o requiere campos estructurados en LEX (Opción B)? | Francisco Peñé (Operations) | Pendiente — challenge enviado |
-| P-03 | ¿`{docket}` resuelve el código completo (`AS005468`) o solo los 6 dígitos numéricos (`005468`)? | Tecnología | Pendiente — refinement |
-| P-04 | ¿Qué hace el endpoint `/account-instruction`? ¿Es el mecanismo de generación del Account Confirmation Letter? | Tecnología | Pendiente — refinement |
+| P-01 | ¿Podés adjuntar el PDF del Account Confirmation Letter al hilo de PWI-44? | Francisco Peñé (Operations) | Cerrado — flujo documentado mediante investigación directa en OPS QA (04/06/2026) |
+| P-02 | ¿La variable de dirección debe insertar `client.address` como está (Opción A) o requiere campos estructurados en LEX (Opción B)? | Francisco Peñé (Operations) | Cerrado — Opción A confirmada. El campo en LEX sigue una convención de formato estructurado con etiquetas; el backend puede parsear sin cambios en el modelo |
+| P-03 | ¿`{docket}` resuelve el código completo (`AS005468`) o solo los 6 dígitos numéricos (`005468`)? | Tecnología | Pendiente — refinement técnico |
+| P-04 | ¿Qué hace el endpoint `/account-instruction`? ¿Es el mecanismo de generación del Account Confirmation Letter? | Tecnología | Pendiente — refinement técnico |
 
 ---
 
 ## PWI asociado
 
-**PWI-44** — En análisis · Challenge enviado a Francisco Peñé (Operations) · Enriquecimiento Detallado en curso.
+**PWI-44** — Listo para Sent to Dev · Enriquecimiento Detallado completado (04/06/2026).
 
 ---
 
 ## Notas
 
-- Si Francisco confirma Opción B (campos estructurados en LEX), el scope de la variable de dirección implica un segundo requerimiento sobre LEX — no puede resolverse dentro de PWI-44.
-- El feature file `features/ops/ops-deposit-instructions.md` no existe aún. Se crea cuando el PWI alcance Sent to Dev y el enriquecimiento esté completo.
-- La urgencia del PWI debe corregirse a **Medio** en Jira (acuerdo confirmado en el hilo de Slack, ticket quedó en Normal por error).
+- El feature file `features/ops/ops-deposit-instructions.md` no existe aún. Se crea cuando el PWI alcance Sent to Dev.
+- P-03 y P-04 son decisiones de implementación técnica — no afectan el scope del PWI. Quedan para refinement con Tecnología.
+- La variable se llama `{client_address}` (no `{address}`) — nombre final confirmado en el enriquecimiento.
