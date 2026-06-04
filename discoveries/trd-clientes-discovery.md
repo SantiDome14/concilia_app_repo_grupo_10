@@ -1,89 +1,117 @@
 ---
-name: TRD — Módulo Clientes · Visibilidad de saldos y límites
+name: TRD — Módulo Clientes · Visualización de saldos y límites
 features: [TRD]
 status: En investigación
 owner: Santino Domeniconi
-created_at: 2026-06-03
-updated_at: 2026-06-03
+created_at: 2026-06-04
+updated_at: 2026-06-04
 propagates_to:
   - features/trd/trd-clientes.md
 ---
 
-# TRD — Módulo Clientes · Visibilidad de saldos y límites
+# TRD — Módulo Clientes · Visualización de saldos y límites
 
 ## Objetivo
 
-Entender el estado actual del módulo Clientes de TRD, identificar los gaps de información que afectan la planificación de operaciones, y definir qué datos deben estar disponibles en el módulo sin necesidad de iniciar un quote.
+Definir el patrón de visualización óptimo para exponer el saldo por moneda y el límite operativo por entidad de cada cliente directamente desde el módulo Clientes de TRD, sin que el operador tenga que iniciar el flujo de creación de un quote para acceder a esos datos.
 
 ## Contexto
 
-El módulo Clientes de TRD existe en producción pero está documentado de forma mínima. Al abrir este discovery, el módulo muestra únicamente tres campos por cliente: **Nombre**, **N° de legajo** y **Está activo**. No hay feature file correspondiente en `features/trd/`.
+**Requerimiento asociado:** PWI-64 — TRD · Clientes — Visibilidad de saldos y límites por cliente
 
-La hipótesis central de este discovery es: *los operadores necesitan acceder a datos de contexto del cliente (saldos y límites) antes de decidir qué operación realizar, pero ese acceso hoy requiere iniciar el flujo de un quote — lo que introduce fricción operativa innecesaria.*
+El módulo Clientes de TRD muestra hoy tres campos por cliente: Nombre, N° de legajo y Está activo. Para conocer el saldo y el límite operativo de un cliente, los operadores deben iniciar el flujo de creación de un quote (4 pasos: abrir formulario → escribir nombre → seleccionar cliente → ver datos). Esto obliga a comenzar una operación para acceder a información de contexto que debería estar disponible antes de tomar la decisión de operar.
 
-El requerimiento **PWI-64**, solicitado por Facundo Vasques (Head of Trading), es el punto de entrada de este discovery.
+El sistema ya expone estos datos en el formulario de quote:
+- **Límites operativos por entidad:** valor junto al nombre del cliente (ej. Haz Pagos $6.793.360 / Circuit $6.793.360)
+- **Saldo por moneda:** campo "balance" al lado de los montos del par seleccionado
+
+**Caso de uso central (validado con el área de Trading Desk):** antes de pasarle una cotización a un cliente, el trader necesita saber si ese cliente tiene saldo suficiente en la moneda de origen y si tiene límite operativo disponible. Hoy ese chequeo requiere simular el inicio de un quote. El objetivo es que ese chequeo sea un clic en la fila del cliente.
 
 ---
 
-## Estado actual del módulo
+## Hipótesis exploradas
 
-### Campos visibles en el listado de Clientes
+### H1 — Columnas adicionales en la tabla de Clientes
+Agregar columnas de saldo y límite directamente en la tabla existente.
 
-| Campo | Descripción |
-|---|---|
-| Nombre | Nombre completo del cliente |
-| N° de legajo | Identificador interno del cliente |
-| Está activo | Estado del cliente (activo / inactivo) |
+**Descartada.** La tabla ya tiene tres columnas (Nombre, Legajo, Activo). Agregar 7 columnas más (5 monedas + 2 entidades) la vuelve ilegible. Tampoco hay espacio natural para jerarquizar la información.
 
-Fuente: captura del entorno de producción compartida por Facundo Vasques (junio 2026).
+---
 
-### Flujo actual para ver datos financieros de un cliente
+### H2 — Fila expandible inline (accordion)
+Al hacer clic en una fila, se expande hacia abajo mostrando saldos y límites en un panel de dos columnas.
 
-Para acceder al saldo y límite de un cliente, los operadores deben:
+**Evaluada, descartada.** Es útil cuando el caso de uso es comparar múltiples clientes en paralelo. El caso de uso real es consultar un cliente a la vez antes de cotizar — el accordion abre espacio para ruido visual sin aportar ventaja sobre el sidebar. Además, múltiples filas expandidas simultáneamente degradan la legibilidad de la lista.
 
-1. Tocar **Crear Quote**
-2. Escribir el nombre del cliente en el buscador
-3. Volver a clickear en el nombre del cliente en el dropdown
-4. Recién en ese momento el sistema expone los datos
+---
 
-**Total: 4 pasos para acceder a información de contexto que debería estar disponible sin iniciar una operación.**
+### H3 — Panel lateral deslizante (sidebar derecho) ✅ DECISIÓN
 
-### Datos que expone el formulario de quote hoy
+Al hacer clic en una fila de cliente, se abre un panel lateral desde la derecha (slide-in) que muestra todos los datos de ese cliente sin desplazar el contenido principal.
 
-Dentro del formulario de creación de quote, el sistema expone dos tipos de datos del cliente:
+**Validado con el área de Trading Desk mediante wireframe interactivo.** Ganó sobre las otras dos opciones.
 
-| Dato | Dónde aparece | Qué representa |
+**Justificación:**
+- El flujo es lineal: el trader selecciona un cliente, revisa su posición, y decide si cotiza o no. Un panel lateral acompaña ese flujo sin perder el contexto de la lista.
+- La lista de clientes queda visible al fondo, lo que permite cambiar de cliente sin cerrar el panel (próximo clic reemplaza el contenido).
+- La información puede organizarse en secciones diferenciadas (Saldos / Límites) con jerarquía visual clara.
+
+---
+
+## Decisiones de diseño consolidadas
+
+Validadas mediante revisión de wireframe iterativo (dos rondas).
+
+### Patrón general del panel
+- Ancho: 380px. Slide-in desde la derecha, transición 200ms ease-out.
+- Se abre al hacer clic en cualquier fila de cliente.
+- Se cierra al hacer clic fuera del panel o en el botón ×.
+- Dark theme consistente con el resto de la aplicación TRD.
+
+### Header del panel
+- Nombre del cliente (heading principal)
+- Legajo como badge (outline, xs)
+- Estado como badge pill verde sutil (`green-900/40` bg, `green-700` border, `green-400` texto) — no texto plano "true"
+
+### Sección Saldos por Moneda
+- Una card por moneda: ARS, USDC, BTC, ETH, USDT
+- Grid de 2 columnas (USDT ocupa celda completa si es impar)
+- Cada card tiene:
+  - Dot de color semántico: ARS → verde (#22c55e), USDC → azul (#3b82f6), USDT → teal (#14b8a6), BTC → naranja (#f97316), ETH → violeta (#a855f7)
+  - Borde izquierdo de 2px del mismo color del dot
+  - Valor en monospace, tamaño base
+- Si el saldo es $0, se muestra de todas formas (no se oculta)
+
+### Sección Límite Operativo por Entidad
+- Una card por entidad: Haz Pagos y Circuit Pay
+- Cada card muestra:
+  - Dot naranja + nombre de entidad + valor del límite disponible
+  - Barra de progreso thin (4px alto, border-radius 2px): fondo `white/10`, fill naranja (`#f97316`)
+  - Texto xs muted debajo: "usado / disponible"
+
+### Botón de acción
+- Label: "Crear Quote"
+- Estilo: outline sobrio (borde `white/10`, texto blanco, hover `white/8` bg) — no violeta saturado
+- Comportamiento: redirige al módulo Quotes con el cliente pre-filtrado. No inicia ninguna acción dentro de Clientes.
+- Leyenda bajo el botón: "Vista de solo lectura · el quote se crea en el flujo de Quotes"
+
+### Confirmación de scope
+El módulo Clientes es estrictamente de solo lectura. La decisión de no iniciar quotes desde Clientes fue explícitamente confirmada con el área de Trading Desk en esta misma validación.
+
+---
+
+## Wireframe de referencia
+
+https://claude.ai/design/p/de8ec9f4-56a2-4a9d-8de2-943b62568bb4?file=Clientes+-+Saldos+y+L%C3%ADmites.html
+
+Versión activa: sidebar deslizante (única opción en el wireframe tras revisión con el área).
+
+---
+
+## Estado y próximos pasos
+
+| # | Acción | Estado |
 |---|---|---|
-| `Haz Pagos $X / Circuit $X` | Junto al nombre del cliente, al seleccionarlo | **Límites operativos por entidad** — el límite que tiene el cliente para operar con cada entidad del grupo |
-| `balance` (al lado de cada campo de monto) | Junto al campo "Monto a comprar" y "Monto a entregar" | **Saldo por moneda del par seleccionado** — el dinero que el cliente tiene disponible en esa moneda |
-
-Confirmado por Facundo Vasques vía DM (03-06-2026):
-> *"eso representa los limites"* (sobre las cifras de Haz Pagos / Circuit)
-> *"el monto a comprar es el saldo que tienen — aparece ahí cuando vas a cargar el quote"*
-
----
-
-## Hipótesis validadas en el proceso de refinamiento (PWI-64)
-
-| # | Hipótesis | Respuesta | Fuente |
-|---|---|---|---|
-| H1 | Los operadores necesitan ver saldo por moneda **y** límite por entidad | Confirmado — ambos datos | Facu (DM, 03-06-2026) |
-| H2 | Si un cliente no tiene saldo en una moneda, se prefiere mostrar $0 en lugar de ocultar el campo | Confirmado — mostrar $0 | Facu (DM, 03-06-2026) |
-| H3 | Hay otros datos del cliente que faltan en el módulo Clientes además de saldos y límites | No — saldos y límites son el único gap identificado | Facu (DM, 03-06-2026) |
-| H4 | Podría tener valor iniciar un quote directamente desde el módulo de Clientes | No — la separación es intencional. Clientes es informativo; Quotes es para crear operaciones | Facu (DM, 03-06-2026) |
-
----
-
-## Requerimientos vinculados
-
-| REQ | Descripción | Estado |
-|---|---|---|
-| PWI-64 | Visibilidad de saldos y límites por cliente en el módulo Clientes de TRD | IN ANALYSIS |
-
----
-
-## Pendientes para concluir
-
-- Validar el wireframe con Facu antes de cerrar el scope visual (a preparar por Producto)
-- Crear el feature file `features/trd/trd-clientes.md` una vez que el wireframe esté validado y el REQ avance a SENT TO DEV
-- Confirmar si el campo por entidad (Haz Pagos / Circuit) está expresado en ARS u otra unidad — no fue respondido explícitamente en el proceso de refinamiento
+| 1 | Wireframe final actualizado con mejoras estéticas (badges, color semántico, progress bar) | En curso |
+| 2 | Handoff a Tecnología (PWI-64 → EWI espejo) | Pendiente |
+| 3 | Crear `features/trd/trd-clientes.md` una vez el módulo llegue a producción | Pendiente |
