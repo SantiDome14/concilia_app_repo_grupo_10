@@ -17,7 +17,7 @@
 
 | Módulo | Estado | Feature file | Referencias |
 |---|---|---|---|
-| _Por completar_ | _—_ | _—_ | _—_ |
+| Deposit Instructions | En construcción | [`ops-deposit-instructions.md`](./ops-deposit-instructions.md) | PWI-44 |
 
 ---
 
