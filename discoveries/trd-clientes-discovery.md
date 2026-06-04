@@ -89,8 +89,6 @@ Validadas mediante revisión de wireframe iterativo (dos rondas).
 - Una card por entidad: Haz Pagos y Circuit Pay
 - Cada card muestra:
   - Dot naranja + nombre de entidad + valor del límite disponible
-  - Barra de progreso thin (4px alto, border-radius 2px): fondo `white/10`, fill naranja (`#f97316`)
-  - Texto xs muted debajo: "usado / disponible"
 
 ### Botón de acción
 - Label: "Crear Quote"
@@ -105,7 +103,7 @@ El módulo Clientes es estrictamente de solo lectura. La creación de quotes no 
 
 ## Wireframe de referencia
 
-https://claude.ai/design/p/de8ec9f4-56a2-4a9d-8de2-943b62568bb4?file=Clientes+-+Saldos+y+L%C3%ADmites.html
+https://claude.ai/design/p/de8ec9f4-56a2-4a9d-8de2-943b62568bb4?file=_original%2FClientes+-+Saldos+y+L%C3%ADmites+%28v1%29.html 
 
 Tecnología debe implementar: **Panel lateral + Variante B (con quote) + Color por moneda activado**. Las demás variantes del wireframe quedan como registro de lo evaluado.
 
