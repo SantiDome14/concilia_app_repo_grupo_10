@@ -176,6 +176,7 @@ El calificativo se construye mirando el conjunto de la semana: throughput, inici
 
 El bullet **no describe qué se hizo** — describe **qué habilita, qué problema elimina, qué capacidad crea**:
 
+Para clusters (2+ ítems):
 ```
 [Área]
 • PWI-XX — [nombre] → [qué habilita o resuelve en el negocio]
