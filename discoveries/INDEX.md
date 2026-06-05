@@ -29,6 +29,7 @@ Hipótesis focalizadas en un módulo específico dentro de una aplicación.
 
 | Archivo | Nombre | Estado | Owner | Última act. | Propaga a |
 |---|---|---|---|---|---|
+| [`lex-auditoria-operativa-discovery.md`](./lex-auditoria-operativa-discovery.md) | LEX — Auditoría operativa de trades confirmados (TRD → LEX) | En investigación | Santino Domeniconi | 2026-06-05 | _—_ |
 | [`ops-deposit-instructions-discovery.md`](./ops-deposit-instructions-discovery.md) | OPS — Deposit Instructions · Variables automáticas | Concluida | Santino Domeniconi | 2026-06-04 | `features/ops/ops-deposit-instructions.md` |
 | [`trd-clientes-discovery.md`](./trd-clientes-discovery.md) | TRD — Módulo Clientes · Visualización de saldos y límites | En investigación | Santino Domeniconi | 2026-06-04 | `features/trd/trd-clientes.md` |
 | [`trd-quotes-discovery.md`](./trd-quotes-discovery.md) | TRD — Módulo Quotes | En investigación | Santino Domeniconi | 2026-05-26 | `features/trd/trd-quotes.md` |
