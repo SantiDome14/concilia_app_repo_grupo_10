@@ -225,6 +225,8 @@ Ejemplo de compresión:
 Comparar con el reporte anterior (Paso 1.2 C):
 - Bloqueado la semana pasada y esta semana avanzó → agregar `↗ desbloqueado` al bullet correspondiente.
 
+Rovo (paso 1.2 D) puede confirmar el contexto del desbloqueo cuando el campo `Blocked cause` de Jira no es suficientemente descriptivo.
+
 ---
 
 ### Paso 1.4 — Template del mensaje
