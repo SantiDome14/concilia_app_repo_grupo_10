@@ -94,7 +94,7 @@ Cinco preguntas a responder antes de arrancar la implementación. Cada una tiene
 ## Riesgos y unknowns
 
 - **Slack 3-second timeout** — n8n debe responder 200 inmediato al webhook y procesar el resto async. Si tarda más, Slack reintenta y aparecen duplicados. No es opcional, es la primera regla de la implementación.
-- **Mapping Slack user → identidad interna (Notion/Jira)** — verificar al arrancar Fase 0 si ya existe tabla de mapping en algún workflow de Miles. Si no, agendar Fase 0.5 corta para armarla.
+- **Mapping Slack user → identidad interna (Notion/Jira)** — verificar al arrancar Fase 0 si ya existe tabla de mapping en algún workflow de Miles. Si no, agendar Fase 0.5 corta para armarla. **Nota:** la base "Personas" de Notion propuesta en `miles-home-discovery.md` (H1) es exactamente este mapping. Se diseña una sola vez en aquel discovery y se consume desde acá — no duplicar.
 - **Endpoint público expuesto** — el Request URL configurado en el Slack App es accesible desde internet. La verificación de firma HMAC-SHA256 con `signing_secret` de Slack es la única barrera. Skipearla por "facilidad de testing" abre el endpoint a falsificación.
 - **Coexistencia con challenges abiertos** — el skill tiene que distinguir cuáles tienen opciones discretas (Block Kit) vs. cuáles son prosa libre (formato actual). Hoy esto es juicio del PM al construir cada Cn; en la implementación, probablemente sea instrucción explícita al skill en el Paso 4.
 - **El MCP de Slack actual no soporta `blocks`** — para postear con Block Kit, el skill necesita llamar a un endpoint helper en n8n (`/miles-post-challenge`) que internamente usa Miles con la Slack API completa. Componente adicional a construir como parte de Fase 3.
