@@ -55,17 +55,17 @@ Cloud ID: `53eec1f8-a156-4af9-bc3a-d6142b50e0cc`
 | `READY FOR DEV` | Definido, esperando pasarlo a dev | En curso |
 | `BLOCKED` | Bloqueado (causa externa) | Bloqueos |
 | `SENT TO DEV` | Cerrado desde Producto, épica en EWI | Cerrado |
-| `Done` | Completado | — (no incluir en reporte) |
+| `Done` | Completado | — (no incluir) |
 | `Deprecated` | Descartado | — (no incluir) |
 
-**Query 1 — Cerrado esta semana (a SENT TO DEV):**
+**Query 1 — Cerrado esta semana:**
 ```jql
 (assignee = currentUser() OR reporter = currentUser())
 AND status changed to "SENT TO DEV" during (startOfWeek(), now())
 ORDER BY updated DESC
 ```
 
-**Query 2 — En curso (activos):**
+**Query 2 — En curso:**
 ```jql
 (assignee = currentUser() OR reporter = currentUser())
 AND status in ("IN ANALYSIS", "READY FOR DEV")
@@ -80,7 +80,7 @@ AND status = "BLOCKED"
 ORDER BY updated DESC
 ```
 
-**Query 4 — Nuevas iniciativas (creadas esta semana):**
+**Query 4 — Nuevas iniciativas:**
 ```jql
 reporter = currentUser()
 AND created >= startOfWeek()
@@ -88,31 +88,31 @@ AND status not in ("SENT TO DEV", "Done", "Deprecated")
 ORDER BY created DESC
 ```
 
-Campos a traer: `summary`, `status`, `priority`, `customfield_10310` (Business Area), `customfield_10306` (Blocked cause), `created`, `updated`.
+Campos: `summary`, `status`, `priority`, `customfield_10310` (Business Area), `customfield_10306` (Blocked cause), `created`, `updated`.
 
 #### B) Notion — task list de la semana
 
 1. `notion-fetch` sobre el URL provisto.
 2. Identificar el `data-source-url` de la DB inline (`collection://[UUID]`).
 3. Consultar todos los registros via view mode (Kanban o Activas).
-4. El schema vigente tiene: `Task name` (título), `Estado` (No iniciada · En curso · En otra cancha · Resuelta), `Área` (Trading Desk · Legal & Compliance · Operations · Finance & Accounting · Sales & Partnerships · Management · Miles/N8N · Framework · Ops de Producto), `Impacto` (texto libre), `REQ` (referencia a ticket).
+4. Schema vigente: `Task name` (título), `Estado` (NO INICIADA · EN CURSO · EN OTRA CANCHA · RESUELTA), `Área` (Trading Desk · Legal & Compliance · Operations · Finance & Accounting · Sales & Partnerships · Management · Miles/N8N · Framework · Ops de Producto), `Impacto` (texto libre), `REQ` (referencia a ticket).
 
-**Mapeo de Estado a sección del reporte:**
+**Mapeo Estado → sección del reporte:**
 
-| Estado Notion | Sección del reporte |
+| Estado Notion | Sección |
 |---|---|
-| `Resuelta` | ✅ Cerrado |
-| `En curso` | 🔄 En curso |
-| `En otra cancha` | 🔄 En curso (con indicador) o 🚨 Bloqueos |
-| `No iniciada` | No se incluye directamente salvo que sea nueva iniciativa de esta semana |
+| `RESUELTA` | ✅ Cerrado |
+| `EN CURSO` | 🔄 En curso |
+| `EN OTRA CANCHA` | 🔄 En curso (con indicador) o 🚨 Bloqueos |
+| `NO INICIADA` | Solo si es nueva iniciativa de esta semana |
 
-**Nota:** el campo `_status` es legacy (solo en semana 01/06-05/06) — ignorarlo. Usar siempre `Estado`.
+> `_status` es campo legacy (solo semana 01/06-05/06) — ignorar siempre.
 
 #### C) Slack — reporte anterior y contexto semanal
 
-**Reporte anterior:** buscar en `#product` el último "Resumen semanal" de Santi (`from:<@U0B1MM6MF0U> in:#product`). Extraer qué estaba en "En curso" y "Bloqueos" para detectar avances esta semana.
+Buscar en `#product` el último "Resumen semanal" de Santi (`from:<@U0B1MM6MF0U> in:#product`). Extraer "En curso" y "Bloqueos" del reporte anterior para detectar avances.
 
-**Canales a escanear (actividad de esta semana):**
+**Canales a escanear:**
 
 | Canal | ID | Prioridad |
 |---|---|---|
@@ -130,70 +130,63 @@ Campos a traer: `summary`, `status`, `priority`, `customfield_10310` (Business A
 
 #### Principio central
 
-El reporte no es una lista de tareas completadas. Es una narrativa de impacto: **qué hice → qué logré → qué sigue**. El CEO y el HOP leen esto para entender el valor generado en la semana, no para ver el detalle de cada ticket.
+El reporte no es una lista de tareas. Es una narrativa de impacto: **qué hice → qué logré → qué sigue**. El CEO y el HOP deben entender el valor generado, no el detalle de cada ticket.
 
-#### Paso A — Deduplicación
+#### A — Deduplicación
 
-Cruzar Jira y Notion por campo `REQ`. Si una tarea de Notion y un ticket de Jira referencian el mismo REQ, son el mismo ítem — usar los datos más ricos de los dos.
+Cruzar Jira y Notion por campo `REQ`. Si coinciden, usar los datos más ricos de los dos.
 
-#### Paso B — Agrupamiento por Área
+#### B — Agrupamiento por Área
 
-Agrupar todos los ítems resueltos/activos por su `Área` (Notion) o Business Area (Jira). Nombres de área exactos (alineados con Jira): `Trading Desk`, `Legal & Compliance`, `Operations`, `Finance & Accounting`, `Sales & Partnerships`, `Management`, `Miles/N8N`, `Framework`, `Ops de Producto`.
+Agrupar por `Área` (Notion) o Business Area (Jira). Nombres exactos: `Trading Desk`, `Legal & Compliance`, `Operations`, `Finance & Accounting`, `Sales & Partnerships`, `Management`, `Miles/N8N`, `Framework`, `Ops de Producto`. Solo incluir grupos con contenido real.
 
-Solo incluir en el reporte los grupos que tienen contenido real esta semana.
+#### C — Clustering temático
 
-#### Paso C — Clustering temático dentro de cada Área
+Dentro de cada grupo, identificar clusters por tema:
+- Keywords `workflow`, `Miles`, `n8n`, `automatiz*` → cluster "Automatizaciones"
+- Keywords `tablero`, `Jira`, `epic*`, `configuraci*` → cluster "Framework de trabajo"
+- Keywords `onboarding`, `Centaurus`, `API`, `partner*` → cluster "Partnership"
+- Mismo REQ o misma épica → mismo cluster
 
-Dentro de cada grupo, identificar clusters de ítems relacionados por tema. Señales para agrupar:
+1 solo ítem = bullet individual, sin clustering.
 
-- Mismo REQ o REQs del mismo discovery/iniciativa
-- Keywords compartidos: `workflow`, `Miles`, `n8n`, `automatiz*` → cluster "Automatizaciones"; `tablero`, `Jira`, `epic*`, `configuraci*` → cluster "Mejoras al framework de trabajo"; `onboarding`, `Centaurus`, `API`, `partner*` → cluster "Partnership"
-- Items que forman parte de una misma épica o secuencia de trabajo
+#### D — Narrativa de impacto
 
-Si hay 1 solo ítem en el grupo, no aplica clustering — va como bullet individual.
-
-#### Paso D — Narrativa de impacto por cluster
-
-Para cada cluster (2+ ítems relacionados), sintetizar así:
-
+Para clusters (2+ ítems):
 ```
 [Área]
-• [Nombre del cluster]: [qué se hizo — 1-2 oraciones, activo, sin listar cada sub-tarea].
-  _Logro: [qué se consiguió — métrica, capacidad habilitada, problema eliminado]._
+• [Nombre del cluster]: [qué se hizo — 1-2 oraciones].
+  _Logro: [métrica, capacidad habilitada, problema eliminado]._
 ```
 
-Para ítems individuales (sin cluster):
-
+Para ítems individuales:
 ```
-• REQ-XXX — [Nombre] → [acción realizada] [↗ avanzó / ↗ desbloqueado si aplica]
-```
-
-**Ejemplo de síntesis correcta:**
-
-❌ Mal (lista de tareas):
-```
-Miles/N8N
-• REQ Approval Locks → workflow actualizado
-• Auto-asignación de REQs → configurada
-• Recordatorio heads → implementado
+• REQ-XXX — [Nombre] → [acción] [↗ avanzó / ↗ desbloqueado si aplica]
 ```
 
-✅ Bien (narrativa de impacto):
+Si el campo `Impacto` de Notion está completado, usarlo directamente como línea de logro.
+
+**Ejemplo:**
+
+❌ Lista de tareas:
 ```
 Miles/N8N
-• Sistema de gestión de REQs: se implementó el gate de aprobación de heads con auto-asignación por área y recordatorio automático de SLA.
-  _Logro: los REQs tienen trazabilidad completa desde captura hasta aprobación, sin intervención manual._
+• REQ Approval Locks → actualizado
+• Auto-asignación → configurada
 ```
 
-Si el campo `Impacto` de Notion está completado para una tarea resuelta, usar ese texto directamente como línea de logro.
+✅ Narrativa de impacto:
+```
+Miles/N8N
+• Sistema de gestión de REQs: gate de aprobación de heads con auto-asignación y SLA automático implementados.
+  _Logro: trazabilidad completa desde captura hasta aprobación sin intervención manual._
+```
 
-#### Paso E — Indicadores de progreso vs semana anterior
+#### E — Indicadores de progreso
 
-Para ítems en "En curso" o "Bloqueos", comparar con el reporte anterior:
-
-- Estaba en **Bloqueos** la semana pasada y ahora avanzó → agregar `↗ desbloqueado`
-- Estaba en **En curso** sin movimiento y esta semana tuvo actividad real → agregar `↗ avanzó`
-- Sin cambio → sin indicador
+Comparar con el reporte anterior:
+- Estaba en **Bloqueos** y avanzó → `↗ desbloqueado`
+- Estaba en **En curso** sin movimiento y esta semana tuvo actividad → `↗ avanzó`
 
 ---
 
@@ -202,39 +195,39 @@ Para ítems en "En curso" o "Bloqueos", comparar con el reporte anterior:
 ```
 :clipboard: _Resumen semanal — Producto_ | Semana del [DD] al [DD] de [mes]
 
-:bar_chart: _[N] REQ(s) a SENT TO DEV | [1-2 highlights ejecutivos]_
+:bar_chart: _[N] REQ(s) a SENT TO DEV | [highlight ejecutivo]_
 
 :sparkles: _Nuevas iniciativas_
 
 [Área]
-• [Nombre] → [estado inicial / primer paso concreto]
+• [Nombre] → [primer paso concreto]
 
 :white_check_mark: _Cerrado esta semana_
 
 [Área]
-• [Narrativa de cluster o bullet individual con REQ-XXX]
+• [Narrativa de cluster o bullet individual]
   _Logro: [impacto]._
 
 :arrows_counterclockwise: _En curso_
 
 [Área]
-• REQ-XXX — [Nombre] ([STATUS]) → [situación] [↗ indicador si aplica]
+• REQ-XXX — [Nombre] ([STATUS]) → [situación] [↗ si aplica]
 
 :rotating_light: _Bloqueos_
-• REQ-XXX → [razón concisa] (blocked cause si disponible en Jira)
+• REQ-XXX → [razón concisa]
 
 _Sent using_ <@U0AHZHTQE22|Claude>
 ```
 
-> Secciones vacías se omiten. El subtitle `:bar_chart:` siempre incluye throughput + 1 highlight del cluster de mayor impacto.
+> Secciones vacías se omiten. `:bar_chart:` siempre incluye throughput + 1 highlight del cluster de mayor impacto.
 
 ---
 
 ### Paso 1.5 — Revisión y envío
 
-1. Presentar el borrador completo. **Nunca enviar sin confirmación explícita.**
+1. Presentar borrador completo. **Nunca enviar sin confirmación explícita.**
 2. Aplicar ajustes.
-3. Usar `slack_send_message_draft` en `#product` (`C0A7E419292`). Mostrar el draft.
+3. `slack_send_message_draft` en `#product` (`C0A7E419292`). Mostrar el draft.
 4. Confirmar antes de `slack_send_message`.
 
 ---
@@ -243,28 +236,28 @@ _Sent using_ <@U0AHZHTQE22|Claude>
 
 Ejecutar después del envío confirmado.
 
-### Paso 2.1 — Identificar tareas pendientes
+### Paso 2.1 — Tareas pendientes
 
-Tasks con `Estado` = `"No iniciada"`, `"En curso"` o `"En otra cancha"` (todo lo que no sea `"Resuelta"`).
+Tasks con `Estado` = `"NO INICIADA"`, `"EN CURSO"` o `"EN OTRA CANCHA"`.
 
-### Paso 2.2 — Calcular fecha próxima semana
+### Paso 2.2 — Fecha próxima semana
 
 Próximo lunes al próximo viernes. Formato: `Tasks DD/MM - DD/MM`.
 
-### Paso 2.3 — Crear nueva página
+### Paso 2.3 — Crear página
 
 ```json
 notion-create-pages: { "pages": [{ "properties": { "title": "Tasks DD/MM - DD/MM" }, "icon": "icons/checklist_green" }] }
 ```
 
-### Paso 2.4 — Crear la base de datos
+### Paso 2.4 — Crear base de datos
 
-Con `notion-create-database`, parent = page_id recién creada:
+`notion-create-database` con parent = page_id recién creada:
 
 ```sql
 CREATE TABLE (
   "Task name" TITLE,
-  "Estado" SELECT('No iniciada':gray, 'En curso':blue, 'En otra cancha':yellow, 'Resuelta':green),
+  "Estado" SELECT('NO INICIADA':gray, 'EN CURSO':blue, 'EN OTRA CANCHA':yellow, 'RESUELTA':green),
   "Área" SELECT('Trading Desk':blue, 'Legal & Compliance':purple, 'Operations':orange, 'Finance & Accounting':green, 'Sales & Partnerships':brown, 'Management':yellow, 'Miles/N8N':pink, 'Framework':gray, 'Ops de Producto':red),
   "Impacto" RICH_TEXT,
   "REQ" RICH_TEXT,
@@ -273,22 +266,23 @@ CREATE TABLE (
 )
 ```
 
-### Paso 2.5 — Poblar con tareas pendientes
+### Paso 2.5 — Poblar tareas pendientes
 
-Para cada tarea con Estado != "Resuelta":
-- Copiar: `Task name`, `Estado`, `Área`, `REQ`
-- No copiar: `Impacto` (se llena fresco), `Due date` (se limpia)
+Copiar por cada tarea: `Task name`, `Estado`, `Área`, `REQ`. No copiar `Impacto` ni `Due date`.
 
 ### Paso 2.6 — Crear vistas
 
-Después de crear la DB, crear estas vistas con `notion-create-view`:
-- **Kanban** (board): `GROUP BY "Estado"; SORT BY "Área" ASC; SHOW "Task name", "Área", "REQ", "Impacto", "Due date", "Assignee"`
-- **Activas** (list): `FILTER "Estado" != "Resuelta"; SORT BY "Estado" ASC; SORT BY "Área" ASC`
-- **En curso** (list): `FILTER "Estado" = "En curso"`
-- **En otra cancha** (list): `FILTER "Estado" = "En otra cancha"`
-- **No iniciada** (list): `FILTER "Estado" = "No iniciada"`
-- **Resuelta** (list): `FILTER "Estado" = "Resuelta"`
-- **Calendario** (calendar): `CALENDAR BY "Due date"`
+Con `notion-create-view`, database_id = ID de la nueva DB, data_source_id = ID del collection:
+
+| Vista | Tipo | Configuración |
+|---|---|---|
+| Kanban | board | `GROUP BY "Estado"; SORT BY "Área" ASC; SHOW "Task name", "Área", "REQ", "Impacto", "Due date", "Assignee"` |
+| Activas | list | `FILTER "Estado" != "RESUELTA"; SORT BY "Estado" ASC; SORT BY "Área" ASC; SHOW "Task name", "Estado", "Área", "REQ", "Impacto", "Due date"` |
+| EN CURSO | list | `FILTER "Estado" = "EN CURSO"; SORT BY "Área" ASC; SHOW "Task name", "Área", "REQ", "Impacto"` |
+| EN OTRA CANCHA | list | `FILTER "Estado" = "EN OTRA CANCHA"; SORT BY "Área" ASC; SHOW "Task name", "Área", "REQ", "Impacto"` |
+| NO INICIADA | list | `FILTER "Estado" = "NO INICIADA"; SORT BY "Área" ASC; SHOW "Task name", "Área", "REQ", "Due date"` |
+| RESUELTA | list | `FILTER "Estado" = "RESUELTA"; SHOW "Task name", "Área", "REQ", "Impacto"` |
+| Calendario | calendar | `CALENDAR BY "Due date"; SHOW "Task name", "Estado", "Área"` |
 
 ### Paso 2.7 — Confirmar
 
@@ -304,9 +298,10 @@ Compartir link de la nueva página y cantidad de tareas traspasadas.
 | Canal `#product` | `C0A7E419292` |
 | Santi Slack ID | `U0B1MM6MF0U` |
 | Claude bot ID | `U0AHZHTQE22` |
-| Estados JQL activos | `TO DO`, `IN ANALYSIS`, `READY FOR DEV`, `BLOCKED`, `SENT TO DEV` |
-| Áreas Notion (= Jira) | Trading Desk · Legal & Compliance · Operations · Finance & Accounting · Sales & Partnerships · Management |
-| Áreas internas | Miles/N8N · Framework · Ops de Producto |
-| Formato título Notion | `Tasks DD/MM - DD/MM` (ej. `Tasks 08/06 - 12/06`) |
+| Estados Jira activos | `TO DO` · `IN ANALYSIS` · `READY FOR DEV` · `BLOCKED` · `SENT TO DEV` |
+| Opciones Estado Notion | `NO INICIADA` · `EN CURSO` · `EN OTRA CANCHA` · `RESUELTA` |
+| Áreas (= Jira) | `Trading Desk` · `Legal & Compliance` · `Operations` · `Finance & Accounting` · `Sales & Partnerships` · `Management` |
+| Áreas internas | `Miles/N8N` · `Framework` · `Ops de Producto` |
+| Formato título Notion | `Tasks DD/MM - DD/MM` |
 
 **MCPs requeridos:** Atlassian (Jira), Notion, Slack.
