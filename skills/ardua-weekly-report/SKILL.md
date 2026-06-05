@@ -106,13 +106,11 @@ Campos: `summary`, `status`, `priority`, `customfield_10310` (Business Area), `c
 | `EN OTRA CANCHA` | 🔄 En curso (con indicador) o 🚨 Bloqueos |
 | `NO INICIADA` | Solo si es nueva iniciativa de esta semana |
 
-> `_status` es campo legacy (solo semana 01/06-05/06) — ignorar siempre.
-
 #### C) Slack — reporte anterior y contexto semanal
 
-Buscar en `#product` el último "Resumen semanal" de Santi (`from:<@U0B1MM6MF0U> in:#product`). Extraer "En curso" y "Bloqueos" del reporte anterior para detectar avances.
+Usar `slack_search_public_and_private` con query `"Resumen semanal" from:<@U0B1MM6MF0U> in:#product`. Leer el mensaje más reciente via `slack_read_thread` si tiene hilo. Extraer "En curso" y "Bloqueos" del reporte anterior para detectar avances.
 
-**Canales a escanear:**
+**Canales a escanear** (usar `slack_read_channel` con `limit=20` para Alta prioridad; `limit=10` para el resto):
 
 | Canal | ID | Prioridad |
 |---|---|---|
@@ -219,7 +217,17 @@ Comparar con el reporte anterior:
 _Sent using_ <@U0AHZHTQE22|Claude>
 ```
 
-> Secciones vacías se omiten. `:bar_chart:` siempre incluye throughput + 1 highlight del cluster de mayor impacto.
+> Secciones vacías se omiten completamente (encabezado incluido). `:bar_chart:` siempre incluye throughput + 1 highlight del cluster de mayor impacto.
+
+**Casos especiales de sección vacía:**
+
+| Situación | Comportamiento |
+|---|---|
+| 0 REQs pasaron a SENT TO DEV | `:bar_chart:` dice `_0 REQs cerrados esta semana \| [highlight de mayor avance en curso]_` |
+| No hay ítems en curso | Omitir sección `:arrows_counterclockwise:` completa |
+| No hay bloqueos | Omitir sección `:rotating_light:` completa |
+| No hay nuevas iniciativas | Omitir sección `:sparkles:` completa |
+| Notion no devuelve tareas RESUELTA pero Jira sí tiene SENT TO DEV | Usar solo datos de Jira para esa sección; no dejar la sección vacía |
 
 ---
 
@@ -272,7 +280,9 @@ Copiar por cada tarea: `Task name`, `Estado`, `Área`, `REQ`. No copiar `Impacto
 
 ### Paso 2.6 — Crear vistas
 
-Con `notion-create-view`, database_id = ID de la nueva DB, data_source_id = ID del collection:
+La respuesta de `notion-create-database` incluye el `id` de la nueva base de datos. Ese mismo `id` es el `database_id` **y** el `data_source_id` que requiere `notion-create-view`. No hay un paso adicional de lookup — usar directamente el valor retornado en el paso 2.4.
+
+Con `notion-create-view`, database_id = data_source_id = ID retornado en paso 2.4:
 
 | Vista | Tipo | Configuración |
 |---|---|---|
