@@ -4,7 +4,7 @@ features: [TRD]
 status: En investigación
 owner: Santino Domeniconi
 created_at: 2026-05-26
-updated_at: 2026-05-26
+updated_at: 2026-06-05
 propagates_to:
   - features/trd/trd-quotes.md
 ---
@@ -31,3 +31,10 @@ El módulo está en producción. Sin embargo, al momento de abrir este discovery
 
 - Acceso a TRD QA para relevar el estado actual del módulo (campos del formulario, listado, filtros, ciclo de vida completo)
 - Confirmar fuente del catálogo de agrupadores (LEX u otra) — queda a resolver por Desarrollo en refinement técnico de REQ-92
+- Documentar el ciclo de vida completo del quote (ofertado → aceptado → ejecutado → liquidado), incluyendo cómo y dónde se registra la aceptación del cliente — requerido por `lex-auditoria-operativa-discovery.md` (H-01, H-02)
+
+---
+
+## Relación con otras iniciativas
+
+- **`lex-auditoria-operativa-discovery.md`** — discovery sobre auditoría operativa de trades confirmados en LEX. Depende de que el ciclo de vida del quote (en particular el evento de aceptación del cliente) quede documentado en este discovery.
