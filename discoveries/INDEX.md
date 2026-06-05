@@ -41,7 +41,7 @@ Hipótesis sobre una funcionalidad específica dentro de un módulo.
 
 | Archivo | Nombre | Estado | Owner | Última act. | Propaga a |
 |---|---|---|---|---|---|
-| [`trd-control-sanidad-tc-discovery.md`](./trd-control-sanidad-tc-discovery.md) | TRD — Control de sanidad del TC en carga de trades | En investigación | Santino Domeniconi | 2026-06-05 | `features/trd/trd-quotes.md` · `features/trd/trd-proveedores-de-liquidez.md` |
+| [`trd-controles-tc-discovery.md`](./trd-controles-tc-discovery.md) | TRD — Controles de TC en carga de trades | En investigación | Santino Domeniconi | 2026-06-05 | `features/trd/trd-quotes.md` · `features/trd/trd-proveedores-de-liquidez.md` |
 | [`trd-quotes-discovery.md`](./trd-quotes-discovery.md) | TRD — Módulo Quotes | En investigación | Santino Domeniconi | 2026-05-26 | `features/trd/trd-quotes.md` |
 | [`fin-tesoreria-disponibilidades-discovery.md`](./fin-tesoreria-disponibilidades-discovery.md) | FIN · Tesorería · Disponibilidades — modelo conceptual del módulo | En investigación | Yasmani Rodriguez | 2026-05-20 | `features/fin/fin-tesoreria-disponibilidades.md` · [REQ-50](https://arduasolutions.atlassian.net/browse/REQ-50) |
 | [`lex-alertas-discovery.md`](./lex-alertas-discovery.md) | LEX — Módulo Alertas · Discovery Document | En investigación | Yasmani Rodriguez | 2026-04-24 | _—_ |
