@@ -19,6 +19,7 @@
 |---|---|---|---|
 | Clientes | Producción | `lex-clientes-export-altas-legales.md` · `lex-clientes-informacion-contacto.md` (en definición) | `discoveries/lex-clientes-informacion-contacto-discovery.md` · `discoveries/lex-clientes-export-altas-legales-discovery.md` |
 | Detalle de Cliente — Tab Operatoria | SENT TO DEV (PWI-21) | _Pendiente_ | — |
+| Detalle de Cliente — Tab Details · Sección Onboarding | `TO DO` (PWI-72 enriquecido) | _Pendiente_ | `discoveries/lex-discovery.md` §3.4 + §4.7 + §8.8 |
 | Detalle de Cliente — Tab Operatoria · Sección Quotes | SENT TO DEV (PWI-53) | `lex-operatoria-quotes.md` | `discoveries/lex-operatoria-rulo-quotes-discovery.md` |
 | Alertas | _En discovery_ | _Pendiente_ | `discoveries/lex-alertas-discovery.md` |
 | Límites | _En discovery_ | _Pendiente_ | `discoveries/lex-limites-discovery.md` |

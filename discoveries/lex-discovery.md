@@ -4,7 +4,7 @@ features: [LEX]
 status: En investigación
 owner: Yasmani Rodriguez
 created_at: 2026-04-30
-updated_at: 2026-05-19
+updated_at: 2026-06-05
 ---
 
 # LEX — Legal File Management · Discovery Document
@@ -96,6 +96,7 @@ Todo cliente se procesa a través de un `onboarding` con provider **AIPRISE** (i
   - **Modalidad**: *KYC* (particulares), *KYB* (companies), *KYC Analista Legales* (variante con revisión manual reforzada).
 - **Status**: `STARTED` → `PENDING_REVIEW` → `FINISHED` (aprobado) | `CANCELLED` (rechazado).
 - **Identifier**: ID de AIPrise que permite acceder a su dashboard externo para revisar documentación cruda.
+- **Cardinalidad actual — bug documentado en PWI-72:** el sistema almacena un único registro de onboarding por cliente. Cuando el cliente completa más de un intento —porque el primero fue rechazado y debió rehacer el proceso— solo el primer registro queda persistido. La sección de onboarding en el tab Details muestra entonces el intento original (potencialmente rechazado) en lugar del aprobado. PWI-72 expande la tabla para mostrar todos los intentos en orden cronológico descendente y restringe la acción de acceso al registro externo al intento con estado Aprobado.
 
 ### 3.5 Relaciones entre clientes
 
@@ -224,10 +225,16 @@ Vista de legajo completo. Cuatro tabs:
 
 | Tab | Contenido |
 |---|---|
-| **Details** | Info del cliente · Dockets · Onboarding (AIPrise) con link al dashboard externo · Relaciones (beneficiarios, cotitulares, agrupadores, sociedades) · Preguntas del formulario de onboarding · Totalizador COINAG · Advertencias de similitud · Desactivación |
+| **Details** | Info del cliente · Dockets · Onboarding (AIPrise): URL de la sesión + tabla de intentos (Proveedor / Tipo / Estado / Identificador / Operaciones) · Relaciones (beneficiarios, cotitulares, agrupadores, sociedades) · Preguntas del formulario de onboarding · Totalizador COINAG · Advertencias de similitud · Desactivación |
 | **Documents** | Árbol de documentos con carpetas, upload/download/edit/delete |
 | **Limits** | Módulo de Límites — ver `lex-limites-discovery.md`. En producción hoy muestra Consumo total, Disponible, progress bars por límite activo agrupadas por entidad del grupo (Haz Pagos, Circuit Pay), con badge de estado (ACTIVO), origen del límite (ej: Recibo de Sueldo) y rango de validez. |
 | **CaseActivity** | Feed cronológico de comentarios + logs del sistema |
+
+**Sección Onboarding en el tab Details (estado actual en producción):** expone dos elementos:
+- **URL de la sesión**: campo con enlace directo al dashboard de AiPrise para consultar la documentación cruda del intento almacenado.
+- **Tabla de intentos de onboarding**: columnas Proveedor, Tipo, Estado, Identificador y Operaciones. Hoy limitada a una única fila por cliente — ver nota de cardinalidad en §3.4 y PWI-72.
+
+**Estado objetivo post PWI-72:** la tabla mostrará todos los intentos registrados en orden cronológico descendente. La acción de acceso al registro externo (menú de Operaciones) estará habilitada únicamente en la fila del intento con estado Aprobado. Cuando no existe intento aprobado, el historial se muestra completo pero sin la acción disponible.
 
 **Totalizador COINAG**: un popover en el detalle permite consultar `/totalizer/{taxId}` → retorna `cantidadTotalCVU` y `cantidadTotalCBU`. Es el **único cruce hoy entre el tax_id del cliente y el mundo operativo** vía agregado de conteo. No muestra movimientos ni contrapartes — solo conteo agregado. Patrón base que la nueva tab "Operatoria" del REQ-53 (§8.4) va a expandir con más métricas operativas (transacciones, volumen, breakdowns).
 
@@ -697,6 +704,19 @@ El **REQ-33** (Prime Desk RFQ — Centro de Notificaciones, ya en `SENT TO DEV`)
 
 ---
 
+### 8.8 PWI-72 — Expandir LEX — Historial de intentos de onboarding AiPrise
+
+**Objetivo:** corregir el comportamiento de la sección de onboarding en el tab Details del perfil del cliente: en lugar de mostrar un único registro (el primero persistido), mostrar todos los intentos registrados con su estado real, habilitando la acción de acceso al registro externo únicamente en el intento Aprobado.
+
+**Ticket:** https://arduasolutions.atlassian.net/browse/PWI-72
+**Estado actual:** `TO DO` (enriquecido, pendiente de mover a SENT TO DEV)
+**Prioridad:** Baja
+**Tipo:** Bug
+
+Ver §3.4 (cardinalidad del modelo) y §4.7 (sección Onboarding en el tab Details) para el contexto.
+
+---
+
 ### Iniciativas del módulo Límites (contexto · no parte de los 4 REQs de §8)
 
 Dos REQ activos — detalle completo en `lex-limites-discovery.md` §5:
@@ -842,4 +862,5 @@ Mientras tanto, el discovery permanece en `opened/` como fuente viva de contexto
 | 2026-04-24 (AM · decisiones finales + derivación de discovery hijo) | Decisiones del HoP para arrancar la apertura de tickets: nombres finales Blacklist y Alertas como módulos top-level del sidebar; "Alertas" sube al top-level (se descarta la sección "Sistema" intermedia del REQ-33); acción en tarjetas: "Marcar como revisada"; las alertas tienen state machine + asignación + comentarios. Se **deriva `lex-alertas-discovery.md` como discovery hijo**. §8.3 queda como resumen con link al hijo. §4.1, §5, §8.7 actualizados. G-12 marcado como resuelto. |
 | 2026-04-24 (AM · apertura de tickets en Jira + ajuste de scope de REQ-53) | **Apertura completa de los 4 REQs en Jira:** REQ-47 (re-scopeado a Blacklist), REQ-52 (Módulo Alertas + Screening), REQ-53 (Tab Operatoria), REQ-54 (Centro de Reportería). Todos con Priority, Business Area, Source, Parent y links cruzados armados. Decisiones incorporadas durante la apertura: REQ-52 con listado único filtrable en lugar de tabs por tipo; REQ-54 pasa de "framework shell" a Centro de Reportería completo con CRUD de definiciones + CRON + histórico. Ajuste de scope de REQ-53: se descarta la sección "Uso vs. Límites" al confirmar que el tab Limits existente ya la cubre en producción. §4.1, §4.7, §5, §8.6, §12 actualizados. Nomenclatura REQ-NEW-A/B/C reemplazada por IDs reales REQ-52/53/54 en todo el documento. |
 | 2026-04-24 (PM · cierre de ciclo de sesión) | **Los 4 REQs pasan a `SENT TO DEV`** tras validación cruzada con Juan Gonzalez (Legal notificado) y Santiago Ahmed (Tecnología notificado). **Los 4 prototipos HTML generados** en paralelo vía Agent Team de Claude Code, guardados en `prototypes/lex/`: `lex_blacklist_prototype.html`, `lex_alertas_prototype.html`, `lex_operatoria_prototype.html`, `lex_reporteria_prototype.html`. Todos clonan el core-template y respetan el Design System del core (brand LEX Teal #2DD4BF). Usuarios mock consistentes entre los 4 (Yasmani / María Silvestre / Juan Gonzalez / Camila Cattaneo / Valen Vila). CUITs blacklisteados consistentes entre Blacklist y Alertas. §5 actualizada con columna "Prototipo" (link por módulo). §8 actualizada: cada REQ muestra estado `SENT TO DEV` + link al prototipo. §10.2 pasa de "pendiente ejecución" a "mitigación activa". §12 reordenada: la sección "Post-apertura de tickets" se elimina (ejecutada); queda "Durante el desarrollo (in-flight)", "Post-v1 de los 4 REQs", "Input adicional pendiente" y nuevo "Criterio de cierre del discovery". Header del documento refleja cierre de ciclo de sesión. |
+| 2026-06-05 | §3.4 — nota de cardinalidad del modelo de onboarding y referencia a PWI-72. §4.7 — descripción detallada de la sección Onboarding en el tab Details (URL de la sesión + tabla de intentos) y estado objetivo post PWI-72. §8.8 — PWI-72 agregado a iniciativas. |
 | 2026-04-24 (PM · tarde — ajuste de scope + apertura de REQ-59 transversal) | **Ajuste de UX en REQ-52:** la página principal del módulo Alertas pasa a tener dos pestañas — Nuevas (formato card-list TRD-style para `status = new`, triaje rápido) + Histórico (listado tabular con state machine completa para `in_review`, `resolved`, `dismissed`). Reorden de columnas del Histórico: Fecha (primera), Tipo, Cliente, específicas del tipo, Estado (penúltima), Responsable (última). **Ajuste de scope en REQ-54:** el módulo Centro de Reportería deja de ser dueño del catálogo en runtime — alta / baja / archivado de reportes se tramita por requerimiento formal a Producto; la UI en LEX solo expone Generar (manual) + Configurar CRON + Editar 5 campos acotados de metadata (descripción, categoría, entidad rectora, normativa, periodicidad); campos técnicos son solo lectura. **Creación de REQ-59 (Reportería — Infraestructura Transversal del Core)** como prerequisito técnico de REQ-54 y futuras reporterías de OPS, TRD, FIN. REQ-59 con Priority High, bloquea REQ-54, parent REQ-3. AM-1001 (REQ-52) y AM-1003 (REQ-54) actualizadas en Jira para reflejar los ajustes. §8.1 actualizado (bullet de "listado único filtrable" reemplazado por dos pestañas). §8.6 dependencias actualizada con REQ-59 como fila nueva y prerequisito de REQ-54. §8.7 patrón REQ-33 actualizado (REQ-52 ahora hereda el formato visual card-list para Nuevas). G-13 abierto (unificación de sistema integral de alertas transversal al core). Prototipos `lex_alertas_prototype.html` y `lex_reporteria_prototype.html` en re-iteración vía Claude Code Agent Team para reflejar los ajustes (breadcrumb Módulo/Vista, header sin CTAs Cuenta/Notificaciones, Cuenta al pie del sidebar, Reportería sin CTA "Nuevo Reporte", Alertas con dos pestañas y reorden de columnas). |
