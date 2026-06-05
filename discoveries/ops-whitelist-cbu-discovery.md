@@ -4,7 +4,7 @@ features: [OPS]
 status: En investigación
 owner: Santino Domeniconi
 created_at: 2026-06-04
-updated_at: 2026-06-04
+updated_at: 2026-06-05
 propagates_to: []
 ---
 
@@ -15,17 +15,13 @@ propagates_to: []
 Entender cómo enriquecer la gestión de la whitelist de cuentas habilitadas para
 retiros con dos capacidades nuevas:
 
-1. **Identificación del banco o fintech** asociado a cada CBU/CVU whitelisteado,
-   usando como insumos la tabla de referencia oficial provista por Operations
-   (fuente: Ministerio de Economía / BCRA) y el identificador de banco que ya
-   devuelve la API de Coinag al momento de validar el número.
+1. **Identificación del banco o fintech** asociado a cada CBU/CVU whitelisteado.
 2. **Sistema de etiquetas** que permita identificar y clasificar cada CBU/CVU
    whitelisteado, tanto en el alta como de forma diferida.
 
 La investigación cubre el caso especial de los CVUs (fintechs: Mercado Pago,
-Ualá, Naranja X, etc.) que no pueden resolverse automáticamente, y el impacto
-de estas mejoras en el flujo de retiros cuando la Comanda de Retiros se
-formalice en el sistema.
+Ualá, Naranja X, etc.) y el impacto de estas mejoras en el flujo de retiros
+cuando la Comanda de Retiros se formalice en el sistema.
 
 ## Contexto
 
@@ -36,28 +32,116 @@ exclusiva de admins (ver `discoveries/ops-discovery.md` §6.3 y §9.1).
 
 El problema documentado en **PWI-46** (Manuel Lamensa, Operations) es que la
 whitelist actual solo muestra el número de CBU/CVU, sin información del banco o
-fintech asociado. Cuando un cliente tiene múltiples cuentas whitelisteadas en
+fintech asociado. Cuando un cliente tiene múltiples cuentas whitelisted en
 distintos bancos y solicita retirar a una específica, el operador trabaja "a
-ciegas". Para CVUs el problema es mayor: no existe base de datos pública que
-permita resolver la entidad automáticamente.
+ciegas". Para CVUs el problema es más agudo: no hay ningún indicador de la
+entidad receptora.
 
-La tabla de referencia CBU→banco fue provista por Operations (Manu Lamensa)
-como insumo de implementación. Cubre los 3 primeros dígitos del CBU
-(identificador unívoco de la entidad financiera) y los mapea al nombre oficial
-del banco.
+**Hallazgo central (2026-06-05):** El dato ya llega desde Coinag. La API de
+Coinag devuelve `bank_id` al validar cualquier CBU o CVU. OPS captura el campo
+pero no lo muestra ni lo guarda. **El gap es exclusivamente de producto en OPS
+— no requiere nueva integración ni base de datos de prefijos.**
 
-**Estructura del CBU (22 dígitos):**
-`[3 dígitos banco][4 dígitos sucursal][1 dígito verificador][13 dígitos cuenta][1 dígito verificador]`
+Este hallazgo fue validado en revisión conjunta con IT: Mati Ghisalberti
+(CTO), Valentin Vila (dev), Santi Ahmed (PM IT), 2026-06-05.
 
-Este gap de "proceso completo de whitelist" estaba abierto en
-`discoveries/ops-discovery.md` §13 (prioridad Media). PWI-46 lo materializa
-como requerimiento concreto con urgencia Alta.
+## Estado actual en producción (revisión del repositorio `core-ops-frontend`)
+
+Revisión realizada el 2026-06-04 y actualizada el 2026-06-05. Archivos de
+referencia: `src/views/Clients/ClientDetail.vue` y
+`src/views/psp/PSPAccounts.vue`.
+
+### Qué es la whitelist hoy
+
+La whitelist de retiros vive en el detalle de cliente (`ClientDetail.vue`). El
+botón "Whitelistar Cuenta" aparece solo si el cliente tiene al menos una
+instrucción de Coinag — funcionalidad exclusiva del esquema PSP (ARS / Coinag).
+
+Flujo actual al whitelistear una cuenta:
+
+1. El admin ingresa el número de CBU o CVU.
+2. OPS llama a `/coinag/account/{número}` para validar.
+3. Coinag responde con: nombre del titular, CUIT, alias, tipo de cuenta,
+   número normalizado, estado activo/inactivo, y **`bank_id`**.
+4. OPS muestra: tipo de cuenta, nombre del titular, número, alias, CUIT,
+   estado. **`bank_id` no se renderiza.**
+5. Al confirmar, OPS hace POST a `/clients/{clientId}/whitelist-account` con:
+   nombre, CUIT, número de cuenta, moneda. **`bank_id` no se incluye.**
+
+### El dato ya existe: `bank_id` capturado y descartado
+
+En `ClientDetail.vue`, el código mapea explícitamente:
+
+```javascript
+validatedAccountData.value = {
+  accountType: result.account_type,
+  account:     result.account,
+  alias:       result.alias,
+  ownerCuit:   result.cuit,
+  ownerName:   result.holder,
+  bankId:      result.bank_id,   // ← SE CAPTURA
+  active:      result.active
+};
+```
+
+Y el POST que guarda la whitelist descarta `bankId`:
+
+```javascript
+await post(`/clients/${clientId}/whitelist-account`, {
+  name:           validatedAccountData.value.ownerName,
+  tax_number:     validatedAccountData.value.ownerCuit,
+  account_number: validatedAccountData.value.account,
+  currency_id:    selectedCurrency?.id,
+  // bankId:       ← NO SE ENVÍA
+});
+```
+
+El campo tampoco aparece en el template del modal de confirmación. El gap es de
+producto: OPS recibe el dato, lo ignora, y lo pierde.
+
+### Qué existe sobre etiquetas hoy
+
+El sistema de etiquetas ya existe, pero para una entidad diferente. En la vista
+PSP > Cuentas (`PSPAccounts.vue`), las cuentas CVU asignadas a clientes tienen
+una columna **Label** editable via POST a `/coinag/alias`. Estas son cuentas
+receptoras de **depósitos** — distintas a las cuentas whitelisted de **retiro**.
+
+La whitelist de retiros **no tiene etiquetas hoy**.
+
+### BIND como referencia de capacidad
+
+BIND (Banco Industrial S.A.) es el segundo proveedor bancario activo en OPS,
+confirmado por el filtro `provider_name: BIND` en `PSPAccounts.vue`. BIND
+expone un endpoint público documentado que resuelve cuentas externas de
+cualquier banco o fintech:
+
+`GET /walletentidad-cuenta/v1/api/v1.201/CuentaCVUByCbuCvuOrAlias`
+
+Su response incluye `bancoNombre` (banco sponsor) y `entidad` (entidad dueña
+del CBU/CVU). Para CVUs, `entidad` potencialmente devuelve el nombre de la
+fintech (Mercado Pago, Ualá, etc.).
+
+Sin embargo, **la integración activa para el flujo de whitelist es Coinag, no
+BIND**. El endpoint de BIND sirve como referencia para entender el techo de
+lo que es posible resolver vía API, y como punto de comparación para evaluar
+el formato de `bank_id` que devuelve Coinag.
+
+Refs: https://psp.bind.com.ar/developers/apis/consultar-cbu-cvu-por-cbu-cvu-o-alias
+
+### Comanda de Retiros
+
+No existe ninguna vista de Comanda de Retiros en el frontend actual. El flujo
+de retiros hoy es externo al sistema (Slack, WhatsApp). La visualización de
+banco/etiqueta al seleccionar la cuenta destino al procesar un retiro es
+forward-looking — aplica cuando la Comanda de Retiros se construya.
 
 ## Tabla de referencia — prefijos CBU
 
-Provista en `CBU_tabla_bancos-2.docx` vía hilo de Slack de PWI-46 (reply de
-Manu Lamensa, 26/05/2026). Cubre 41 entidades financieras + CVU. Prefijos
-representativos:
+Provista por el área de Operations (Manu Lamensa) como insumo original. A la
+luz del hallazgo de que Coinag ya resuelve el dato vía API, **esta tabla es
+innecesaria como solución de implementación**. Se mantiene en el discovery
+como referencia histórica y como fallback conceptual en caso de que `bank_id`
+de Coinag requiera mapeo.
 
 | Prefijo | Entidad | Tipo |
 |---|---|---|
@@ -72,104 +156,53 @@ representativos:
 | 299 | Banco Comafi S.A. | Banco |
 | 000 | CVU — Fintechs (Mercado Pago, Ualá, etc.) | CVU - Fintech |
 
-**Nota CVU:** el prefijo `000` agrupa a todas las fintechs sin subdistinción
-por entidad. No es posible resolver automáticamente si un CVU corresponde a
-Mercado Pago, Ualá u otra fintech. La identificación de CVUs requiere etiqueta
-manual.
-
-## Estado actual en producción (revisión del repositorio `core-ops-frontend`)
-
-Revisión realizada el 2026-06-04 sobre el repositorio de Tecnología
-(`repositories/core-ops-frontend`). Archivos de referencia:
-`src/views/Clients/ClientDetail.vue` y `src/views/psp/PSPAccounts.vue`.
-
-### Qué es la whitelist hoy
-
-La whitelist de retiros vive en el detalle de cliente (`ClientDetail.vue`). El
-botón "Whitelistar Cuenta" aparece solo si el cliente tiene al menos una
-instrucción de Coinag — es decir, es una funcionalidad exclusiva del esquema
-PSP (ARS / Coinag). No aplica al esquema Ops no-ARS.
-
-Cuando el admin whitelistea una cuenta, el flujo es:
-
-1. Ingresa el número de CBU o CVU.
-2. El sistema llama a `/coinag/account/{número}` para validarlo.
-3. Coinag devuelve: nombre del titular, CUIT, alias, tipo de cuenta, número
-   normalizado, estado activo/inactivo, **y un identificador de banco
-   (`bank_id`)**.
-4. Se muestra al admin: tipo de cuenta, nombre del titular, número, alias,
-   CUIT y estado.
-5. Al confirmar, se envía a `/clients/{clientId}/whitelist-account` con:
-   nombre del titular, CUIT, número de cuenta y moneda.
-
-**Dato crítico:** `bank_id` ya está disponible en el paso 3 — se captura en
-el código pero **no se muestra ni se guarda**. La tabla de prefijos CBU que
-proveyó Manu puede ser el mapeo necesario para convertir ese `bank_id` en un
-nombre legible como "Banco Galicia" o "BBVA". Está abierto confirmar si
-`bank_id` de Coinag equivale al prefijo de 3 dígitos o es un identificador
-diferente.
-
-### Qué existe sobre etiquetas hoy
-
-El sistema de etiquetas ya existe, pero para una entidad diferente. En la vista
-PSP > Cuentas (`PSPAccounts.vue`), las cuentas CVU asignadas a clientes por
-Coinag tienen una columna **Label** editable: campo de texto libre que el
-operador puede modificar desde esa vista, guardándose via `/coinag/alias`. Hay
-además un filtro por label en esa misma vista.
-
-**Estas cuentas son distintas a las cuentas whitelisted de retiro.** Las
-cuentas PSP/Coinag son las cuentas receptoras de depósitos que Ardua crea
-para los clientes. Las cuentas whitelisted son las cuentas propias del cliente
-en sus bancos, hacia donde Ardua envía los retiros.
-
-La whitelist de retiros **no tiene etiquetas hoy**.
-
-### Comanda de Retiros
-
-No existe ninguna vista de Comanda de Retiros en el frontend actual. El flujo
-de retiros hoy es externo al sistema (Slack, WhatsApp). La pregunta de si el
-banco/etiqueta deben mostrarse al seleccionar la cuenta destino al procesar un
-retiro es forward-looking — aplica cuando la Comanda de Retiros se construya
-(ver `features/ops/ops-retiros-confirmacion-whatsapp.md` y el gap abierto en
-`discoveries/ops-discovery.md` §6.3).
-
 ## Hipótesis — estado actualizado
 
 | # | Hipótesis | Estado |
 |---|---|---|
-| H1 | La resolución del banco viene de `bank_id` retornado por Coinag al validar, no de parsear el prefijo en el frontend. La tabla CBU es el mapeo `bank_id → nombre legible`. | A confirmar — depende del formato de `bank_id` |
-| H2 | Banco resuelto y etiqueta son datos independientes y coexistentes: una cuenta puede tener "Banco Galicia" (resuelto) + "Galicia sueldo Juan" (etiqueta manual). | Plausible — alineado con el patrón de label que ya existe en PSP Cuentas |
-| H3 | La Comanda de Retiros aún no existe en el sistema; la mejora es relevante para cuando se construya. | Confirmada — no hay UI de retiros con selector de cuentas |
-| H4 | Para CVUs sin banco identificable, el sistema debería advertir y requerir etiqueta manual antes de guardar. | A confirmar con Operations |
-| H5 | Las etiquetas podrían tener permisos más amplios que la whitelist (admins crean cuentas; ops officers pueden etiquetar). | A confirmar con Operations |
+| H1 | Coinag ya devuelve `bank_id` al validar cualquier CBU/CVU. OPS captura el campo pero lo descarta. El gap es exclusivamente de producto: mostrar y guardar el dato que ya llega. No se necesita BD de prefijos ni nueva integración. | **Confirmada** — 2026-06-05 |
+| H2 | Banco resuelto y etiqueta son datos independientes y coexistentes: una cuenta puede tener "Banco Galicia" (resuelto desde Coinag) + "Galicia sueldo" (etiqueta manual libre). | **Plausible** — alineado con patrón de label en PSP Cuentas |
+| H3 | La Comanda de Retiros no existe en el sistema; la mejora es relevante para cuando se construya. | **Confirmada** |
+| H4 | Para CVUs, Coinag podría devolver el nombre de la fintech específica en `bank_id` (o en otro campo), eliminando o reduciendo la necesidad de etiqueta obligatoria. | **Pendiente** — depende del formato real de `bank_id` para CVUs. A verificar por Operations en la PSP vieja (ver P2). |
+| H5 | Las etiquetas podrían tener permisos más amplios que el alta de whitelist: admins crean cuentas, pero ops officers podrían etiquetar. | **A confirmar** con Operations |
 
-## Preguntas abiertas para Operations (pendientes de challenge)
+## Preguntas abiertas
 
-Las siguientes preguntas deben responderse antes de estructurar el
-requerimiento. El challenge a Manu Lamensa aún no fue enviado.
+Las siguientes preguntas bloquean la definición final del scope o deben
+responderse antes de que IT implemente.
 
-1. **Alcance de banco vs etiqueta:** ¿espera ver el nombre del banco
-   auto-resuelto, un alias libre que él pueda poner, o ambas cosas
-   independientes?
-2. **CVU:** cuando no se puede resolver el banco automáticamente, ¿la
-   etiqueta manual es obligatoria o solo recomendada?
-3. **Permisos:** ¿los operadores (no admins) pueden editar etiquetas sobre
-   cuentas ya whitelisted?
-4. **Visibilidad en retiros:** cuando exista una UI para procesar retiros,
-   ¿qué información de la cuenta destino necesita ver el operador para
-   elegir correctamente?
-5. **Retroactividad:** ¿hay urgencia de mostrar el banco en cuentas ya
-   whitelisted, o solo aplica a las altas nuevas?
+**P1 — Formato de `bank_id` para CBUs [bloqueante]:**
+¿El campo `bank_id` que devuelve Coinag al validar un CBU llega como nombre
+legible ("Banco Galicia") o como código numérico? Si es código, ¿qué formato
+usa (prefijo de 3 dígitos BCRA, ID interno de Coinag, u otro)?
+→ Verificar en la PSP vieja con un CBU de banco conocido (ej. Galicia, Macro).
+
+**P2 — Formato de `bank_id` para CVUs [bloqueante para H4]:**
+Al validar un CVU, ¿qué devuelve Coinag en `bank_id`? ¿Resuelve el nombre de
+la fintech ("Mercado Pago", "Ualá") o devuelve un valor genérico / vacío? Si
+resuelve, las etiquetas para CVUs pasan a ser complementarias, no obligatorias.
+→ Verificar en la PSP vieja con un CVU de Mercado Pago y uno de Ualá. Comparar
+resultados entre fintechs distintas.
+
+**P3 — Permisos de etiquetado:**
+¿Los operadores (no admins) deben poder editar etiquetas sobre cuentas ya
+whitelisted? ¿O el etiquetado queda restringido al rol que hizo el alta?
+
+**P4 — Retroactividad:**
+¿Hay urgencia de mostrar banco en cuentas ya whitelisted (backfill), o la
+mejora aplica solo a las altas nuevas?
 
 ## Referencias
 
 - PWI-46: https://arduasolutions.atlassian.net/browse/PWI-46
 - Hilo Slack: https://arduasolutions.slack.com/archives/C0AK2PW5BGQ/p1779824763900199
-- Tabla de referencia: `CBU_tabla_bancos-2.docx` (adjunto en hilo, reply de Manu 26/05/2026)
+- Tabla de referencia CBU: `CBU_tabla_bancos-2.docx` (adjunto en hilo, reply de Manu Lamensa, 26/05/2026)
 - Gap de origen: `discoveries/ops-discovery.md` §13 — "Proceso completo de whitelist"
 - Repo de referencia (read-only): `repositories/core-ops-frontend`
-  - `src/views/Clients/ClientDetail.vue` — flujo de whitelisting
+  - `src/views/Clients/ClientDetail.vue` — flujo de whitelisting y `bank_id` capturado
   - `src/views/psp/PSPAccounts.vue` — sistema de labels existente en PSP Cuentas
-- Features relacionados (whitelist fuera de scope en ambos):
+- BIND API (referencia de capacidad): https://psp.bind.com.ar/developers/apis/consultar-cbu-cvu-por-cbu-cvu-o-alias
+- Revisión IT (2026-06-05): Mati Ghisalberti, Valentin Vila, Santi Ahmed — confirman integración Coinag activa y que el dato debería llegar
+- Features relacionados:
   - `features/ops/ops-crear-withdrawal-sin-banco.md`
   - `features/ops/ops-retiros-confirmacion-whatsapp.md`
