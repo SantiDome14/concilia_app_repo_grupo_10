@@ -32,16 +32,6 @@ Hipótesis focalizadas en un módulo específico dentro de una aplicación.
 | [`lex-auditoria-operativa-discovery.md`](./lex-auditoria-operativa-discovery.md) | LEX — Auditoría operativa de trades confirmados (TRD → LEX) | En investigación | Santino Domeniconi | 2026-06-05 | _—_ |
 | [`ops-deposit-instructions-discovery.md`](./ops-deposit-instructions-discovery.md) | OPS — Deposit Instructions · Variables automáticas | Concluida | Santino Domeniconi | 2026-06-04 | `features/ops/ops-deposit-instructions.md` |
 | [`trd-clientes-discovery.md`](./trd-clientes-discovery.md) | TRD — Módulo Clientes · Visualización de saldos y límites | En investigación | Santino Domeniconi | 2026-06-04 | `features/trd/trd-clientes.md` |
-
----
-
-## Producto — funcionalidad
-
-Hipótesis sobre una funcionalidad específica dentro de un módulo.
-
-| Archivo | Nombre | Estado | Owner | Última act. | Propaga a |
-|---|---|---|---|---|---|
-| [`trd-controles-tc-discovery.md`](./trd-controles-tc-discovery.md) | TRD — Controles de TC en carga de trades | En investigación | Santino Domeniconi | 2026-06-05 | `features/trd/trd-quotes.md` · `features/trd/trd-proveedores-de-liquidez.md` |
 | [`trd-quotes-discovery.md`](./trd-quotes-discovery.md) | TRD — Módulo Quotes | En investigación | Santino Domeniconi | 2026-05-26 | `features/trd/trd-quotes.md` |
 | [`fin-tesoreria-disponibilidades-discovery.md`](./fin-tesoreria-disponibilidades-discovery.md) | FIN · Tesorería · Disponibilidades — modelo conceptual del módulo | En investigación | Yasmani Rodriguez | 2026-05-20 | `features/fin/fin-tesoreria-disponibilidades.md` · [REQ-50](https://arduasolutions.atlassian.net/browse/REQ-50) |
 | [`lex-alertas-discovery.md`](./lex-alertas-discovery.md) | LEX — Módulo Alertas · Discovery Document | En investigación | Yasmani Rodriguez | 2026-04-24 | _—_ |
