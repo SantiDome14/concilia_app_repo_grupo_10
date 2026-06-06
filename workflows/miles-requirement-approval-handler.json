@@ -1,0 +1,916 @@
+{
+  "name": "miles-requirement-approval-handler",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "req-approval",
+        "options": {}
+      },
+      "id": "fdcb80cf-2e33-47be-9930-a2abc526ae37",
+      "name": "Trigger — From Actions Router",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        6400,
+        8128
+      ],
+      "webhookId": "miles-req-approval"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================================\n// miles-requirement-approval-handler · Parse Slack Payload\n// ----------------------------------------------------------------------------\n// Invocado por miles-slack-actions-router, que reenvia { payload: <string\n// original url-encoded de Slack> }. Solo PARSEA el payload y extrae los datos\n// de la interaccion. La AUTORIZACION se resuelve mas adelante (Resolve\n// Authorization), una vez consultadas Business Areas, Stakeholders y Capabilities.\n// ============================================================================\n\nconst raw = $('Trigger — From Actions Router').item.json.body?.payload\n         || $('Trigger — From Actions Router').item.json.body || '';\nlet payload;\ntry {\n  payload = typeof raw === 'string' ? JSON.parse(decodeURIComponent(raw)) : raw;\n} catch (e) {\n  return [{ json: { error: 'Could not parse payload', raw: String(raw).slice(0,500) } }];\n}\n\n// Idempotencia minima: sin acciones, nada que hacer.\nconst actions = payload.actions || [];\nif (actions.length === 0) {\n  return [{ json: { _abort: true, _reason: 'no_actions' } }];\n}\n\nconst action      = actions[0] || {};\nconst actionValue = action.value || '';\nconst [decision, requesterId] = actionValue.split('__');   // approve|reject __ <requesterSlackId>\n\n// callback_id formato: req_approval_<CHANNELID>_<THREADTS sin punto>\nconst callbackId = payload.callback_id || '';\nconst parts = callbackId.replace('req_approval_', '').split('_');\nconst channelId     = parts[0] || '';\nconst threadTsClean = parts[1] || '';\nconst threadTs      = threadTsClean.slice(0, 10) + '.' + threadTsClean.slice(10);\n\nconst approverId   = payload.user?.id || '';\nconst approverName = payload.user?.name || approverId;\nconst responseUrl  = payload.response_url || '';\n\nreturn [{ json: {\n  decision,        // 'approve' | 'reject'\n  requesterId,     // Slack ID del solicitante\n  approverId,      // Slack ID de quien clickeo\n  approverName,\n  channelId,\n  threadTs,\n  responseUrl,\n  callbackId,\n}}];"
+      },
+      "id": "761528a1-f11f-4663-a4d1-f048aaa55edd",
+      "name": "Parse Slack Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6848,
+        8128
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-authorized",
+              "leftValue": "={{ $json.isAuthorized }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9732c115-48e3-4eb6-9fd8-ac2a83d8c857",
+      "name": "Is Authorized Approver?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        7072,
+        8128
+      ]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $('Parse Slack Payload').item.json.decision }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "approve"
+            },
+            {
+              "value2": "reject",
+              "output": 1
+            }
+          ]
+        },
+        "fallbackOutput": 1
+      },
+      "id": "fb0dc4b0-48ff-4fd3-b8df-0888d721ae91",
+      "name": "Switch — Approve or Reject?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        8240,
+        8096
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fullName = $('Fetch Approver Info').item.json.user?.profile?.real_name || $('Parse Slack Payload').item.json.approverName;\nreturn [{ json: { ...$('Parse Slack Payload').item.json, approverDisplayName: fullName } }];"
+      },
+      "id": "f8b7c622-3e1a-4c60-b666-e06a826305f5",
+      "name": "Get Approver Display Name",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8736,
+        7888
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Reconstruye los campos del requerimiento parseando los Block Kit del hilo,\n// porque al aprobar el contexto original ya no esta en memoria del workflow.\n// AHORA produce campos NORMALIZADOS para el work-items-handler (no arma el ADF).\nconst msgs = $json.messages || [];\nconst channelId = $('Parse Slack Payload').item.json.channelId;\nconst threadTs  = $('Parse Slack Payload').item.json.threadTs;\n\nconst rootMsg = msgs[0] || {};\nconst elements = rootMsg.blocks?.[0]?.elements?.[0]?.elements || [];\n\nconst extractFromBlocks = (labelText) => {\n  for (let i = 0; i < elements.length; i++) {\n    const el = elements[i];\n    if (el.type === 'text' && el.style?.italic && el.text.trim() === labelText) {\n      let value = '';\n      for (let j = i + 1; j < elements.length; j++) {\n        const next = elements[j];\n        if (next.type === 'text' && next.text === '\\n\\n') break;\n        if (next.type === 'text' && next.text !== '\\n') value += next.text;\n      }\n      return value.trim();\n    }\n  }\n  return '';\n};\n\nconst problema  = extractFromBlocks('Problema');\nconst contexto  = extractFromBlocks('Contexto');\nconst impacto   = extractFromBlocks('Impacto');\nconst resultado = extractFromBlocks('Resultado esperado');\nconst urgencia  = extractFromBlocks('Urgencia') || 'Normal';\n\nconst urgLower = urgencia.toLowerCase();\nlet priority_id = '3';\nif (urgLower.includes('crítico') || urgLower.includes('critico')) priority_id = '1';\nelse if (urgLower.includes('alto'))  priority_id = '2';\nelse if (urgLower.includes('bajo'))  priority_id = '4';\n\nconst area = $('Resolve Authorization').item.json.area || '';\nconst thread_url = 'https://arduasolutions.slack.com/archives/' + channelId + '/p' + threadTs.replace('.', '');\n\nreturn [{ json: {\n  // campos normalizados que consume el work-items-handler\n  problema, contexto, impacto, resultado_esperado: resultado, urgencia,\n  area, priority_id, thread_url,\n  // metadata para nodos siguientes\n  channelId, threadTs,\n} }];\n"
+      },
+      "id": "9c049311-aeb5-4ef2-9398-294de02ccfef",
+      "name": "Rebuild Jira Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9856,
+        7792
+      ]
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        8512,
+        8448
+      ],
+      "id": "0814a4a7-f35e-45da-b25e-2cbd1e948434",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "url": "=https://slack.com/api/users.info?user={{ $('Parse Slack Payload').item.json.approverId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "937991bd-b2f2-4a92-a489-605ff55c1823",
+      "name": "Fetch Approver Info",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8512,
+        7888
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MX2QZHGzOYBtt41s",
+          "name": "Slack Bot Token — Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-decision",
+              "leftValue": "={{ $('Parse Slack Payload').item.json.decision }}",
+              "rightValue": "approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "daf07a33-682c-4586-8a9d-a8175a3dabc4",
+      "name": "IF — Approve or Reject?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        8976,
+        7888
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $('Parse Slack Payload').item.json.channelId, thread_ts: $('Parse Slack Payload').item.json.threadTs, text: '<@' + $('Parse Slack Payload').item.json.solicitanteId + '> tu requerimiento fue rechazado por ' + $('Get Approver Display Name').item.json.approverDisplayName + '. El ticket no fue creado en Jira.', mrkdwn: true }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        9648,
+        7984
+      ],
+      "id": "0d73c7f8-c46b-4369-8bbb-d23d919fd505",
+      "name": "Notify user Rejected",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MX2QZHGzOYBtt41s",
+          "name": "Slack Bot Token — Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Parse Slack Payload').item.json.responseUrl }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ replace_original: true, text: '✅ *Habilitado por @' + $json.approverDisplayName + '*', attachments: [] }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        9232,
+        7792
+      ],
+      "id": "87de8bbe-0629-4493-8ddb-3299a63de215",
+      "name": "Update Message approved",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "LXRpdRXQLv37KLaS",
+          "name": "Jira-API-Miles"
+        },
+        "httpHeaderAuth": {
+          "id": "MX2QZHGzOYBtt41s",
+          "name": "Slack Bot Token — Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $('Parse Slack Payload').item.json.channelId, thread_ts: $('Parse Slack Payload').item.json.threadTs, text: '🎉 Requerimiento creado exitosamente!\\n\\n*Ticket:* ' + $json.issueKey + '\\n*Link:* ' + $json.issueUrl + '\\n\\n📎 Podés sumar _documentos, capturas, links o consideraciones adicionales_ directamente en este hilo.', mrkdwn: true }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        10256,
+        7792
+      ],
+      "id": "fc05d643-1fe3-4426-a65c-36d9835633f8",
+      "name": "Post to Thread",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MX2QZHGzOYBtt41s",
+          "name": "Slack Bot Token — Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Parse Slack Payload').item.json.responseUrl }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ replace_original: true, text: '❌ *Rechazado por ' + $json.approverDisplayName + '*', attachments: [] }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        9232,
+        7984
+      ],
+      "id": "4744166c-63f4-4f2d-b2c8-f7a67b8593fc",
+      "name": "Update message Reject",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "LXRpdRXQLv37KLaS",
+          "name": "Jira-API-Miles"
+        },
+        "httpHeaderAuth": {
+          "id": "MX2QZHGzOYBtt41s",
+          "name": "Slack Bot Token — Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://slack.com/api/conversations.replies",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "channel",
+              "value": "={{ $('Parse Slack Payload').item.json.channelId }}"
+            },
+            {
+              "name": "ts",
+              "value": "={{ $('Parse Slack Payload').item.json.threadTs }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        9648,
+        7792
+      ],
+      "id": "269782e8-6cd3-4cd4-80b5-d8ca33b2503f",
+      "name": "Fetch Thread-Rebuild Payload",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MX2QZHGzOYBtt41s",
+          "name": "Slack Bot Token — Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/databases/20437e6c297a4afe923a29b5d01ad26c/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Notion-Version",
+              "value": "2022-06-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ filter: { property: 'Thread ID', title: { equals: $('Parse Slack Payload').item.json.threadTs } } }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        7312,
+        8112
+      ],
+      "id": "5ec76b58-07cd-41de-810f-20b5516f46d5",
+      "name": "Check Tracker",
+      "credentials": {
+        "notionApi": {
+          "id": "aldMlehkPJEZ6AqY",
+          "name": "Notion-API-Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c-exists",
+              "leftValue": "={{ $json.results.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "c-resolved",
+              "leftValue": "={{ $json.results[0]?.properties?.Status?.select?.name }}",
+              "rightValue": "Pending",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        7568,
+        8112
+      ],
+      "id": "2b683a15-b282-40ff-8c0a-15090041f29d",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/databases/7ddac325-ee1e-4459-8695-3fabd8f8a7ab/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Notion-Version",
+              "value": "2022-06-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ filter: { property: 'Slack Channel ID', rich_text: { equals: $json.channelId } } }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        6640,
+        8128
+      ],
+      "id": "514e9714-fbaa-428d-a7cb-cfa5b37cbca9",
+      "name": "Query Business Area",
+      "credentials": {
+        "notionApi": {
+          "id": "aldMlehkPJEZ6AqY",
+          "name": "Notion-API-Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ 'https://api.notion.com/v1/pages/' + $('Check Tracker').item.json.results[0].id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ properties: { 'Status': { select: { name: 'Rejected' } }, 'Approver ID': { rich_text: [{ text: { content: $('Parse Slack Payload').item.json.approverId } }] } } }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        9440,
+        7984
+      ],
+      "id": "82593936-5486-4a50-bd50-4f28baa77600",
+      "name": "Update Notion Lock — Rejected",
+      "credentials": {
+        "notionApi": {
+          "id": "aldMlehkPJEZ6AqY",
+          "name": "Notion-API-Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ 'https://api.notion.com/v1/pages/' + $('Check Tracker').item.json.results[0].id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ properties: { 'Status': { select: { name: 'Approved' } }, 'Approver ID': { rich_text: [{ text: { content: $('Parse Slack Payload').item.json.approverId } }] } } }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        9440,
+        7792
+      ],
+      "id": "c7aa0331-650e-49ca-8da8-c6c825f706ce",
+      "name": "Update Notion Lock — Approved",
+      "credentials": {
+        "notionApi": {
+          "id": "aldMlehkPJEZ6AqY",
+          "name": "Notion-API-Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.arduasolutions.com/webhook/jira-work-items",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ operation: 'create', project: 'PWI', intake_type_id: '10134', area: $json.area, problema: $json.problema, contexto: $json.contexto, impacto: $json.impacto, resultado_esperado: $json.resultado_esperado, urgencia: $json.urgencia, priority_id: $json.priority_id, thread_url: $json.thread_url }) }}",
+        "options": {}
+      },
+      "id": "cd4e4ce9-3580-4313-a1d3-164addd97730",
+      "name": "Create via Work-Items Handler",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10064,
+        7792
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/databases/376e8880-def6-80aa-bee4-000b5c221413/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Notion-Version",
+              "value": "2022-06-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ filter: { property: 'Slack ID', rich_text: { equals: $('Parse Slack Payload').item.json.approverId } } }) }}",
+        "options": {}
+      },
+      "id": "3e3ec8ec-12ea-458b-a7e6-e0d90665004d",
+      "name": "Query Stakeholder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        6848,
+        8384
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "aldMlehkPJEZ6AqY",
+          "name": "Notion-API-Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/databases/a2a071ba-0c63-4d4e-8ee4-d0197f837fa8/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Notion-Version",
+              "value": "2022-06-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ filter: { or: [ { property: 'Code', rich_text: { equals: 'req.approve.own' } }, { property: 'Code', rich_text: { equals: 'req.approve.cross' } } ] } }) }}",
+        "options": {}
+      },
+      "id": "b12c77d5-efdb-4fc9-8a89-d65b10ae5ea6",
+      "name": "Query Capabilities",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        6848,
+        8592
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "aldMlehkPJEZ6AqY",
+          "name": "Notion-API-Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================================\n// miles-requirement-approval-handler · Resolve Authorization\n// ----------------------------------------------------------------------------\n// Autoriza por CAPABILITIES (modelo nuevo), no por la tabla Area Heads.\n//   1. Business Areas: canal -> area (pageId + Name).\n//   2. Stakeholders:   el aprobador (por Slack ID) con sus Capabilities[] + Business Area[].\n//   3. Capabilities:   resuelve Code -> pageId para 'req.approve.own' y 'req.approve.cross'.\n//\n// Autorizado si:\n//   (tiene req.approve.own  Y  su Business Area == area del canal)   // head del area\n//   O\n//   (tiene req.approve.cross)                                        // universal (Producto + C-Level)\n//\n// Los Code son identificadores semanticos estables del dominio (no UUIDs).\n// Agregar capabilities nuevas NO requiere tocar este flujo: solo importan estas dos.\n// ============================================================================\n\nconst CAP_OWN   = 'req.approve.own';\nconst CAP_CROSS = 'req.approve.cross';\n\nconst p = $('Parse Slack Payload').item.json;\n\n// --- 1. Area del canal ------------------------------------------------------\nconst baResults = $('Query Business Area').item.json.results || [];\nconst areaRow   = baResults[0] || null;\nconst areaPageId = areaRow ? areaRow.id : '';\nconst areaName   = areaRow ? (areaRow.properties?.Name?.title?.[0]?.plain_text || '') : '';\n\n// --- 3. Resolver Code -> pageId de capabilities -----------------------------\nconst capResults = $('Query Capabilities').item.json.results || [];\nlet ownCapId = '', crossCapId = '';\nfor (const c of capResults) {\n  const code = c.properties?.Code?.rich_text?.[0]?.plain_text || '';\n  if (code === CAP_OWN)   ownCapId   = c.id;\n  if (code === CAP_CROSS) crossCapId = c.id;\n}\n\n// --- 2. Stakeholder aprobador ----------------------------------------------\nconst stkResults = $('Query Stakeholder').item.json.results || [];\nconst stk = stkResults[0] || null;\n\nlet isAuthorized = false;\nif (stk) {\n  const caps    = (stk.properties?.Capabilities?.relation || []).map(r => r.id);\n  const stkArea = (stk.properties?.['Business Area']?.relation || []).map(r => r.id);\n\n  const hasOwn   = ownCapId   && caps.includes(ownCapId);\n  const hasCross = crossCapId && caps.includes(crossCapId);\n\n  const isOwnArea = hasOwn && areaPageId && stkArea.includes(areaPageId);\n  isAuthorized = isOwnArea || hasCross;\n}\n\nreturn [{ json: {\n  ...p,\n  area: areaName,        // nombre del area, para el work-items-handler\n  areaPageId,\n  isAuthorized,\n}}];"
+      },
+      "id": "bcb8cf15-4c94-4892-8c0b-e99907b91cd3",
+      "name": "Resolve Authorization",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7088,
+        8384
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Parse Slack Payload').item.json.responseUrl }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ replace_original: true, text: '⏳ Procesando tu decisión…', attachments: [] }) }}",
+        "options": {}
+      },
+      "id": "f0486dc2-f098-4fca-82ba-3b6c2576c570",
+      "name": "Disable Buttons — Processing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        8240,
+        8304
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MX2QZHGzOYBtt41s",
+          "name": "Slack Bot Token — Miles"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger — From Actions Router": {
+      "main": [
+        [
+          {
+            "node": "Parse Slack Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Slack Payload": {
+      "main": [
+        [
+          {
+            "node": "Query Business Area",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Business Area": {
+      "main": [
+        [
+          {
+            "node": "Query Stakeholder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Stakeholder": {
+      "main": [
+        [
+          {
+            "node": "Query Capabilities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Capabilities": {
+      "main": [
+        [
+          {
+            "node": "Resolve Authorization",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Authorization": {
+      "main": [
+        [
+          {
+            "node": "Is Authorized Approver?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Authorized Approver?": {
+      "main": [
+        [
+          {
+            "node": "Check Tracker",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Tracker": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Disable Buttons — Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch — Approve or Reject?": {
+      "main": [
+        [
+          {
+            "node": "Fetch Approver Info",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Approver Info",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Approver Info": {
+      "main": [
+        [
+          {
+            "node": "Get Approver Display Name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Approver Display Name": {
+      "main": [
+        [
+          {
+            "node": "IF — Approve or Reject?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF — Approve or Reject?": {
+      "main": [
+        [
+          {
+            "node": "Update Message approved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update message Reject",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Message approved": {
+      "main": [
+        [
+          {
+            "node": "Update Notion Lock — Approved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Notion Lock — Approved": {
+      "main": [
+        [
+          {
+            "node": "Fetch Thread-Rebuild Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Thread-Rebuild Payload": {
+      "main": [
+        [
+          {
+            "node": "Rebuild Jira Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rebuild Jira Payload": {
+      "main": [
+        [
+          {
+            "node": "Create via Work-Items Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update message Reject": {
+      "main": [
+        [
+          {
+            "node": "Update Notion Lock — Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Notion Lock — Rejected": {
+      "main": [
+        [
+          {
+            "node": "Notify user Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create via Work-Items Handler": {
+      "main": [
+        [
+          {
+            "node": "Post to Thread",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Disable Buttons — Processing": {
+      "main": [
+        [
+          {
+            "node": "Switch — Approve or Reject?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true
+  },
+  "versionId": "3ce84889-396b-4496-9baf-d5a6392db093",
+  "meta": {
+    "instanceId": "95944be45d5aa5e5565d656a14e718ed8b92e30102ad1bd3fcad4cf1b1c2f383"
+  },
+  "id": "H6uzCMuikHQy3jJa",
+  "tags": [
+    {
+      "updatedAt": "2026-03-25T20:09:56.359Z",
+      "createdAt": "2026-03-25T20:09:56.359Z",
+      "id": "m3quhhGHST3hiHGb",
+      "name": "miles"
+    }
+  ]
+}

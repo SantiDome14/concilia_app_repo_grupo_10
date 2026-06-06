@@ -1,5 +1,5 @@
 {
-  "name": "[MILES] Slack Event Router",
+  "name": "miles-slack-event-router",
   "nodes": [
     {
       "parameters": {
@@ -8,27 +8,47 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "39658588-c923-4351-acb2-6cbc7b10b885",
+      "id": "2ec568cf-cedb-4e45-8a1c-abb198c5364a",
       "name": "Trigger — Slack Events",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [24352, 9984],
+      "position": [
+        36224,
+        22064
+      ],
       "webhookId": "miles-slack-events"
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1 },
-          "conditions": [{ "id": "cond-challenge", "leftValue": "={{ $json.body.type }}", "rightValue": "url_verification", "operator": { "type": "string", "operation": "equals" } }],
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c-ch",
+              "leftValue": "={{ $json.body.type }}",
+              "rightValue": "url_verification",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
           "combinator": "and"
         },
         "options": {}
       },
-      "id": "936443fd-f37a-4d1c-8eb9-31bfa421a401",
+      "id": "8ab3a429-935a-483e-92d2-1067d9b7676b",
       "name": "Is URL Verification?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [24576, 9984]
+      "position": [
+        36448,
+        22064
+      ]
     },
     {
       "parameters": {
@@ -36,11 +56,14 @@
         "responseBody": "={{ JSON.stringify({ challenge: $json.body.challenge }) }}",
         "options": {}
       },
-      "id": "3e368ec1-6e6d-4f5d-b2be-4a848f8b704a",
+      "id": "7ce12467-0a42-425c-a7a5-f764e8f1a382",
       "name": "Respond — URL Verification",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [24816, 9840]
+      "position": [
+        36672,
+        21936
+      ]
     },
     {
       "parameters": {
@@ -48,231 +71,56 @@
         "responseBody": "{\"ok\": true}",
         "options": {}
       },
-      "id": "621ef146-4164-425b-bdcc-cb333e5ef84d",
-      "name": "Respond — Acknowledge Event",
+      "id": "d75d537b-c853-498a-a2c3-2eb778d5b124",
+      "name": "Respond — Ack",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [24816, 10128]
+      "position": [
+        36672,
+        22176
+      ]
     },
     {
       "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
-          "conditions": [
-            { "id": "cond-subtype-changed", "leftValue": "={{ $json.body.event.subtype }}", "rightValue": "message_changed", "operator": { "type": "string", "operation": "equals" } },
-            { "id": "cond-subtype-deleted", "leftValue": "={{ $json.body.event.subtype }}", "rightValue": "message_deleted", "operator": { "type": "string", "operation": "equals" } },
-            { "id": "cond-edited-flag",     "leftValue": "={{ $json.body.event.edited }}", "rightValue": "", "operator": { "type": "object", "operation": "exists" } }
-          ],
-          "combinator": "or"
-        },
-        "options": {}
+        "jsCode": "// ============================================================================\n// miles-slack-event-router · Classify Event\n// ----------------------------------------------------------------------------\n// Resuelve los 3 ejes de clasificacion y devuelve una unica `action`.\n//   Eje 1 (que):    tipo de evento Slack\n//   Eje 2 (quien):  origen del evento (Claude firmado / Miles / bot / humano)\n//   Eje 3 (donde):  canal REQ vs otro · raiz vs reply · con/sin mencion\n//\n// Acciones posibles:\n//   'challenge'        -> (lo maneja un IF previo, no llega aca)\n//   'app_home'         -> publicar App Home\n//   'capture_req'      -> forward al conversation-handler (captura REQ de Claude)\n//   'ignore'           -> noOp\n//\n// Catalogo (ver miles-discovery.md):\n//   1  url_verification                                          -> challenge (IF previo)\n//   2  app_home_opened + humano                                  -> app_home\n//   3  app_mention + Claude firmado + canal REQ + raiz           -> capture_req\n//   4  cualquiera + Miles                                        -> ignore (anti-loop)\n//   5  cualquiera + otro bot                                     -> ignore\n//   6  message + humano + DM (im)                                -> ignore\n//   7  app_mention + humano + fuera de canal REQ                 -> ignore\n//   8  message + humano + reply sin mencion                      -> ignore\n//   9  edit/delete                                               -> ignore\n//   10 message + Claude firmado + canal REQ + raiz               -> ignore (gemelo del app_mention)\n//   11 cualquier mencion/texto libre del usuario (no firmado)    -> ignore\n//\n// NOTA DE-DUP (REQ duplicados):\n//   Un posteo firmado por Claude que menciona a Miles en un canal REQ dispara\n//   DOS eventos Slack: `message` y `app_mention`, ambos con la firma. Para\n//   capturar el REQ una sola vez, el evento CANONICO de captura es `app_mention`\n//   (senal explicita de intencion hacia Miles). El `message` gemelo se descarta.\n//\n// NOTA INTERACCION POR TEXTO LIBRE (eliminado el follow-up):\n//   La UNICA interaccion habilitada usuario->Miles via texto es la firmada por\n//   Claude (captura de REQ). Mencionar a Miles a mano o escribir texto libre en\n//   un hilo NO dispara nada en este router. Las interacciones ricas del usuario\n//   (botones, inputs, modales) NO entran por la Events API: Slack las envia como\n//   interactivity payloads a /webhook/slack-actions (router aparte). Por eso aca\n//   no existe rama de follow-up: seria estructuralmente imposible que reciba esas\n//   interacciones, y solo atraparia texto libre, que esta deshabilitado.\n// ============================================================================\n\nconst body  = $json.body || {};\nconst event = body.event || {};\n\nconst MILES_ID  = 'U0ANEJ5BRPZ';\nconst CLAUDE_ID = 'U0AHZHTQE22';\nconst REQ_CHANNELS = ['C0AJ2599DA6','C0AJ67HK0ES','C0AK2PW5BGQ','C0AKNPCNNSU','C0AJMRFP0TD','C0ARDGP8134'];\nconst CLAUDE_SIGNATURES = ['Sent using','Sent with','Sent via','Sent from','Sent by',\n  'Enviado usando','Enviado mediante','Enviado con','Enviado vía','Enviado via','Enviado por','Enviado desde'];\n\nconst text = event.text || '';\nconst ignore = (reason) => [{ json: { action: 'ignore', _reason: reason } }];\n\n// --- Eje 1: tipo de evento --------------------------------------------------\nconst eventType = event.type || '';\nconst subtype   = event.subtype || '';\nconst isEditDelete = subtype === 'message_changed' || subtype === 'message_deleted' || !!event.edited;\n\n// (9) edit/delete -> ignore\nif (isEditDelete) return ignore('edit_or_delete');\n\n// (2) app_home_opened -> app_home  (solo humano; los bots no abren Home)\nif (eventType === 'app_home_opened') {\n  if (!event.user || event.user === MILES_ID) return ignore('home_non_human');\n  return [{ json: { action: 'app_home', user_id: event.user } }];\n}\n\n// --- Eje 2: origen ----------------------------------------------------------\n// (4) el propio Miles -> ignore (anti-loop)\nif (event.user === MILES_ID || event.bot_id) {\n  // bot_id cubre (5) otro bot y (4) Miles posteando como bot\n  // pero Claude firmado puede venir con bot_id? No: Claude postea como usuario humano.\n  // Excepcion: si es Claude firmado lo evaluamos abajo, antes de descartar por bot.\n  const sigOK = CLAUDE_SIGNATURES.some(s => text.includes(s)) && text.includes(CLAUDE_ID);\n  if (!sigOK) return ignore('bot_or_miles');\n}\n\nconst isClaudeSigned = CLAUDE_SIGNATURES.some(s => text.includes(s)) && text.includes(CLAUDE_ID);\n\n// --- Eje 3: ubicacion + intencion ------------------------------------------\nconst channel     = event.channel || '';\nconst isReqChannel = REQ_CHANNELS.includes(channel);\nconst isDM        = event.channel_type === 'im';\nconst isRoot      = !event.thread_ts || event.thread_ts === event.ts;\n\n// (6) DM entrante -> ignore (Miles solo reacciona a lo que el inicia)\nif (isDM) return ignore('dm_inbound');\n\n// --- (10) DE-DUP: descartar el `message` gemelo del posteo firmado ----------\n// Un posteo firmado por Claude que menciona a Miles dispara `message` Y\n// `app_mention`. La captura se hace SOLO por `app_mention` (abajo). Cualquier\n// evento `message` firmado se descarta para no duplicar el REQ.\nif (eventType === 'message' && isClaudeSigned) {\n  return ignore('claude_signed_message_dedup');\n}\n\n// --- (3) Captura de REQ: app_mention + Claude firmado + canal REQ + raiz ----\nif (eventType === 'app_mention' && isClaudeSigned && isReqChannel && isRoot) {\n  return [{ json: {\n    action: 'capture_req',\n    thread_ts: event.ts,\n    channel_id: channel,\n    user_id: event.user,\n    message_text: text.replace(/<@[A-Z0-9]+>/g, '').trim(),\n    source: 'claude'\n  }}];\n}\n\n// (7) app_mention fuera de canal REQ -> ignore\nif (eventType === 'app_mention' && !isReqChannel) return ignore('mention_outside_req');\n\n// (11) app_mention en canal REQ sin firma (mano del usuario) -> ignore\n//      Incluye menciones en raiz y en reply: texto libre no habilitado.\nif (eventType === 'app_mention') return ignore('mention_unsigned_noop');\n\n// (8) message (humano, sin firma) -> ignore (texto libre no habilitado)\nreturn ignore('no_match');"
       },
-      "id": "d97fb1d0-78e6-405c-a43b-bd0a103bcf4e",
-      "name": "Is Edit or Delete?",
-      "type": "n8n-nodes-base.if",
+      "id": "0220e47a-c908-4dd0-a678-eca9caa576fa",
+      "name": "Classify Event",
+      "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [25040, 10128]
-    },
-    {
-      "parameters": {},
-      "id": "494bcbc9-ced6-42b9-8248-2115d0f777db",
-      "name": "Ignore — Edit or Delete",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [25040, 10336]
+      "position": [
+        36896,
+        22176
+      ]
     },
     {
       "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
-          "conditions": [{ "id": "cond-bot", "leftValue": "={{ $json.body.event.bot_id }}", "rightValue": "", "operator": { "type": "string", "operation": "exists" } }],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "7cbbf074-f60a-4aaf-affd-8ecb7571cec7",
-      "name": "Is Bot Message?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [25264, 10128]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
-          "conditions": [
+        "dataType": "string",
+        "value1": "={{ $json.action }}",
+        "rules": {
+          "rules": [
             {
-              "id": "cond-claude-user",
-              "leftValue": "={{ $json.body.event.username }}",
-              "rightValue": "Claude",
-              "operator": { "type": "string", "operation": "equals" }
+              "value2": "app_home"
             },
             {
-              "id": "cond-req-channel",
-              "leftValue": "={{ (() => { const reqChannels = ['C0AJ2599DA6','C0AJ67HK0ES','C0AK2PW5BGQ','C0AKNPCNNSU','C0AJMRFP0TD','C0ARDGP8134']; return reqChannels.includes($json.body.event.channel); })() }}",
-              "rightValue": true,
-              "operator": { "type": "boolean", "operation": "true" }
+              "value2": "capture_req",
+              "output": 1
             },
             {
-              "id": "cond-sent-using",
-              "leftValue": "={{ (() => { const t = $json.body.event.text || ''; const signatures = ['Sent using','Sent with','Sent via','Sent from','Sent by','Enviado usando','Enviado mediante','Enviado con','Enviado vía','Enviado via','Enviado por','Enviado desde']; return signatures.some(s => t.includes(s)); })() }}",
-              "rightValue": true,
-              "operator": { "type": "boolean", "operation": "true" }
-            },
-            {
-              "id": "cond-is-parent-message",
-              "leftValue": "={{ !$json.body.event.thread_ts || ($json.body.event.thread_ts === $json.body.event.ts) }}",
-              "rightValue": true,
-              "operator": { "type": "boolean", "operation": "true" }
+              "value2": "ignore",
+              "output": 2
             }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
+          ]
+        }
       },
-      "id": "38803320-c13a-491b-9481-200600b2ef6b",
-      "name": "Is Claude REQ Message?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [25536, 9760]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://n8n.arduasolutions.com/webhook/req-conversation",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ thread_ts: $json.body.event.ts, channel_id: $json.body.event.channel, user_id: $json.body.event.user, message_text: $json.body.event.text, source: 'claude' }) }}",
-        "options": {}
-      },
-      "id": "dd80aeb8-2402-45b5-83b8-ed8a937d8d96",
-      "name": "Forward Claude REQ to Handler",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [25744, 9616]
-    },
-    {
-      "parameters": {},
-      "id": "21a033ec-aee6-4bc5-b1fe-c87f4c6c99d5",
-      "name": "Ignore",
-      "type": "n8n-nodes-base.noOp",
+      "id": "97660e6e-8570-453f-abe2-8c4fa337a1a7",
+      "name": "Switch — Action",
+      "type": "n8n-nodes-base.switch",
       "typeVersion": 1,
-      "position": [25744, 9904]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
-          "conditions": [{ "id": "cond-mention", "leftValue": "={{ $json.body.event.type }}", "rightValue": "app_mention", "operator": { "type": "string", "operation": "equals" } }],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "e2dadf3b-6226-4aa0-ab14-ca4f8c8e1c22",
-      "name": "Is App Mention?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [25552, 10384]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
-          "conditions": [{ "id": "cond-mention-thread", "leftValue": "={{ $json.body.event.thread_ts }}", "rightValue": "", "operator": { "type": "string", "operation": "exists" } }],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "4f34d3da-2357-4303-8663-3a4d67302f39",
-      "name": "Is Mention In Thread?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [25744, 10112]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://n8n.arduasolutions.com/webhook/req-conversation",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ thread_ts: $json.body.event.thread_ts, channel_id: $json.body.event.channel, user_id: $json.body.event.user, message_text: $json.body.event.text.replace(/<@[A-Z0-9]+>/g, '').trim(), source: 'mention' }) }}",
-        "options": {}
-      },
-      "id": "47fa15f6-5686-45e8-94f5-1161515172f1",
-      "name": "Forward Mention In Thread to Handler",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [25984, 9984]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
-          "conditions": [{
-            "id": "cond-has-context",
-            "leftValue": "={{ (() => { const text = $('Trigger — Slack Events').item.json.body.event.text || ''; const stripped = text.replace(/<@[A-Z0-9]+>/g, '').trim(); return stripped.length > 10; })() }}",
-            "rightValue": true,
-            "operator": { "type": "boolean", "operation": "true" }
-          }],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "e504c019-c73c-45be-a30e-6b2f64866590",
-      "name": "Has Context?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [25984, 10240]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
-          "conditions": [{
-            "id": "cond-claude-signature",
-            "leftValue": "={{ (() => { const text = $('Trigger — Slack Events').item.json.body.event.text || ''; const signatures = ['Sent using','Sent with','Sent via','Sent from','Sent by','Enviado usando','Enviado mediante','Enviado con','Enviado vía','Enviado via','Enviado por','Enviado desde']; const hasSig = signatures.some(s => text.includes(s)); return hasSig && text.includes('U0AHZHTQE22'); })() }}",
-            "rightValue": true,
-            "operator": { "type": "boolean", "operation": "true" }
-          }],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "8dc03333-5c70-480b-ad53-f4047b4569e3",
-      "name": "Is Claude Signature?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [26224, 10016]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://n8n.arduasolutions.com/webhook/req-conversation",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ thread_ts: $('Trigger — Slack Events').item.json.body.event.ts, channel_id: $('Trigger — Slack Events').item.json.body.event.channel, user_id: $('Trigger — Slack Events').item.json.body.event.user, message_text: $('Trigger — Slack Events').item.json.body.event.text, source: 'claude' }) }}",
-        "options": {}
-      },
-      "id": "0bb4584b-5bcc-45c0-91e0-7cf65f14aec9",
-      "name": "Forward Claude Human-Posted to Handler",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [26464, 9872]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://n8n.arduasolutions.com/webhook/req-conversation",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ thread_ts: $('Trigger — Slack Events').item.json.body.event.ts, channel_id: $('Trigger — Slack Events').item.json.body.event.channel, user_id: $('Trigger — Slack Events').item.json.body.event.user, message_text: $('Trigger — Slack Events').item.json.body.event.text.replace(/<@[A-Z0-9]+>/g, '').trim(), source: 'mention' }) }}",
-        "options": {}
-      },
-      "id": "628d28d9-0768-4e56-a783-430f75461619",
-      "name": "Forward Mention Context to Handler",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [26224, 10128]
+      "position": [
+        37104,
+        22176
+      ]
     },
     {
       "parameters": {
@@ -280,164 +128,661 @@
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "slackApi",
         "sendQuery": true,
-        "queryParameters": { "parameters": [{ "name": "user", "value": "={{ $json.body.event.user }}" }] },
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "user",
+              "value": "={{ $json.user_id }}"
+            }
+          ]
+        },
         "options": {}
       },
-      "id": "5734517a-635d-45a6-ab22-1314494a21f0",
-      "name": "Get Mention User Info",
+      "id": "a2ca043f-dfaf-4cc7-ba2c-7486770b0e2f",
+      "name": "Get Home User Info",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [26224, 10352],
-      "credentials": { "slackApi": { "id": "BCycvSbTaX6nUIo1", "name": "Slack API — Miles" } }
+      "position": [
+        37344,
+        21824
+      ],
+      "credentials": {
+        "slackApi": {
+          "id": "BCycvSbTaX6nUIo1",
+          "name": "Slack-API-Miles"
+        }
+      }
     },
     {
       "parameters": {
-        "select": "channel",
-        "channelId": { "__rl": true, "value": "={{ $('Trigger — Slack Events').item.json.body.event.channel }}", "mode": "id" },
-        "text": "=Hola *{{ $('Get Mention User Info').item.json.user.profile.first_name }}* 👋\n\n¿En qué puedo ayudarte? Contame qué necesitás:\n\n• Crear un nuevo requerimiento\n• Consultar el estado de un requerimiento\n• Ver los requerimientos de tu área",
-        "otherOptions": {
-          "thread_ts": { "replyValues": { "thread_ts": "={{ $('Trigger — Slack Events').item.json.body.event.ts }}" } },
-          "mrkdwn": true
+        "jsCode": "\n// ============================================================================\n// miles-slack-event-router · Build App Home View\n// ----------------------------------------------------------------------------\n// Arma la vista del App Home: intro personalizada (nombre + area) + capacidades.\n// El nombre y el area salen de users.info (nodo previo). El area se infiere del\n// campo `title` del perfil, con el MISMO criterio que el skill ardua-req-definition.\n// ============================================================================\n\nconst info = $json;  // respuesta de users.info\nconst profile = (info.user && info.user.profile) || {};\nconst userId  = (info.user && info.user.id) || $('Classify Event').first().json.user_id;\n\nconst firstName = profile.first_name || profile.display_name || profile.real_name || 'che';\nconst title     = profile.title || '';\n\n// --- Inferencia de area (criterio del skill) --------------------------------\nconst AREA_KEYWORDS = [\n  { area: 'Finance & Accounting', kw: ['finance','finanzas','accounting','contabilidad','cfo'] },\n  { area: 'Legal & Compliance',   kw: ['legal','compliance','legales'] },\n  { area: 'Operations',           kw: ['operations','operaciones'] },\n  { area: 'Sales & Partnerships', kw: ['sales','comercial','partnerships'] },\n  { area: 'Trading Desk',         kw: ['trading','mesa','trading desk'] },\n  { area: 'Management',           kw: ['ceo','coo','management','direccion','dirección','directorio'] },\n];\nfunction inferArea(t) {\n  if (!t) return null;\n  // Si hay separador, el area esta despues\n  let seg = t;\n  const sep = t.match(/[|\\/,]/);\n  if (sep) seg = t.split(/[|\\/,]/).pop().trim();\n  const low = (seg + ' ' + t).toLowerCase();\n  for (const { area, kw } of AREA_KEYWORDS) {\n    if (kw.some(k => low.includes(k))) return area;\n  }\n  return null;\n}\nconst area = inferArea(title);\nconst areaLine = area\n  ? `Trabajás en *${area}*.`\n  : `Sos parte del equipo de Ardua.`;\n\n// --- Block Kit de la vista --------------------------------------------------\nconst blocks = [\n  { type: 'header', text: { type: 'plain_text', text: `Hola ${firstName} 👋`, emoji: true } },\n  { type: 'section', text: { type: 'mrkdwn',\n    text: `${areaLine}\\nSoy *Miles*, tu asistente de Producto en Slack. Esto es lo que puedo hacer por vos:` } },\n  { type: 'divider' },\n  { type: 'section', text: { type: 'mrkdwn',\n    text: '*📝 Capturar requerimientos*\\nCuando describís una necesidad en el canal de tu área, la convierto en un requerimiento y lo registro en Jira automáticamente.' } },\n  { type: 'section', text: { type: 'mrkdwn',\n    text: '*✅ Gestionar aprobaciones*\\nSi un requerimiento necesita el visto bueno del líder del área, le acerco la decisión con botones para aprobar o rechazar.' } },\n  { type: 'section', text: { type: 'mrkdwn',\n    text: '*🔔 Avisarte cómo avanza*\\nTe notifico en el hilo original cada vez que tu requerimiento cambia de estado: enviado a desarrollo, en curso, completado, y más.' } },\n  { type: 'divider' },\n  { type: 'context', elements: [{ type: 'mrkdwn',\n    text: '💡 Para crear un requerimiento, escribime en el canal `#req-product-` de tu área o pedíselo a Claude.' }] },\n];\n\nconst view = { type: 'home', blocks };\n\nreturn [{ json: { user_id: userId, view: JSON.stringify(view) } }];\n"
+      },
+      "id": "00027a5b-cdcc-4284-86b0-90e63ae88ccf",
+      "name": "Build App Home View",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        38016,
+        22528
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/views.publish",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ user_id: $json.user_id, view: $json.view }) }}",
+        "options": {}
+      },
+      "id": "2b995d9b-dabe-4ea0-a5be-faf80b0b8a8c",
+      "name": "Publish App Home",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        39376,
+        21824
+      ],
+      "credentials": {
+        "slackApi": {
+          "id": "BCycvSbTaX6nUIo1",
+          "name": "Slack-API-Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.arduasolutions.com/webhook/req-conversation",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ thread_ts: $json.thread_ts, channel_id: $json.channel_id, user_id: $json.user_id, message_text: $json.message_text, source: $json.source }) }}",
+        "options": {}
+      },
+      "id": "8b397d96-1bf4-4c9a-8c97-6abfb3c6f93e",
+      "name": "Forward — Capture REQ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        37344,
+        22176
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "06dd5577-944a-48f7-b7fe-d36cfe34c165",
+      "name": "Ignore",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        37344,
+        22480
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/databases/376e8880-def6-805c-bd88-fc5b2c6765f0/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Notion-Version",
+              "value": "2022-06-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ filter: { property: 'Slack ID', rich_text: { equals: $('Classify Event').item.json.user_id } }, page_size: 1 }) }}",
+        "options": {}
+      },
+      "id": "d4f0622e-5f9d-49cb-b427-4e60fb7bd3bf",
+      "name": "Query Stakeholder by Slack ID",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        37568,
+        21824
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "aldMlehkPJEZ6AqY",
+          "name": "Notion-API-Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// ============================================================================\n// miles-slack-event-router · Resolve Profile  (v3 — precedencia Role > Group)\n// ----------------------------------------------------------------------------\n// Orden de precedencia (ver miles-home-discovery.md):\n//   1. Role contiene \"Product\"  -> 'producto'  (precede a TODO; ej. Head of Product)\n//   2. Group Head / C-Level     -> 'lider'\n//   3. Group Analyst            -> 'stakeholder'\n//   4. Group Manager/Specialist + req.ticket.take -> 'tecnico'\n//                               sin req.ticket.take -> 'producto'\n//   5. fallback (sin match / sin Group) -> 'producto'\n//\n// Flag adicional: is_tech_lead = (perfil tecnico Y Role == \"Technical Lead\").\n// Suma la seccion de Refinamiento en el builder tecnico.\n//\n// Exporta tambien: jira_id (assignee para queries), business_area_id (pageId,\n// para resolver el nombre del area), first_name.\n// ============================================================================\n\nconst stkRes = $('Query Stakeholder by Slack ID').first().json.results || [];\nconst slackUser = $('Classify Event').first().json.user_id;\nconst info = $('Get Home User Info').first().json;\nconst sProfile = (info.user && info.user.profile) || {};\nconst firstName = sProfile.first_name || sProfile.display_name || sProfile.real_name || 'che';\n\nconst capRes = $('Query Capability — ticket.take').first().json.results || [];\nconst ticketTakeId = capRes[0] ? capRes[0].id : null;\n\nfunction emit(profile, reason, extra={}) {\n  return [{ json: {\n    profile, _reason: reason, user_id: slackUser, first_name: firstName,\n    is_tech_lead: false, jira_id: null, business_area_id: null, ...extra\n  } }];\n}\n\nif (stkRes.length === 0) return emit('producto', 'no_stakeholder_match', { group: [], capabilities: [], role: '' });\n\nconst props = stkRes[0].properties || {};\nconst group = (props['Group']?.multi_select || []).map(g => g.name);\nconst capabilities = (props['Capabilities']?.relation || []).map(r => r.id);\nconst businessAreaId = (props['Business Area']?.relation || [])[0]?.id || null;\nconst role = props['Role']?.rich_text?.[0]?.plain_text || '';\nconst jiraId = props['Jira ID']?.rich_text?.[0]?.plain_text || null;\n\nconst base = { group, capabilities, role, jira_id: jiraId, business_area_id: businessAreaId };\n\n// 1) Role con \"Product\" manda\nif (/product/i.test(role)) return emit('producto', 'role_product', base);\n\n// 2) Sin Group -> fallback\nif (group.length === 0) return emit('producto', 'no_group', base);\n\n// 3) Head / C-Level -> lider\nif (group.includes('C-Level') || group.includes('Head')) return emit('lider', 'group_head', base);\n\n// 4) Analyst -> stakeholder\nif (group.includes('Analyst')) return emit('stakeholder', 'group_analyst', base);\n\n// 5) Manager / Specialist -> tecnico si tiene ticket.take, si no producto\nif (group.includes('Manager') || group.includes('Specialist')) {\n  const hasTicketTake = ticketTakeId && capabilities.includes(ticketTakeId);\n  if (hasTicketTake) {\n    const isTL = /technical lead/i.test(role);\n    return emit('tecnico', isTL ? 'tech_lead' : 'dev', { ...base, is_tech_lead: isTL });\n  }\n  return emit('producto', 'manager_pm', base);\n}\n\n// fallback\nreturn emit('producto', 'fallback', base);\n"
+      },
+      "id": "57120658-bbe7-49ad-808f-ccb2c59fa8d4",
+      "name": "Resolve Profile",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        38016,
+        21824
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/databases/836a99fd-c232-44b8-a2bf-17fb388f0d0c/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Notion-Version",
+              "value": "2022-06-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ filter: { property: 'Code', rich_text: { equals: 'req.ticket.take' } }, page_size: 1 }) }}",
+        "options": {}
+      },
+      "id": "748d16fc-2658-4eee-a962-acb03ae467ba",
+      "name": "Query Capability — ticket.take",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        37792,
+        21824
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "aldMlehkPJEZ6AqY",
+          "name": "Notion-API-Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Identidad + datos Jira ya resueltos aguas arriba\nconst bj = $('Build JQL').first().json;\nconst userId = bj.user_id;\nconst firstName = bj.first_name || 'che';\nconst areaName = bj.area_name || 'tu área';\n// La respuesta del handler puede venir como objeto o string JSON\nlet _resp = $json;\nif (typeof _resp === 'string') { try { _resp = JSON.parse(_resp); } catch(e){ _resp = {}; } }\nif (_resp && _resp.body && !_resp.issues) {\n  // por si n8n envuelve el body\n  let b = _resp.body;\n  if (typeof b === 'string') { try { b = JSON.parse(b); } catch(e){ b = {}; } }\n  _resp = b;\n}\nconst issues = (_resp && _resp.issues) || [];\n\n// Normaliza un issue a una fila simple\nfunction row(it){\n  const f = it.fields || {};\n  const assignee = f.assignee ? (f.assignee.displayName || '') : '';\n  const status = f.status ? f.status.name : '';\n  const area = f.customfield_10310 ? (f.customfield_10310.value || f.customfield_10310.name || '') : '';\n  return { key: it.key, summary: f.summary || '', status, assignee, area };\n}\nconst rows = issues.map(row);\nfunction inStatus(r, arr){ return arr.includes(r.status); }\nfunction table(caption, header, dataRows){\n  const head = header.map(h => ({type:'raw_text', text:h}));\n  const body = dataRows.map(cells => cells.map(c => ({type:'raw_text', text:String(c)})));\n  return { type:'data_table', caption, rows:[head, ...body] };\n}\nfunction emptyNote(txt){ return { type:'context', elements:[{type:'mrkdwn', text:txt}] }; }\n\nconst enCurso = rows.filter(r => inStatus(r, ['IN ANALYSIS','IN PROGRESS']));\nconst porEnriquecer = rows.filter(r => r.status === 'To Do' && r.assignee); // asignados a mi (la query ya filtro por mi assignee salvo disponibles)\n// \"disponibles\" = To Do sin assignee\nconst disponibles = rows.filter(r => r.status === 'To Do' && !r.assignee);\nconst bloqueados = rows.filter(r => r.status === 'BLOCKED');\n\nconst blocks = [\n  { type:'section', text:{ type:'mrkdwn', text:`:wave: *Hola, ${firstName}*\\nProduct Manager · tu mesa de trabajo` } },\n  { type:'divider' },\n  { type:'header', text:{ type:'plain_text', text:`En curso (${enCurso.length})`, emoji:true } },\n  enCurso.length ? table('En curso', ['Key','Requerimiento','Estado'], enCurso.map(r=>[r.key,r.summary,r.status])) : emptyNote('_Nada en curso ahora._'),\n  { type:'divider' },\n  { type:'header', text:{ type:'plain_text', text:`Por enriquecer (${porEnriquecer.length})`, emoji:true } },\n  porEnriquecer.length ? table('Por enriquecer', ['Key','Requerimiento'], porEnriquecer.map(r=>[r.key,r.summary])) : emptyNote('_Nada por enriquecer._'),\n  { type:'divider' },\n  { type:'header', text:{ type:'plain_text', text:`Disponibles (${disponibles.length})`, emoji:true } },\n  disponibles.length ? table('Disponibles', ['Key','Requerimiento'], disponibles.map(r=>[r.key,r.summary])) : emptyNote('_Sin requerimientos disponibles._'),\n  { type:'divider' },\n  { type:'header', text:{ type:'plain_text', text:`Bloqueados (${bloqueados.length})`, emoji:true } },\n  bloqueados.length ? table('Bloqueados', ['Key','Requerimiento'], bloqueados.map(r=>[r.key,r.summary])) : emptyNote('_Sin bloqueos._'),\n  { type:'divider' },\n  { type:'actions', elements:[\n    { type:'button', style:'primary', text:{type:'plain_text',text:'+ Nuevo requerimiento',emoji:true}, action_id:'new_requirement', value:'new_req' },\n    { type:'button', text:{type:'plain_text',text:'Pedir informe',emoji:true}, action_id:'request_report', value:'report' }\n  ]},\n  { type:'header', text:{ type:'plain_text', text:'Prioridades globales', emoji:true } },\n  { type:'section', text:{ type:'mrkdwn', text:':hourglass_flowing_sand: _Próximamente_ — cola global de Producto priorizada.' } },\n  { type:'context', elements:[{ type:'mrkdwn', text:`Miles · ${rows.length} PWIs · datos en vivo` }] }\n];\nconst view={type:'home',blocks};\nreturn [{ json:{ user_id:userId, view:JSON.stringify(view) } }];\n"
+      },
+      "id": "973e2994-2363-4d2f-b33f-f1df89c49a5e",
+      "name": "Build Home — Producto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        39136,
+        21584
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Identidad + datos Jira ya resueltos aguas arriba\nconst bj = $('Build JQL').first().json;\nconst userId = bj.user_id;\nconst firstName = bj.first_name || 'che';\nconst areaName = bj.area_name || 'tu área';\n// La respuesta del handler puede venir como objeto o string JSON\nlet _resp = $json;\nif (typeof _resp === 'string') { try { _resp = JSON.parse(_resp); } catch(e){ _resp = {}; } }\nif (_resp && _resp.body && !_resp.issues) {\n  // por si n8n envuelve el body\n  let b = _resp.body;\n  if (typeof b === 'string') { try { b = JSON.parse(b); } catch(e){ b = {}; } }\n  _resp = b;\n}\nconst issues = (_resp && _resp.issues) || [];\n\n// Normaliza un issue a una fila simple\nfunction row(it){\n  const f = it.fields || {};\n  const assignee = f.assignee ? (f.assignee.displayName || '') : '';\n  const status = f.status ? f.status.name : '';\n  const area = f.customfield_10310 ? (f.customfield_10310.value || f.customfield_10310.name || '') : '';\n  return { key: it.key, summary: f.summary || '', status, assignee, area };\n}\nconst rows = issues.map(row);\nfunction inStatus(r, arr){ return arr.includes(r.status); }\nfunction table(caption, header, dataRows){\n  const head = header.map(h => ({type:'raw_text', text:h}));\n  const body = dataRows.map(cells => cells.map(c => ({type:'raw_text', text:String(c)})));\n  return { type:'data_table', caption, rows:[head, ...body] };\n}\nfunction emptyNote(txt){ return { type:'context', elements:[{type:'mrkdwn', text:txt}] }; }\n\nconst activos = rows; // la query ya filtro por area + no Done/Deprecated\nconst blocks = [\n  { type:'section', text:{ type:'mrkdwn', text:`:wave: *Hola, ${firstName}*\\nRequerimientos activos de ${areaName}` } },\n  { type:'divider' },\n  { type:'header', text:{ type:'plain_text', text:`Requerimientos activos (${activos.length})`, emoji:true } },\n  activos.length ? table('Requerimientos activos', ['Key','Requerimiento','Estado'], activos.map(r=>[r.key,r.summary,r.status])) : emptyNote('_No hay requerimientos activos en tu área._'),\n  { type:'divider' },\n  { type:'actions', elements:[\n    { type:'button', style:'primary', text:{type:'plain_text',text:'+ Nuevo requerimiento',emoji:true}, action_id:'new_requirement', value:'new_req' },\n    { type:'button', text:{type:'plain_text',text:'Pedir informe',emoji:true}, action_id:'request_report', value:'report' }\n  ]},\n  { type:'context', elements:[{ type:'mrkdwn', text:`Miles · ${activos.length} requerimientos · ${areaName}` }] }\n];\nconst view={type:'home',blocks};\nreturn [{ json:{ user_id:userId, view:JSON.stringify(view) } }];\n"
+      },
+      "id": "5908aad1-f84d-40ed-be3d-bf0e4e9dc718",
+      "name": "Build Home — Stakeholder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        39136,
+        21744
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Identidad + datos Jira ya resueltos aguas arriba\nconst bj = $('Build JQL').first().json;\nconst userId = bj.user_id;\nconst firstName = bj.first_name || 'che';\nconst areaName = bj.area_name || 'tu área';\n// La respuesta del handler puede venir como objeto o string JSON\nlet _resp = $json;\nif (typeof _resp === 'string') { try { _resp = JSON.parse(_resp); } catch(e){ _resp = {}; } }\nif (_resp && _resp.body && !_resp.issues) {\n  // por si n8n envuelve el body\n  let b = _resp.body;\n  if (typeof b === 'string') { try { b = JSON.parse(b); } catch(e){ b = {}; } }\n  _resp = b;\n}\nconst issues = (_resp && _resp.issues) || [];\n\n// Normaliza un issue a una fila simple\nfunction row(it){\n  const f = it.fields || {};\n  const assignee = f.assignee ? (f.assignee.displayName || '') : '';\n  const status = f.status ? f.status.name : '';\n  const area = f.customfield_10310 ? (f.customfield_10310.value || f.customfield_10310.name || '') : '';\n  return { key: it.key, summary: f.summary || '', status, assignee, area };\n}\nconst rows = issues.map(row);\nfunction inStatus(r, arr){ return arr.includes(r.status); }\nfunction table(caption, header, dataRows){\n  const head = header.map(h => ({type:'raw_text', text:h}));\n  const body = dataRows.map(cells => cells.map(c => ({type:'raw_text', text:String(c)})));\n  return { type:'data_table', caption, rows:[head, ...body] };\n}\nfunction emptyNote(txt){ return { type:'context', elements:[{type:'mrkdwn', text:txt}] }; }\n\nconst activos = rows;\nconst blocks = [\n  { type:'section', text:{ type:'mrkdwn', text:`:wave: *Hola, ${firstName}*\\nVista de liderazgo · ${areaName}` } },\n  { type:'divider' },\n  { type:'header', text:{ type:'plain_text', text:'En espera de tu aprobación', emoji:true } },\n  { type:'section', text:{ type:'mrkdwn', text:':hourglass_flowing_sand: _Próximamente_ — aún no existe un estado de \"espera de aprobación\" en el workflow de PWI.' } },\n  { type:'divider' },\n  { type:'header', text:{ type:'plain_text', text:`Todos los requerimientos del área (${activos.length})`, emoji:true } },\n  activos.length ? table('Requerimientos del área', ['Key','Requerimiento','Owner','Estado'], activos.map(r=>[r.key,r.summary,r.assignee||'—',r.status])) : emptyNote('_No hay requerimientos activos._'),\n  { type:'divider' },\n  { type:'actions', elements:[\n    { type:'button', style:'primary', text:{type:'plain_text',text:'+ Nuevo requerimiento',emoji:true}, action_id:'new_requirement', value:'new_req' },\n    { type:'button', text:{type:'plain_text',text:'Pedir informe',emoji:true}, action_id:'request_report', value:'report' }\n  ]},\n  { type:'header', text:{ type:'plain_text', text:'Prioridades globales', emoji:true } },\n  { type:'section', text:{ type:'mrkdwn', text:':hourglass_flowing_sand: _Próximamente_ — cola global priorizada.' } },\n  { type:'context', elements:[{ type:'mrkdwn', text:`Miles · vista agregada · ${areaName}` }] }\n];\nconst view={type:'home',blocks};\nreturn [{ json:{ user_id:userId, view:JSON.stringify(view) } }];\n"
+      },
+      "id": "f7210c16-1192-499a-9033-02fb5b05eaf4",
+      "name": "Build Home — Lider",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        39136,
+        21904
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Identidad + datos Jira ya resueltos aguas arriba\nconst bj = $('Build JQL').first().json;\nconst userId = bj.user_id;\nconst firstName = bj.first_name || 'che';\nconst areaName = bj.area_name || 'tu área';\n// La respuesta del handler puede venir como objeto o string JSON\nlet _resp = $json;\nif (typeof _resp === 'string') { try { _resp = JSON.parse(_resp); } catch(e){ _resp = {}; } }\nif (_resp && _resp.body && !_resp.issues) {\n  // por si n8n envuelve el body\n  let b = _resp.body;\n  if (typeof b === 'string') { try { b = JSON.parse(b); } catch(e){ b = {}; } }\n  _resp = b;\n}\nconst issues = (_resp && _resp.issues) || [];\n\n// Normaliza un issue a una fila simple\nfunction row(it){\n  const f = it.fields || {};\n  const assignee = f.assignee ? (f.assignee.displayName || '') : '';\n  const status = f.status ? f.status.name : '';\n  const area = f.customfield_10310 ? (f.customfield_10310.value || f.customfield_10310.name || '') : '';\n  return { key: it.key, summary: f.summary || '', status, assignee, area };\n}\nconst rows = issues.map(row);\nfunction inStatus(r, arr){ return arr.includes(r.status); }\nfunction table(caption, header, dataRows){\n  const head = header.map(h => ({type:'raw_text', text:h}));\n  const body = dataRows.map(cells => cells.map(c => ({type:'raw_text', text:String(c)})));\n  return { type:'data_table', caption, rows:[head, ...body] };\n}\nfunction emptyNote(txt){ return { type:'context', elements:[{type:'mrkdwn', text:txt}] }; }\n\nconst isTL = bj.is_tech_lead;\n// Desarrollo\nconst devEnCurso = rows.filter(r => inStatus(r, ['IN PROGRESS','CODE REVIEW']) && r.assignee);\nconst devDisponibles = rows.filter(r => r.status === 'READY FOR DEV' && !r.assignee);\nconst devBloqueados = rows.filter(r => r.status === 'BLOCKED' && r.assignee);\n// Refinamiento (solo TL)\nconst refDisponibles = rows.filter(r => r.status === 'TO REFINEMENT' && !r.assignee);\nconst refParaHacer = rows.filter(r => r.status === 'TO REFINEMENT' && r.assignee);\nconst refEnCurso = rows.filter(r => r.status === 'IN REFINEMENT');\nconst refBloqueados = rows.filter(r => r.status === 'BLOCKED'); // refinamiento blocked se solapa; criterio simple V1\n\nconst blocks = [\n  { type:'section', text:{ type:'mrkdwn', text:`:wave: *Hola, ${firstName}*\\n${isTL ? 'Tablero de Technical Lead' : 'Tu tablero técnico'}` } },\n];\n\nif (isTL) {\n  blocks.push({ type:'divider' });\n  blocks.push({ type:'header', text:{ type:'plain_text', text:'▸ REFINAMIENTO', emoji:true } });\n  blocks.push({ type:'header', text:{ type:'plain_text', text:`Disponibles (${refDisponibles.length})`, emoji:true } });\n  blocks.push(refDisponibles.length ? table('Ref · Disponibles', ['Key','Ticket'], refDisponibles.map(r=>[r.key,r.summary])) : emptyNote('_Nada disponible para refinar._'));\n  blocks.push({ type:'header', text:{ type:'plain_text', text:`Para hacer (${refParaHacer.length})`, emoji:true } });\n  blocks.push(refParaHacer.length ? table('Ref · Para hacer', ['Key','Ticket'], refParaHacer.map(r=>[r.key,r.summary])) : emptyNote('_Nada asignado para refinar._'));\n  blocks.push({ type:'header', text:{ type:'plain_text', text:`En curso (${refEnCurso.length})`, emoji:true } });\n  blocks.push(refEnCurso.length ? table('Ref · En curso', ['Key','Ticket'], refEnCurso.map(r=>[r.key,r.summary])) : emptyNote('_Nada refinando ahora._'));\n}\n\nblocks.push({ type:'divider' });\nblocks.push({ type:'header', text:{ type:'plain_text', text:isTL ? '▸ DESARROLLO' : 'Desarrollo', emoji:true } });\nblocks.push({ type:'header', text:{ type:'plain_text', text:`En curso (${devEnCurso.length})`, emoji:true } });\nblocks.push(devEnCurso.length ? table('Dev · En curso', ['Key','Ticket','Estado'], devEnCurso.map(r=>[r.key,r.summary,r.status])) : emptyNote('_Nada en curso._'));\nblocks.push({ type:'header', text:{ type:'plain_text', text:`Disponibles (${devDisponibles.length})`, emoji:true } });\nblocks.push(devDisponibles.length ? table('Dev · Disponibles', ['Key','Ticket'], devDisponibles.map(r=>[r.key,r.summary])) : emptyNote('_Sin tickets disponibles._'));\nblocks.push({ type:'header', text:{ type:'plain_text', text:`Bloqueados (${devBloqueados.length})`, emoji:true } });\nblocks.push(devBloqueados.length ? table('Dev · Bloqueados', ['Key','Ticket'], devBloqueados.map(r=>[r.key,r.summary])) : emptyNote('_Sin bloqueos._'));\n\nblocks.push({ type:'divider' });\nblocks.push({ type:'actions', elements:[\n  { type:'button', style:'danger', text:{type:'plain_text',text:'Informar bloqueante',emoji:true}, action_id:'report_blocker', value:'blocker' }\n]});\nblocks.push({ type:'context', elements:[{ type:'mrkdwn', text:`Miles · ${rows.length} EWIs · datos en vivo` }] });\n\nconst view={type:'home',blocks};\nreturn [{ json:{ user_id:userId, view:JSON.stringify(view) } }];\n"
+      },
+      "id": "a57cef67-2bf9-4fc0-8c56-b8c0736f6e21",
+      "name": "Build Home — Tecnico",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        39136,
+        22064
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.profile }}",
+                    "rightValue": "producto",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "producto"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.profile }}",
+                    "rightValue": "stakeholder",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "stakeholder"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.profile }}",
+                    "rightValue": "lider",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "lider"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.profile }}",
+                    "rightValue": "tecnico",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "tecnico"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": 0
         }
       },
-      "id": "01f81677-b468-447e-ac13-5edb5776e1e9",
-      "name": "Reply to @Miles Mention",
-      "type": "n8n-nodes-base.slack",
-      "typeVersion": 2.3,
-      "position": [26464, 10352],
-      "webhookId": "03ec7cf2-201c-4fc8-b82a-70a18a3eb701",
-      "credentials": { "slackApi": { "id": "BCycvSbTaX6nUIo1", "name": "Slack API — Miles" } }
-    },
-    {
-      "parameters": {},
-      "id": "bf57a57d-6e04-4834-8056-e2f4381b7c5c",
-      "name": "Ignore — No Context",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [26496, 10608]
+      "id": "5fe662ee-7898-4b1d-8b7c-c52f006c78b7",
+      "name": "Switch — Profile",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        38912,
+        21824
+      ]
     },
     {
       "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
-          "conditions": [
+        "method": "POST",
+        "url": "https://api.notion.com/v1/databases/43a8018b-e397-44b6-87f6-59c6dadaba00/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
             {
-              "id": "cond-malformed-req-channel",
-              "leftValue": "={{ (() => { const reqChannels = ['C0AJ2599DA6','C0AJ67HK0ES','C0AK2PW5BGQ','C0AKNPCNNSU','C0AJMRFP0TD','C0ARDGP8134']; return reqChannels.includes($json.body.event.channel); })() }}",
-              "rightValue": true,
-              "operator": { "type": "boolean", "operation": "true" }
-            },
-            {
-              "id": "cond-malformed-mentions-miles",
-              "leftValue": "={{ (() => { const t = $json.body.event.text || ''; return t.includes('U0ANEJ5BRPZ') && !t.includes('<@U0ANEJ5BRPZ'); })() }}",
-              "rightValue": true,
-              "operator": { "type": "boolean", "operation": "true" }
-            },
-            {
-              "id": "cond-malformed-top-level",
-              "leftValue": "={{ !$json.body.event.thread_ts }}",
-              "rightValue": true,
-              "operator": { "type": "boolean", "operation": "true" }
-            },
-            {
-              "id": "cond-malformed-has-claude-sig",
-              "leftValue": "={{ (() => { const t = $json.body.event.text || ''; const sigs = ['Sent using','Sent with','Sent via','Sent from','Sent by','Enviado usando','Enviado mediante','Enviado con','Enviado vía','Enviado via','Enviado por','Enviado desde']; return sigs.some(s => t.includes(s)) && t.includes('U0AHZHTQE22'); })() }}",
-              "rightValue": true,
-              "operator": { "type": "boolean", "operation": "true" }
+              "name": "Notion-Version",
+              "value": "2022-06-28"
             }
-          ],
-          "combinator": "and"
+          ]
         },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ page_size: 100 }) }}",
         "options": {}
       },
-      "id": "116b4664-b510-40e9-a22a-bae15746ccea",
-      "name": "Is Malformed Miles Mention?",
-      "type": "n8n-nodes-base.if",
+      "id": "f786cb34-ba84-44ff-859a-878a80a7d3ec",
+      "name": "Resolve Area Name",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        38240,
+        21824
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "aldMlehkPJEZ6AqY",
+          "name": "Notion-API-Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// ============================================================================\n// miles-slack-event-router · Build JQL\n// ----------------------------------------------------------------------------\n// Arma el JQL segun el perfil. Una query amplia por perfil; el reparto en\n// secciones se hace despues en el builder.\n// Estados verificados 2026-06-06 (PWI y EWI).\n// ============================================================================\n\nconst rp = $('Resolve Profile').first().json;\nconst profile = rp.profile;\nconst jiraId = rp.jira_id;\nconst areaId = rp.business_area_id;\nconst isTL = rp.is_tech_lead;\n\n// Resolver nombre de area desde Resolve Area Name (pageId -> Name)\nlet areaName = null;\nif (areaId) {\n  const areas = $('Resolve Area Name').first().json.results || [];\n  const match = areas.find(a => a.id === areaId);\n  areaName = match ? (match.properties?.Name?.title?.[0]?.plain_text || null) : null;\n}\n\nfunction esc(s){ return String(s).replace(/\"/g, '\\\\\"'); }\n\nlet jql = '';\nif (profile === 'stakeholder' || profile === 'lider') {\n  // PWIs del area, activos (no Done/Deprecated)\n  const area = areaName ? `\"Business Area\" = \"${esc(areaName)}\"` : 'project = PWI';\n  jql = `project = PWI AND ${area} AND status NOT IN (Done, DEPRECATED) ORDER BY status ASC`;\n} else if (profile === 'producto') {\n  // PWIs: asignados a mi (varios estados) + disponibles (To Do sin asignar)\n  const mine = jiraId ? `assignee = \"${esc(jiraId)}\"` : 'assignee IS EMPTY';\n  jql = `project = PWI AND ( (${mine} AND status IN (\"IN ANALYSIS\",\"IN PROGRESS\",\"To Do\",BLOCKED)) OR (assignee IS EMPTY AND status = \"To Do\") ) ORDER BY status ASC`;\n} else if (profile === 'tecnico') {\n  // EWIs: desarrollo (mine in progress/code review/blocked + disponibles ready for dev)\n  // si es TL, ademas refinamiento (to/in refinement). Traemos amplio y repartimos.\n  const mine = jiraId ? `assignee = \"${esc(jiraId)}\"` : 'assignee IS EMPTY';\n  const devStates = '\"IN PROGRESS\",\"CODE REVIEW\",BLOCKED';\n  const refStates = isTL ? ',\"TO REFINEMENT\",\"IN REFINEMENT\"' : '';\n  jql = `project = EWI AND ( (${mine} AND status IN (${devStates}${refStates})) OR (assignee IS EMPTY AND status IN (\"READY FOR DEV\"${isTL ? ',\"TO REFINEMENT\"' : ''})) ) ORDER BY status ASC`;\n} else {\n  jql = `project = PWI AND assignee IS EMPTY AND status = \"To Do\"`;\n}\n\nreturn [{ json: { jql, profile, jira_id: jiraId, area_name: areaName, is_tech_lead: isTL,\n                  user_id: rp.user_id, first_name: rp.first_name } }];\n"
+      },
+      "id": "8d1e62c6-5fb4-458b-a734-134998f851e1",
+      "name": "Build JQL",
+      "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [25744, 10560]
+      "position": [
+        38464,
+        21824
+      ]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://n8n.arduasolutions.com/webhook/req-conversation",
+        "url": "https://n8n.arduasolutions.com/webhook/jira-work-items",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ thread_ts: $json.body.event.ts, channel_id: $json.body.event.channel, user_id: $json.body.event.user, message_text: $json.body.event.text, source: 'claude' }) }}",
+        "jsonBody": "={{ JSON.stringify({ operation: 'search', jql: $json.jql, maxResults: 100, fields: 'summary,status,assignee,customfield_10310' }) }}",
         "options": {}
       },
-      "id": "3e423311-a3ee-4f27-bcf8-c2210bf58153",
-      "name": "Forward Malformed Mention to Handler",
+      "id": "bc00d628-5c34-4b59-a893-35250fb98983",
+      "name": "Query Jira (via handler)",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [25984, 10432]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
-          "conditions": [
-            { "id": "cond-thread-exists",    "leftValue": "={{ $json.body.event.thread_ts }}", "rightValue": "", "operator": { "type": "string", "operation": "exists" } },
-            { "id": "cond-thread-diff",      "leftValue": "={{ $json.body.event.thread_ts }}", "rightValue": "={{ $json.body.event.ts }}", "operator": { "type": "string", "operation": "notEquals" } },
-            { "id": "cond-not-miles-mention","leftValue": "={{ ($json.body.event.text || '').includes('<@U0ANEJ5BRPZ>') }}", "rightValue": false, "operator": { "type": "boolean", "operation": "equals" } }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "81a44526-e012-425a-b1b3-61dc4d76f0b6",
-      "name": "Is Thread Reply?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [25744, 10752]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://n8n.arduasolutions.com/webhook/req-conversation",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ thread_ts: $json.body.event.thread_ts, channel_id: $json.body.event.channel, user_id: $json.body.event.user, message_text: $json.body.event.text, user_name: $json.body.event.user, source: 'thread_reply' }) }}",
-        "options": {}
-      },
-      "id": "fefd5c6a-27be-4f9f-af87-71f55e4bea3b",
-      "name": "Forward to Conversation Handler",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [25984, 10624]
-    },
-    {
-      "parameters": {},
-      "id": "0d425e5b-c6d4-4611-901f-b44f5dc078ea",
-      "name": "Ignore — Not a Thread Reply",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [25968, 10928]
+      "typeVersion": 4.3,
+      "position": [
+        38688,
+        21824
+      ]
     }
   ],
   "pinData": {},
   "connections": {
-    "Trigger — Slack Events":         { "main": [[{ "node": "Is URL Verification?", "type": "main", "index": 0 }]] },
-    "Is URL Verification?":           { "main": [[{ "node": "Respond — URL Verification", "type": "main", "index": 0 }], [{ "node": "Respond — Acknowledge Event", "type": "main", "index": 0 }]] },
-    "Respond — Acknowledge Event":    { "main": [[{ "node": "Is Edit or Delete?", "type": "main", "index": 0 }]] },
-    "Is Edit or Delete?":             { "main": [[{ "node": "Ignore — Edit or Delete", "type": "main", "index": 0 }], [{ "node": "Is Bot Message?", "type": "main", "index": 0 }]] },
-    "Is Bot Message?":                { "main": [[{ "node": "Is Claude REQ Message?", "type": "main", "index": 0 }], [{ "node": "Is App Mention?", "type": "main", "index": 0 }]] },
-    "Is Claude REQ Message?":         { "main": [[{ "node": "Forward Claude REQ to Handler", "type": "main", "index": 0 }], [{ "node": "Ignore", "type": "main", "index": 0 }]] },
-    "Is App Mention?":                { "main": [[{ "node": "Is Mention In Thread?", "type": "main", "index": 0 }], [{ "node": "Is Malformed Miles Mention?", "type": "main", "index": 0 }]] },
-    "Is Mention In Thread?":          { "main": [[{ "node": "Forward Mention In Thread to Handler", "type": "main", "index": 0 }], [{ "node": "Has Context?", "type": "main", "index": 0 }]] },
-    "Has Context?":                   { "main": [[{ "node": "Is Claude Signature?", "type": "main", "index": 0 }], [{ "node": "Get Mention User Info", "type": "main", "index": 0 }]] },
-    "Is Claude Signature?":           { "main": [[{ "node": "Forward Claude Human-Posted to Handler", "type": "main", "index": 0 }], [{ "node": "Forward Mention Context to Handler", "type": "main", "index": 0 }]] },
-    "Get Mention User Info":          { "main": [[{ "node": "Reply to @Miles Mention", "type": "main", "index": 0 }]] },
-    "Reply to @Miles Mention":        { "main": [[{ "node": "Ignore — No Context", "type": "main", "index": 0 }]] },
-    "Is Malformed Miles Mention?":    { "main": [[{ "node": "Forward Malformed Mention to Handler", "type": "main", "index": 0 }], [{ "node": "Is Thread Reply?", "type": "main", "index": 0 }]] },
-    "Is Thread Reply?":               { "main": [[{ "node": "Forward to Conversation Handler", "type": "main", "index": 0 }], [{ "node": "Ignore — Not a Thread Reply", "type": "main", "index": 0 }]] }
+    "Trigger — Slack Events": {
+      "main": [
+        [
+          {
+            "node": "Is URL Verification?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is URL Verification?": {
+      "main": [
+        [
+          {
+            "node": "Respond — URL Verification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond — Ack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond — Ack": {
+      "main": [
+        [
+          {
+            "node": "Classify Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Event": {
+      "main": [
+        [
+          {
+            "node": "Switch — Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch — Action": {
+      "main": [
+        [
+          {
+            "node": "Get Home User Info",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Forward — Capture REQ",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ignore",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Home User Info": {
+      "main": [
+        [
+          {
+            "node": "Query Stakeholder by Slack ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Stakeholder by Slack ID": {
+      "main": [
+        [
+          {
+            "node": "Query Capability — ticket.take",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Profile": {
+      "main": [
+        [
+          {
+            "node": "Resolve Area Name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Capability — ticket.take": {
+      "main": [
+        [
+          {
+            "node": "Resolve Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch — Profile": {
+      "main": [
+        [
+          {
+            "node": "Build Home — Producto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Home — Stakeholder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Home — Lider",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Home — Tecnico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Home — Producto": {
+      "main": [
+        [
+          {
+            "node": "Publish App Home",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Home — Stakeholder": {
+      "main": [
+        [
+          {
+            "node": "Publish App Home",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Home — Lider": {
+      "main": [
+        [
+          {
+            "node": "Publish App Home",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Home — Tecnico": {
+      "main": [
+        [
+          {
+            "node": "Publish App Home",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Area Name": {
+      "main": [
+        [
+          {
+            "node": "Build JQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build JQL": {
+      "main": [
+        [
+          {
+            "node": "Query Jira (via handler)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Jira (via handler)": {
+      "main": [
+        [
+          {
+            "node": "Switch — Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
   "active": true,
-  "settings": { "executionOrder": "v1", "availableInMCP": true },
-  "versionId": "0a82625f-e359-4eee-b4d3-1237b984f0a3",
-  "meta": { "templateCredsSetupCompleted": true, "instanceId": "95944be45d5aa5e5565d656a14e718ed8b92e30102ad1bd3fcad4cf1b1c2f383" },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true
+  },
+  "versionId": "2f5b59e9-d639-495c-b918-39e44a53d483",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "95944be45d5aa5e5565d656a14e718ed8b92e30102ad1bd3fcad4cf1b1c2f383"
+  },
   "id": "oAFCmrntS6da6cCA",
   "tags": [
-    { "updatedAt": "2026-04-01T15:49:24.440Z", "createdAt": "2026-04-01T15:49:24.440Z", "id": "PUW9bm4KdcIVVs8y", "name": "product-manager-app" },
-    { "updatedAt": "2026-03-25T20:09:56.359Z", "createdAt": "2026-03-25T20:09:56.439Z", "id": "m3quhhGHST3hiHGb", "name": "miles" }
+    {
+      "updatedAt": "2026-03-25T20:09:56.359Z",
+      "createdAt": "2026-03-25T20:09:56.359Z",
+      "id": "m3quhhGHST3hiHGb",
+      "name": "miles"
+    }
   ]
 }

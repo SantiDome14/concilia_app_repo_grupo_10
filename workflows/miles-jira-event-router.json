@@ -1,46 +1,105 @@
 {
-  "id": "TJkEk7gl6bLiXyow",
   "name": "miles-jira-event-router",
-  "active": true,
-  "versionId": "e4512f16-ce53-4b2c-aec1-99ccb7052e1c",
-  "createdAt": "2026-04-10T14:19:37.369Z",
-  "updatedAt": "2026-05-22T16:17:31.056Z",
-  "trigger": {
-    "type": "webhook",
-    "path": "/webhook/jira-events",
-    "method": "POST"
-  },
-  "description": "Receives Jira automation events and routes notifications to Slack. Supports 6 event types: req_sent_to_dev (notifies #4dt-product-technology-delivery + auto-assigns PM), req_promoted_to_done (notifies area channel), story_in_refinement / story_to_do / story_in_progress / story_to_done (notifies area channel and/or #req-product-notifications). Auto-assignment logic balances load between Valentin Vila and Matias Sragowicz, with Legal & Compliance hardcoded to Valentin and Operations hardcoded to Matias.",
   "nodes": [
-    "Webhook",
-    "Build Messages",
-    "Post to Slack",
-    "Assign Logic",
-    "Should Assign?",
-    "Get Valen's count",
-    "Get Mati's count",
-    "Assign in Jira"
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "jira-events",
+        "options": {}
+      },
+      "id": "ea878ef9-f8d8-4242-bb12-49e92b2a7eb4",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        13904,
+        8192
+      ],
+      "webhookId": "d33e0677-7480-45ed-8232-ddb25a5c10f6"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// ============================================================================\n// miles-jira-event-router · Build Messages\n// ----------------------------------------------------------------------------\n// Router de notificaciones de eventos de Jira -> Slack.\n// Contrato de entrada (Jira Automation web request):\n//   { event_type, board, triggeredAt,\n//     pwi: { issueKey, summary, status, area, issueUrl, intakeType, discussionThread } }\n//\n// event_types soportados (solo pwi_*):\n//   pwi_sent_to_dev          -> 2 mensajes: leadership (general) + hilo/area\n//   pwi_ready_for_dev        -> 1 mensaje: hilo/area\n//   pwi_in_development       -> 1 mensaje: hilo/area\n//   pwi_promoted_to_done     -> 1 mensaje: hilo/area\n//   pwi_promoted_to_deprecated -> 1 mensaje: hilo/area\n//   pwi_promoted_to_blocked  -> 1 mensaje: hilo/area\n// Unknown event_types: ignorados silenciosamente.\n// ============================================================================\n\nconst body = $input.first().json.body || {};\nconst { event_type, pwi = {} } = body;\n\n// --- Canales fijos ----------------------------------------------------------\nconst LEADERSHIP_CHANNEL = 'C0ADKPUS83B';   // #4dt-product-technology-delivery\n\n// --- Mapa area -> canal de Slack (fallback cuando no hay discussionThread) ---\nconst areaToChannel = {\n  'Finance & Accounting': 'C0AJ2599DA6',\n  'Legal & Compliance':   'C0AJ67HK0ES',\n  'Operations':           'C0AK2PW5BGQ',\n  'Sales & Partnerships': 'C0AKNPCNNSU',\n  'Trading Desk':         'C0AJMRFP0TD',\n  'Management':           'C0ARDGP8134',\n};\n\n// --- Resolver destino \"hilo o canal del area\" -------------------------------\n// Si hay discussionThread (Intake = Discussion) -> postear en el hilo original.\n// Si no (Intake = Manual) -> postear al canal del area como mensaje suelto.\nfunction resolveThreadDestination() {\n  const dt = pwi.discussionThread || '';\n  // URL formato: https://arduasolutions.slack.com/archives/<CHANNEL>/p<TS sin punto>\n  const m = dt.match(/archives\\/([A-Z0-9]+)\\/p(\\d+)/i);\n  if (m) {\n    const channel = m[1];\n    const tsRaw = m[2];\n    // reinsertar el punto: ultimos 6 digitos son microsegundos\n    const thread_ts = tsRaw.slice(0, -6) + '.' + tsRaw.slice(-6);\n    return { channel, thread_ts };\n  }\n  // Fallback: canal del area, sin thread\n  const channel = areaToChannel[pwi.area] || null;\n  return channel ? { channel, thread_ts: null } : null;\n}\n\nconst messages = [];\nconst push = (dest, text) => {\n  if (!dest || !dest.channel) return;\n  const m = { channel_id: dest.channel, slack_message: text };\n  if (dest.thread_ts) m.thread_ts = dest.thread_ts;\n  messages.push(m);\n};\n\n// --- Builders por tipo ------------------------------------------------------\nconst title = pwi.summary || '(sin titulo)';\nconst key   = pwi.issueKey || '';\nconst url   = pwi.issueUrl || '';\nconst link  = (url && key) ? `<${url}|${key}>` : (key || '—');\n\nconst builders = {\n  pwi_sent_to_dev() {\n    // a) Leadership — mensaje general\n    push({ channel: LEADERSHIP_CHANNEL, thread_ts: null },\n      `🚀 *Nuevo requerimiento listo para desarrollo*\\n\\n` +\n      `*${title}*\\n` +\n      `${link} · Área: ${pwi.area || '—'}\\n\\n` +\n      `Aprobado por Producto y con Épica creada en el tablero de Tecnología. ` +\n      `Cualquier consulta sobre el alcance, respondan este mensaje. 🤝`\n    );\n    // b) Hilo/area — feedback al solicitante\n    push(resolveThreadDestination(),\n      `🚀 Tu requerimiento *${title}* (${link}) fue aprobado y enviado a desarrollo. ` +\n      `Ya tiene una Épica en el tablero de Tecnología.`\n    );\n  },\n  pwi_ready_for_dev() {\n    push(resolveThreadDestination(),\n      `📝 Tu requerimiento *${title}* (${link}) ya está *listo para desarrollo* — ` +\n      `el equipo de Tecnología lo refinó y lo tomará en el próximo ciclo.`\n    );\n  },\n  pwi_in_development() {\n    push(resolveThreadDestination(),\n      `🛠️ ¡Manos a la obra! Tu requerimiento *${title}* (${link}) entró *en desarrollo*. ` +\n      `Te avisamos cuando esté disponible.`\n    );\n  },\n  pwi_promoted_to_done() {\n    push(resolveThreadDestination(),\n      `🎉 Tu requerimiento *${title}* (${link}) está *completado y disponible* en el sistema. ` +\n      `Probalo y ante cualquier duda o feedback, respondé este mensaje. 🤝`\n    );\n  },\n  pwi_promoted_to_deprecated() {\n    push(resolveThreadDestination(),\n      `🗂️ Tu requerimiento *${title}* (${link}) fue *descartado*. ` +\n      `Si necesitás entender el motivo o reabrir la discusión, respondé este mensaje.`\n    );\n  },\n  pwi_promoted_to_blocked() {\n    push(resolveThreadDestination(),\n      `⛔ Tu requerimiento *${title}* (${link}) quedó *bloqueado*. ` +\n      `El equipo está trabajando para destrabarlo; te mantenemos al tanto por acá.`\n    );\n  },\n};\n\nif (builders[event_type]) builders[event_type]();\n\nreturn messages.map(m => ({ json: m }));\n"
+      },
+      "id": "45847a1b-a48c-43f6-8d16-7c536168433b",
+      "name": "Build Messages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        14144,
+        8192
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify( Object.assign({ channel: $json.channel_id, text: $json.slack_message, mrkdwn: true }, $json.thread_ts ? { thread_ts: $json.thread_ts } : {}) ) }}",
+        "options": {}
+      },
+      "id": "7027e9d2-7e3a-41fc-afba-39e761b4eafc",
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        14384,
+        8192
+      ],
+      "credentials": {
+        "slackApi": {
+          "id": "BCycvSbTaX6nUIo1",
+          "name": "Slack-API-Miles"
+        }
+      }
+    }
   ],
-  "supported_event_types": [
-    "req_sent_to_dev",
-    "req_promoted_to_done",
-    "story_in_refinement",
-    "story_to_do",
-    "story_in_progress",
-    "story_to_done"
-  ],
-  "channel_map": {
-    "Finance & Accounting": "C0AJ2599DA6",
-    "Legal & Compliance": "C0AJ67HK0ES",
-    "Operations": "C0AK2PW5BGQ",
-    "Sales & Partnerships": "C0AKNPCNNSU",
-    "Trading Desk": "C0AJMRFP0TD",
-    "Management": "C0ARDGP8134",
-    "leadership": "C0ADKPUS83B",
-    "product_notifications": "C0AS1BPV9QU"
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Build Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Messages": {
+      "main": [
+        [
+          {
+            "node": "Post to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
-  "assignees": {
-    "VALENTIN_VILA": "712020:20f41ca6-e116-42bf-8f68-afaf20c599d7",
-    "MATIAS_SRAGOWICZ": "712020:69915e40-9b41-4595-8459-6f8d496748eb"
-  }
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "36717448-253b-4aca-99b4-d661d8e14362",
+  "meta": {
+    "instanceId": "95944be45d5aa5e5565d656a14e718ed8b92e30102ad1bd3fcad4cf1b1c2f383"
+  },
+  "id": "TJkEk7gl6bLiXyow",
+  "tags": [
+    {
+      "updatedAt": "2026-03-25T20:09:56.359Z",
+      "createdAt": "2026-03-25T20:09:56.359Z",
+      "id": "m3quhhGHST3hiHGb",
+      "name": "miles"
+    }
+  ]
 }

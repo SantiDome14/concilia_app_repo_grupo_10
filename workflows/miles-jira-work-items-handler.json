@@ -1,0 +1,617 @@
+{
+  "name": "miles-jira-work-items-handler",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "jira-work-items",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "90450c2f-61dd-46cd-8f73-164407d8c339",
+      "name": "Webhook — Work Items",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        5760,
+        6064
+      ],
+      "webhookId": "miles-jira-work-items"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// ============================================================================\n// miles-jira-work-items-handler · Validate & Route\n// ----------------------------------------------------------------------------\n// Gateway unico para operaciones CRUD sobre work items de Jira.\n// Contrato de entrada (POST /webhook/jira-work-items):\n//   {\n//     operation: 'create' | 'update' | 'transition' | 'delete',\n//     // --- create ---\n//     project?: 'PWI',                 // default PWI\n//     issueType?: 'Requirement',       // default Requirement\n//     fieldsExtra?: { ... },           // custom fields ya en shape Jira (customfield_xxx)\n//     summary?, problema, contexto?, impacto?, resultado_esperado,\n//     urgencia?, area?, thread_url, priority_id?,\n//     // --- update ---\n//     issueKey?, fields?: { ... },     // objeto Jira (assignee, priority, summary, ...)\n//     // --- transition ---\n//     transitionId?, comment?,\n//     // --- delete ---\n//     confirm?: true\n//   }\n// Respuesta sincrona: { ok, operation, issueKey?, issueUrl?, error? }\n// ============================================================================\n\nconst body = $input.first().json.body || {};\nconst op = (body.operation || '').toLowerCase();\n\nconst fail = (msg) => [{ json: { _valid: false, _error: msg, operation: op } }];\n\nconst VALID_OPS = ['create', 'update', 'transition', 'delete', 'search'];\nif (!VALID_OPS.includes(op)) {\n  return fail(`operation invalida o ausente: \"${op}\". Validas: ${VALID_OPS.join(', ')}`);\n}\n\n// --- Validacion por operacion ----------------------------------------------\nif (op === 'create') {\n  if (!body.problema)           return fail('create requiere \"problema\"');\n  if (!body.resultado_esperado) return fail('create requiere \"resultado_esperado\"');\n  if (!body.thread_url)         return fail('create requiere \"thread_url\"');\n}\nif (op === 'update') {\n  if (!body.issueKey) return fail('update requiere \"issueKey\"');\n  if (!body.fields || typeof body.fields !== 'object') return fail('update requiere \"fields\" (objeto Jira)');\n}\nif (op === 'transition') {\n  if (!body.issueKey)     return fail('transition requiere \"issueKey\"');\n  if (!body.transitionId) return fail('transition requiere \"transitionId\"');\n}\nif (op === 'delete') {\n  if (!body.issueKey)        return fail('delete requiere \"issueKey\"');\n  if (body.confirm !== true) return fail('delete requiere \"confirm\": true (guarda anti-borrado)');\n}\n\nif (op === 'search') {\n  if (!body.jql) return fail('search requiere \"jql\"');\n}\n\n// --- Passthrough normalizado ------------------------------------------------\nreturn [{ json: { ...body, operation: op, _valid: true } }];\n"
+      },
+      "id": "a9dffc11-3b25-46ee-9521-10796a55f0d9",
+      "name": "Validate & Route",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6000,
+        6064
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c-valid",
+              "leftValue": "={{ $json._valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b297e483-03b8-4da4-abf5-b32b3fc0a602",
+      "name": "Is Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        6176,
+        6064
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "create",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "create"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "update",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "update"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "transition",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "transition"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "delete",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "delete"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "search",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "search"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "05df6be0-0355-48f7-a948-f94225a2d780",
+      "name": "Switch — Operation",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        6400,
+        5840
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// ============================================================================\n// Build Create Body — UNICA fuente del formato ADF + campos de creacion.\n// Esquema verificado contra Jira real (2026-06-04):\n//   - issuetype Requirement = id 10155 (proyecto PWI / PRODUCT 10168)\n//   - Business Area  = customfield_10310 (select) IDs 10128-10133\n//   - Discussion Thread = customfield_10311 (url)\n//   - Intake Type    = customfield_10312 (select) Discussion=10134 Manual=10135\n// Reemplaza la logica duplicada y DESACTUALIZADA de:\n//   - conversation-handler · Code — Build Jira Body\n//   - approval-handler      · Rebuild Jira Payload (usaba cf_10170 + IDs 10020-24, obsoletos)\n// ============================================================================\n\nconst b = $json;\nconst clean = (s) => (s || '').replace(/\\n/g, ' ').replace(/\\r/g, '').replace(/\\t/g, ' ').trim() || '-';\n\nconst project       = b.project   || 'PWI';\nconst issueTypeId   = b.issueTypeId || '10155';       // Requirement\nconst priority_id   = b.priority_id || '3';           // Medium\n\n// --- Business Area: mapa nombre -> id (IDs reales Jira) ---------------------\nconst AREA_NAME_TO_ID = {\n  'Finance & Accounting': '10128',\n  'Legal & Compliance':   '10129',\n  'Operations':           '10130',\n  'Sales & Partnerships': '10131',\n  'Trading Desk':         '10132',\n  'Management':           '10133',\n};\n// Acepta business_area_id directo, o lo resuelve desde area (nombre)\nlet businessAreaId = b.business_area_id || (b.area ? AREA_NAME_TO_ID[b.area] : '') || '';\n\n// --- Intake Type: Discussion (10134) por defecto para capturas de Slack -----\n//   override con b.intake_type_id si el caller lo necesita distinto\nconst intakeTypeId = b.intake_type_id || '10134';     // Discussion\n\n// --- Summary ---------------------------------------------------------------\nlet summary = b.summary;\nif (!summary) {\n  const probClean = clean(b.problema);\n  const raw = '[Miles] ' + (b.area ? b.area + ' \\u2014 ' : '') + probClean;\n  summary = raw.length > 150 ? raw.substring(0, raw.lastIndexOf(' ', 150)) + '\\u2026' : raw;\n}\n\n// --- ADF description (formato fiel) -----------------------------------------\nconst desc = {\n  type: 'doc', version: 1,\n  content: [\n    { type: 'paragraph', content: [{ type: 'text', text: 'Capturado por Miles via Slack', marks: [{ type: 'em' }] }] },\n    ...(b.thread_url ? [\n      { type: 'paragraph', content: [{ type: 'text', text: '\\ud83d\\udd17 Ver hilo en Slack', marks: [{ type: 'link', attrs: { href: b.thread_url } }] }] }\n    ] : []),\n    { type: 'rule' },\n    { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Problema' }] },\n    { type: 'paragraph', content: [{ type: 'text', text: clean(b.problema) }] },\n    ...(clean(b.contexto) !== '-' ? [\n      { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Contexto' }] },\n      { type: 'paragraph', content: [{ type: 'text', text: clean(b.contexto) }] }\n    ] : []),\n    { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Impacto' }] },\n    { type: 'paragraph', content: [{ type: 'text', text: clean(b.impacto) }] },\n    { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Resultado esperado' }] },\n    { type: 'paragraph', content: [{ type: 'text', text: clean(b.resultado_esperado) }] },\n    { type: 'rule' },\n    { type: 'paragraph', content: [{ type: 'text', text: 'Urgencia: ' + clean(b.urgencia || 'Normal') }] }\n  ]\n};\n\nconst fields = {\n  project: { key: project },\n  issuetype: { id: issueTypeId },\n  summary,\n  priority: { id: priority_id },\n  description: desc,\n};\n\n// Business Area (select)\nif (businessAreaId) fields.customfield_10310 = { id: businessAreaId };\n// Discussion Thread (url) — ademas del link en el ADF\nif (b.thread_url) fields.customfield_10311 = b.thread_url;\n// Intake Type (select)\nif (intakeTypeId) fields.customfield_10312 = { id: intakeTypeId };\n\n// Custom fields extra ya en shape Jira (override / casos especiales)\nif (b.fieldsExtra && typeof b.fieldsExtra === 'object') {\n  Object.assign(fields, b.fieldsExtra);\n}\n\nreturn [{ json: { jira_body: JSON.stringify({ fields }), _op: 'create' } }];\n"
+      },
+      "id": "f67ed132-bab7-4511-9d88-0994dd957492",
+      "name": "Build Create Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6720,
+        5600
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://arduasolutions.atlassian.net/rest/api/3/issue",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.jira_body }}",
+        "options": {}
+      },
+      "id": "e51e6225-9fbb-4c88-a0ef-bff8ece6e0ec",
+      "name": "Jira — Create",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        6944,
+        5600
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "LXRpdRXQLv37KLaS",
+          "name": "Jira-API-Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://arduasolutions.atlassian.net/rest/api/3/issue/{{ $('Validate & Route').item.json.issueKey }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ fields: $('Validate & Route').item.json.fields }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "04b4f5e0-1aa9-4668-b803-b2771db375a0",
+      "name": "Jira — Update",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        6720,
+        5808
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "LXRpdRXQLv37KLaS",
+          "name": "Jira-API-Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://arduasolutions.atlassian.net/rest/api/3/issue/{{ $('Validate & Route').item.json.issueKey }}/transitions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ transition: { id: $('Validate & Route').item.json.transitionId }, ...( $('Validate & Route').item.json.comment ? { update: { comment: [ { add: { body: { type: 'doc', version: 1, content: [ { type: 'paragraph', content: [ { type: 'text', text: $('Validate & Route').item.json.comment } ] } ] } } } ] } } : {} ) }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "bdbe98a6-0f5a-4d73-8a7d-806db062ead8",
+      "name": "Jira — Transition",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        6704,
+        6000
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "LXRpdRXQLv37KLaS",
+          "name": "Jira-API-Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://arduasolutions.atlassian.net/rest/api/3/issue/{{ $('Validate & Route').item.json.issueKey }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "e71d005c-122b-4ad2-9e5e-7a6ee42f3b0f",
+      "name": "Jira — Delete",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        6704,
+        6192
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "LXRpdRXQLv37KLaS",
+          "name": "Jira-API-Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Normaliza la respuesta sincrona del handler.\nconst op = $('Validate & Route').first().json.operation;\n\n// search -> devuelve issues crudos de Jira\nif (op === 'search') {\n  const r = $json || {};\n  const issues = r.issues || [];\n  return [{ json: { ok: true, operation: op, total: issues.length, issues } }];\n}\n\n// resto de operaciones -> issueKey / issueUrl\nlet issueKey = '', issueUrl = '';\ntry {\n  const r = $json;\n  issueKey = r.key || r.issueKey || $('Validate & Route').first().json.issueKey || '';\n} catch (e) {}\nif (issueKey) issueUrl = 'https://arduasolutions.atlassian.net/browse/' + issueKey;\nreturn [{ json: { ok: true, operation: op, issueKey, issueUrl } }];\n"
+      },
+      "id": "0b5686da-5d8e-4209-b367-803452accdaa",
+      "name": "Build Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7312,
+        5824
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "d4005f02-2c2f-4c3c-9e14-04299b48c23c",
+      "name": "Respond — Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        7520,
+        5824
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst v = $('Validate & Route').first().json;\nreturn [{ json: { ok: false, operation: v.operation || null, error: v._error || 'unknown' } }];\n"
+      },
+      "id": "d293d1e0-9647-4ac5-a5a7-2aeb7d054665",
+      "name": "Build Error Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6400,
+        6288
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "627c1fa2-b41a-4918-978c-7bf3d4c9ebaf",
+      "name": "Respond — Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        6400,
+        6544
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://arduasolutions.atlassian.net/rest/api/3/search/jql",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "jql",
+              "value": "={{ $('Validate & Route').item.json.jql }}"
+            },
+            {
+              "name": "maxResults",
+              "value": "={{ $('Validate & Route').item.json.maxResults || 100 }}"
+            },
+            {
+              "name": "fields",
+              "value": "={{ $('Validate & Route').item.json.fields || 'summary,status,assignee,customfield_10310' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8bb2f69b-ba50-4259-8438-68c494a27b22",
+      "name": "Jira — Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        6704,
+        6384
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "LXRpdRXQLv37KLaS",
+          "name": "Jira-API-Miles"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook — Work Items": {
+      "main": [
+        [
+          {
+            "node": "Validate & Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate & Route": {
+      "main": [
+        [
+          {
+            "node": "Is Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid?": {
+      "main": [
+        [
+          {
+            "node": "Switch — Operation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Error Response": {
+      "main": [
+        [
+          {
+            "node": "Respond — Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch — Operation": {
+      "main": [
+        [
+          {
+            "node": "Build Create Body",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Jira — Update",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Jira — Transition",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Jira — Delete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Jira — Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Create Body": {
+      "main": [
+        [
+          {
+            "node": "Jira — Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Jira — Create": {
+      "main": [
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Jira — Update": {
+      "main": [
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Jira — Transition": {
+      "main": [
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Jira — Delete": {
+      "main": [
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Response": {
+      "main": [
+        [
+          {
+            "node": "Respond — Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Jira — Search": {
+      "main": [
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "9681dba9-384f-4983-a9ae-cc368cace3b5",
+  "meta": {
+    "instanceId": "95944be45d5aa5e5565d656a14e718ed8b92e30102ad1bd3fcad4cf1b1c2f383"
+  },
+  "id": "dknbrlcPzLuJz4Bb",
+  "tags": [
+    {
+      "updatedAt": "2026-03-25T20:09:56.359Z",
+      "createdAt": "2026-03-25T20:09:56.359Z",
+      "id": "m3quhhGHST3hiHGb",
+      "name": "miles"
+    }
+  ]
+}

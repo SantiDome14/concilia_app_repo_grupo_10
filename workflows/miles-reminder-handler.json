@@ -1,27 +1,496 @@
 {
-  "id": "9TxrLxzhf2xu1MIm",
   "name": "miles-reminder-handler",
-  "active": true,
-  "versionId": "30dea718-5f73-4685-a31a-4fb2385f5eec",
-  "createdAt": "2026-05-19T18:27:14.787Z",
-  "updatedAt": "2026-05-21T15:44:32.103Z",
-  "trigger": {
-    "type": "schedule",
-    "cron": "0 10-18 * * 1-5",
-    "description": "Every hour, Monday to Friday, between 10:00 and 18:00 Argentina time (UTC-3)"
-  },
-  "description": "Cron-based reminder handler for pending approval requests. Runs every hour on business days (Mon-Fri, 10:00-18:00 ART). Queries the Notion lock table (DB 20437e6c) for entries with status=pending and reminder_sent=false. Calculates business hours elapsed since creation using an Argentina timezone-aware algorithm (8 business hours/day, Mon-Fri). When 24+ business hours have elapsed, posts a reminder in the original Slack thread mentioning the area head, then marks reminder_sent=true in the lock to prevent duplicate reminders.",
   "nodes": [
-    "Trigger — Cron",
-    "Query Pending Locks",
-    "Check Business Hours Elapsed",
-    "IF — Has Pending?",
-    "Post Reminder in Thread",
-    "Update Notion Lock — Reminder Sent",
-    "No Operation, do nothing"
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 10-18 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "f7ac24ec-af38-44ef-a24f-6752a289d446",
+      "name": "Trigger — Cron",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        3088,
+        976
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/databases/20437e6c297a4afe923a29b5d01ad26c/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Notion-Version",
+              "value": "2022-06-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ filter: { property: 'Status', select: { equals: 'Pending' } } }) }}",
+        "options": {}
+      },
+      "id": "a74f665d-3674-435d-ada4-148d51d71a0f",
+      "name": "Query Pending",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3312,
+        976
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "aldMlehkPJEZ6AqY",
+          "name": "Notion-API-Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================================\n// miles-reminder-handler · Resolve Reminders\n// ----------------------------------------------------------------------------\n// Por cada fila Pending del Tracker:\n//   1. Decide si toca recordar: pasaron >= THRESHOLD horas habiles desde\n//      Last Reminder At (o desde Locked At si nunca se recordo).\n//   2. Deriva los aprobadores del area (stakeholders con req.approve.own cuya\n//      Business Area == area del canal de la fila) -> sus Slack IDs.\n//   3. Emite UN item por (fila x aprobador) para mandar DM, mas metadata para\n//      marcar Last Reminder At una vez por fila.\n//\n// Horas habiles: L-V 10:00-18:00 Argentina (UTC-3). Threshold 4h.\n// ============================================================================\n\nconst TIMEZONE_OFFSET = -3;\nconst DAY_START = 10, DAY_END = 18;\nconst THRESHOLD_HOURS = 4;\n\nfunction toArg(d){ return new Date(d.getTime() + TIMEZONE_OFFSET*3600*1000); }\nfunction businessHoursElapsed(sinceISO){\n  const now = toArg(new Date());\n  const start = toArg(new Date(sinceISO));\n  let elapsed = 0;\n  const cur = new Date(start);\n  while (cur < now){\n    const day = cur.getUTCDay(), hour = cur.getUTCHours();\n    if (day>=1 && day<=5 && hour>=DAY_START && hour<DAY_END){\n      const next = new Date(cur.getTime()+3600*1000);\n      const end = next<now ? next : now;\n      elapsed += (end-cur)/3600000;\n    }\n    cur.setTime(cur.getTime()+3600*1000);\n  }\n  return elapsed;\n}\n\n// --- Mapa area pageId -> { channelId, name } desde Business Areas -----------\nconst baResults = $('Query Business Areas').item.json.results || [];\nconst areaByChannel = {};   // channelId -> areaPageId\nfor (const a of baResults){\n  const chan = a.properties?.['Slack Channel ID']?.rich_text?.[0]?.plain_text || '';\n  if (chan) areaByChannel[chan] = a.id;\n}\n\n// --- Aprobadores con own: pageArea -> [slackIds] ----------------------------\nconst ownStk = $('Query Own Stakeholders').item.json.results || [];\nconst approversByArea = {};  // areaPageId -> [slackId]\nfor (const s of ownStk){\n  const slackId = s.properties?.['Slack ID']?.rich_text?.[0]?.plain_text || '';\n  const areas = (s.properties?.['Business Area']?.relation || []).map(r => r.id);\n  if (!slackId) continue;\n  for (const ap of areas){\n    (approversByArea[ap] = approversByArea[ap] || []).push(slackId);\n  }\n}\n\n// --- Recorrer filas pendientes ---------------------------------------------\nconst rows = $('Query Pending').item.json.results || [];\nconst out = [];\nfor (const row of rows){\n  const props = row.properties;\n  const threadId  = props?.['Thread ID']?.title?.[0]?.plain_text || '';\n  const channelId = props?.['Channel ID']?.rich_text?.[0]?.plain_text || '';\n  const lockedAt  = props?.['Locked At']?.created_time || row.created_time;\n  const lastRem   = props?.['Last Reminder At']?.date?.start || '';\n  const pageId    = row.id;\n\n  // since: ultimo recordatorio, o creacion si nunca se recordo\n  const sinceISO = lastRem || lockedAt;\n  if (!sinceISO) continue;\n  if (businessHoursElapsed(sinceISO) < THRESHOLD_HOURS) continue;\n\n  // aprobadores del area de esta fila\n  const areaPageId = areaByChannel[channelId];\n  const approvers = (areaPageId && approversByArea[areaPageId]) ? approversByArea[areaPageId] : [];\n  if (approvers.length === 0) continue;\n\n  // permalink del hilo\n  const threadUrl = 'https://arduasolutions.slack.com/archives/' + channelId + '/p' + threadId.replace('.', '');\n\n  for (const approverId of approvers){\n    out.push({ json: {\n      approverId, channelId, threadId, threadUrl, pageId,\n      nowISO: new Date().toISOString(),\n    }});\n  }\n}\n\nif (out.length === 0) return [{ json: { hasReminders: false } }];\nreturn out.map(o => ({ json: { ...o.json, hasReminders: true } }));"
+      },
+      "id": "036e3cc1-ad26-4d73-adb3-ed305573cfc1",
+      "name": "Resolve Reminders",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3536,
+        976
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-has-pending",
+              "leftValue": "={{ $json.hasReminders }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "33f019fe-14f3-41d2-97c4-479dc1464fb7",
+      "name": "IF — Has Reminders?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3760,
+        976
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "45072263-f865-4000-b5a5-50b6216137da",
+      "name": "No Operation, do nothing",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        3984,
+        1104
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $('Resolve Reminders').item.json.approverId, text: '👋 Tenés un requerimiento esperando tu aprobación. Para revisarlo y habilitarlo/rechazarlo, entrá al hilo: ' + $('Resolve Reminders').item.json.threadUrl, mrkdwn: true }) }}",
+        "options": {}
+      },
+      "id": "bf510a3e-7afd-4e38-b44d-d22e4e7883ea",
+      "name": "Send DM Reminder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4480,
+        960
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MX2QZHGzOYBtt41s",
+          "name": "Slack Bot Token — Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ 'https://api.notion.com/v1/pages/' + $('Resolve Reminders').item.json.pageId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Notion-Version",
+              "value": "2022-06-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ properties: { 'Last Reminder At': { date: { start: $('Resolve Reminders').item.json.nowISO } } } }) }}",
+        "options": {}
+      },
+      "id": "72eec8d8-418c-48ab-b909-ceac251a5a45",
+      "name": "Update Last Reminder At",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4672,
+        960
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "aldMlehkPJEZ6AqY",
+          "name": "Notion-API-Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/databases/20437e6c297a4afe923a29b5d01ad26c/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Notion-Version",
+              "value": "2022-06-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ filter: { and: [ { property: 'Thread ID', title: { equals: $json.threadId } }, { property: 'Status', select: { does_not_equal: 'Pending' } } ] } }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3984,
+        960
+      ],
+      "id": "93be4ca1-e779-45d0-9caf-7c86905e65bf",
+      "name": "Check Thread Resolved",
+      "credentials": {
+        "notionApi": {
+          "id": "aldMlehkPJEZ6AqY",
+          "name": "Notion-API-Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "60ba7f5d-85f3-49d7-894d-f07e35dab02b",
+              "leftValue": "={{ $json.results.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4240,
+        960
+      ],
+      "id": "cff8a8fd-fd64-4ad6-858e-392ddb33ae7a",
+      "name": "IF — Already Resolved?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/databases/7ddac325-ee1e-4459-8695-3fabd8f8a7ab/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Notion-Version",
+              "value": "2022-06-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ page_size: 100 }) }}",
+        "options": {}
+      },
+      "id": "919ed9cb-6298-42a6-bcba-7859ab9fa590",
+      "name": "Query Business Areas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3536,
+        832
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "aldMlehkPJEZ6AqY",
+          "name": "Notion-API-Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/databases/a2a071ba-0c63-4d4e-8ee4-d0197f837fa8/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Notion-Version",
+              "value": "2022-06-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ filter: { property: 'Code', rich_text: { equals: 'req.approve.own' } } }) }}",
+        "options": {}
+      },
+      "id": "749b06ca-24be-4718-8d7f-7a1568d334d4",
+      "name": "Query Capability Own",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3760,
+        832
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "aldMlehkPJEZ6AqY",
+          "name": "Notion-API-Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/databases/376e8880-def6-80aa-bee4-000b5c221413/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Notion-Version",
+              "value": "2022-06-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ filter: { property: 'Capabilities', relation: { contains: ($('Query Capability Own').item.json.results[0] ? $('Query Capability Own').item.json.results[0].id : 'none') } }, page_size: 100 }) }}",
+        "options": {}
+      },
+      "id": "49052047-1cf2-49b7-a919-f9359558857d",
+      "name": "Query Own Stakeholders",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3984,
+        832
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "aldMlehkPJEZ6AqY",
+          "name": "Notion-API-Miles"
+        }
+      }
+    }
   ],
-  "lock_notion_db": "20437e6c297a4afe923a29b5d01ad26c",
-  "reminder_threshold_business_hours": 24,
-  "timezone": "America/Argentina/Buenos_Aires",
-  "business_hours": { "start": 10, "end": 18, "days": "Mon-Fri" }
+  "pinData": {},
+  "connections": {
+    "Trigger — Cron": {
+      "main": [
+        [
+          {
+            "node": "Query Pending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Pending": {
+      "main": [
+        [
+          {
+            "node": "Query Business Areas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Business Areas": {
+      "main": [
+        [
+          {
+            "node": "Query Capability Own",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Capability Own": {
+      "main": [
+        [
+          {
+            "node": "Query Own Stakeholders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Own Stakeholders": {
+      "main": [
+        [
+          {
+            "node": "Resolve Reminders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Reminders": {
+      "main": [
+        [
+          {
+            "node": "IF — Has Reminders?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF — Has Reminders?": {
+      "main": [
+        [
+          {
+            "node": "Check Thread Resolved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Thread Resolved": {
+      "main": [
+        [
+          {
+            "node": "IF — Already Resolved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF — Already Resolved?": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send DM Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send DM Reminder": {
+      "main": [
+        [
+          {
+            "node": "Update Last Reminder At",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true
+  },
+  "versionId": "9695b780-4c78-48e3-b1a1-c79704104388",
+  "meta": {
+    "instanceId": "95944be45d5aa5e5565d656a14e718ed8b92e30102ad1bd3fcad4cf1b1c2f383"
+  },
+  "id": "9TxrLxzhf2xu1MIm",
+  "tags": [
+    {
+      "updatedAt": "2026-03-25T20:09:56.359Z",
+      "createdAt": "2026-03-25T20:09:56.359Z",
+      "id": "m3quhhGHST3hiHGb",
+      "name": "miles"
+    }
+  ]
 }

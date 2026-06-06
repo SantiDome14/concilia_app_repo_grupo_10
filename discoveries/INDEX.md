@@ -99,7 +99,7 @@ Hipótesis sobre cómo trabajamos: automatizaciones de gestión, SLAs, herramien
 
 | Archivo | Nombre | Estado | Owner | Última act. |
 |---|---|---|---|---|
-| [`miles-home-discovery.md`](./miles-home-discovery.md) | Home de Miles — contenido ramificado por rol y fuente de identidad | En investigación | Yasmani Rodriguez | 2026-06-05 |
+| [`miles-home-discovery.md`](./miles-home-discovery.md) | Home de Miles — contenido ramificado por perfil y fuente de identidad | En investigación | Yasmani Rodriguez | 2026-06-06 |
 | [`ask-ardua-gmail-bandejas-compartidas-discovery.md`](./ask-ardua-gmail-bandejas-compartidas-discovery.md) | Ask Ardua — Acceso de Claude a bandejas de Gmail compartidas por área | En investigación | Santino Domeniconi | 2026-05-26 |
 | [`jira-automations-discovery.md`](./jira-automations-discovery.md) | Jira Automations — Session Context | En investigación | Yasmani Rodriguez | 2026-05-11 |
 | [`jira-sla-discovery.md`](./jira-sla-discovery.md) | SLA de Work Items de Jira | En investigación | Yasmani Rodriguez | 2026-05-10 |
