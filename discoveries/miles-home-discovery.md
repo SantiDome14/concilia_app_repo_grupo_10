@@ -8,6 +8,8 @@ updated_at: 2026-06-07
 propagates_to:
   - workflows/miles-slack-event-router.json
   - workflows/miles-jira-work-items-handler.json
+  - workflows/miles-conversation-handler.json
+  - workflows/miles-requirement-approval-handler.json
 ---
 
 # Home de Miles — contenido ramificado por perfil y fuente de identidad
@@ -92,7 +94,9 @@ Los 5 perfiles y su contenido (todos en patrón tabla — ver H4):
 - CTAs: "Nuevo requerimiento", "Pedir informe".
 
 **`lider`** (Head / C-Level de área de negocio) — filtra por Business Area
-- En espera de aprobación → "Próximamente" (no existe el estado, ver D-proceso).
+- En espera de tu aprobación → card operativa (resuelto 2026-06-07, ver H7). Lista
+  los REQ del área que esperan la aprobación de ESTA persona, desde el REQ Approval
+  Tracker de Notion + el hilo de Slack. No usa Jira.
 - Todos los requerimientos del área, con columna Owner (vista agregada).
 - Prioridades globales → "Próximamente" (ver D1).
 
@@ -141,6 +145,48 @@ filtro nativo + botón expandir). En **mobile** NO muestra filtro ni expandir
 pantallas angostas). Como la mayoría abre el Home desde desktop, las tablas son la
 elección correcta. Las cards quedan para bloques que son "una entidad con acción"
 más que "una lista".
+
+### H7 — La card "En espera de tu aprobación" se resuelve con el Tracker de Notion + el hilo de Slack (sin Jira), y un resumen LLM del problema — VALIDADA
+El perfil `lider` debía mostrar "requerimientos en espera de tu aprobación". La
+decisión de proceso que estaba abierta (¿estado en PWI? ¿campo? ¿tracker?) se
+resolvió: **se modela con el REQ Approval Tracker de Notion, NO con un estado de
+Jira**. El ciclo de aprobación de un REQ vive enteramente en Slack (hilo) + Notion
+(lock del tracker); Jira recién entra cuando el REQ es aprobado y se crea el ticket.
+Por eso la card no toca Jira.
+
+**Fuente de los datos de la card (2026-06-07):**
+- **REQ Approval Tracker** (db `20437e6c-297a-4afe-923a-29b5d01ad26c`). Un row por
+  REQ en espera (lock). Campos usados: `Thread ID` (title), `Channel ID`, `Requester
+  ID`, `Locked At` (created_time), `Status` (Pending/Approved/Rejected), `Approver ID`
+  y el campo NUEVO `Eligible Approver IDs` (ver abajo).
+- **Hilo de Slack** del REQ (vía `conversations.replies`): de ahí sale el texto del
+  problema para mostrar en la card, y la re-validación de si el hilo ya fue resuelto.
+
+**Resolución approver ↔ card — campo nuevo `Eligible Approver IDs`.**
+Problema descubierto: `Approver ID` nace VACÍO en un lock Pending — solo se llena
+cuando alguien efectivamente resuelve la aprobación. Entonces no servía para filtrar
+"qué le toca aprobar a esta persona". Solución: se agregó al Tracker el campo
+**`Eligible Approver IDs`** (RICH_TEXT, CSV de Slack user IDs), poblado AL CREAR el
+lock con todos los aprobadores candidatos del área (los que `Check Approval Gate` ya
+resolvía en el conversation-handler). La card filtra
+`Status = Pending AND Eligible Approver IDs contains <user_id>`. `Approver ID` queda
+reservado para quién resolvió (auditoría), no para elegibilidad.
+
+**Resumen del problema con LLM (Groq).** El texto del problema se muestra como un
+resumen de 1-2 líneas en español rioplatense, generado con Groq
+(`llama-3.3-70b-versatile`, endpoint OpenAI-compatible, credencial predefinida tipo
+Groq). Cascada de fallback: resumen Groq → texto del problema extraído del hilo
+(parser de la sección `:mag: _Problema_`) → "abrí el hilo".
+
+**Re-validación contra Slack:** antes de mostrar, se relee el hilo y se descarta si
+ya está resuelto (marcas "🎉 Requerimiento creado" / "tu requerimiento fue rechazado
+por") — evita mostrar como pendiente algo ya cerrado.
+
+**Forma:** cards apiladas (NO carousel — H5 sigue abierta para otras secciones).
+El subtitle lleva `:loudspeaker:` + la mención del solicitante + la antigüedad de la
+espera. Botón "Ir a conversación" (estilo neutro, sin primary) que abre el panel del
+hilo vía permalink con `?thread_ts=<ts>&cid=<channel>`. (No se muestra avatar del
+solicitante — ver el aprendizaje de Block Kit sobre `slack_icon`/`hero_image`.)
 
 ### H5 — Algunas secciones se verían mejor como carousel de cards — ABIERTA (próximo paso)
 Hipótesis nueva (2026-06-06): secciones como "Disponibles" o "En curso" podrían
@@ -246,6 +292,54 @@ partir del PWI igual que el resto.
   20 columnas. Primera row = header. Sort automático.
 - Bloques nuevos Slack 2026: card/alert/carousel (abril), data_table (20 mayo).
   Todos renderizan en App Home. Hasta 100 bloques por Home.
+
+### Lectura de Slack desde Code node — `this.helpers` NO es confiable (2026-06-07)
+Leer el hilo de Slack (`conversations.replies`) con
+`this.helpers.httpRequestWithAuthentication.call(this, 'slackApi', ...)` DENTRO de un
+Code node devolvía vacío de forma intermitente/silenciosa. Síntoma concreto: el campo
+`fullText` llegaba vacío al nodo de Groq, que entonces respondía "No hay información
+para resumir". El parser y Groq estaban bien; la LECTURA era la que fallaba.
+**Regla:** las llamadas HTTP autenticadas (Slack, etc.) van en un **nodo HTTP visible**,
+no embebidas en Code. Beneficio doble: confiabilidad + debugeo (se ve input/output del
+nodo en la ejecución). Aplica a cualquier llamada externa.
+
+### Slack Block Kit — avatares en un card block: `slack_icon` exige `name`, `hero_image` es banner (2026-06-07)
+El campo `slack_icon` de un card block (el ícono junto al título) acepta SOLO un
+`name` de un conjunto cerrado de íconos. `rocket` es válido; `hourglass_flowing_sand`
+y `bell` NO fueron aceptados. **Un solo bloque con un `slack_icon` inválido hace que
+Slack rechace el `views.publish` ENTERO** (`ok:false`, error tipo
+`/view/blocks/N/slack_icon/name`), no solo ese bloque — el Home queda sin actualizar.
+Verificado en vivo al intentar pasarle una imagen: Slack devuelve
+`missing required field: name [json-pointer:/view/blocks/N/slack_icon]`. **El
+`slack_icon` NO acepta `image_url` — requiere `name`.** (Corrige una nota previa que
+asumía que aceptaba un ImageElement con URL.)
+
+Para mostrar una imagen DENTRO de un card, el campo es **`hero_image`**
+(`{ type:'image', image_url, alt_text }`; la doc lista `hero_image/title/actions/body`
+como el set de campos, al menos uno requerido). PERO `hero_image` renderiza como una
+imagen destacada grande tipo **banner**, no como un avatar pequeño — no sirve para
+"foto de la persona al lado del título". Un avatar mini iría en un `context` block,
+pero eso es un bloque aparte, fuera de la card.
+
+**Decisión (2026-06-07):** para la card de aprobación se vuelve al emoji `:loudspeaker:`
+en el subtitle (sin foto). El avatar real queda para el próximo desafío (cards de
+capacidad de equipos de Tecnología), y NO se resolverá llamando a `users.list` en cada
+render: se cacheará el directorio de usuarios en una **Data Table de n8n refrescada
+~2×/día** por un workflow programado, y las cards la consultarán localmente. Se
+descartó y revirtió el experimento de un nodo `Fetch Users` (`users.list`) por card.
+
+### Arquitectura de la card de aprobación — Split → Fetch → Parse → Groq → Assemble (2026-06-07)
+La rama `lider` del router resuelve la card con nodos visibles, todos con la llamada
+externa FUERA de Code (consecuencia del aprendizaje de `this.helpers`):
+`Query Approval Locks` (Notion; locks Pending filtrados por `Eligible Approver IDs`
+contains el user) → `Split Locks` (Code: desagrega a N items, sin llamadas externas,
+arrastra `byParent`) → `Fetch Thread` (HTTP visible: `conversations.replies`, 1×item,
+neverError) → `Parse Thread` (Code: extrae `problemaParser` + `fullText` del hilo,
+detecta `_skip` si ya está resuelto) → `Summarize Problem (Groq)` (HTTP visible,
+`llama-3.3-70b-versatile`, neverError) → `Assemble Approval Cards` (Code: cascada de
+fallback, reensambla `approval_cards[]` + reinyecta `byParent`) → `Build Home — Lider`.
+Los datos de la card se leen por REFERENCIA item-paired (`$('Parse Thread').all()[i]`),
+no se confía en que el nodo HTTP arrastre los campos de entrada hacia adelante.
 
 ### Notion — IDs MCP vs REST (causó 3 correcciones)
 **El MCP de Notion y la API REST usan identificadores DISTINTOS para la misma
@@ -373,16 +467,16 @@ y mantenible.
 
 ## Decisión de proceso abierta
 
-- **Estado de "espera de aprobación" en PWI.** El perfil `lider` quiere ver
-  "requerimientos en espera de tu aprobación", pero el workflow de PWI NO tiene un
-  estado que represente eso. Es una decisión de proceso (¿se agrega un estado? ¿se
-  modela con un campo? ¿con el approval tracker de Notion?). Hasta resolverla, el
-  bloque sale "Próximamente".
+- ~~**Estado de "espera de aprobación" en PWI.**~~ → RESUELTA (2026-06-07, ver H7).
+  No se modela con un estado de Jira sino con el **REQ Approval Tracker de Notion**
+  (lock por REQ Pending) + el hilo de Slack. La card del perfil `lider` ya es
+  operativa. El filtro de elegibilidad usa el campo nuevo `Eligible Approver IDs`.
 
 ## Definiciones resueltas en la sesión
 1. ~~Criterio de "ticket disponible" para técnico~~ → `READY FOR DEV` + sin assignee.
-2. ~~Qué estado representa "espera de aprobación"~~ → no existe; queda como decisión
-   de proceso abierta, bloque "Próximamente".
+2. ~~Qué estado representa "espera de aprobación"~~ → no se modela con estado de Jira;
+   se resuelve con el REQ Approval Tracker de Notion + hilo de Slack (ver H7). Card
+   operativa al 2026-06-07.
 3. Copy exacto del prompt del CTA → pendiente (depende de D3 + D2).
 4. Resolución de D2 con a4x → pendiente.
 5. ~~Criterio y forma de "Prioridades globales"~~ → dos tablas (What's next / What's
@@ -432,14 +526,25 @@ y mantenible.
   automatización Jira → propaga a `jira-automations-discovery.md`, no al App Home.
   Para el App Home, el orden se deriva en runtime del rank del PWI (no depende del
   rank del EWI).
-- **Estado de aprobación** (decisión de proceso): definir y luego cablear el bloque
-  del perfil líder.
+- ~~**Estado de aprobación** (decisión de proceso): definir y luego cablear el bloque
+  del perfil líder.~~ → RESUELTO (H7). Card operativa con Tracker de Notion + hilo.
 - **Activar config en Slack app**: event subscription `app_home_opened` + Home Tab
   (si no están ya activos).
-- **Bug colateral detectado**: el `miles-reminder-handler` usa el collection ID malo
-  de Capabilities (`a2a071ba-...`) en `Query Capability Own` y `Query Own
-  Stakeholders` — probablemente falla silenciosamente al resolver aprobadores.
-  Revisar por separado si los recordatorios de aprobación no llegan.
+- **Optimización futura — cachear el resumen del problema** en el Tracker (campo
+  `Problem Summary`, calculado con Groq AL CREAR el lock) en vez de llamar a Groq en
+  cada apertura del Home. Hoy cada apertura del Home de un líder hace una llamada a
+  Groq por REQ pendiente; con el volumen actual (1-2) es imperceptible, pero conviene
+  cachear si crece. No bloqueante.
+- **Fixes aplicados (2026-06-07)** al resolver la card de aprobación: los nodos que
+  resuelven aprobadores en el **conversation-handler** y el **approval-handler**
+  usaban el collection ID viejo de Capabilities en vez del database ID — corregido
+  (colección → database) en `Query Business Area`, `Query Capabilities`,
+  `Query Area Stakeholders`, `Query Requester` (conversation-handler) y los 3 nodos
+  equivalentes del approval-handler. Además `solicitanteId` → `requesterId` en
+  `Notify user Rejected` del approval-handler. El `conversation-handler` ahora puebla
+  `Eligible Approver IDs` al crear el lock. (El `miles-reminder-handler` NO tenía el
+  bug: ya usaba los database IDs correctos — el problema estaba en los handlers de
+  aprobación, no en el de recordatorios.)
 
 ## Cómo termina este discovery
 Tooling de proceso, no feature de producto. Sus conclusiones propagan a

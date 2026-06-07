@@ -8,13 +8,13 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "3c6d9eee-f49d-4624-96c6-e944f675bbd0",
+      "id": "e2ff1f39-53bb-4a08-80a9-9aa603506753",
       "name": "Trigger — Conversation Event",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -6448,
-        17968
+        -5968,
+        18832
       ],
       "webhookId": "miles-req-conversation"
     },
@@ -24,13 +24,13 @@
         "responseBody": "{\"ok\": true}",
         "options": {}
       },
-      "id": "a234188d-d531-4fc6-b6bb-533c00f6111c",
+      "id": "a08f21b0-dae8-40f2-beca-625aa811c73f",
       "name": "Respond — Acknowledge",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
-        -6240,
-        17776
+        -5760,
+        18640
       ]
     },
     {
@@ -71,13 +71,13 @@
         },
         "options": {}
       },
-      "id": "715be8d9-17bd-4f4c-b6f1-0d15cafe021c",
+      "id": "12a066bd-f683-4d93-9cd6-fe755a0dacb1",
       "name": "Extract Event Data",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -6208,
-        17968
+        -5728,
+        18832
       ]
     },
     {
@@ -103,26 +103,26 @@
         },
         "options": {}
       },
-      "id": "64f35280-19a6-46d5-80ce-b59ae6fc6caa",
+      "id": "8e768c0d-2f77-418a-a74d-ec13642f7809",
       "name": "Is Source Claude?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -6016,
-        17968
+        -5536,
+        18832
       ]
     },
     {
       "parameters": {
         "jsCode": "// ============================================================\n// FIX: Parse Claude Message — soporta 3 formatos de mensaje\n// A: bullets  \"• _Label:_ valor\"  (Legales)\n// B: shortcodes \":red_circle: _Label_\\ncontenido\"  (Finance)\n// C: emoji Unicode \"🔍 Label\\ncontenido\"  (formato estándar)\n// ============================================================\nconst rawText = $('Extract Event Data').item.json.message_text || '';\nconst text = rawText\n  .replace(/<@[A-Z0-9]+\\|[^>]+>/g, '')\n  .replace(/<@[A-Z0-9]+>/g, '')\n  .replace(/\\*?Sent using\\*?[^\\n]*/g, '')\n  .replace(/\\*?Sent with\\*?[^\\n]*/g, '')\n  .replace(/\\*?Sent via\\*?[^\\n]*/g, '')\n  .replace(/\\*?Enviado[^\\n]*/g, '')\n  .trim();\n\nconst channel_id = $('Extract Event Data').item.json.channel_id || '';\nconst thread_ts  = $('Extract Event Data').item.json.thread_ts  || '';\n\nconst channelMap = {\n  'C0AJ2599DA6': 'Finance & Accounting',\n  'C0AJ67HK0ES': 'Legal & Compliance',\n  'C0AK2PW5BGQ': 'Operations',\n  'C0AKNPCNNSU': 'Sales & Partnerships',\n  'C0AJMRFP0TD': 'Trading Desk',\n  'C0ARDGP8134': 'Management'\n};\nconst area = channelMap[channel_id] || '';\n\nconst extractBlock = (emojiLabel, bulletLabel, slackShortcodes) => {\n  // Formato C: emoji Unicode bloque\n  const emojiEscaped = emojiLabel.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n  const blockRegex = new RegExp(\n    emojiEscaped + '\\\\s*\\\\n([\\\\s\\\\S]*?)(?=\\\\n:[a-z_]+:|\\\\n[\\uD83D\\uDD0D\\uD83E\\uDDED\\u26A0\\u2705\\uD83D\\uDEA8\\uD83D\\uDCCE\\uD83D\\uDC64]|$)',\n    'i'\n  );\n  const blockMatch = text.match(blockRegex);\n  if (blockMatch && blockMatch[1].trim()) return blockMatch[1].trim();\n\n  // Formato B: shortcode de Slack bloque\n  for (const sc of (slackShortcodes || [])) {\n    const scEscaped = sc.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n    const scBlockRegex = new RegExp(\n      scEscaped + '\\\\s*(?:_[^_]+_)?\\\\s*\\\\n([\\\\s\\\\S]*?)(?=\\\\n:[a-z_]+:|$)',\n      'i'\n    );\n    const scMatch = text.match(scBlockRegex);\n    if (scMatch && scMatch[1].trim()) return scMatch[1].trim();\n  }\n\n  // Formato A: bullet inline\n  const bulletEscaped = bulletLabel.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n  const bulletRegex = new RegExp(\n    '(?:\\u2022\\\\s*_?' + bulletEscaped + ':?_?\\\\*?|\\\\*' + bulletEscaped + ':\\\\*)\\\\s*([^\\\\n]+)',\n    'i'\n  );\n  const bulletMatch = text.match(bulletRegex);\n  return bulletMatch ? bulletMatch[1].trim() : '';\n};\n\nconst extractUrgencia = () => {\n  const inline = text.match(/:(?:zap|rotating_light|alarm_clock)[^:]*:\\s*_?Urgencia:?_?\\s*([^\\n]+)/i);\n  if (inline) return inline[1].trim();\n  const block = text.match(/:(?:zap|rotating_light|alarm_clock)[^:]*:\\s*_?Urgencia_?\\s*\\n([^\\n:]+)/i);\n  if (block) return block[1].trim();\n  const bullet = text.match(/[\\u2022\\-]\\s*_?Urgencia:?_?\\s*([^\\n]+)/i);\n  if (bullet) return bullet[1].trim();\n  return '';\n};\n\nconst solicitante = extractBlock('\\uD83D\\uDC64 Solicitante', 'Solicitante', [':bust_in_silhouette:']);\nconst problema    = extractBlock('\\uD83D\\uDD0D Problema',    'Problema',    [':red_circle:', ':mag:']);\nconst contexto    = extractBlock('\\uD83E\\uDDED Contexto',    'Contexto',    [':pushpin:', ':compass:']);\nconst impacto     = extractBlock('\\u26A0\\uFE0F Impacto',     'Impacto',     [':bar_chart:', ':warning:']);\nconst resultado   = extractBlock('\\u2705 Resultado esperado','Resultado esperado', [':white_check_mark:']);\nconst urgencia    = extractUrgencia();\n\nconst problemaFull = problema;\n\nconst urgLower = (urgencia || '').toLowerCase();\nlet priority_id = '3';\nif (urgLower.includes('cr\\u00edtico') || urgLower.includes('critico')) priority_id = '1';\nelse if (urgLower.includes('alt')) priority_id = '2';\nelse if (urgLower.includes('bajo')) priority_id = '4';\n\nconst areaIdMap = {\n  'Finance & Accounting': '10128',\n  'Legal & Compliance':   '10129',\n  'Operations':           '10130',\n  'Sales & Partnerships': '10131',\n  'Trading Desk':         '10132',\n  'Management':           '10133'\n};\nconst business_area_id = areaIdMap[area] || '';\n\nconst thread_url = 'https://arduasolutions.slack.com/archives/' + channel_id + '/p' + thread_ts.replace('.', '');\n\nconst rawSummary = '[Miles] ' + (area ? area + ' \\u2014 ' : '') + problemaFull.replace(/\\n/g, ' ');\nconst jira_summary = rawSummary.length > 150\n  ? rawSummary.substring(0, rawSummary.lastIndexOf(' ', 150)) + '\\u2026'\n  : rawSummary;\n\nreturn [{ json: {\n  channel_id, thread_ts, area, solicitante,\n  captured_area:      area,\n  captured_contexto: contexto,\n  captured_problema:  problemaFull,\n  captured_impacto:   impacto,\n  captured_resultado: resultado,\n  captured_urgencia:  urgencia,\n  priority_id, business_area_id, thread_url, jira_summary\n}}];"
       },
-      "id": "c32f0b80-d2fe-427c-9b60-19d72eac5744",
+      "id": "ff996530-2667-4626-a128-11e779f0ed80",
       "name": "Parse Claude Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -5792,
-        17952
+        -5312,
+        18816
       ]
     },
     {
@@ -145,13 +145,13 @@
         },
         "options": {}
       },
-      "id": "6fc1309f-4269-432e-adb9-d3e947e36c36",
+      "id": "f857e58d-af18-4a20-a5d2-f9a0d8818770",
       "name": "Fetch Thread — Claude Path",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -5632,
-        17952
+        -5152,
+        18816
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -164,13 +164,13 @@
       "parameters": {
         "jsCode": "const msgs = ($json.messages || []);\nconst thread_ts = $('Extract Event Data').item.json.thread_ts;\nconst milesAlreadyReplied = msgs.some(m => m.bot_id && m.ts !== thread_ts);\nreturn [{ json: { ...$json, is_duplicate: milesAlreadyReplied } }];"
       },
-      "id": "a26c8465-6bce-48b5-bfac-f184094c2630",
+      "id": "1da085b3-88db-4d8d-8ca5-0e6f5852988c",
       "name": "Is Duplicate? (Claude Path)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -5440,
-        17952
+        -4960,
+        18816
       ]
     },
     {
@@ -196,13 +196,13 @@
         },
         "options": {}
       },
-      "id": "f9960cb0-f5a4-4c87-b494-490fa8ad2882",
+      "id": "f88cdea1-ec38-4e0c-b4e0-efc70279665a",
       "name": "Skip if Duplicate? (Claude Path)",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -5200,
-        17952
+        -4720,
+        18816
       ]
     },
     {
@@ -228,13 +228,13 @@
         },
         "options": {}
       },
-      "id": "b9c0b83d-35ad-42e0-81d4-4cecced9a258",
+      "id": "cf71a400-df32-4d61-8b1c-f05311829e0b",
       "name": "Is Notification Thread — Claude Path?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -4896,
-        17968
+        -4416,
+        18832
       ]
     },
     {
@@ -260,19 +260,19 @@
         },
         "options": {}
       },
-      "id": "c58a2f1f-b196-4cf6-9a20-77eba1580fa8",
+      "id": "48b6e066-f8c6-46b1-83f7-5f7ebeee0f49",
       "name": "Is Session Closed — Claude Path?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -4640,
-        17984
+        -4160,
+        18848
       ]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.notion.com/v1/databases/7ddac325-ee1e-4459-8695-3fabd8f8a7ab/query",
+        "url": "https://api.notion.com/v1/databases/43a8018b-e397-44b6-87f6-59c6dadaba00/query",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "notionApi",
         "sendHeaders": true,
@@ -292,10 +292,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -4144,
-        18000
+        -3664,
+        18864
       ],
-      "id": "bb3f4fd3-9003-492e-95c0-37fa1a031675",
+      "id": "b34beaa6-6b79-4359-8884-6a2a3dea8cd4",
       "name": "Query Business Area",
       "credentials": {
         "notionApi": {
@@ -308,13 +308,13 @@
       "parameters": {
         "jsCode": "// ============================================================================\n// miles-conversation-handler · Check Approval Gate  (modelo capabilities)\n// ----------------------------------------------------------------------------\n// Resuelve, para el canal/area del requerimiento:\n//   - approver_ids: TODOS los stakeholders del area con req.approve.own (a mencionar)\n//   - needs_approval: false si el solicitante puede auto-aprobar\n//       (tiene req.approve.own de su area  O  req.approve.cross)\n//\n// Fuentes:\n//   Query Business Area     -> area (pageId + Name) desde el canal\n//   Query Capabilities      -> Code -> pageId  (own, cross)\n//   Query Area Stakeholders -> personas del area (con Capabilities[] + Slack ID)\n//   Query Requester         -> el solicitante por Slack ID (Capabilities[] + Business Area[])\n//\n// Sin area configurada (canal sin fila en Business Areas) -> sin gate.\n// ============================================================================\n\nconst CAP_OWN = 'req.approve.own';\nconst CAP_CROSS = 'req.approve.cross';\n\nconst channelId     = $('Extract Event Data').item.json.channel_id;\nconst solicitanteId = $('Extract Event Data').item.json.user_id || '';\nconst threadTs      = $('Extract Event Data').item.json.thread_ts;\n\n// Campos normalizados del requerimiento (para el work-items-handler)\nconst pcm = $('Parse Claude Message').first().json;\nconst reqFields = {\n  problema:           pcm.captured_problema   || pcm.problema   || '',\n  contexto:           pcm.captured_contexto   || pcm.contexto   || '',\n  impacto:            pcm.captured_impacto    || pcm.impacto    || '',\n  resultado_esperado: pcm.captured_resultado  || pcm.resultado_esperado || '',\n  urgencia:           pcm.captured_urgencia   || pcm.urgencia   || 'Normal',\n  area:               pcm.area                || '',\n  business_area_id:   pcm.business_area_id    || '',\n  priority_id:        pcm.priority_id         || '3',\n  thread_url:         pcm.thread_url          || '',\n};\n\n// --- Area del canal ---------------------------------------------------------\nconst baResults = $('Query Business Area').item.json.results || [];\nconst areaRow   = baResults[0] || null;\n\n// Sin area configurada -> sin gate de aprobacion\nif (!areaRow) {\n  return [{ json: { ...reqFields, needs_approval: false, channelId, threadTs, solicitanteId, approver_ids: [] } }];\n}\nconst areaPageId = areaRow.id;\nconst areaName   = areaRow.properties?.Name?.title?.[0]?.plain_text || '';\n\n// --- Code -> pageId de capabilities -----------------------------------------\nconst capResults = $('Query Capabilities').item.json.results || [];\nlet ownCapId='', crossCapId='';\nfor (const c of capResults) {\n  const code = c.properties?.Code?.rich_text?.[0]?.plain_text || '';\n  if (code === CAP_OWN)   ownCapId   = c.id;\n  if (code === CAP_CROSS) crossCapId = c.id;\n}\n\n// --- Aprobadores del area: stakeholders del area con req.approve.own --------\nconst areaStk = $('Query Area Stakeholders').item.json.results || [];\nconst approver_ids = [];\nfor (const s of areaStk) {\n  const caps = (s.properties?.Capabilities?.relation || []).map(r => r.id);\n  const slackId = s.properties?.['Slack ID']?.rich_text?.[0]?.plain_text || '';\n  if (ownCapId && caps.includes(ownCapId) && slackId) approver_ids.push(slackId);\n}\n\n// --- isAutoApproved: el solicitante puede aprobar? --------------------------\nconst reqResults = $('Query Requester').item.json.results || [];\nconst reqStk = reqResults[0] || null;\nlet isAutoApproved = false;\nif (reqStk) {\n  const caps    = (reqStk.properties?.Capabilities?.relation || []).map(r => r.id);\n  const reqArea = (reqStk.properties?.['Business Area']?.relation || []).map(r => r.id);\n  const hasOwnHere = ownCapId && caps.includes(ownCapId) && reqArea.includes(areaPageId);\n  const hasCross   = crossCapId && caps.includes(crossCapId);\n  isAutoApproved = hasOwnHere || hasCross;\n}\n\nreturn [{ json: {\n  ...reqFields,\n  needs_approval: !isAutoApproved,\n  approver_ids,\n  area_name: areaName,\n  channelId,\n  threadTs,\n  solicitanteId,\n} }];"
       },
-      "id": "9b20789d-b4bb-4ff4-9979-4c1ea2ac91f6",
+      "id": "3f95ce34-fd63-41dd-83a2-9d1b7bf89f78",
       "name": "Check Approval Gate",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -3888,
-        18000
+        -3408,
+        18864
       ]
     },
     {
@@ -341,13 +341,13 @@
         },
         "options": {}
       },
-      "id": "d1d92556-ad66-49e9-ba42-32fca0fcdd31",
+      "id": "6f22ea8c-22b2-4eeb-adf8-1cadee299846",
       "name": "IF — Needs Approval?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -3696,
-        18000
+        -3216,
+        18864
       ]
     },
     {
@@ -357,10 +357,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -3440,
-        17808
+        -2960,
+        18672
       ],
-      "id": "ceb4d550-4780-40da-8fad-293077b20eb1",
+      "id": "0b70f9dc-efdf-45bc-9709-28be0e558f94",
       "name": "Build Approval Buttons Body"
     },
     {
@@ -377,10 +377,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -3184,
-        17808
+        -2704,
+        18672
       ],
-      "id": "c2ea9a09-a073-4f71-8741-42441558a9e6",
+      "id": "e0efc4d2-fd6c-4cdb-8086-75fbfc9ce968",
       "name": "Post approval buttons",
       "credentials": {
         "httpBasicAuth": {
@@ -401,16 +401,16 @@
         "nodeCredentialType": "notionApi",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  parent: { database_id: \"20437e6c297a4afe923a29b5d01ad26c\" },\n  properties: {\n    \"Thread ID\":     { title:     [{ text: { content: $('Build Approval Buttons Body').item.json.threadTs } }] },\n    \"Channel ID\":    { rich_text: [{ text: { content: $('Build Approval Buttons Body').item.json.channelId } }] },\n    \"Requester ID\":  { rich_text: [{ text: { content: $('Build Approval Buttons Body').item.json.solicitanteId || \"\" } }] },\n    \"Status\":        { select: { name: \"Pending\" } }\n  }\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  parent: { database_id: \"20437e6c297a4afe923a29b5d01ad26c\" },\n  properties: {\n    \"Thread ID\":     { title:     [{ text: { content: $('Build Approval Buttons Body').item.json.threadTs } }] },\n    \"Channel ID\":    { rich_text: [{ text: { content: $('Build Approval Buttons Body').item.json.channelId } }] },\n    \"Requester ID\":  { rich_text: [{ text: { content: $('Build Approval Buttons Body').item.json.solicitanteId || \"\" } }] },\n    \"Eligible Approver IDs\": { rich_text: [{ text: { content: ($('Build Approval Buttons Body').item.json.approver_ids || []).join(\",\") } }] },\n    \"Status\":        { select: { name: \"Pending\" } }\n  }\n}) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -2976,
-        17808
+        -2496,
+        18672
       ],
-      "id": "1650c34c-25af-4134-9b66-4ec37695f024",
+      "id": "721865a2-4481-40bb-a54d-059d54d908de",
       "name": "Create approval lock in Notion",
       "credentials": {
         "notionApi": {
@@ -430,13 +430,13 @@
         "jsonBody": "={{ JSON.stringify({ channel: $('Extract Event Data').item.json.channel_id, thread_ts: $('Extract Event Data').item.json.thread_ts, text: '🎉 Requerimiento creado exitosamente!\\n\\n*Ticket:* ' + $json.issueKey + '\\n*Link:* ' + $json.issueUrl + '\\n\\n📎 Podés sumar _documentos, capturas, links o consideraciones adicionales_ directamente en este hilo — todo ese contexto será tenido en cuenta durante el proceso de refinamiento del requerimiento por parte del equipo de Producto.' }) }}",
         "options": {}
       },
-      "id": "f0d8b083-cf02-4ba2-9445-d0ede7533288",
+      "id": "d1de2114-0f37-4f05-8dba-26c540d934cb",
       "name": "Post Success to Thread",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -3184,
-        18016
+        -2704,
+        18880
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -447,13 +447,13 @@
     },
     {
       "parameters": {},
-      "id": "37e057cf-904c-4429-a740-225bffebdee9",
+      "id": "37397e4e-1f86-41c5-8641-7d3522208037",
       "name": "Ignore — Session Closed",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        -4656,
-        17696
+        -4176,
+        18560
       ]
     },
     {
@@ -465,19 +465,19 @@
         "jsonBody": "={{ JSON.stringify({ operation: 'create', project: 'PWI', intake_type_id: '10134', area: $json.area, business_area_id: $json.business_area_id, problema: $json.problema, contexto: $json.contexto, impacto: $json.impacto, resultado_esperado: $json.resultado_esperado, urgencia: $json.urgencia, priority_id: $json.priority_id, thread_url: $json.thread_url }) }}",
         "options": {}
       },
-      "id": "47abd1b7-83c6-480c-90a4-907c864c5214",
+      "id": "1547cc08-e843-4ab0-93bd-a3b548269960",
       "name": "Create via Work-Items Handler",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -2384,
-        17296
+        -1904,
+        18160
       ]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.notion.com/v1/databases/a2a071ba-0c63-4d4e-8ee4-d0197f837fa8/query",
+        "url": "https://api.notion.com/v1/databases/836a99fd-c232-44b8-a2bf-17fb388f0d0c/query",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "notionApi",
         "sendHeaders": true,
@@ -494,13 +494,13 @@
         "jsonBody": "={{ JSON.stringify({ filter: { or: [ { property: 'Code', rich_text: { equals: 'req.approve.own' } }, { property: 'Code', rich_text: { equals: 'req.approve.cross' } } ] } }) }}",
         "options": {}
       },
-      "id": "f5b28147-7f44-4e6e-9e66-e1e16f2e878a",
+      "id": "d932f554-dd0d-4b75-80fa-0093f770416d",
       "name": "Query Capabilities",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -4144,
-        18208
+        -3664,
+        19072
       ],
       "credentials": {
         "notionApi": {
@@ -512,7 +512,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.notion.com/v1/databases/376e8880-def6-80aa-bee4-000b5c221413/query",
+        "url": "https://api.notion.com/v1/databases/376e8880-def6-805c-bd88-fc5b2c6765f0/query",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "notionApi",
         "sendHeaders": true,
@@ -529,13 +529,13 @@
         "jsonBody": "={{ JSON.stringify({ filter: { property: 'Business Area', relation: { contains: ($('Query Business Area').item.json.results[0] ? $('Query Business Area').item.json.results[0].id : 'none') } } }) }}",
         "options": {}
       },
-      "id": "29e26e71-5b84-46d0-a25e-1b6801702e07",
+      "id": "d41877bf-dc95-40c4-b1d6-2414edf45c6c",
       "name": "Query Area Stakeholders",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -4144,
-        18400
+        -3664,
+        19264
       ],
       "credentials": {
         "notionApi": {
@@ -547,7 +547,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.notion.com/v1/databases/376e8880-def6-80aa-bee4-000b5c221413/query",
+        "url": "https://api.notion.com/v1/databases/376e8880-def6-805c-bd88-fc5b2c6765f0/query",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "notionApi",
         "sendHeaders": true,
@@ -564,13 +564,13 @@
         "jsonBody": "={{ JSON.stringify({ filter: { property: 'Slack ID', rich_text: { equals: $('Extract Event Data').item.json.user_id } } }) }}",
         "options": {}
       },
-      "id": "7ff96fc6-1783-4b08-99ab-047b372eeac2",
+      "id": "34e9f35f-8273-481a-8d70-a6b5ffbaee11",
       "name": "Query Requester",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -4144,
-        18608
+        -3664,
+        19472
       ],
       "credentials": {
         "notionApi": {
@@ -819,7 +819,7 @@
     "executionOrder": "v1",
     "availableInMCP": true
   },
-  "versionId": "bec3d116-2d65-4fb7-80db-dd5353b49690",
+  "versionId": "33be9583-a3a9-435f-b944-8637a6ddd459",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "95944be45d5aa5e5565d656a14e718ed8b92e30102ad1bd3fcad4cf1b1c2f383"
