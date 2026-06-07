@@ -4,7 +4,7 @@ features: []
 status: En investigación
 owner: Yasmani Rodriguez
 created_at: 2026-06-05
-updated_at: 2026-06-06
+updated_at: 2026-06-07
 propagates_to:
   - workflows/miles-slack-event-router.json
   - workflows/miles-jira-work-items-handler.json
@@ -150,6 +150,89 @@ card/alert) y renderiza en App Home. No construido aún — queda como próximo
 experimento visual. Riesgo a validar: cómo se comporta el carousel en mobile
 (misma precaución que el data_table en H4).
 
+### H6 — "Prioridades globales" = dos tablas (What's next / What's going on), particionadas por el tipo del EWI espejo — VALIDADA
+La sección "Prioridades globales" estaba inconsistente entre perfiles: los
+builders PWI (producto/stakeholder/lider) mostraban una tabla de PWIs filtrada
+por `issueType = Requirement`; los builders EWI (tecnico/it_lead) mostraban una
+tabla DISTINTA, partiendo del EWI y buscando su PWI, con ranking propio del board
+de EWI. Misma sección, dos significados, dos rankings. Rompía la premisa de
+transparentar de forma UNIFICADA el trabajo de Producto + Tecnología ante
+stakeholders no técnicos.
+
+**Resolución (2026-06-07):** una sola definición de la sección, idéntica para los
+cinco perfiles, construida SIEMPRE desde el PWI (es la unidad que el stakeholder
+—técnico o no— conoce: su requerimiento). La sección se compone de DOS tablas que
+responden dos preguntas de naturaleza distinta:
+
+- **What's next?** — cola de priorización. PWIs Requirement que aún no entraron al
+  ciclo de desarrollo. El orden por LexoRank del PWI es el protagonista (qué sigue
+  y en qué orden).
+- **What's going on?** — seguimiento de lo que ya está en construcción. El orden de
+  cola deja de mandar; importa la fase (y a futuro, el % de completitud).
+
+**Regla de partición — por el TIPO del EWI espejo, no por el estado del PWI.**
+El estado del PWI NO distingue refinamiento de desarrollo (se verificó en vivo:
+PWI-72/71/67/64 y PWI-63 están todos en `SENT TO DEV`, pero los primeros tienen
+espejo `Epic` —siguen en refinamiento— y PWI-63 tiene espejo `Story` —ya en dev).
+El tipo del EWI espejo sí lo distingue, porque al pasar a `READY FOR DEV` la Épica
+se convierte en Story (ver `jira.md`). Por eso:
+
+```
+Para cada PWI Requirement activo (status NOT IN (Done, DEPRECATED)):
+  espejo = issuelinks.find(l =>
+       l.type.name === 'Problem/Incident'   // name interno real del link type
+    && l.type.outward === 'causes'          // visto desde el PWI
+    && l.outwardIssue
+    && l.outwardIssue.key.startsWith('EWI-')        // descarta AM-* legacy
+    && ['Epic','Story'].includes(l.outwardIssue.fields.issuetype.name)
+  )
+  sin espejo válido   -> What's next      (aún no cruzó a Tecnología)
+  espejo tipo Epic    -> What's next      (cruzó, en refinamiento)
+  espejo tipo Story   -> What's going on  (en desarrollo real)
+```
+
+Los BLOCKED no se usan para particionar: caen naturalmente del lado que les
+corresponde según el tipo de su espejo (bloqueado antes de dev → next; bloqueado
+ya en dev → going on). Esto resuelve que `BLOCKED` sea alcanzable desde casi
+cualquier estado y por sí solo no diga de qué lado de la línea está.
+
+**Diferencia entre perfiles:** solo la trazabilidad técnica. No técnicos
+(stakeholder/lider/producto): columnas `PWI · Requerimiento · Estado · Prioridad ·
+Área`. Técnicos (tecnico/it_lead): las mismas filas y el mismo orden, + columna del
+EWI espejo (key). Una fuente, un ranking, un significado.
+
+**Cardinalidad confirmada:** 1 Requirement ↔ 1 EWI espejo (verificado sobre 16
+PWIs; ninguno tiene más de un `Problem/Incident` saliente). No hace falta regla de
+desempate.
+
+**Implicancia de implementación:** toda la sección se resuelve con UNA query a PWI
+trayendo `issuelinks` — el `outwardIssue` ya incluye `fields.issuetype` y
+`fields.status` del espejo, así que la partición no requiere segundo salto a EWI.
+Esto invierte la lógica de los builders técnicos (hoy parten del EWI): pasan a
+partir del PWI igual que el resto.
+
+**Ajustes de render (2026-06-07, validados en App Home en vivo):**
+- La sección lleva un header `:round_pushpin: Prioridades globales` + un context
+  kicker ("Cola de Producto y Tecnología · priorización y seguimiento"). El `header`
+  block tiene tamaño fijo y NO supera al `caption` del data_table; la jerarquía de
+  sección se fija por emoji + kicker, no por tamaño (validado en Block Kit Builder).
+- Los títulos de cada tabla (con su contador) viven en el `caption` del data_table,
+  no en sub-headers — el caption es obligatorio, así que un header propio por tabla
+  duplica. Queda: un header de sección único + dos captions (`What's next? (N)` /
+  `What's going on? (N)`).
+- What's next: columna `Rank` al inicio = entero consecutivo 1,2,3… según orden
+  LexoRank del PWI (posición de prioridad legible, no el string LexoRank). El Rank
+  va SOLO en What's next (es la prioridad; en going on el orden ya no manda).
+- What's going on: la columna `Estado` muestra el estado del EWI espejo (lo más
+  cercano a la realidad de construcción), no el del PWI.
+- Ambas tablas llevan `Área`; los perfiles técnicos suman la columna `EWI` (key).
+- La sección la ven los 5 perfiles, incluido el dev común (técnico no-TL). El
+  `Build JQL` del perfil `tecnico` trae PWI Requirement siempre (query combinada
+  `project IN (PWI, EWI)`), no solo si es TL.
+- Footer del Home: desglose `${next} en cola · ${going} en curso` en vez del conteo
+  total de PWI activos (que incluía tipos no mostrados y generaba ruido). Los conteos
+  se exponen desde `buildPrioridadesGlobales` vía `opts.counts`.
+
 ## Hallazgos técnicos de la sesión (2026-06-06)
 
 ### Block Kit — schema de bloques nuevos
@@ -196,6 +279,35 @@ JSON. **Solución:** usar **typeVersion 3.2**, que renderiza un puerto por cada 
 (estructura `rules.values` con `conditions` + `outputKey` por salida, y
 `options.fallbackOutput` para el default). Aprendizaje: los Switch nuevos van directo
 en 3.2.
+
+### Jira — issuelinks PWI↔EWI: name real del link type y forma del payload (2026-06-07)
+- **El `name` interno del link type NO es "causes".** Es **`Problem/Incident`**
+  (link type nativo de Jira reutilizado). `causes` / `is caused by` son los LABELS
+  (`outward` / `inward`), no el name. Verificado uniforme sobre 16 PWIs con espejo.
+  Implicancia: filtrar por labels (`inward`/`outward`) está bien; pero cualquier
+  lógica que asuma `type.name === 'causes'` falla. En JQL, `issueLinkType = "causes"`
+  funciona porque Jira acepta los labels — pero el name no es ese.
+- **El `outwardIssue` del PWI trae `fields.issuetype`, `fields.status` y
+  `fields.priority` del EWI espejo** embebidos. Permite particionar (Epic vs Story)
+  y conocer el estado del espejo SIN segunda query a EWI.
+- **Ruido real en links — la validación del par es necesaria.** PWI-34 tiene, además
+  del `causes → EWI-26`, links `Relates → PWI-33` y `Blocks → PWI-47` (hacia otros
+  PWI). Sin validar `name === 'Problem/Incident'` + target `EWI-*` + tipo Epic/Story,
+  se contarían mal. Como todavía no hay restricción a nivel Jira sobre qué link types
+  se pueden usar, la validación del par es obligatoria en todo análisis de relación
+  PWI↔EWI.
+- **Espejos legacy `AM-*`.** PWI-40 apunta a `AM-932 (Story)` — board deprecado
+  (era REQ/AM/MAIN). El filtro `key.startsWith('EWI-')` los descarta correctamente.
+- **Estado del PWI no sincroniza 1:1 con el avance del EWI en todos los saltos:**
+  varios PWI en `SENT TO DEV` tienen su EWI aún en `TO REFINEMENT`. Razón adicional
+  para particionar por tipo de espejo, no por estado del PWI.
+
+### Estados del PWI Requirement antes del ciclo de desarrollo (2026-06-07)
+Confirmado con Head of Product: el board PWI para work items tipo Requirement usa
+`TO DO · IN ANALYSIS · BLOCKED` antes de `SENT TO DEV`. `IN PROGRESS` en PWI es solo
+para work items que NO son Requirement (Automatización, Investigación, etc.).
+`BLOCKED` es alcanzable desde casi cualquier estado no terminal (todos menos `Done`
+y `DEPRECATED`).
 
 ### Estados reales verificados de Jira (2026-06-06)
 - **PWI**: Backlog · To Do · IN ANALYSIS · IN PROGRESS · BLOCKED · SENT TO DEV ·
@@ -246,9 +358,11 @@ y mantenible.
 
 ## Dependencias
 
-- **D1 — Reporte de prioridades global.** Los bloques de prioridades de `lider` y
-  `producto` dependen de un reporte (aún no implementado) con todos los
-  requerimientos activos priorizados. Hoy salen como "Próximamente".
+- **D1 — Reporte de prioridades global. — RESUELTA (2026-06-07, ver H6).** Ya no es
+  "Próximamente". La sección "Prioridades globales" se define como dos tablas
+  (What's next / What's going on) construidas desde el PWI, idénticas para los cinco
+  perfiles salvo la columna de trazabilidad EWI en los técnicos. No depende de un
+  reporte externo: se resuelve con la query de PWI que el App Home ya hace.
 - **D2 — Estandarización de Claude Desktop (Ardua 4x).** Condiciona H3 (CTA con
   prompt pre-cargado).
 - **D3 — Infra de interactividad de Miles.** Los botones del Home
@@ -271,11 +385,35 @@ y mantenible.
    de proceso abierta, bloque "Próximamente".
 3. Copy exacto del prompt del CTA → pendiente (depende de D3 + D2).
 4. Resolución de D2 con a4x → pendiente.
+5. ~~Criterio y forma de "Prioridades globales"~~ → dos tablas (What's next / What's
+   going on), partición por tipo del EWI espejo, perspectiva única PWI (ver H6).
 
 ## Pendientes / próximos pasos
 - **Carousel de cards** (H5): experimentar con secciones en formato carousel.
 - **Botones con handler** (D3): cablear la interactividad de los CTAs.
-- **Prioridades globales** (D1): construir el reporte que alimenta esos bloques.
+- ~~**Prioridades globales** (D1)~~ → RESUELTO (H6). Pendiente: aplicar el criterio
+  en los 5 builders del router (próximo paso de esta sesión).
+- **Conteo de tareas + % de completitud en What's going on** (PRÓXIMO PASO, iteración
+  en curso): métrica granular que vive en los child del EWI espejo. Ruta de cálculo
+  (doble salto): PWI —causes→ EWI espejo —parent/subtask→ child (done vs total). Solo
+  aplica a What's going on (lo que ya está en construcción); no a What's next. Diseño
+  pendiente de decidir: cómo traer los child (segunda query al handler por los espejos
+  Story de la cola going-on) y cómo definir "done" (statusCategory = Done de cada child).
+  Es el primer caso del App Home que SÍ requiere el segundo salto a EWI.
+- **Secciones personales mezclan tipos de PWI** (hallazgo 2026-06-07): las secciones
+  En curso / Por enriquecer / Disponibles de los perfiles producto/stakeholder/lider
+  filtran `rows` por estado SIN filtrar por `issueType = Requirement`. Como la query
+  de PWI trae todos los tipos activos (Requirement, Work Automation, Investigación,
+  Activities…), esas secciones podrían mostrar tipos no-Requirement mezclados. Es
+  decisión de producto (¿qué tipos ve cada perfil en sus secciones personales?), no
+  bug de esta tarea. Resolver en sesión aparte.
+- **Espejo del rank PWI→EWI en el board físico de Tecnología** (hipótesis abierta):
+  que reordenar la prioridad de un PWI reordene su EWI espejo en los boards de EWI.
+  No es sincronización literal del valor LexoRank (imposible entre boards distintos),
+  sino del orden relativo dentro del subconjunto de EWIs con espejo. Es trabajo de
+  automatización Jira → propaga a `jira-automations-discovery.md`, no al App Home.
+  Para el App Home, el orden se deriva en runtime del rank del PWI (no depende del
+  rank del EWI).
 - **Estado de aprobación** (decisión de proceso): definir y luego cablear el bloque
   del perfil líder.
 - **Activar config en Slack app**: event subscription `app_home_opened` + Home Tab
