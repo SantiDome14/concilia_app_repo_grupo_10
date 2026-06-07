@@ -393,13 +393,31 @@ y mantenible.
 - **Botones con handler** (D3): cablear la interactividad de los CTAs.
 - ~~**Prioridades globales** (D1)~~ → RESUELTO (H6). Pendiente: aplicar el criterio
   en los 5 builders del router (próximo paso de esta sesión).
-- **Conteo de tareas + % de completitud en What's going on** (PRÓXIMO PASO, iteración
-  en curso): métrica granular que vive en los child del EWI espejo. Ruta de cálculo
-  (doble salto): PWI —causes→ EWI espejo —parent/subtask→ child (done vs total). Solo
-  aplica a What's going on (lo que ya está en construcción); no a What's next. Diseño
-  pendiente de decidir: cómo traer los child (segunda query al handler por los espejos
-  Story de la cola going-on) y cómo definir "done" (statusCategory = Done de cada child).
-  Es el primer caso del App Home que SÍ requiere el segundo salto a EWI.
+- ~~**Conteo de tareas + % de completitud en What's going on**~~ → IMPLEMENTADO
+  (2026-06-07, validado en vivo). Columna `Avance` con barra de progreso textual
+  (`▓▓▓░░░ 75% (3/4)`) en What's going on, los 5 perfiles. Arquitectura (separación
+  de responsabilidades, §3.5):
+    - **Handler** (`miles-jira-work-items-handler`, id `dknbrlcPzLuJz4Bb`): operación
+      nueva `search_children`. Recibe `parentKeys: ['EWI-60', ...]`, hace
+      `parent IN (...)` SIN filtro de estado (los child Done cuentan al numerador),
+      agrupa por `parent.key` y devuelve `byParent` con el `statusCategory.key` de
+      cada child. NO calcula completitud — solo trae los child crudos (el handler es
+      dueño de Jira, no de la lógica de presentación). Tolerante a `parentKeys`
+      vacío → devuelve `byParent: {}` sin llamar a Jira (`_childEmpty`).
+    - **Router**: dos nodos nuevos entre `Query Jira (via handler)` y `Switch — Profile`:
+      `Resolve Children Keys` (Code: resuelve los espejos Story de going-on, arma
+      `parentKeys`) → `Fetch Children Progress` (HTTP: POST al handler `search_children`).
+      Los builders leen los issues por REFERENCIA (`$('Query Jira (via handler)')`) y
+      el `byParent` de `$json`. El CÁLCULO de completitud vive en el builder
+      (`buildPrioridadesGlobales`), no en el handler.
+    - **Regla de completitud**: si el espejo Story tiene child → `done/total` (mandan
+      los child; done = `statusCategory.key === 'done'`). Si NO tiene child → la Story
+      es la unidad: 100% si su statusCategory es done, 0% si no. El `(done/total)` solo
+      se muestra cuando hay child.
+    - **Dependencia de proceso** (Yasmani, 2026-06-07): se implementará una automatización
+      Jira que impida mover una EWI a Done con child abiertos — elimina de raíz la
+      inconsistencia "Story Done con child no-Done", reforzando que mandan los child.
+  Es el primer caso del App Home que requiere el segundo salto a EWI.
 - **Secciones personales mezclan tipos de PWI** (hallazgo 2026-06-07): las secciones
   En curso / Por enriquecer / Disponibles de los perfiles producto/stakeholder/lider
   filtran `rows` por estado SIN filtrar por `issueType = Requirement`. Como la query
@@ -437,7 +455,8 @@ también desde `challenges-interactivos-discovery.md`.
   infra de interactividad de Miles.
 - `release-awareness-discovery.md` — patrón de UX reactiva.
 - `workflows/miles-slack-event-router.json` — router con la cadena del App Home.
-- `workflows/miles-jira-work-items-handler.json` — gateway de Jira (incl. search).
+- `workflows/miles-jira-work-items-handler.json` — gateway de Jira (id
+  `dknbrlcPzLuJz4Bb`; ops: create/update/transition/delete/search/search_children).
 - Doc Anthropic sobre deep links de Claude Desktop (esquema `claude://`), abril 2026.
 - Doc Slack: data_table block, card block, build-richer-agent-experiences (2026).
 - Doc Atlassian: migración a `/rest/api/3/search/jql` (CHANGE-2046).

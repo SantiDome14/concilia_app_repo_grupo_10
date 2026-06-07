@@ -20,7 +20,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\n// ============================================================================\n// miles-jira-work-items-handler · Validate & Route\n// ----------------------------------------------------------------------------\n// Gateway unico para operaciones CRUD sobre work items de Jira.\n// Contrato de entrada (POST /webhook/jira-work-items):\n//   {\n//     operation: 'create' | 'update' | 'transition' | 'delete',\n//     // --- create ---\n//     project?: 'PWI',                 // default PWI\n//     issueType?: 'Requirement',       // default Requirement\n//     fieldsExtra?: { ... },           // custom fields ya en shape Jira (customfield_xxx)\n//     summary?, problema, contexto?, impacto?, resultado_esperado,\n//     urgencia?, area?, thread_url, priority_id?,\n//     // --- update ---\n//     issueKey?, fields?: { ... },     // objeto Jira (assignee, priority, summary, ...)\n//     // --- transition ---\n//     transitionId?, comment?,\n//     // --- delete ---\n//     confirm?: true\n//   }\n// Respuesta sincrona: { ok, operation, issueKey?, issueUrl?, error? }\n// ============================================================================\n\nconst body = $input.first().json.body || {};\nconst op = (body.operation || '').toLowerCase();\n\nconst fail = (msg) => [{ json: { _valid: false, _error: msg, operation: op } }];\n\nconst VALID_OPS = ['create', 'update', 'transition', 'delete', 'search'];\nif (!VALID_OPS.includes(op)) {\n  return fail(`operation invalida o ausente: \"${op}\". Validas: ${VALID_OPS.join(', ')}`);\n}\n\n// --- Validacion por operacion ----------------------------------------------\nif (op === 'create') {\n  if (!body.problema)           return fail('create requiere \"problema\"');\n  if (!body.resultado_esperado) return fail('create requiere \"resultado_esperado\"');\n  if (!body.thread_url)         return fail('create requiere \"thread_url\"');\n}\nif (op === 'update') {\n  if (!body.issueKey) return fail('update requiere \"issueKey\"');\n  if (!body.fields || typeof body.fields !== 'object') return fail('update requiere \"fields\" (objeto Jira)');\n}\nif (op === 'transition') {\n  if (!body.issueKey)     return fail('transition requiere \"issueKey\"');\n  if (!body.transitionId) return fail('transition requiere \"transitionId\"');\n}\nif (op === 'delete') {\n  if (!body.issueKey)        return fail('delete requiere \"issueKey\"');\n  if (body.confirm !== true) return fail('delete requiere \"confirm\": true (guarda anti-borrado)');\n}\n\nif (op === 'search') {\n  if (!body.jql) return fail('search requiere \"jql\"');\n}\n\n// --- Passthrough normalizado ------------------------------------------------\nreturn [{ json: { ...body, operation: op, _valid: true } }];\n"
+        "jsCode": "\n// ============================================================================\n// miles-jira-work-items-handler · Validate & Route\n// ----------------------------------------------------------------------------\n// Gateway unico para operaciones CRUD sobre work items de Jira.\n// Contrato de entrada (POST /webhook/jira-work-items):\n//   {\n//     operation: 'create' | 'update' | 'transition' | 'delete',\n//     // --- create ---\n//     project?: 'PWI',                 // default PWI\n//     issueType?: 'Requirement',       // default Requirement\n//     fieldsExtra?: { ... },           // custom fields ya en shape Jira (customfield_xxx)\n//     summary?, problema, contexto?, impacto?, resultado_esperado,\n//     urgencia?, area?, thread_url, priority_id?,\n//     // --- update ---\n//     issueKey?, fields?: { ... },     // objeto Jira (assignee, priority, summary, ...)\n//     // --- transition ---\n//     transitionId?, comment?,\n//     // --- delete ---\n//     confirm?: true\n//   }\n// Respuesta sincrona: { ok, operation, issueKey?, issueUrl?, error? }\n// ============================================================================\n\nconst body = $input.first().json.body || {};\nconst op = (body.operation || '').toLowerCase();\n\nconst fail = (msg) => [{ json: { _valid: false, _error: msg, operation: op } }];\n\nconst VALID_OPS = ['create', 'update', 'transition', 'delete', 'search', 'search_children'];\nif (!VALID_OPS.includes(op)) {\n  return fail(`operation invalida o ausente: \"${op}\". Validas: ${VALID_OPS.join(', ')}`);\n}\n\n// --- Validacion por operacion ----------------------------------------------\nif (op === 'create') {\n  if (!body.problema)           return fail('create requiere \"problema\"');\n  if (!body.resultado_esperado) return fail('create requiere \"resultado_esperado\"');\n  if (!body.thread_url)         return fail('create requiere \"thread_url\"');\n}\nif (op === 'update') {\n  if (!body.issueKey) return fail('update requiere \"issueKey\"');\n  if (!body.fields || typeof body.fields !== 'object') return fail('update requiere \"fields\" (objeto Jira)');\n}\nif (op === 'transition') {\n  if (!body.issueKey)     return fail('transition requiere \"issueKey\"');\n  if (!body.transitionId) return fail('transition requiere \"transitionId\"');\n}\nif (op === 'delete') {\n  if (!body.issueKey)        return fail('delete requiere \"issueKey\"');\n  if (body.confirm !== true) return fail('delete requiere \"confirm\": true (guarda anti-borrado)');\n}\n\nif (op === 'search') {\n  if (!body.jql) return fail('search requiere \"jql\"');\n}\n\nif (op === 'search_children') {\n  // Tolerante a vacío: si no hay parentKeys válidas, el handler devuelve byParent:{}\n  // sin llamar a Jira (marca _childEmpty para el ramo HTTP/Build Response).\n  const keys = Array.isArray(body.parentKeys)\n    ? body.parentKeys.filter(k => typeof k === 'string' && /^EWI-\\d+$/.test(k))\n    : [];\n  if (keys.length === 0) {\n    body._childEmpty = true;\n    body._childJql = 'issuekey = NULL';  // JQL inocuo; igual no se usa (ver Build Response)\n  } else {\n    // Sin filtro de estado: los child Done cuentan para el numerador del %.\n    body._childJql = `parent IN (${keys.join(',')})`;\n  }\n}\n\n// --- Passthrough normalizado ------------------------------------------------\nreturn [{ json: { ...body, operation: op, _valid: true } }];\n"
       },
       "id": "a9dffc11-3b25-46ee-9521-10796a55f0d9",
       "name": "Validate & Route",
@@ -182,6 +182,29 @@
               },
               "renameOutput": true,
               "outputKey": "search"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "search_children",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "search_children"
             }
           ]
         },
@@ -330,7 +353,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\n// Normaliza la respuesta sincrona del handler.\nconst op = $('Validate & Route').first().json.operation;\n\n// search -> devuelve issues crudos de Jira\nif (op === 'search') {\n  const r = $json || {};\n  const issues = r.issues || [];\n  return [{ json: { ok: true, operation: op, total: issues.length, issues } }];\n}\n\n// resto de operaciones -> issueKey / issueUrl\nlet issueKey = '', issueUrl = '';\ntry {\n  const r = $json;\n  issueKey = r.key || r.issueKey || $('Validate & Route').first().json.issueKey || '';\n} catch (e) {}\nif (issueKey) issueUrl = 'https://arduasolutions.atlassian.net/browse/' + issueKey;\nreturn [{ json: { ok: true, operation: op, issueKey, issueUrl } }];\n"
+        "jsCode": "\n// Normaliza la respuesta sincrona del handler.\nconst op = $('Validate & Route').first().json.operation;\n\n// search_children -> agrupa los child por parent.key con su statusCategory.\n// NO calcula done/total: el computo de completitud vive en el router (builder).\nif (op === 'search_children') {\n  // Caso vacío (sin parentKeys válidas): byParent vacío, sin tocar la respuesta de Jira.\n  if ($('Validate & Route').first().json._childEmpty) {\n    return [{ json: { ok: true, operation: op, byParent: {} } }];\n  }\n  const issues = ($json && $json.issues) || [];\n  const byParent = {};\n  for (const it of issues) {\n    const f = it.fields || {};\n    const pk = f.parent && f.parent.key;\n    if (!pk) continue;\n    const cat = (f.status && f.status.statusCategory && f.status.statusCategory.key) || '';\n    (byParent[pk] = byParent[pk] || []).push({ key: it.key, statusCategory: cat });\n  }\n  return [{ json: { ok: true, operation: op, byParent } }];\n}\n\n// search -> devuelve issues crudos de Jira\nif (op === 'search') {\n  const r = $json || {};\n  const issues = r.issues || [];\n  return [{ json: { ok: true, operation: op, total: issues.length, issues } }];\n}\n\n// resto de operaciones -> issueKey / issueUrl\nlet issueKey = '', issueUrl = '';\ntry {\n  const r = $json;\n  issueKey = r.key || r.issueKey || $('Validate & Route').first().json.issueKey || '';\n} catch (e) {}\nif (issueKey) issueUrl = 'https://arduasolutions.atlassian.net/browse/' + issueKey;\nreturn [{ json: { ok: true, operation: op, issueKey, issueUrl } }];\n"
       },
       "id": "0b5686da-5d8e-4209-b367-803452accdaa",
       "name": "Build Response",
@@ -415,6 +438,45 @@
       "position": [
         6704,
         6384
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "LXRpdRXQLv37KLaS",
+          "name": "Jira-API-Miles"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://arduasolutions.atlassian.net/rest/api/3/search/jql",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "jql",
+              "value": "={{ $('Validate & Route').item.json._childJql }}"
+            },
+            {
+              "name": "maxResults",
+              "value": "100"
+            },
+            {
+              "name": "fields",
+              "value": "parent,status,issuetype,summary"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-5e6f-47a8-9b0c-search-children",
+      "name": "Jira — Search Children",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        6704,
+        6604
       ],
       "credentials": {
         "httpBasicAuth": {
@@ -513,6 +575,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Jira — Search Children",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -583,6 +652,17 @@
       ]
     },
     "Jira — Search": {
+      "main": [
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Jira — Search Children": {
       "main": [
         [
           {
