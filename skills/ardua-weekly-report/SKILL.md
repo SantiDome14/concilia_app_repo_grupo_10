@@ -1,11 +1,11 @@
 ---
 name: ardua-weekly-report
-description: "Genera el reporte semanal de Producto de Ardua y prepara la task list de Notion para la semana siguiente. Activar SIEMPRE ante frases como hacer el reporte semanal, reporte de la semana, armar el weekly, cerrar la semana, mandar el reporte, weekly report, o cualquier variacion que indique cierre semanal del PM. El proceso tiene dos fases - (1) recoleccion de datos de Jira, Notion y Slack con enriquecimiento semantico via Atlassian Rovo, sintesis del reporte con agrupamiento por Area e impacto narrativo, revision por el PM y envio a #product; (2) creacion de la nueva task list en Notion con las tareas pendientes. Nunca enviar el reporte sin revision explicita del PM."
+description: "Genera el reporte semanal de Producto de Ardua. Activar SIEMPRE ante frases como hacer el reporte semanal, reporte de la semana, armar el weekly, cerrar la semana, mandar el reporte, weekly report, o cualquier variacion que indique cierre semanal del PM. Recolecta datos de Jira, Notion, Slack e historial de Claude, sintetiza el reporte con agrupamiento por Area e impacto narrativo, y lo envia a #product previa revision del PM. Nunca enviar el reporte sin revision explicita del PM."
 ---
 
 # Ardua Weekly Report
 
-Genera el reporte semanal de Santi Domeniconi (Technical PM, Ardua Solutions) y prepara el arranque de la semana siguiente. El proceso es determinista: recolectar → enriquecer → sintetizar → revisar → enviar → crear próxima semana.
+Genera el reporte semanal de Santi Domeniconi (Technical PM, Ardua Solutions). El proceso es determinista: recolectar → sintetizar → revisar → enviar.
 
 ---
 
@@ -17,15 +17,6 @@ Genera el reporte semanal de Santi Domeniconi (Technical PM, Ardua Solutions) y 
 - **Firma fija:** `_Sent using_ <@U0AHZHTQE22|Claude>`
 
 ---
-
-## Proceso en dos fases
-
-```
-Fase 1: Recolección → Enriquecimiento Rovo → Síntesis con agrupamiento → Revisión → Envío
-Fase 2: Nueva task list en Notion con tareas pendientes
-```
-
-Presentar la Fase 2 solo después de que el PM confirme el envío.
 
 ---
 
@@ -58,37 +49,31 @@ Cloud ID: `53eec1f8-a156-4af9-bc3a-d6142b50e0cc`
 | `Done` | Completado | — (no incluir) |
 | `Deprecated` | Descartado | — (no incluir) |
 
-**Query 1 — Cerrado esta semana:**
+**Query principal — toda la actividad de la semana (PWI):**
 ```jql
-(assignee = currentUser() OR reporter = currentUser())
-AND status changed to "SENT TO DEV" during (startOfWeek(), now())
+project = PWI AND (assignee = currentUser() OR reporter = currentUser())
+AND updated >= -7d
 ORDER BY updated DESC
 ```
+`maxResults: 50`, campos: `summary`, `status`, `priority`, `customfield_10310` (Business Area), `customfield_10306` (Blocked cause), `created`, `updated`.
 
-**Query 2 — En curso:**
+> ⚠️ `status changed to "SENT TO DEV" during (startOfWeek(), now())` puede devolver items en estado `Done` de semanas anteriores — usar esta query amplia y clasificar manualmente.
+
+**Clasificar resultados manualmente:**
+
+| Criterio | Sección |
+|---|---|
+| `status = "SENT TO DEV"` + `updated >= lunes de esta semana` | ✅ Cerrado |
+| `status = "IN ANALYSIS"` | 🔄 En curso (**solo este estado**) |
+| `status = "READY FOR DEV"` | **Excluir** — ticket definido, sin acción de producto activa |
+| `status = "BLOCKED"` | 🚨 Bloqueos |
+| `status = "TO DO"` + `created >= lunes de esta semana` | ✨ Nuevas iniciativas |
+
+**EWI tickets:** Si hay actividad product-driven en el tablero de Technology (ej. actualización de esquema a pedido de un stakeholder), incluir con prefijo `EWI-XX`. Query adicional:
 ```jql
-(assignee = currentUser() OR reporter = currentUser())
-AND status in ("IN ANALYSIS", "READY FOR DEV")
-AND updated >= startOfWeek()
-ORDER BY status ASC, updated DESC
+project = EWI AND (assignee = currentUser() OR reporter = currentUser())
+AND updated >= -7d ORDER BY updated DESC
 ```
-
-**Query 3 — Bloqueados:**
-```jql
-(assignee = currentUser() OR reporter = currentUser())
-AND status = "BLOCKED"
-ORDER BY updated DESC
-```
-
-**Query 4 — Nuevas iniciativas:**
-```jql
-reporter = currentUser()
-AND created >= startOfWeek()
-AND status not in ("SENT TO DEV", "Done", "Deprecated")
-ORDER BY created DESC
-```
-
-Campos: `summary`, `status`, `priority`, `customfield_10310` (Business Area), `customfield_10306` (Blocked cause), `created`, `updated`.
 
 #### B) Notion — task list de la semana
 
@@ -143,113 +128,107 @@ Usar `Atlassian Rovo:search` con las siguientes reglas:
 - Si Rovo no devuelve resultados útiles para una query, continuar sin bloquear la síntesis.
 - Los resultados de Rovo son contexto de enriquecimiento, no reemplazan los datos estructurados de Jira y Notion.
 
+#### E) Historial de conversaciones Claude — trabajo no capturado en Jira ni Notion
+
+Mucho trabajo de producto queda en sesiones de Claude sin generar ticket ni tarea en Notion: discoveries mejorados, wireframes construidos, reqs emitidos, decisiones de diseño documentadas. Capturarlo evita que el reporte subestime la semana.
+
+```json
+recent_chats: { "n": 10, "sort_order": "desc" }
+```
+
+Revisar títulos y resúmenes de la semana. Incluir en el reporte si:
+- Se creó o mejoró un discovery
+- Se construyó un wireframe para validación con stakeholder
+- Se emitió un REQ vía req-definition
+- Se documentó una decisión o se actualizó un feature file
+
+Agrupar bajo el área correspondiente o bajo `Operaciones de Producto` / `Framework`. **No duplicar lo que ya cubrió Jira o Notion.**
+
 ---
 
-### Paso 1.3 — Síntesis con agrupamiento e impacto
+### Paso 1.3 — Síntesis
 
 #### Principio central
 
-El reporte no es una lista de tareas. Es una narrativa de impacto: **qué hice → qué logré → qué sigue**. El CEO y el HOP deben entender el valor generado, no el detalle de cada ticket.
+El reporte no es una lista de tareas — es una narrativa de impacto breve. El CEO y el HOP deben entender qué se hizo, con qué resultado, y qué sigue.
 
 #### A — Deduplicación
 
-Cruzar Jira y Notion por campo `REQ`. Si coinciden, usar los datos más ricos de los dos. El contexto de Rovo (paso 1.2 D) se incorpora como capa adicional sobre los datos deduplicados.
+Cruzar Jira, Notion y Claude history por campo `REQ` / ticket key. Si el mismo ítem aparece en múltiples fuentes, usar los datos más ricos (contexto Claude > descripción Jira > nombre de tarea Notion). Cada ítem aparece una sola vez en el reporte.
 
 #### B — Agrupamiento por Área
 
-Agrupar por `Área` (Notion) o Business Area (Jira). Nombres exactos: `Trading Desk`, `Legal & Compliance`, `Operations`, `Finance & Accounting`, `Sales & Partnerships`, `Management`, `Miles/N8N`, `Framework`, `Ops de Producto`. Solo incluir grupos con contenido real.
+Agrupar por `Área`. Nombres exactos: `Legal & Compliance`, `Operations`, `Trading Desk`, `Finance & Accounting`, `Sales & Partnerships`, `Management`, `Miles / N8N`, `JIRA`, `Framework`, `Operaciones de Producto`. Solo incluir grupos con contenido real.
 
-#### C — Clustering temático
+> **Ítem sin área clara:** Si un ítem no tiene campo `Área` en Notion ni Business Area en Jira, y el nombre/contexto no permite inferir el grupo con confianza, **preguntar al PM antes de agrupar**. Presentar el ítem ambiguo y las opciones candidatas: _"No tengo claro en qué área va '[nombre]' — ¿lo pongo bajo [opción A] o [opción B]?"_. No asumir ni inventar categoría.
 
-Dentro de cada grupo, identificar clusters por tema:
-- Keywords `workflow`, `Miles`, `n8n`, `automatiz*` → cluster "Automatizaciones"
-- Keywords `tablero`, `Jira`, `epic*`, `configuraci*` → cluster "Framework de trabajo"
-- Keywords `onboarding`, `Centaurus`, `API`, `partner*` → cluster "Partnership"
-- Mismo REQ o misma épica → mismo cluster
+#### C — Formato de cada bullet
 
-1 solo ítem = bullet individual, sin clustering.
+Usar el patrón que refleja los reportes reales:
 
-#### D — Narrativa de impacto
-
-Para clusters (2+ ítems):
 ```
-[Área]
-• [Nombre del cluster]: [qué se hizo — 1-2 oraciones].
-  _Logro: [métrica, capacidad habilitada, problema eliminado]._
+[TICKET] — [descripción corta] → [acción tomada]. [Contexto o impacto en la misma línea.]
 ```
 
-Para ítems individuales:
+Ejemplos reales:
 ```
-• REQ-XXX — [Nombre] → [acción] [↗ avanzó / ↗ desbloqueado si aplica]
-```
+PWI-53 — LEX · Historial de quotes desde el detalle de cliente → enriquecido (Detallado) y enviado a Dev. Expone quotes de TRD en LEX para gestión de límites. Wireframe validado con Cami.
 
-Si el campo `Impacto` de Notion está completado, usarlo directamente como línea de logro. Si Rovo aportó contexto adicional relevante (paso 1.2 D), incorporarlo para enriquecer o completar la línea `_Logro:_`.
-
-**Ejemplo:**
-
-❌ Lista de tareas:
-```
-Miles/N8N
-• REQ Approval Locks → actualizado
-• Auto-asignación → configurada
+PWI-44 — OPS · Variables automáticas en Deposit Instructions → enviado a Dev. {account_number} y {client_address} eliminan carga manual en instrucciones SWIFT (~10–30/semana).
 ```
 
-✅ Narrativa de impacto:
-```
-Miles/N8N
-• Sistema de gestión de REQs: gate de aprobación de heads con auto-asignación y SLA automático implementados.
-  _Logro: trazabilidad completa desde captura hasta aprobación sin intervención manual._
-```
+**Sin líneas `_Logro:_` separadas. Sin clustering temático con headers. El contexto va inline en el mismo bullet.**
 
-#### E — Indicadores de progreso
+Si el campo `Impacto` de Notion está completado, incorporarlo como contexto inline al final del bullet.
 
-Comparar con el reporte anterior:
-- Estaba en **Bloqueos** y avanzó → `↗ desbloqueado`
-- Estaba en **En curso** sin movimiento y esta semana tuvo actividad → `↗ avanzó`
+#### D — Indicadores de progreso
 
-Rovo (paso 1.2 D) puede confirmar el contexto del desbloqueo cuando el campo `Blocked cause` de Jira no es suficientemente descriptivo.
+Comparar con el reporte anterior (Paso 1.2 C):
+- Estaba en **Bloqueos** y avanzó → agregar `↗ desbloqueado` al bullet
+- Estaba en **En curso** y esta semana tuvo movimiento → agregar `↗ avanzó`
 
 ---
 
 ### Paso 1.4 — Template del mensaje
 
+> Los emojis son Unicode — renderizan tanto en Claude (preview del borrador) como en Slack (mensaje enviado).
+
 ```
-:clipboard: _Resumen semanal — Producto_ | Semana del [DD] al [DD] de [mes]
+📋 _Resumen semanal — Producto_ | Semana del [DD] al [DD] de [mes]
 
-:bar_chart: _[N] REQ(s) a SENT TO DEV | [highlight ejecutivo]_
+📊 _[N] REQs a SENT TO DEV | [highlight ejecutivo — logro más importante de la semana]_
 
-:sparkles: _Nuevas iniciativas_
-
-[Área]
-• [Nombre] → [primer paso concreto]
-
-:white_check_mark: _Cerrado esta semana_
+✨ _Nuevas iniciativas_
 
 [Área]
-• [Narrativa de cluster o bullet individual]
-  _Logro: [impacto]._
+• [TICKET] — [descripción] → [primer paso concreto]
 
-:arrows_counterclockwise: _En curso_
+✅ _Cerrado esta semana_
 
 [Área]
-• REQ-XXX — [Nombre] ([STATUS]) → [situación] [↗ si aplica]
+• [TICKET] — [descripción] → [acción]. [Contexto o impacto inline.]
 
-:rotating_light: _Bloqueos_
-• REQ-XXX → [razón concisa]
+🔄 _En curso_
+
+[Área]
+• [TICKET] — [descripción] ([STATUS]) → [situación actual]. [Próximo paso o bloqueante nombrado] [↗ si aplica]
+
+🚨 _Bloqueos_
+• [TICKET(S)] → [descripción del bloqueo]. [Quién debe desbloquearlo]
 
 _Sent using_ <@U0AHZHTQE22|Claude>
 ```
 
-> Secciones vacías se omiten completamente (encabezado incluido). `:bar_chart:` siempre incluye throughput + 1 highlight del cluster de mayor impacto.
+> Secciones vacías se omiten completamente (encabezado incluido). `📊` siempre incluye throughput + 1 highlight del ítem de mayor impacto de la semana.
 
 **Casos especiales de sección vacía:**
 
 | Situación | Comportamiento |
 |---|---|
-| 0 REQs pasaron a SENT TO DEV | `:bar_chart:` dice `_0 REQs cerrados esta semana \| [highlight de mayor avance en curso]_` |
-| No hay ítems en curso | Omitir sección `:arrows_counterclockwise:` completa |
-| No hay bloqueos | Omitir sección `:rotating_light:` completa |
-| No hay nuevas iniciativas | Omitir sección `:sparkles:` completa |
+| 0 REQs pasaron a SENT TO DEV | `📊` dice `_0 REQs cerrados esta semana \| [highlight de mayor avance en curso]_` |
+| No hay ítems en curso | Omitir sección `🔄` completa |
+| No hay bloqueos | Omitir sección `🚨` completa |
+| No hay nuevas iniciativas | Omitir sección `✨` completa |
 | Notion no devuelve tareas RESUELTA pero Jira sí tiene SENT TO DEV | Usar solo datos de Jira para esa sección; no dejar la sección vacía |
 
 ---
@@ -260,66 +239,6 @@ _Sent using_ <@U0AHZHTQE22|Claude>
 2. Aplicar ajustes.
 3. `slack_send_message_draft` en `#product` (`C0A7E419292`). Mostrar el draft.
 4. Confirmar antes de `slack_send_message`.
-
----
-
-## Fase 2 — Nueva task list en Notion
-
-Ejecutar después del envío confirmado.
-
-### Paso 2.1 — Tareas pendientes
-
-Tasks con `Estado` = `"NO INICIADA"`, `"EN CURSO"` o `"EN OTRA CANCHA"`.
-
-### Paso 2.2 — Fecha próxima semana
-
-Próximo lunes al próximo viernes. Formato: `Tasks DD/MM - DD/MM`.
-
-### Paso 2.3 — Crear página
-
-```json
-notion-create-pages: { "pages": [{ "properties": { "title": "Tasks DD/MM - DD/MM" }, "icon": "icons/checklist_green" }] }
-```
-
-### Paso 2.4 — Crear base de datos
-
-`notion-create-database` con parent = page_id recién creada:
-
-```sql
-CREATE TABLE (
-  "Task name" TITLE,
-  "Estado" SELECT('NO INICIADA':gray, 'EN CURSO':blue, 'EN OTRA CANCHA':yellow, 'RESUELTA':green),
-  "Área" SELECT('Trading Desk':blue, 'Legal & Compliance':purple, 'Operations':orange, 'Finance & Accounting':green, 'Sales & Partnerships':brown, 'Management':yellow, 'Miles/N8N':pink, 'Framework':gray, 'Ops de Producto':red),
-  "Impacto" RICH_TEXT,
-  "REQ" RICH_TEXT,
-  "Due date" DATE,
-  "Assignee" PEOPLE
-)
-```
-
-### Paso 2.5 — Poblar tareas pendientes
-
-Copiar por cada tarea: `Task name`, `Estado`, `Área`, `REQ`. No copiar `Impacto` ni `Due date`.
-
-### Paso 2.6 — Crear vistas
-
-La respuesta de `notion-create-database` incluye el `id` de la nueva base de datos. Ese mismo `id` es el `database_id` **y** el `data_source_id` que requiere `notion-create-view`. No hay un paso adicional de lookup — usar directamente el valor retornado en el paso 2.4.
-
-Con `notion-create-view`, database_id = data_source_id = ID retornado en paso 2.4:
-
-| Vista | Tipo | Configuración |
-|---|---|---|
-| Kanban | board | `GROUP BY "Estado"; SORT BY "Área" ASC; SHOW "Task name", "Área", "REQ", "Impacto", "Due date", "Assignee"` |
-| Activas | list | `FILTER "Estado" != "RESUELTA"; SORT BY "Estado" ASC; SORT BY "Área" ASC; SHOW "Task name", "Estado", "Área", "REQ", "Impacto", "Due date"` |
-| EN CURSO | list | `FILTER "Estado" = "EN CURSO"; SORT BY "Área" ASC; SHOW "Task name", "Área", "REQ", "Impacto"` |
-| EN OTRA CANCHA | list | `FILTER "Estado" = "EN OTRA CANCHA"; SORT BY "Área" ASC; SHOW "Task name", "Área", "REQ", "Impacto"` |
-| NO INICIADA | list | `FILTER "Estado" = "NO INICIADA"; SORT BY "Área" ASC; SHOW "Task name", "Área", "REQ", "Due date"` |
-| RESUELTA | list | `FILTER "Estado" = "RESUELTA"; SHOW "Task name", "Área", "REQ", "Impacto"` |
-| Calendario | calendar | `CALENDAR BY "Due date"; SHOW "Task name", "Estado", "Área"` |
-
-### Paso 2.7 — Confirmar
-
-Compartir link de la nueva página y cantidad de tareas traspasadas.
 
 ---
 
@@ -335,6 +254,5 @@ Compartir link de la nueva página y cantidad de tareas traspasadas.
 | Opciones Estado Notion | `NO INICIADA` · `EN CURSO` · `EN OTRA CANCHA` · `RESUELTA` |
 | Áreas (= Jira) | `Trading Desk` · `Legal & Compliance` · `Operations` · `Finance & Accounting` · `Sales & Partnerships` · `Management` |
 | Áreas internas | `Miles/N8N` · `Framework` · `Ops de Producto` |
-| Formato título Notion | `Tasks DD/MM - DD/MM` |
 
 **MCPs requeridos:** Atlassian Rovo (Jira JQL + Rovo Search semántico), Notion, Slack.
