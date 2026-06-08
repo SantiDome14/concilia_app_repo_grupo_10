@@ -65,7 +65,7 @@ Hipótesis sobre capacidades que aparecen en varios productos con la misma semá
 | [`operatoria-rulo-discovery.md`](./operatoria-rulo-discovery.md) | Operatoria del rulo — Pipeline ARS → Stablecoins | Concluida | Santino Domeniconi | 2026-05-27 | `features/common/operatoria-rulo.md` · `entities/haz-pagos.md` · `entities/circuit-pay.md` |
 | [`ardua-api-documentation-discovery.md`](./ardua-api-documentation-discovery.md) | Ardua API Documentation — Portal público de documentación de las APIs | En investigación | Yasmani Rodriguez | 2026-05-15 | _—_ |
 | [`release-awareness-discovery.md`](./release-awareness-discovery.md) | Release Awareness — banner y modal de nuevas funcionalidades | Concluida | Santino Domeniconi | 2026-05-08 | _—_ |
-| [`panel-cliente-discovery.md`](./panel-cliente-discovery.md) | Panel de Cliente — Vista 360 transversal del core | En investigación | Santino Domeniconi / Yasmani Rodriguez | 2026-06-04 | `features/common/panel-cliente.md` |
+| [`panel-cliente-discovery.md`](./panel-cliente-discovery.md) | Panel de Cliente — Vista 360 transversal del core | En investigación | Santino Domeniconi / Yasmani Rodriguez | 2026-06-08 | `features/common/panel-cliente.md` |
 | [`ventanas-de-mantenimiento-discovery.md`](./ventanas-de-mantenimiento-discovery.md) | Ventanas de Mantenimiento — Comunicación proactiva al usuario | Concluida | Santino Domeniconi | 2026-05-08 | _—_ |
 
 ---
