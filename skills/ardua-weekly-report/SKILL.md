@@ -160,6 +160,20 @@ Cruzar Jira, Notion y Claude history por campo `REQ` / ticket key. Datos más ri
 
 Un bullet por cada PWI (o EWI product-driven) que pasó a SENT TO DEV esta semana. Agrupados por área.
 
+El header de la sección siempre lleva un calificativo narrativo que contextualiza la semana más allá del número de REQs:
+
+```
+📦 _[N] REQ(s) a IT | [frase corta que describe el carácter de la semana]
+```
+
+Ejemplos de calificativos:
+- `semana de pipeline — 2 iniciativas abiertas, 2 wireframes activos`
+- `semana de volumen — 5 REQs cerrados en LEX + TRD + OPS`
+- `semana de bloqueos — 0 REQs cerrados, 3 pendientes de decisión gerencial`
+- `semana de discovery — REFACTOR CLP iniciado, panel-cliente avanzado`
+
+El calificativo se construye mirando el conjunto de la semana: throughput, iniciativas nuevas, trabajo de discovery, wireframes activos. No inventar — reflejar lo que realmente pasó.
+
 El bullet **no describe qué se hizo** — describe **qué habilita, qué problema elimina, qué capacidad crea**:
 
 ```
@@ -219,7 +233,7 @@ Comparar con el reporte anterior (Paso 1.2 C):
 ```
 📋 _Resumen semanal — Producto_ | Semana del [DD] al [DD] de [mes]
 
-📦 _[N] REQ(s) a IT esta semana_
+📦 _[N] REQ(s) a IT | [frase corta que describe el carácter de la semana]_
 
 [Área]
 • PWI-XX — [nombre] → [qué habilita o resuelve en el negocio]
