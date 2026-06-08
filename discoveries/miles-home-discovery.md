@@ -4,7 +4,7 @@ features: []
 status: En investigación
 owner: Yasmani Rodriguez
 created_at: 2026-06-05
-updated_at: 2026-06-07
+updated_at: 2026-06-08
 propagates_to:
   - workflows/miles-slack-event-router.json
   - workflows/miles-jira-work-items-handler.json
@@ -134,6 +134,15 @@ adopción D2, no bloqueo técnico).
 requerimiento" está presente en los templates como `action_id: new_requirement`,
 pero su comportamiento (deep link vs abrir web) queda pendiente de cablear con la
 infra de interactividad (D3). Por ahora es un botón sin handler.
+
+**Resolución (2026-06-08):** el botón se resuelve como **botón URL de Block Kit**
+apuntando a `https://claude.ai/ask-your-org`. Reemplaza el deep link `claude://`
+con prompt precargado (H3 original). Al ser botón URL no pasa por el handler de
+interactividad — se le quitaron `action_id` y `value`. Esto saca a H3 de la
+dependencia D2 (ya no necesita Claude Desktop instalado): abre el espacio de la
+org en Claude web, donde la persona arranca el alta con la skill `ardua-req-definition`.
+Aplicado en los 3 builders que lo llevan (producto, stakeholder, lider). Los
+perfiles técnicos NO tienen este botón (tienen "Informar bloqueante").
 
 ### H4 — Patrón visual: tablas por defecto, cards cuando lo amerite — VALIDADA
 Se evaluó tabla (`data_table`) vs card (`card`) como patrón base.
@@ -278,6 +287,69 @@ partir del PWI igual que el resto.
 - Footer del Home: desglose `${next} en cola · ${going} en curso` en vez del conteo
   total de PWI activos (que incluía tipos no mostrados y generaba ruido). Los conteos
   se exponen desde `buildPrioridadesGlobales` vía `opts.counts`.
+
+## Hallazgos técnicos de la sesión (2026-06-08)
+
+### Default tab del App Home — la feature "Agents & AI Apps" fuerza la apertura en Chat (2026-06-08)
+Miles abría por defecto en la pestaña **Chat** en vez de **Home**, sin forma
+aparente de controlarlo desde `views.publish` ni desde la config de tabs. Causa
+raíz: la app tenía activada la feature **Agents & AI Apps** de Slack, que reemplaza
+el Messages tab por las pestañas **Chat / History** y fuerza la superficie
+conversacional como default — comportamiento de plataforma, NO configurable por la
+app ni por views. La pista decisiva fue el set de tabs "Home · Chat · History ·
+About" + el badge AGENT + "Sending messages to this app has been turned off".
+**Resolución:** se desactivó la feature Agent/Assist → Miles vuelve a app clásica
+y abre en Home. Los recordatorios siguen funcionando vía `chat.postMessage` (no
+dependían de la superficie de agente). El flujo de captura de REQ tampoco se afecta:
+corre por menciones firmadas en canales, no por eventos de agente.
+
+### Estados de Jira normalizados a MAYÚSCULAS + comparación case-insensitive en builders (2026-06-08)
+Síntoma: la sección "En curso" del perfil técnico mostraba 0 pese a que el dev
+tenía 6 EWIs `IN PROGRESS`. Causa raíz: el `status.name` real de Jira venía con
+capitalización de palabra (`'In Progress'`), pero los builders comparaban contra
+`'IN PROGRESS'` de forma case-sensitive. El JQL es case-insensitive (la query SÍ
+traía los issues), pero el filtro JS del builder los descartaba. NO era un problema
+de Jira ID (se verificó idéntico al accountId del board).
+**Resolución doble:** (1) Yasmani normalizó TODOS los `status.name` de Jira a
+MAYÚSCULAS manualmente; (2) se redefinió `inStatus()` como case-insensitive
+(`(r.status||'').toUpperCase()` contra el array `.map(upper)`) y se envolvieron
+todas las comparaciones `r.status === 'X'` en `.toUpperCase()`, en los 5 builders.
+Esto inmuniza contra futuras inconsistencias de capitalización. Nota: el
+`statusCategory.key` sigue en minúscula (`done`/`indeterminate`/`new`) — esas
+comparaciones NO se tocan, son estables.
+
+### Las secciones de desarrollo muestran solo el EWI padre, no las subtareas (2026-06-08)
+EWI-60 (Story) tiene 5 subtareas (EWI-81..85), todas `IN PROGRESS` y asignadas al
+mismo dev. La query traía la Story + las 5 subtareas, y "En curso" renderizaba 6
+cards (la Story y cada subtarea suelta). **Resolución:** se agregó
+`isSubtask: !!(f.issuetype && f.issuetype.subtask)` al `row()`, y `ewiRows`
+(las cards operativas de dev en los builders técnicos) filtra `!r.isSubtask`. Ahora
+EWI-60 aparece como 1 sola card. La barra de progreso de "What's going on" NO se
+afecta (viene de la query aparte `search_children`).
+
+### Un card block NO tiene footer; el `(done/total)` en el subtitle NO renderiza → va al final del body (2026-06-08)
+Se quiso mostrar un indicador `(done/total)` de subtareas en las cards de EWI con
+hijos (solo builders técnicos — Producto/Stakeholder/Lider tienen cards de PWI, que
+no tienen subtareas directas). Primer intento: appendear `(0/5)` al `subtitle` de la
+card. **El JSON se generaba correctamente** — verificado ejecutando el router en
+runtime: el subtitle salía `🟠 Medium · 📍 Operations · ⏱ hace 7 días · (0/5)` y el
+`byParent` llegaba poblado con la key del EWI. **Pero el App Home NO renderiza esa
+porción del subtitle** — el dato está en el payload pero no se ve. Diagnóstico:
+recorrido completo del flujo de datos (handler `search_children` correcto, nodo HTTP
+`Jira — Search Children` pide `parent,status,issuetype,summary`, `Resolve Children
+Keys` ampliado para incluir los EWI Story de las cards de dev) — todo sano; el corte
+era de **render**, no de datos.
+**Confirmado de la doc oficial de Slack:** el bloque `card` tiene el set de campos
+`slack_icon / title / subtitle / body / hero_image / actions` (al menos uno de
+hero_image/title/actions/body requerido). **NO existe un campo `footer`.** Lo más
+cercano a "esquina inferior izquierda" es el final del `body` (texto libre que el
+Home SÍ renderiza completo, arriba de los `actions`).
+**Resolución:** el indicador se appendea al final del `body` como
+`` _`2/5` Tareas completadas_ `` (italic, con la fracción en código/backticks). El
+truncado a 200 chars del body se aplica ANTES de appendear, para que el contador
+nunca se pierda por el clip. Aplicado en los 2 builders técnicos (Tecnico, IT Lead).
+Regla general derivada: **el subtitle de un card es poco confiable para datos
+secundarios en App Home; usar el body para lo que tiene que verse sí o sí.**
 
 ## Hallazgos técnicos de la sesión (2026-06-06)
 
