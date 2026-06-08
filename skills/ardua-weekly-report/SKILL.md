@@ -153,7 +153,7 @@ Revisar títulos y resúmenes de la semana. Incluir en el reporte si:
 - Se emitió un REQ vía req-definition
 - Se documentó una decisión o se actualizó un feature file
 
-Agrupar bajo el área correspondiente o bajo `Operaciones de Producto` / `Framework`. **No duplicar lo que ya cubrió Jira o Notion.**
+Agrupar en `🗂️ Otras tareas`. **No duplicar lo que ya cubrió Jira o Notion.**
 
 ---
 
