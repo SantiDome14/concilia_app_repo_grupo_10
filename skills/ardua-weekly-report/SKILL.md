@@ -139,6 +139,22 @@ Revisar títulos y resúmenes de la semana. Incluir en el reporte si:
 
 Agrupar en `🗂️ Otras tareas`. **No duplicar lo que ya cubrió Jira o Notion.**
 
+#### E) Historial de conversaciones Claude — trabajo no capturado en Jira ni Notion
+
+Mucho trabajo de producto queda en sesiones de Claude sin generar ticket ni tarea en Notion: discoveries mejorados, wireframes construidos, reqs emitidos, decisiones de diseño documentadas. Capturarlo evita que el reporte subestime la semana.
+
+```json
+recent_chats: { "n": 10, "sort_order": "desc" }
+```
+
+Revisar títulos y resúmenes de la semana. Incluir en el reporte si:
+- Se creó o mejoró un discovery
+- Se construyó un wireframe para validación con stakeholder
+- Se emitió un REQ vía req-definition
+- Se documentó una decisión o se actualizó un feature file
+
+Agrupar bajo el área correspondiente o bajo `Operaciones de Producto` / `Framework`. **No duplicar lo que ya cubrió Jira o Notion.**
+
 ---
 
 ### Paso 1.3 — Síntesis
