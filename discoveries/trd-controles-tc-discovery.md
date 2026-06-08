@@ -5,6 +5,7 @@ status: En investigación
 owner: Santino Domeniconi
 created_at: 2026-06-08
 updated_at: 2026-06-08
+validated_with: Facundo Vasques (Head of Trading) — 08/06/2026
 propagates_to:
   - features/trd/trd-quotes.md
   - features/trd/trd-proveedores-de-liquidez.md
@@ -113,13 +114,13 @@ Se activa al hacer click en el CTA cuando hay desvío activo.
 
 ---
 
-## Decisiones pendientes de validación con Facu Vasques
+## Decisiones de diseño — validadas con Facu Vasques (08/06/2026)
 
-| # | Pregunta | Impacto |
+| # | Pregunta | Decisión |
 |---|---|---|
-| D-1 | ¿El quote / operación aprobada con desvío queda marcada con un badge en el listado? | Si sí, Technology debe persistir un flag `deviation_approved: true` en el registro |
-| D-2 | ¿El modal de confirmación requiere un campo de justificación libre antes de confirmar? | Si sí, el modal necesita un textarea y el campo debe persistirse |
-| D-3 | ¿El CTA cambia de texto y color al detectar desvío, o mantiene su aspecto original? | Si no cambia, todo el peso de la segunda barrera recae exclusivamente en el modal |
+| D-1 | ¿El quote / operación aprobada con desvío queda marcada con un badge en el listado? | **No.** Sin badge ni marcador en el listado. La operación se registra igual que cualquier otra. |
+| D-2 | ¿El modal de confirmación requiere un campo de justificación libre antes de confirmar? | **No.** Solo confirmación explícita via CTA. Sin campo de texto libre. |
+| D-3 | ¿El CTA cambia de texto y color al detectar desvío, o mantiene su aspecto original? | **Sí, cambia.** El botón pasa a ámbar con texto diferenciado al activarse el desvío. |
 
 ---
 
