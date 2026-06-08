@@ -18,8 +18,6 @@ Genera el reporte semanal de Santi Domeniconi (Technical PM, Ardua Solutions). E
 
 ---
 
----
-
 ## Fase 1 — Reporte semanal
 
 ### Paso 1.1 — Solicitar inputs
@@ -109,7 +107,7 @@ Usar `slack_search_public_and_private` con query `"Resumen semanal" from:<@U0B1M
 
 #### D) Atlassian Rovo — Enriquecimiento semántico
 
-Ejecutar **después** de los 4 queries JQL y la lectura de Notion. Rovo Search hace búsqueda semántica cross-source (Jira + Confluence) y aporta contexto cualitativo que los campos estructurados no capturan.
+Ejecutar después de la recolección de Jira y Notion. Rovo Search hace búsqueda semántica cross-source (Jira + Confluence) y aporta contexto cualitativo que los campos estructurados no capturan.
 
 Usar `Atlassian Rovo:search` con las siguientes reglas:
 
@@ -117,16 +115,13 @@ Usar `Atlassian Rovo:search` con las siguientes reglas:
 
 | Condición | Query Rovo | Propósito |
 |---|---|---|
-| Hay 1+ ítems en estado `BLOCKED` | `"[summary del ticket bloqueado]"` | Encontrar decisiones, discusiones o Confluence pages vinculadas al bloqueo que expliquen la causa o el camino a desbloqueo |
-| Hay clusters de 3+ ítems en el mismo Área | `"[nombre del área] [semana actual]"` | Enriquecer la narrativa de impacto del cluster con contexto de decisiones o avances registrados en Confluence |
-| Hay nuevas iniciativas sin campo `Impacto` en Notion | `"[summary del ticket nuevo]"` | Verificar si existe trabajo previo, discovery o Confluence relacionado que aporte contexto para la sección Nuevas iniciativas |
-| El reporte anterior tenía bloqueos que esta semana no aparecen | `"[summary del ticket desbloqueado]"` | Confirmar contexto del desbloqueo para usar el indicador `↗ desbloqueado` con fundamento |
+| Hay 1+ ítems en estado `BLOCKED` | `"[summary del ticket bloqueado]"` | Encontrar decisiones o Confluence pages que expliquen la causa o el camino a desbloqueo |
+| El reporte anterior tenía bloqueos que esta semana no aparecen | `"[summary del ticket desbloqueado]"` | Confirmar contexto del desbloqueo para el indicador `↗ desbloqueado` |
 
 **Instrucciones operativas:**
-- Máximo **4 búsquedas Rovo por sesión** — priorizar bloqueados y clusters de mayor impacto.
-- Si Rovo devuelve resultados de Confluence relevantes, incorporar el contexto como texto en la narrativa de impacto del cluster o en la línea `_Logro:_`. No incluir links internos de Confluence en el mensaje de Slack.
-- Si Rovo no devuelve resultados útiles para una query, continuar sin bloquear la síntesis.
-- Los resultados de Rovo son contexto de enriquecimiento, no reemplazan los datos estructurados de Jira y Notion.
+- Máximo **2 búsquedas Rovo por sesión** — priorizar bloqueados.
+- Si Rovo no devuelve resultados útiles, continuar sin bloquear la síntesis.
+- Los resultados de Rovo son contexto de enriquecimiento, no reemplazan los datos estructurados.
 
 #### E) Historial de conversaciones Claude — trabajo no capturado en Jira ni Notion
 
@@ -142,7 +137,7 @@ Revisar títulos y resúmenes de la semana. Incluir en el reporte si:
 - Se emitió un REQ vía req-definition
 - Se documentó una decisión o se actualizó un feature file
 
-Agrupar bajo el área correspondiente o bajo `Operaciones de Producto` / `Framework`. **No duplicar lo que ya cubrió Jira o Notion.**
+Agrupar en `🗂️ Otras tareas`. **No duplicar lo que ya cubrió Jira o Notion.**
 
 ---
 
@@ -150,42 +145,70 @@ Agrupar bajo el área correspondiente o bajo `Operaciones de Producto` / `Framew
 
 #### Principio central
 
-El reporte no es una lista de tareas — es una narrativa de impacto breve. El CEO y el HOP deben entender qué se hizo, con qué resultado, y qué sigue.
+El reporte tiene **dos categorías**, en orden fijo de importancia:
+
+1. **REQs a IT** — los PWIs que pasaron a SENT TO DEV esta semana. Este es el KPI del área. Va primero, detallado, uno por uno.
+2. **Otras tareas** — todo lo demás (en curso, framework, Miles, wireframes, discoveries, bloqueos si son pocos). Va comprimido. Máximo 5 bullets, agrupando lo relacionado.
+
+Longitud objetivo del mensaje completo: **≤ 12 líneas de contenido**. Si el borrador supera eso, comprimir Otras tareas antes de tocar REQs a IT.
 
 #### A — Deduplicación
 
-Cruzar Jira, Notion y Claude history por campo `REQ` / ticket key. Si el mismo ítem aparece en múltiples fuentes, usar los datos más ricos (contexto Claude > descripción Jira > nombre de tarea Notion). Cada ítem aparece una sola vez en el reporte.
+Cruzar Jira, Notion y Claude history por campo `REQ` / ticket key. Datos más ricos ganan: contexto Claude > descripción Jira > nombre de tarea Notion. Cada ítem aparece una sola vez.
 
-#### B — Agrupamiento por Área
+#### B — Sección REQs a IT
 
-Agrupar por `Área`. Nombres exactos: `Legal & Compliance`, `Operations`, `Trading Desk`, `Finance & Accounting`, `Sales & Partnerships`, `Management`, `Miles / N8N`, `JIRA`, `Framework`, `Operaciones de Producto`. Solo incluir grupos con contenido real.
+Un bullet por cada PWI (o EWI product-driven) que pasó a SENT TO DEV esta semana. Agrupados por área.
 
-> **Ítem sin área clara:** Si un ítem no tiene campo `Área` en Notion ni Business Area en Jira, y el nombre/contexto no permite inferir el grupo con confianza, **preguntar al PM antes de agrupar**. Presentar el ítem ambiguo y las opciones candidatas: _"No tengo claro en qué área va '[nombre]' — ¿lo pongo bajo [opción A] o [opción B]?"_. No asumir ni inventar categoría.
-
-#### C — Formato de cada bullet
-
-Usar el patrón que refleja los reportes reales:
+El bullet **no describe qué se hizo** — describe **qué habilita, qué problema elimina, qué capacidad crea**:
 
 ```
-[TICKET] — [descripción corta] → [acción tomada]. [Contexto o impacto en la misma línea.]
+[Área]
+• PWI-XX — [nombre] → [qué habilita o resuelve en el negocio]
 ```
 
-Ejemplos reales:
+Ejemplos:
 ```
-PWI-53 — LEX · Historial de quotes desde el detalle de cliente → enriquecido (Detallado) y enviado a Dev. Expone quotes de TRD en LEX para gestión de límites. Wireframe validado con Cami.
+Legal & Compliance
+• PWI-53 — Historial de quotes en LEX → operadores de límites ven los quotes de TRD sin salir del legajo del cliente.
+• PWI-72 — Historial de intentos AiPrise → Legal opera siempre sobre el último estado real del cliente, no sobre un intento rechazado.
 
-PWI-44 — OPS · Variables automáticas en Deposit Instructions → enviado a Dev. {account_number} y {client_address} eliminan carga manual en instrucciones SWIFT (~10–30/semana).
+Operations
+• PWI-44 — Variables en Deposit Instructions → elimina carga manual de SWIFT (~10–30 instrucciones/semana).
 ```
 
-**Sin líneas `_Logro:_` separadas. Sin clustering temático con headers. El contexto va inline en el mismo bullet.**
+Si 0 REQs pasaron a IT esta semana, la sección dice `_0 REQs a IT — [razón o contexto breve]_` y el peso del mensaje pasa a Otras tareas.
 
-Si el campo `Impacto` de Notion está completado, incorporarlo como contexto inline al final del bullet.
+#### C — Sección Otras tareas
+
+Todo lo que no es SENT TO DEV: trabajo en curso, framework, Miles/N8N, wireframes, discoveries, trabajo interno, nuevas iniciativas, bloqueos menores.
+
+**Reglas de compresión:**
+- Items relacionados del mismo tema van en **un solo bullet**: `[Tema]: item1, item2 y item3`
+- Sin sub-headers de área
+- Máximo 5 bullets en total
+- Cada bullet responde: ¿qué avanzó o qué se creó?
+- Bloqueos activos van aquí si son 1 o 2; si son 3+, armar sección `🚨` separada al final
+
+> **Ítem sin categoría clara:** Si no es posible inferir el grupo con confianza, preguntar antes de clasificar: _"No tengo claro dónde va '[nombre]' — ¿en Otras tareas como [opción A] o [opción B]?"_. No asumir ni inventar.
+
+Ejemplo de compresión:
+```
+❌ Sin comprimir (4 bullets):
+• Miles — REQ Approval Locks → workflow actualizado
+• Miles — Auto-asignación → TRD y LEX a Santi, resto a Yas
+• Miles — Recordatorio CTA → implementado en aprobación
+• Framework — Skills de Claude → actualizadas
+
+✅ Comprimido (2 bullets):
+• Miles / N8N: gate de aprobación con auto-asignación y recordatorio de SLA implementados.
+• Operaciones de Producto: skills de Claude actualizadas.
+```
 
 #### D — Indicadores de progreso
 
 Comparar con el reporte anterior (Paso 1.2 C):
-- Estaba en **Bloqueos** y avanzó → agregar `↗ desbloqueado` al bullet
-- Estaba en **En curso** y esta semana tuvo movimiento → agregar `↗ avanzó`
+- Bloqueado la semana pasada y esta semana avanzó → agregar `↗ desbloqueado` al bullet correspondiente.
 
 ---
 
@@ -196,40 +219,35 @@ Comparar con el reporte anterior (Paso 1.2 C):
 ```
 📋 _Resumen semanal — Producto_ | Semana del [DD] al [DD] de [mes]
 
-📊 _[N] REQs a SENT TO DEV | [highlight ejecutivo — logro más importante de la semana]_
-
-✨ _Nuevas iniciativas_
+📦 _[N] REQ(s) a IT esta semana_
 
 [Área]
-• [TICKET] — [descripción] → [primer paso concreto]
-
-✅ _Cerrado esta semana_
+• PWI-XX — [nombre] → [qué habilita o resuelve en el negocio]
 
 [Área]
-• [TICKET] — [descripción] → [acción]. [Contexto o impacto inline.]
+• PWI-XX — [nombre] → [ídem]
 
-🔄 _En curso_
-
-[Área]
-• [TICKET] — [descripción] ([STATUS]) → [situación actual]. [Próximo paso o bloqueante nombrado] [↗ si aplica]
+🗂️ _Otras tareas_
+• [Tema / agrupación]: [qué avanzó o se creó — varios ítems en una línea si son del mismo tema]
+• [Ítem individual si no tiene agrupación natural]
 
 🚨 _Bloqueos_
-• [TICKET(S)] → [descripción del bloqueo]. [Quién debe desbloquearlo]
+• [TICKET(S)] → [razón concisa]. [Quién desbloquea]
 
 _Sent using_ <@U0AHZHTQE22|Claude>
 ```
 
-> Secciones vacías se omiten completamente (encabezado incluido). `📊` siempre incluye throughput + 1 highlight del ítem de mayor impacto de la semana.
+> Sección `🚨 Bloqueos` solo aparece si hay 3 o más bloqueos activos — si hay 1 o 2, van como último(s) bullet(s) de `🗂️ Otras tareas`. Longitud objetivo: ≤ 12 líneas de contenido.
 
-**Casos especiales de sección vacía:**
+**Casos especiales:**
 
 | Situación | Comportamiento |
 |---|---|
-| 0 REQs pasaron a SENT TO DEV | `📊` dice `_0 REQs cerrados esta semana \| [highlight de mayor avance en curso]_` |
-| No hay ítems en curso | Omitir sección `🔄` completa |
-| No hay bloqueos | Omitir sección `🚨` completa |
-| No hay nuevas iniciativas | Omitir sección `✨` completa |
-| Notion no devuelve tareas RESUELTA pero Jira sí tiene SENT TO DEV | Usar solo datos de Jira para esa sección; no dejar la sección vacía |
+| 0 REQs a IT | Sección `📦` dice `_0 REQs a IT esta semana — [razón breve]_`. El peso del mensaje pasa a Otras tareas. |
+| No hay Otras tareas relevantes | Omitir sección `🗂️` completa |
+| 1–2 bloqueos | Incluir como último(s) bullet(s) de `🗂️`, no como sección separada |
+| 3+ bloqueos | Armar sección `🚨` separada |
+| Notion no devuelve datos pero Jira sí | Usar solo Jira; no dejar sección vacía |
 
 ---
 
