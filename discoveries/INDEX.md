@@ -2,7 +2,7 @@
 
 > Catálogo navegable de los discoveries existentes. Para entender la convención de naming, los estados y el ciclo de vida, ver [`README.md`](./README.md).
 >
-> Última actualización: **2026-06-07** · **32 discoveries** + **3 artefactos de soporte**
+> Última actualización: **2026-06-08** · **33 discoveries** + **4 artefactos de soporte**
 
 ---
 
@@ -32,6 +32,7 @@ Hipótesis focalizadas en un módulo específico dentro de una aplicación.
 | [`lex-auditoria-operativa-discovery.md`](./lex-auditoria-operativa-discovery.md) | LEX — Auditoría operativa de trades confirmados (TRD → LEX) | En investigación | Santino Domeniconi | 2026-06-05 | _—_ |
 | [`ops-deposit-instructions-discovery.md`](./ops-deposit-instructions-discovery.md) | OPS — Deposit Instructions · Variables automáticas | Concluida | Santino Domeniconi | 2026-06-04 | `features/ops/ops-deposit-instructions.md` |
 | [`trd-clientes-discovery.md`](./trd-clientes-discovery.md) | TRD — Módulo Clientes · Visualización de saldos y límites | En investigación | Santino Domeniconi | 2026-06-04 | `features/trd/trd-clientes.md` |
+| [`trd-controles-tc-discovery.md`](./trd-controles-tc-discovery.md) | TRD — Controles de desvío de TC en Quotes y Proveedores de Liquidez | En investigación | Santino Domeniconi | 2026-06-08 | `features/trd/trd-quotes.md` · `features/trd/trd-proveedores-de-liquidez.md` |
 | [`trd-quotes-discovery.md`](./trd-quotes-discovery.md) | TRD — Módulo Quotes | En investigación | Santino Domeniconi | 2026-05-26 | `features/trd/trd-quotes.md` |
 | [`fin-tesoreria-disponibilidades-discovery.md`](./fin-tesoreria-disponibilidades-discovery.md) | FIN · Tesorería · Disponibilidades — modelo conceptual del módulo | En investigación | Yasmani Rodriguez | 2026-05-20 | `features/fin/fin-tesoreria-disponibilidades.md` · [REQ-50](https://arduasolutions.atlassian.net/browse/REQ-50) |
 | [`lex-alertas-discovery.md`](./lex-alertas-discovery.md) | LEX — Módulo Alertas · Discovery Document | En investigación | Yasmani Rodriguez | 2026-04-24 | _—_ |
@@ -114,6 +115,7 @@ Archivos que viven en `discoveries/` pero **no son discoveries** — son insumos
 |---|---|---|
 | [`ask-ardua-gmail-bandejas-compartidas-guia-implementacion.md`](./ask-ardua-gmail-bandejas-compartidas-guia-implementacion.md) | Guía paso a paso para replicar el workaround de reenvío + etiquetas a otras áreas (Legal, Finance, etc.). Incluye tabla de configuración por área y diferencia con la solución definitiva del REQ-39 | [`ask-ardua-gmail-bandejas-compartidas-discovery.md`](./ask-ardua-gmail-bandejas-compartidas-discovery.md) |
 | [`fin-tesoreria-disponibilidades.html`](./fin-tesoreria-disponibilidades.html) | Simulador interactivo del modelo conceptual de Disponibilidades — 16 eventos T0→T15 con tres perspectivas sincronizadas, asientos contables adscriptos a sociedad, collapsibles por sociedad en la lente de Tesorería, y 8vo grupo contable Patrimonio operativo con saldo de apertura. HTML standalone para validación con stakeholders. **No es el prototipo del módulo** | [`fin-tesoreria-disponibilidades-discovery.md`](./fin-tesoreria-disponibilidades-discovery.md) |
+| [`wireframe_PWI-74.html`](./wireframe_PWI-74.html) | Wireframe interactivo con los tres estados del control de desvío de TC — Quotes y Proveedores de Liquidez en paralelo. Generado el 08/06/2026 para validación con Facundo Vasques. | [`trd-controles-tc-discovery.md`](./trd-controles-tc-discovery.md) |
 | [`core-modulos-transversales-briefing-tech.md`](./core-modulos-transversales-briefing-tech.md) | Briefing técnico para Claude Design — Refinamiento del set transversal del core | [`core-modulos-transversales-discovery.md`](./core-modulos-transversales-discovery.md) |
 
 ---
