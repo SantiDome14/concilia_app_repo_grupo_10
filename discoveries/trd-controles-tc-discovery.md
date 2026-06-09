@@ -143,9 +143,9 @@ Esta decision aplica tanto a Quotes como a Proveedores de Liquidez.
 
 **Decision (Facundo Vasques, 2026-06-08):** el umbral del 3% aplica de forma uniforme a todos los pares en v1, incluyendo cripto/ARS. La mayor volatilidad intradiaria de cripto es conocida y aceptada. Si el control se dispara con frecuencia en esos pares, se revisara el umbral en una iteracion futura.
 
-### C6 — Timestamp del FX Pantalla
+### C6 — Refresh automatico del FX Pantalla y barra de progreso
 
-**Decision (2026-06-09):** el precio de referencia se muestra con un timestamp del momento de obtencion (ej. "Binance · 1.234,56 · 14:32:05"). Esto le da al trader visibilidad sobre la frescura del dato sin requerir logica adicional de refresco en v1. El comportamiento de refresco mientras el formulario esta abierto queda abierto para refinement (ver P-04).
+**Decision (2026-06-09):** el precio de referencia se refresca automaticamente cada 5 segundos en ambos modulos (Quotes y Proveedores) mientras el formulario esta abierto. Se muestra mediante chips de proveedor con una barra de progreso unica que indica el tiempo restante hasta el proximo refresh. El timestamp fue descartado — la barra de progreso cubre la necesidad de visibilidad sobre la frescura del dato sin requerir una marca de tiempo estatica. La frecuencia de 5 segundos es fija en v1.
 
 ### C7 — Objetivo del control: errores de tipeo, no proteccion de margen
 
@@ -158,9 +158,9 @@ Esta decision aplica tanto a Quotes como a Proveedores de Liquidez.
 | # | Pregunta | Por que importa | Estado |
 |---|---|---|---|
 | P-01 | Que proveedores (ademas de "matriz") devuelve el endpoint `/fx-rate` y que pares cubre cada uno? | Define si hay cobertura nativa para pares como USD/ARS, BTC/USDT, ETH/USDT, o si el cross-rate necesita componentes de pares adicionales | Abierta — confirmar en refinement con Tecnologia |
-| P-02 | El endpoint `/fx-rate` soporta BTC/USDT y USD/ARS como pares independientes? | Necesario para computar el cross BTC/ARS = BTC/USDT x USD/ARS | **Abierta con evidencia.** Verificacion en QA (2026-06-09) confirma que para el par BTC/ARS tanto Binance como Matriz devuelven "No disponible". El cross no esta funcionando en QA. Confirmar en refinement si la implementacion del cross esta dentro de v1 o si los pares cripto/ARS quedan excluidos del control en esta version. |
+| P-02 | El endpoint `/fx-rate` soporta BTC/USDT y USD/ARS como pares independientes? | Necesario para computar el cross BTC/ARS = BTC/USDT x USD/ARS | **Abierta con evidencia actualizada.** Verificacion en QA indicaba "No disponible" para BTC/ARS — confirmado como problema de ambiente QA, no de cobertura real. Binance tiene BTC/ARS disponible en produccion. Scope de v1 confirmado. Confirmar en refinement si el endpoint devuelve el par directo o requiere implementar el cross BTC/USDT x USD/ARS. |
 | P-03 | El control de desvio se computa en el frontend o en el backend? | Determina donde vive la logica de comparacion | **Cerrada.** Inspeccion de `QuoteForm.tsx` confirma que la comparacion es local en el frontend: `exchangeRate` vs `fxPantalla` (state). No hay flag de alerta en la respuesta del backend. |
-| P-04 | El FX Pantalla se refresca mientras el formulario esta abierto, o es un fetch puntual que puede volverse stale? | Si el trader deja el formulario abierto varios minutos, el precio de referencia puede ser viejo. Impacta la confiabilidad del control. | Abierta — confirmar en refinement con Mati. La implementacion actual en produccion (`QuoteForm.tsx`) hace un fetch unico en el `useEffect` de `selectedClient`/`selectedPair`, sin polling ni WebSocket de precios. Opciones: polling periodico, boton de refresco manual, o aceptar el timestamp visible como suficiente senal de staleness. |
+| P-04 | El FX Pantalla se refresca mientras el formulario esta abierto, o es un fetch puntual que puede volverse stale? | Si el trader deja el formulario abierto varios minutos, el precio de referencia puede ser viejo. Impacta la confiabilidad del control. | **Cerrada (2026-06-09):** se adopta polling de 5 segundos con barra de progreso unica. El precio se refresca automaticamente en ambos modulos mientras el formulario esta abierto. El control de desvio evalua on blur contra el precio disponible en ese momento — sin re-evaluacion automatica cuando el precio se refresca (ver C6). |
 
 P-01, P-02 y P-04 se cierran en refinement tecnico con Tecnologia.
 
