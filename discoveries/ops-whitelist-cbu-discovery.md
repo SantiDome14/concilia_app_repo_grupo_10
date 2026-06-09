@@ -1,11 +1,11 @@
 ---
 name: OPS — Whitelist CBU/CVU: identificación de banco y etiquetas
 features: [OPS]
-status: Concluida
+status: En investigación
 owner: Santino Domeniconi
 created_at: 2026-06-04
 updated_at: 2026-06-09
-propagates_to: [ops-whitelist, ops-basic-transfer]
+propagates_to: []
 ---
 
 # OPS — Whitelist CBU/CVU: identificación de banco y etiquetas
@@ -302,9 +302,7 @@ de alta (más reciente primero), alfabético por banco, por etiqueta. Pendiente 
 ## Trabajo futuro — v2
 
 * **Colores de marca por banco/fintech en los badges:** cada institución usa su color
-  característico (Galicia → verde, Santander → rojo, Brubank → violeta, Naranja X →
-  naranja, Mercado Pago → azul). El sistema infiere el color automáticamente a partir de
-  `bank_name` / `bank_id` — sin input del operador. No requiere cambios en el modelo de datos.
+  característico (Galicia → Naranja, Santander → rojo, Brubank → violeta, Mercado Pago → azul). El sistema infiere el color automáticamente a partir de`bank_name` / `bank_id` — sin input del operador. No requiere cambios en el modelo de datos.
   Mejora la identificación visual instantánea con múltiples cuentas.
 
 * **Orden y filtro en Destination Account:** permitir ordenar por banco o etiqueta,
