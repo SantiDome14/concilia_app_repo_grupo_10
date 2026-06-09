@@ -4,7 +4,7 @@ features: [TRD]
 status: En investigación
 owner: Santino Domeniconi
 created_at: 2026-06-05
-updated_at: 2026-06-05
+updated_at: 2026-06-09
 propagates_to:
   - features/trd/trd-quotes.md
   - features/trd/trd-proveedores-de-liquidez.md
@@ -131,21 +131,38 @@ El proveedor "matriz" retorna error `'no crypto in pair'` para pares como BTC/AR
 
 ### C3 — Comportamiento cuando el FX de referencia no está disponible
 
-**Decisión (Facundo Vasques, 2026-06-05):** si al momento de cargar el trade el sistema no puede obtener el precio de referencia (feed caído, par sin cobertura, o par exótico sin cross disponible), el sistema **informa al usuario** que no hay valores con qué comparar y permite continuar sin la validación. **La carga nunca se bloquea por ausencia de referencia.**
+**Decisión (Facundo Vasques, 2026-06-05):** si al momento de cargar el trade el sistema no puede obtener el precio de referencia (feed caido, par sin cobertura, o par exotico sin cross disponible), el sistema **informa al usuario** que no hay valores con que comparar y permite continuar sin la validacion. **La carga nunca se bloquea por ausencia de referencia.**
 
-Esta decisión aplica tanto a Quotes como a Proveedores de Liquidez.
+Esta decision aplica tanto a Quotes como a Proveedores de Liquidez.
+
+### C4 — Trigger del control de desvio
+
+**Decision (2026-06-09):** el control se dispara **on blur**, es decir, cuando el trader abandona el campo TC (al pasar al campo siguiente o hacer click fuera). No se dispara durante la escritura ni al hacer submit. Esta decision evita alertas prematuras mientras el trader tipea y concentra el control en el momento en que el valor esta completo.
+
+### C5 — Umbral del 3% para pares cripto/ARS
+
+**Decision (Facundo Vasques, 2026-06-08):** el umbral del 3% aplica de forma uniforme a todos los pares en v1, incluyendo cripto/ARS. La mayor volatilidad intradiaria de cripto es conocida y aceptada. Si el control se dispara con frecuencia en esos pares, se revisara el umbral en una iteracion futura.
+
+### C6 — Timestamp del FX Pantalla
+
+**Decision (2026-06-09):** el precio de referencia se muestra con un timestamp del momento de obtencion (ej. "Binance · 1.234,56 · 14:32:05"). Esto le da al trader visibilidad sobre la frescura del dato sin requerir logica adicional de refresco en v1. El comportamiento de refresco mientras el formulario esta abierto queda abierto para refinement (ver P-04).
+
+### C7 — Objetivo del control: errores de tipeo, no proteccion de margen
+
+**Decision (Facundo Vasques, 2026-06-08):** el control apunta a prevenir **errores de tipeo** (cero de mas, inversion del par, decimal corrido), no a proteger el margen de la operacion. Por eso el umbral es simetrico en ambas direcciones y no distingue entre BUY y SELL. La proteccion de margen es un problema distinto que requiere cruzar TC de Quotes con TC de Proveedores, lo cual esta fuera de alcance.
 
 ---
 
 ## Preguntas abiertas
 
-| # | Pregunta | Por qué importa |
-|---|---|---|
-| P-01 | ¿Qué proveedores (además de "matriz") devuelve el endpoint `/fx-rate` y qué pares cubre cada uno? | Define si hay cobertura nativa para pares como USD/ARS, BTC/USDT, ETH/USDT, o si el cross-rate necesita componentes de pares adicionales |
-| P-02 | ¿El endpoint `/fx-rate` soporta BTC/USDT y USD/ARS como pares independientes? | Necesario para computar el cross BTC/ARS = BTC/USDT × USD/ARS |
-| P-03 | ¿El control de desvío se computa en el frontend (comparación local previa al submit) o en el backend (respuesta del endpoint con flag de alerta)? | Determina si el enriquecimiento del PWI debe describir la lógica de comparación como capacidad del sistema visible al usuario, o si hay una dependencia de backend a documentar |
+| # | Pregunta | Por que importa | Estado |
+|---|---|---|---|
+| P-01 | Que proveedores (ademas de "matriz") devuelve el endpoint `/fx-rate` y que pares cubre cada uno? | Define si hay cobertura nativa para pares como USD/ARS, BTC/USDT, ETH/USDT, o si el cross-rate necesita componentes de pares adicionales | Abierta — confirmar en refinement con Tecnologia |
+| P-02 | El endpoint `/fx-rate` soporta BTC/USDT y USD/ARS como pares independientes? | Necesario para computar el cross BTC/ARS = BTC/USDT x USD/ARS | **Abierta con evidencia.** Verificacion en QA (2026-06-09) confirma que para el par BTC/ARS tanto Binance como Matriz devuelven "No disponible". El cross no esta funcionando en QA. Confirmar en refinement si la implementacion del cross esta dentro de v1 o si los pares cripto/ARS quedan excluidos del control en esta version. |
+| P-03 | El control de desvio se computa en el frontend o en el backend? | Determina donde vive la logica de comparacion | **Cerrada.** Inspeccion de `QuoteForm.tsx` confirma que la comparacion es local en el frontend: `exchangeRate` vs `fxPantalla` (state). No hay flag de alerta en la respuesta del backend. |
+| P-04 | El FX Pantalla se refresca mientras el formulario esta abierto, o es un fetch puntual que puede volverse stale? | Si el trader deja el formulario abierto varios minutos, el precio de referencia puede ser viejo. Impacta la confiabilidad del control. | Abierta — confirmar en refinement con Mati. La implementacion actual en produccion (`QuoteForm.tsx`) hace un fetch unico en el `useEffect` de `selectedClient`/`selectedPair`, sin polling ni WebSocket de precios. Opciones: polling periodico, boton de refresco manual, o aceptar el timestamp visible como suficiente senal de staleness. |
 
-P-01 y P-02 requieren acceso al backend o coordinación con el área de Tecnología. P-03 es una decisión de diseño producto-tecnología que puede resolverse en refinement.
+P-01, P-02 y P-04 se cierran en refinement tecnico con Tecnologia.
 
 ---
 
