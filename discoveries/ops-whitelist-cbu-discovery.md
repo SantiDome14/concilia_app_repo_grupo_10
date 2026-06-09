@@ -1,11 +1,11 @@
 ---
 name: OPS — Whitelist CBU/CVU: identificación de banco y etiquetas
 features: [OPS]
-status: En investigación
+status: Concluida
 owner: Santino Domeniconi
 created_at: 2026-06-04
-updated_at: 2026-06-08
-propagates_to: []
+updated_at: 2026-06-09
+propagates_to: [ops-whitelist, ops-basic-transfer]
 ---
 
 # OPS — Whitelist CBU/CVU: identificación de banco y etiquetas
@@ -56,6 +56,61 @@ donde Manu trabaja a ciegas.
 
 ---
 
+## User journey confirmado en QA — 2026-06-09
+
+Ambos flujos fueron verificados visualmente en `ops-qa.arduasolutions.com`
+por Santino Domeniconi el 2026-06-09. Las capturas de referencia están
+disponibles en el DM de Producto en Slack (mismo hilo que el wireframe).
+
+### Flujo A — Alta de cuenta en whitelist
+
+**Entry point:** detalle de cliente
+(`/clients/{uuid}`) → botón "Whitelistar Cuenta".
+
+| Paso | Qué ve el operador | Estado actual / gap |
+|---|---|---|
+| 1 | Modal se abre: campo **Currency** (dropdown, ARS por defecto) + campo **CVU/CBU** (placeholder: "Ingrese 22 dígitos") + botón **Validar** | Sin cambios con PWI-46 |
+| 2a | Error: `"No se puede habilitar una cuenta interna o inexistente"` — caja roja debajo del input | Coinag rechaza si el CBU/CVU no existe o es cuenta propia |
+| 2b | Éxito: bloque verde **"CVU FOUND" / "CBU FOUND"** con: titular (negrita), número de cuenta, alias, CUIT, estado (Activa/Inactiva) | `bank_id` llega pero **no se renderiza** — gap de PWI-46 |
+| 3 | Botón **Confirmar** (verde) activo | POST no incluye `bank_id` ni etiqueta — gap de PWI-46 |
+
+**Con PWI-46:** en el paso 2b, el bloque "CVU/CBU FOUND" agrega una línea
+**Banco** al final (separada por divisor sutil). Debajo del bloque aparece
+el campo **Etiqueta** (opcional para CBU, requerida para CVU sin fintech
+resuelta). El Confirmar queda deshabilitado si la etiqueta es requerida y
+está vacía.
+
+---
+
+### Flujo B — Ejecución de retiro (Basic Transfer)
+
+**Entry point:** PSPHome (`/psp/home`) → **Create Movement**.
+
+| Paso | Qué ve el operador | Estado actual / gap |
+|---|---|---|
+| 1 | Modal **Create Movement**: dropdown Movement Type (Basic Transfer) | Sin cambios con PWI-46 |
+| 2 | Campo **From**: búsqueda de cliente (autocomplete por nombre) | Sin cambios |
+| 3 | Sección **Select Account**: cuentas CVU propias del cliente con badge COINAG + balance + alias. El operador elige desde cuál se debita. | Sin cambios — estas son cuentas internas, no whitelisted |
+| 4 | Sección **Destination Account**: cuentas whitelisted del cliente. Hoy muestra solo CBU/CVU + nombre titular + CUIT. Sin banco, sin etiqueta. Panel derecho "Account Details" muestra TO con los mismos datos. | **Gap principal** — con múltiples cuentas whitelisted la selección es a ciegas |
+| 5 | Campo **Amount** + botón MAX (autofill con saldo disponible) | Sin cambios |
+| 6 | Clic en **Create Movement** → modal **Confirm Movement** (paso de revisión final antes de ejecutar). Muestra dos bloques: **FROM ACCOUNT** (rojo): Client, Tax Number, Account, Current Balance, New Balance. **TO ACCOUNT (EXTERNAL)** (azul): Holder, CUIT, Account, Account Type (CBU/CVU), Alias. + Transfer Amount grande. Botones Cancel / Confirm Transfer simétricos full-width. | TO ACCOUNT (EXTERNAL) no muestra banco — gap de PWI-46 |
+| 7 | Clic en **Confirm Transfer** (azul) — ejecuta la transferencia | Sin cambios |
+
+**Panel Account Details (lateral derecho):** se actualiza dinámicamente
+al seleccionar cliente y cuenta. Muestra sección **FROM** (rojo) y sección
+**TO** (verde). Hoy TO no incluye banco.
+
+**Con PWI-46 — dónde y cuándo aparece cada elemento nuevo:**
+
+| Elemento nuevo | Paso | Superficie | Posición |
+|---|---|---|---|
+| Badge banco/fintech | 4 | Destination Account (Create Movement) | Encima del número de cuenta |
+| Etiqueta libre | 4 | Destination Account (Create Movement) | Debajo del CUIT. Es la misma ingresada al whitelistear (Alcance 3) |
+| Badge banco/fintech | 4 | Panel TO (Account Details lateral) | Nueva línea debajo de Account (CBU) |
+| Banco | 6 | TO ACCOUNT (EXTERNAL) (Confirm Movement) | Nueva línea al final del bloque, tras Alias, separada por divisor |
+
+---
+
 ## Estado actual en producción (revisión del repositorio `core-ops-frontend`)
 
 Revisión realizada el 2026-06-04, actualizada el 2026-06-08. Archivos de
@@ -72,10 +127,27 @@ cliente tiene al menos una instrucción de Coinag. Flujo actual:
 3. Coinag responde con: nombre del titular, CUIT, alias, tipo de cuenta,
    número normalizado, estado activo/inactivo, `bank_id` y posiblemente
    `bank_name` (ver H6).
-4. OPS muestra: tipo de cuenta, nombre del titular, número, alias, CUIT,
-   estado. **El banco no se renderiza.**
+4. OPS muestra un bloque verde con etiqueta **"CVU FOUND" / "CBU FOUND"**,
+   seguido de: nombre del titular (destacado), número de cuenta, alias, CUIT
+   y estado (activo/inactivo). **El banco no se renderiza.**
 5. Al confirmar, OPS hace POST a `/clients/{clientId}/whitelist-account` con:
    nombre, CUIT, número de cuenta, moneda. **El banco no se incluye.**
+
+**Confirmación visual (2026-06-09 — QA):** la estructura del bloque
+post-Validar fue verificada en `ops-qa.arduasolutions.com`. Los campos
+renderizados son exactamente: etiqueta de tipo (`CVU FOUND`), nombre del
+titular, número de cuenta, alias, CUIT y estado. El campo `bankId` existe
+en `validatedAccountData` en memoria pero no aparece en el bloque.
+
+Error observable: `"No se puede habilitar una cuenta interna o inexistente"`
+— Coinag rechaza el CBU/CVU cuando no existe o pertenece a una cuenta
+interna de Coinag.
+
+**Decisión de diseño — línea Banco (2026-06-09):** el banco se agrega como
+última línea del bloque "CVU/CBU FOUND", separada del resto con un divisor
+sutil. Formato: `Banco  [badge de institución]  Nombre legible`. Para CVUs
+sin fintech resuelta: `Banco  [No resuelto]  Sin información` → dispara
+etiqueta requerida.
 
 El código mapea `result.bank_id` → `bankId` pero lo descarta completamente:
 
@@ -163,7 +235,7 @@ cuenta whitelisted y monto ya está implementado. H3 queda descartada.
 | H3 | La Comanda de Retiros no existe en el sistema. | **Descartada** — el flujo de retiros existe como Basic Transfer en Create Movement de PSPHome. |
 | H4 | Para CVUs, Coinag podría devolver el nombre de la fintech específica, eliminando o reduciendo la necesidad de etiqueta obligatoria. | **Pendiente** — no fue posible verificar qué devuelve `bank_name` para CVUs. |
 | H5 | Las etiquetas podrían tener permisos más amplios que el alta: admins crean cuentas, pero ops officers podrían etiquetar. | **A confirmar** con Manu. |
-| H6 | El campo correcto a mapear desde Coinag es `bank_name` (nombre legible), no `bank_id`. ClientDetail.vue captura el campo incorrecto o incompleto. | **Plausible** — confirmado por el código de PSPHome que ya usa `bank_name` directamente desde la respuesta cruda. Requiere verificación del contrato real de la API con IT. |
+| H6 | El campo correcto a mapear desde Coinag es `bank_name` (nombre legible), no `bank_id`. ClientDetail.vue captura el campo incorrecto o incompleto. | **Confirmada (2026-06-09)** — PSPHome.vue renderiza `externalAccountDetails.bank_name` directamente desde la respuesta cruda. ClientDetail.vue captura `result.bank_id` → `bankId` en vez de `bank_name`. El campo a usar en el fix es `bank_name`. Requiere verificar el valor exacto (P1/P2) pero la existencia del campo está validada por código. |
 
 ---
 
@@ -213,6 +285,36 @@ mejora aplica solo a las altas nuevas?
 
 ---
 
+## Open questions — a resolver antes o durante refinement
+
+**OQ-1 — Cuentas existentes sin banco (impacta Alcance 5):** las cuentas whitelisted antes
+del lanzamiento no tendrán `bank_name` guardado. Cuando aparezcan en Destination Account,
+las opciones son: (a) badge neutro "Sin información" permanente, o (b) re-fetch de Coinag
+al renderizar para completar el dato. La opción (b) es más rica pero implica carga técnica
+adicional. Pendiente con IT en refinement. El wireframe usa opción (a) como fallback visual.
+
+**OQ-2 — Orden de cuentas en Destination Account:** no se especifica el orden de
+presentación cuando el cliente tiene múltiples cuentas whitelisted. Opciones: por fecha
+de alta (más reciente primero), alfabético por banco, por etiqueta. Pendiente con IT en refinement.
+
+---
+
+## Trabajo futuro — v2
+
+* **Colores de marca por banco/fintech en los badges:** cada institución usa su color
+  característico (Galicia → verde, Santander → rojo, Brubank → violeta, Naranja X →
+  naranja, Mercado Pago → azul). El sistema infiere el color automáticamente a partir de
+  `bank_name` / `bank_id` — sin input del operador. No requiere cambios en el modelo de datos.
+  Mejora la identificación visual instantánea con múltiples cuentas.
+
+* **Orden y filtro en Destination Account:** permitir ordenar por banco o etiqueta,
+  y/o filtrar inline cuando el cliente tiene muchas cuentas whitelisted.
+
+* **Backfill de banco para cuentas existentes:** re-validar cuentas ya whitelisted
+  sin banco contra Coinag para completar el dato retroactivamente.
+
+---
+
 ## Tabla de referencia — prefijos CBU
 
 Provista por Operations (Manu Lamensa) como insumo original. A la luz del
@@ -235,6 +337,53 @@ histórica y como fallback en caso de que `bank_name` requiera mapeo para CBUs.
 
 ---
 
+## Wireframe — contenido completo (2026-06-09)
+
+Wireframe generado el 2026-06-09 y **validado por Manu Lamensa (Operations)** en su totalidad.
+Disponible en Slack — DM Producto (mismo hilo). Construido sobre las capturas reales de QA.
+
+### Sección 1 — Alcances 1 · 2 · 3: Modal "Whitelistar Cuenta"
+
+Tres columnas comparativas a partir del modal real de OPS:
+
+| Columna | Qué muestra |
+|---|---|
+| Estado actual | Modal tal como existe hoy: CVU/CBU FOUND sin Banco, sin campo Etiqueta |
+| CBU — banco resuelto | CVU/CBU FOUND + línea Banco al final (divisor sutil) + campo **Etiqueta (opcional)** debajo del bloque |
+| CVU — fintech no resuelta | CVU/CBU FOUND + línea Banco: "No resuelto" + campo **Etiqueta (requerida)** con error + Confirmar deshabilitado |
+
+### Sección 2 — Alcance 4: Edición diferida (detalle de cliente)
+
+Tabla de cuentas whitelisted con columnas: Banco/Fintech · Cuenta (CBU/CVU) · Etiqueta · Acciones.
+Una fila en modo edición inline muestra el input + botones guardar/cancelar.
+Fila sin etiqueta muestra botón "+ Agregar".
+
+*⚠️ Decisión pendiente con IT en refinement — ver Dependencias.*
+
+### Sección 3 — Alcance 5: Basic Transfer (Paso 1 — Create Movement)
+
+Dos columnas antes/después del modal Create Movement en PSP frame real:
+
+| Columna | Destination Account | Panel TO |
+|---|---|---|
+| Antes | CBU + Holder + CUIT. Sin banco, sin etiqueta. | Name, CUIT, Account (CBU). Sin banco. |
+| Después | Badge banco encima del CBU + Etiqueta debajo del CUIT + `← etiqueta del alta` | Name, CUIT, Account (CBU) + Banco. |
+
+**La etiqueta mostrada en Destination Account es exactamente la ingresada por el operador
+al momento del alta (campo Etiqueta de Alcance 3).** No es un badge del sistema.
+
+### Sección 3 — Alcance 5: Basic Transfer (Paso 2 — Confirm Movement)
+
+Dos columnas antes/después del modal Confirm Movement (estructura real confirmada en QA):
+
+| Bloque | Campos | Antes | Después |
+|---|---|---|---|
+| FROM ACCOUNT (rojo) | Client, Tax Number, Account, Current Balance, New Balance | Sin cambio | Sin cambio |
+| TO ACCOUNT (EXTERNAL) (azul) | Holder, CUIT, Account, Account Type (CBU/CVU), Alias | Sin banco | + línea **Banco** al final (tras Alias, divisor sutil) |
+| Transfer Amount | Monto grande en azul | Sin cambio | Sin cambio |
+
+---
+
 ## Referencias
 
 - PWI-46: https://arduasolutions.atlassian.net/browse/PWI-46
@@ -242,6 +391,8 @@ histórica y como fallback en caso de que `bank_name` requiera mapeo para CBUs.
 - Tabla de referencia CBU: `CBU_tabla_bancos-2.docx` (adjunto en hilo, Manu Lamensa, 26/05/2026)
 - Gap de origen: `discoveries/ops-discovery.md` §13 — "Proceso completo de whitelist"
 - Reunión con Manu Lamensa: 2026-06-08 — confirmación de scope y dolor principal
+- Revisión visual modal QA: 2026-06-09 — `ops-qa.arduasolutions.com/clients/{id}`
+- Wireframe completo (5 alcances): DM Producto Slack, 2026-06-09 — modal Whitelistar Cuenta ×3 estados, edición diferida, Basic Transfer antes/después
 - Repo de referencia (read-only): `repositories/core-ops-frontend`
   - `src/views/Clients/ClientDetail.vue` — flujo de whitelisting
   - `src/views/psp/PSPHome.vue` — Basic Transfer, lista de whitelisted y `bank_name` en cuentas externas
