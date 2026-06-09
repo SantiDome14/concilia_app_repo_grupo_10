@@ -1,11 +1,12 @@
 ---
 name: OPS — Whitelist CBU/CVU: identificación de banco y etiquetas
 features: [OPS]
-status: En investigación
+status: Concluida
 owner: Santino Domeniconi
 created_at: 2026-06-04
 updated_at: 2026-06-09
-propagates_to: []
+propagates_to:
+  - features/ops/ops-whitelist-cbu-cvu.md
 ---
 
 # OPS — Whitelist CBU/CVU: identificación de banco y etiquetas
