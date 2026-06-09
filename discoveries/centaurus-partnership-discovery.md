@@ -4,7 +4,7 @@ features: []
 status: En investigacion
 owner: Santino Domeniconi
 created_at: 2026-06-02
-updated_at: 2026-06-02
+updated_at: 2026-06-09
 propagates_to:
   - entities/centaurus.md
   - features/clp/README.md
@@ -65,10 +65,10 @@ Esto valida que el modelo es operativamente viable. La API no inventa un flujo n
 | P-01 | ¿Que producto o servicio de Ardua usan los clientes de Centaurus? | ✅ Respondida — transacciones (FX, pagos, cables) | Entidad contraparte probable: Ardua Solutions Corp |
 | P-02 | ¿Que producto o servicio de Centaurus usan los clientes de Ardua? | ✅ Respondida — compra/venta de activos (acciones, CEDEARs, bonos, FCI) | Instrumentos de mercado de capitales vía ALyC |
 | P-03 | ¿Cual es la entidad de Ardua que firma con Centaurus? | ⏳ Pendiente confirmacion formal | Probable: Ardua Solutions Corp. Restriccion de diseno del marco legal |
-| P-04 | ¿Qué datos puntuales faltan y se piden hoy cuando falta información? | ⏳ Bloqueada en documentos — Facu Arce pasa requisitos de Ardua (por tipo); Santi Ahmed consigue requisitos de Centaurus. El cruce define el gap exacto. | Define exactamente los campos que la API debe exponer |
+| P-04 | ¿Qué datos puntuales faltan y se piden hoy cuando falta información? | ✅ Parcialmente resuelta — documentacion patrimonial de Ardua recibida (PF y PJ). Requisitos de Centaurus disponibles via OBPH. Gap estructural confirmado (ver seccion Analisis del gap actualizada). Pendiente validar campos especificos con IT (economicActivityId) y Legal (P-10). | Define exactamente los campos que la API debe exponer |
 | P-05 | ¿El flujo hoy es principalmente Ardua → Centaurus, o tambien viene gente de Centaurus → Ardua? | ✅ Respondida — flujo dominante es Centaurus → Ardua (~10 clientes/mes) | Etapa 1 es la prioridad de desarrollo |
 | P-06 | ¿El tag Centaurus en Trello referenciadores implica que Compliance no pide documentación adicional? | ✅ Respondida — el tag es el disparador del proceso, no lo elimina. Desde Trello se coordina el pedido de documentación por mail, WhatsApp y posiblemente Slack (canal sin acceso para Nico). | El MVP es reemplazar ese flujo multi-canal disperso, no evitar el pedido de docs. |
-| P-07 | ¿Qué documentación adjunta Centaurus en Trello exactamente? ¿Es siempre el set completo o varía por cliente? | ⏳ Bloqueada — mismos documentos que P-04: Facu Arce (requisitos Ardua) + Santi Ahmed (requisitos Centaurus). | Define si hay gap de datos en el flujo actual |
+| P-07 | ¿Qué documentación adjunta Centaurus en Trello exactamente? ¿Es siempre el set completo o varía por cliente? | ⏳ Bloqueada — pendiente confirmacion de Santi Ahmed. El OBPH describe el proceso de onboarding de Centaurus pero no el set exacto de documentos que adjuntan en el flujo manual de Trello. | Define si hay gap de datos en el flujo actual |
 | P-08 | ¿Los T&C de Ardua con el cliente autorizan compartir datos con terceros como Centaurus? | ✅ Respondida — los T&C no están redactados. Cuando se redacten, el área Legal debe incluir el clause de compartir datos con terceros (qué datos, con quién, con qué fin). Prerequisito bloqueante para escalar la API. | Viabilidad legal del intercambio automatizado vía API |
 | P-09 | ¿Hay contrato firmado entre Ardua y Centaurus, o el acuerdo es informal? | ✅ Respondida — no hay contrato firmado al 2026-06-02. Antecedente: ya se formalizó este tipo de acuerdo con ADCAP (no es un template, es un precedente). El contrato con Centaurus se redacta desde cero cuando corresponda. | Marco contractual necesario antes de operar la API a escala |
 
@@ -78,9 +78,18 @@ Esto valida que el modelo es operativamente viable. La API no inventa un flujo n
 
 ### Etapa 1 — Centaurus manda clientes a Ardua
 
-**Lo que Centaurus captura en su onboarding web (personas fisicas):**
-- Entrada minima: DNI + Email
-- Proceso completo (segun politica de privacidad): nombre, apellido, fecha de nacimiento, nacionalidad, DNI, CUIT/CUIL/CDI/CIE, domicilio completo, estado civil, email, profesion, relacion laboral, condicion ante AFIP, telefono, informacion fiscal
+**Lo que Centaurus tiene del cliente al finalizar su propio onboarding (segun OBPH):**
+- Identidad verificada biometricamente (Motor Biometrico — APPROVED)
+- Screening de compliance pasado (Checkone + OFAC)
+- DNI/CUIL/CUIT + email verificado
+- phoneNumber
+- Domicilios RESIDENTIAL y FISCAL completos
+- Datos laborales: companyName, jobRole, economicActivityId (ARCA)
+- civilStatus
+- Perfil inversor CNV (regulations)
+- Condicion tributaria (taxes)
+- Documentos adjuntos en el paso 6 del wizard (codigos de documento propios de Centaurus)
+- Firma digital DocuSign completada
 
 **Lo que Ardua necesita para abrir legajo en Ardua Solutions Corp:**
 - Imagenes del ID (frente + dorso DNI o frente pasaporte)
@@ -91,17 +100,97 @@ Esto valida que el modelo es operativamente viable. La API no inventa un flujo n
 - World Check + Nosis
 - DJ Origen de Fondos (al cierre)
 
-**Gap**: Centaurus no captura imagenes del ID ni monto estimado en USD. La integracion API debe resolver si Centaurus pasa estos datos o si el cliente los completa directamente en un flujo de AiPrise de Ardua. Para onboarding en PSP/PSAV (Haz Pagos / Circuit Pay) se suma documentacion patrimonial que Centaurus no tiene.
+**Gap Ardua Solutions Corp:**
+- Imagenes del ID: Centaurus las obtiene via Motor Biometrico. Ardua usa AiPrise. Si el KYC de Centaurus es aceptado por Ardua (P-10), este gap se cierra. Si no, el cliente debe repetir el proceso.
+- Monto estimado en USD: Centaurus no captura este dato. Debe completarse por el cliente o derivarse a un flujo adicional.
+- DJ Origen de Fondos: tampoco esta en el OBPH. Requiere accion adicional.
 
-**Para empresas**: Centaurus no tiene onboarding digital publico para juridicas. El flujo es manual — sin API disponible en esta etapa.
+**Gap adicional para Haz Pagos / Circuit Pay (PSP / PSAV):**
+El onboarding en Haz Pagos o Circuit Pay requiere documentacion patrimonial que el OBPH de Centaurus no captura ni expone:
+
+_Persona Fisica_: ultimos 3 recibos de sueldo, facturacion 6 meses (si monotributista), DDJJ Ganancias + Acuse, DDJJ REIBP + Acuse, DDJJ Bienes Personales + Acuse, DDJJ Regularizacion + Acuse, ingresos extraordinarios con documentacion de respaldo segun tipo (contratos de mutuos, compraventa de inmueble, donacion, creditos bancarios).
+
+_Persona Juridica_: EECC legalizados o, en su defecto, facturas emitidas 12 meses, DDJJ IVA anual + Acuses, Acta de Asamblea con Aumento de Capital, Creditos Bancarios, Contratos de Mutuos, Certificacion Contable legalizada.
+
+Este gap no tiene resolucion tecnica via API — el cliente debe proveer estos documentos por fuera del flujo de integracion con Centaurus. Implica que la Etapa 1 solo puede habilitar el alta en Ardua Solutions Corp de forma automatizada; Haz Pagos y Circuit Pay requieren un paso manual adicional.
+
+**Para empresas**: Centaurus no tiene onboarding digital para juridicas (confirmado — OBPH es exclusivo PF). Etapa 1 para PJ sin API disponible.
 
 ### Etapa 2 — Ardua manda clientes a Centaurus
 
-**Lo que Ardua captura y coincide con lo que Centaurus necesita:**
-- Nombre, apellido, fecha de nacimiento, DNI, CUIT/CUIL (template LOCAL KYC), domicilio, profesion, email
+**Lo que Ardua captura y coincide con lo que Centaurus necesita (segun OBPH):**
+- Nombre, apellido, fecha de nacimiento, DNI, CUIT/CUIL (template LOCAL KYC)
+- Domicilio (Ardua lo tiene; Centaurus requiere RESIDENTIAL y FISCAL separados con campos especificos)
+- Email
 
-**Gap normativo critico (no opcional):**
-- **Perfil inversor CNV**: Centaurus como ALyC esta obligada a confeccionar el perfil inversor de cada cliente (tolerancia al riesgo, horizonte temporal, experiencia inversora, objetivos). Ardua no captura esto en ningun template. Es un gap normativo — no se puede omitir ni delegar.
+**Gaps confirmados (segun OBPH):**
+
+| Campo OBPH | Estado en Ardua | Severidad |
+|---|---|---|
+| `phoneNumber` | Probablemente capturado — validar con IT | Baja |
+| `economicActivityId` (ID AFIP numerico) | Ardua captura profesion en texto libre — sin mapeo a IDs AFIP | Media — requiere tabla de mapeo o flujo hibrido |
+| `civilStatus` (enum: SINGLE, MARRIED, DIVORCED, WIDOWED, CIVIL_UNION) | Ardua no captura estado civil en ningun template actual | Media |
+| `regulations` (perfil inversor CNV) | Ardua no captura esto en ningun template. Obligatorio por normativa CNV para ALyC | **Alta — gap normativo critico. No se puede omitir ni delegar** |
+| `taxes` (taxId + conditionId — IDs numericos) | Ardua captura condicion AFIP pero con diferente granularidad | Media |
+| `notificationSources` | Ardua no captura esto | Baja |
+| Documentos paso 6 (codigos propios de Centaurus) | Ardua tiene docs en AiPrise — los codigos de Centaurus pueden no coincidir | Media — requiere mapeo de codigos |
+
+**Gap normativo critico (sin cambios):**
+- **Perfil inversor CNV** (`regulations`): Centaurus como ALyC esta obligada a confeccionar el perfil inversor de cada cliente. Ardua no captura esto. Es un gap normativo — no se puede omitir ni delegar. La solucion mas probable es un flujo hibrido donde el cliente completa este paso directamente en la plataforma de Centaurus (ver P-12).
+
+| P-10 | ¿El KYC biometrico de Centaurus (Motor Biometrico + Checkone + OFAC) puede ser aceptado por Ardua como evidencia suficiente de identidad para el alta en Ardua Solutions Corp, evitando repetir AiPrise? | ⏳ Pendiente — requiere validacion Legal y evaluacion tecnica IT | Cambia el diseno de Etapa 1: si aplica, Ardua recibe la referencia del KYC validado en lugar de los documentos crudos |
+| P-11 | ¿El campo `economicActivityId` de Centaurus corresponde al catalogo AFIP estandar? ¿Es posible mapear el campo de profesion/ocupacion de Ardua a ese ID? | ⏳ Pendiente — requiere confirmacion tecnica IT y validacion con Centaurus | Gap de Etapa 2. Si no hay mapeo automatico, el cliente debe completar este campo en un flujo hibrido |
+| P-12 | ¿El campo `regulations` (perfil inversor CNV, paso 4 del wizard de Centaurus) puede ser completado por el cliente en un flujo especifico, o Ardua debe capturarlo en su proceso antes de enviarlo? | ⏳ Pendiente — diseno de flujo a definir | Gap normativo critico de Etapa 2. Centaurus esta obligada como ALyC a contar con este dato — no es opcional |
+| P-13 | ¿El OBPH recibido cubre el scope completo de la API de integracion de Centaurus para PF, o hay endpoints adicionales no documentados (ej: consulta de estado, actualizacion de datos)? | ⏳ Pendiente — validar con equipo Centaurus | Define si el analisis de Etapa 2 esta completo o hay gaps de documentacion |
+
+---
+
+## Documentacion tecnica OBPH (API Centaurus — Persona Humana)
+
+Fuente: documento "OBPH — Documentacion de Integracion", Centaurus Securities, junio 2026. Confidencial — solo para uso del equipo integrador.
+
+### Alcance del OBPH
+
+El OBPH (Onboarding Persona Humana) es el proceso de alta de personas fisicas para cuentas de inversion en Centaurus. Cubre:
+- Cuentas unipersonales (un TITULAR)
+- Cuentas conjuntas (TITULAR + uno o mas COTITULARES)
+
+**Personas juridicas: fuera de scope.** El OBPH no cubre onboarding de empresas. Confirmado — PJ sin API disponible en esta fase para ambas etapas.
+
+### Flujo principal (4 etapas)
+
+**Etapa 1 — Solicitud de Cuenta**
+Registro inicial. Datos minimos: documentType (DNI | CUIL | CUIT), documentNumber, email, condominio (TITULAR | COTITULAR). El sistema detecta si el email ya esta verificado y redirige al estado correcto del wizard.
+
+**Etapa 2 — Compliance**
+Ejecutada por Centaurus de forma automatica e independiente:
+- Verificacion de email (link con redireccion segun estado)
+- KYC biometrico via Motor Biometrico (estados: NOT_STARTED, IN_PROGRESS, APPROVED, DECLINED, IN_REVIEW, EXPIRED, ABANDONED, KYC_EXPIRED)
+- Checkone (screening de compliance)
+- OFAC (screening de sanciones internacionales)
+
+**Etapa 3 — Wizard de Onboarding (6 pasos)**
+Protegido por WizardSession (TTL 24 horas; datos persisten 28 dias).
+
+| Paso (backend) | Paso (UI) | Datos recolectados |
+|---|---|---|
+| Paso 1 | Paso 1 | phoneNumber, domicilios RESIDENTIAL y FISCAL (country, province, city, street, streetNumber, postalCode) |
+| Paso 2 | Paso 2 | companyName, jobRole, economicActivityId (ID AFIP numerico), direccion laboral opcional |
+| Paso 3 | Paso 3 | civilStatus (SINGLE | MARRIED | DIVORCED | WIDOWED | CIVIL_UNION), datos del conyuge opcionales |
+| Paso 4 | Paso 5 | regulations (perfil inversor CNV — array de regulationId + additionalInfo) |
+| Paso 5 | Paso 4 | taxes (taxId + conditionId), notificationSources |
+| Paso 6 | Paso 6 | Documentos adjuntos via multipart/form-data (nombre de archivo = codigo de documento, ej: BUREAU.pdf) |
+
+Nota: el paso 4 del backend se presenta como paso 5 al usuario, y el paso 5 del backend como paso 4. El orden en UI no coincide con el orden en la API.
+
+**Etapa 4 — Finalizacion, Firma y Aprobacion**
+Sincronizacion de datos → finalizacion del onboarding → firma digital via DocuSign → aprobacion interna.
+
+### Estados de la solicitud
+
+`IN_PROGRESS` → `SIGNATURE_PENDING` → `APPROVAL_PENDING` → `APPROVED`
+
+La aprobacion final (APPROVAL_PENDING → APPROVED) es interna de Centaurus. No requiere accion del integrador.
 
 ---
 
@@ -158,6 +247,14 @@ La integracion con Centaurus implicaria un tercer canal o la extension de uno de
 | 2026-06-02 | El modelo del partnership no es de clientes compartidos ni legajo compartido — es intercambio de datos de onboarding para habilitar acceso a los servicios de cada plataforma | Reframe completo del modelo. Impacta el scope de ambos REQs |
 | 2026-06-02 | Centaurus ya tiene una API disponible. Ardua debe adaptarse a su documentacion para la Etapa 2 | Etapa 2: Ardua se integra a la API existente de Centaurus |
 | 2026-06-02 | REQs formalizados en Jira: PWI-69 (Etapa 1) y PWI-70 (Etapa 2) | Primera formalizacion del scope en Jira |
+| 2026-06-09 | Documentacion tecnica OBPH recibida de Centaurus. El proceso de onboarding PF consta de 4 etapas: Solicitud de Cuenta, Compliance (email + KYC + Checkone + OFAC), Wizard (6 pasos), Finalizacion + DocuSign | Bloqueante de documentacion API para PWI-70 (Etapa 2) parcialmente resuelto |
+| 2026-06-09 | Centaurus ejecuta KYC biometrico propio (Motor Biometrico) + Checkone + OFAC como parte de su flujo de compliance. Resultado disponible via webhook | Abre P-10: sub-hipotesis de identidad portable. Podria eliminar el gap de imagenes de ID en Etapa 1 si Legal y IT validan |
+| 2026-06-09 | El OBPH es exclusivo para personas fisicas. Personas juridicas sin onboarding digital en Centaurus — confirmado | Scope de ambas etapas limitado a PF en esta fase. PJ queda fuera de la integracion API |
+| 2026-06-09 | Gap Etapa 2 confirmado: `economicActivityId` usa IDs numericos AFIP. Ardua captura profesion en texto libre | Requiere tabla de mapeo o flujo hibrido de completado. Pendiente validacion IT |
+| 2026-06-09 | Gap Etapa 2 confirmado: `regulations` (perfil inversor CNV) es el paso 4 del wizard — obligatorio por normativa CNV para ALyC. Ardua no captura este dato en ningun template | Gap normativo sin resolucion actual. Solucion probable: flujo hibrido donde el cliente completa este paso en Centaurus (P-12) |
+| 2026-06-09 | Gap Etapa 2 confirmado: `civilStatus`, `taxes` (IDs numericos), `notificationSources` — campos del wizard que Ardua no captura o captura con diferente granularidad | Afectan la completitud del payload que Ardua puede enviar en Etapa 2 |
+| 2026-06-09 | Documentacion patrimonial Ardua recibida (PF y PJ). Confirmado: Centaurus no captura esta documentacion en su OBPH | Gap de Etapa 1 para onboarding en Haz Pagos / Circuit Pay. El cliente debe proveer estos docs por fuera del flujo API — sin solucion tecnica via integracion |
+| 2026-06-09 | La aprobacion final en Centaurus (APPROVAL_PENDING → APPROVED) es interna. El integrador no la controla — solo puede observar el estado via la API | Para Etapa 2 Ardua necesita poder consultar el estado del cliente en Centaurus (P-13) |
 
 ---
 

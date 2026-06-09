@@ -92,7 +92,7 @@ Hipótesis sobre sistemas técnicos transversales (observabilidad, gateways, int
 |---|---|---|---|---|
 | [`prime-desk-rfq-gateway-discovery.md`](./prime-desk-rfq-gateway-discovery.md) | Prime Desk RFQ Gateway · Discovery Document | Concluida | Yasmani Rodriguez | 2026-06-09 |
 | [`aiprise-liveness-check-discovery.md`](./aiprise-liveness-check-discovery.md) | AiPrise — Almacenamiento de video de liveness check en S3 | En investigación | Santino Domeniconi | 2026-06-02 |
-| [`centaurus-partnership-discovery.md`](./centaurus-partnership-discovery.md) | Centaurus — Partnership e integración API bidireccional de onboarding | En investigación | Santino Domeniconi | 2026-06-02 |
+| [`centaurus-partnership-discovery.md`](./centaurus-partnership-discovery.md) | Centaurus — Partnership e integración API bidireccional de onboarding | En investigación | Santino Domeniconi | 2026-06-09 |
 | [`hubspot-integration-discovery.md`](./hubspot-integration-discovery.md) | HubSpot — Relevamiento de plataforma e integraciones con el core | En investigación | Yasmani Rodriguez | 2026-05-05 |
 | [`observabilidad-discovery.md`](./observabilidad-discovery.md) | Observabilidad — Living Discovery Document | En investigación | Yasmani Rodriguez | 2026-04-17 |
 | [`haz-pagos-sitio-web-discovery.md`](./haz-pagos-sitio-web-discovery.md) | Haz Pagos — Sitio web publico y su rol regulatorio (BCRA) | Concluida | Santino Domeniconi | 2026-06-11 |
