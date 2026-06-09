@@ -88,10 +88,10 @@ Hipótesis sobre sistemas técnicos transversales (observabilidad, gateways, int
 
 | Archivo | Nombre | Estado | Owner | Última act. |
 |---|---|---|---|---|
+| [`prime-desk-rfq-gateway-discovery.md`](./prime-desk-rfq-gateway-discovery.md) | Prime Desk RFQ Gateway · Discovery Document | Concluida | Yasmani Rodriguez | 2026-06-09 |
 | [`aiprise-liveness-check-discovery.md`](./aiprise-liveness-check-discovery.md) | AiPrise — Almacenamiento de video de liveness check en S3 | En investigación | Santino Domeniconi | 2026-06-02 |
 | [`hubspot-integration-discovery.md`](./hubspot-integration-discovery.md) | HubSpot — Relevamiento de plataforma e integraciones con el core | En investigación | Yasmani Rodriguez | 2026-05-05 |
 | [`observabilidad-discovery.md`](./observabilidad-discovery.md) | Observabilidad — Living Discovery Document | En investigación | Yasmani Rodriguez | 2026-04-17 |
-| [`prime-desk-rfq-gateway-discovery.md`](./prime-desk-rfq-gateway-discovery.md) | Prime Desk RFQ Gateway · Discovery Document | Concluida | Yasmani Rodriguez | 2026-04-10 |
 
 ---
 

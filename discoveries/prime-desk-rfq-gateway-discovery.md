@@ -4,7 +4,7 @@ features: [TRD, CLP]
 status: Concluida
 owner: Yasmani Rodriguez
 created_at: 2026-04-30
-updated_at: 2026-04-10
+updated_at: 2026-06-09
 ---
 
 # Prime Desk RFQ · Discovery Document
@@ -27,15 +27,18 @@ Este documento consolida el entendimiento actual del sistema Prime Desk RFQ Gate
 
 ## 2. Familia de requerimientos — Prime Desk RFQ
 
-| Ticket     | Nombre                                                 | Capa                       | Estado en Jira                                           |
-| ---------- | ------------------------------------------------------ | -------------------------- | -------------------------------------------------------- |
-| **REQ-8**  | Prime Desk RFQ — Solicitud de Cotización (CLP)         | Web App / cliente          | **Ready for Dev** ✅                                     |
-| **REQ-9**  | Prime Desk RFQ — Panel de Gestión Mesa (TRD)           | Panel operacional / Mesa   | **Ready for Dev** ✅                                     |
-| **REQ-30** | Prime Desk RFQ — Motor de Precio y Liquidez (APE)      | Motor de precio y liquidez | **Ready for Dev** ✅                                     |
-| **REQ-31** | Prime Desk RFQ — Orquestador de Cotizaciones (RFQ API) | Capa de orquestación       | **Ready for Dev** ✅                                     |
-| **REQ-33** | Prime Desk RFQ — Centro de Notificaciones (TRD)        | Módulo transversal TRD     | **In Review** — prototipo v1 listo, pendiente validación |
+> **Nota de nomenclatura (2026-06-09):** la familia se creó originalmente en el proyecto REQ (deprecado). Los tickets vigentes viven en PWI. Mapeo: REQ-8→PWI-31, REQ-9→PWI-30, REQ-30→PWI-26, REQ-31→PWI-11, REQ-33→PWI-34. El resto de este documento conserva la nomenclatura REQ-N como registro histórico de la sesión de discovery.
 
-**Dependencias:** REQ-8 y REQ-9 dependen de REQ-31 (RFQ API) y REQ-30 (APE). REQ-33 es independiente del flujo RFQ pero hereda los 4 tipos de alerta definidos en REQ-9.
+| Ticket     | Nombre                                                 | Capa                       | Estado en Jira (2026-06-09)  |
+| ---------- | ------------------------------------------------------ | -------------------------- | ---------------------------- |
+| **PWI-31** | Prime Desk RFQ — Solicitud de Cotización (CLP)         | Web App / cliente          | Blocked                      |
+| **PWI-30** | Prime Desk RFQ — Panel de Gestión Mesa (TRD)           | Panel operacional / Mesa   | In Development               |
+| **PWI-26** | Prime Desk RFQ — Motor de Precio y Liquidez (APE)      | Motor de precio y liquidez | Ready for Dev                |
+| **PWI-11** | Prime Desk RFQ — Orquestador de Cotizaciones (RFQ API) | Capa de orquestación       | Blocked                      |
+| **PWI-34** | Prime Desk RFQ — Centro de Notificaciones (TRD)        | Módulo transversal TRD     | Blocked                      |
+| **PWI-80** | Prime Desk RFQ — Cálculo de Exposición con Conversión Multi-Asset (APE) | Motor (APE) | In Analysis 🆕               |
+
+**Dependencias:** CLP (PWI-31) y TRD Panel (PWI-30) dependen de RFQ API (PWI-11) y APE (PWI-26). Notificaciones (PWI-34) es independiente del flujo RFQ pero hereda los 4 tipos de alerta definidos en el panel TRD. PWI-80 depende de la infraestructura de price providers del APE (PWI-26) y aporta la 5ª alerta al Centro de Notificaciones (PWI-34).
 
 **Pendiente sin ticket:** Admin BFF — capa de autorización entre TRD y APE. Pendiente de decisión sobre si crear REQ propio o foldearlo en REQ-30.
 
@@ -109,6 +112,15 @@ MESA → TRD (REQ-9 + REQ-33) → ADMIN BFF → APE
 - Precedencia: CLIENT > GROUP > UNDEFINED
 - BPS se aplica por price_line, no sobre el total
 - `max_open_exposure`: límite configurado | `current_open_exposure`: en tiempo real desde TRD
+
+### Conversión multi-asset para exposición (PWI-80)
+
+- La exposición se calcula sumando las reservas activas del cliente, cada una convertida al asset de referencia. Ese total es lo que la RFQ API compara contra `max_open_exposure` para decidir el rechazo por `EXPOSURE_LIMIT_EXCEEDED`.
+- Modo de conversión por asset: **fija** (valor manual, assets estables) o **feed** (en vivo, fiat volátil — ARS, BRL —, reutilizando los price providers del PPS).
+- El modo feed admite una **tasa manual de respaldo** opcional; el motor la usa si el feed está stale o caído al calcular exposición.
+- Asset operado **sin tasa configurada**: la operación procede (no se bloquea) pero el motor **genera una alerta** — se elimina el fallback silencioso a 1.0 del SRS, que para fiat volátil medía exposición con error severo.
+- La alerta de asset sin tasa se incorpora como **5ª alerta** del Centro de Notificaciones (PWI-34), sobre su arquitectura extensible de tabs.
+- **Sin UI en V1:** la configuración de tasas existe como insumo del sistema, consumible por el cálculo; la gestión visual por la Mesa se difiere a iteración futura.
 
 ---
 
@@ -218,3 +230,6 @@ Prototipo base de TRD (REQ-9 v5). Todos los módulos funcionales: Quotes, RFQ Lo
 | CTA de notificación navega al recurso         | "Fondear lote" / "Ver lote" abren directamente el lote afectado en RFQ. 13/04/2026.                                           |
 | Sección "Quotes" (no "Transactions") en CLP   | Historial unificado RFQ + OTC. 13/04/2026.                                                                                    |
 | Dashboard CLP diferido                        | Iniciativa separada futura. 13/04/2026.                                                                                       |
+| SRS no se propaga a `features/`               | El SRS contiene el *cómo* (contratos de API, modelo de datos, invariantes) — ownership de Tecnología. No se versiona en `features/` por decisión deliberada, no es un leak de propagación. 09/06/2026. |
+| Config del motor sin UI en V1 (PWI-80)        | La capacidad es que la configuración de tasas exista como insumo consumible por el sistema; la gestión visual por la Mesa se difiere a iteración futura. 09/06/2026. |
+| Exposición multi-asset: fija/feed/respaldo (PWI-80) | Disparador: la definición del cálculo de límite de exposición. Tasas fija (estables) o feed (fiat volátil, reusa PPS) + respaldo manual. Asset sin tasa → 5ª alerta del Centro de Notificaciones, sin fallback silencioso. 09/06/2026. |
