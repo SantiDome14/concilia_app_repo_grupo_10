@@ -8,64 +8,176 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "4a7f54cf-8ffd-4558-b2a4-a56e2ac1f48c",
       "name": "Trigger — Slack Actions",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -896,
-        80
+        144,
+        768
       ],
-      "webhookId": "miles-slack-actions"
+      "webhookId": "miles-slack-actions",
+      "id": "c41bfaca-7802-4050-b27b-8c173121f5b7"
     },
     {
       "parameters": {
         "respondWith": "noData",
         "options": {}
       },
-      "id": "8a187986-c54c-4096-8ba5-ec370b13a15b",
       "name": "Respond — Ack",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
-        -688,
-        80
-      ]
+        352,
+        768
+      ],
+      "id": "e6496766-5477-4d60-a5d7-82ee45a6380f"
     },
     {
       "parameters": {
-        "jsCode": "// ============================================================================\n// miles-slack-actions-router · Parse & Classify Action\n// ----------------------------------------------------------------------------\n// Router (dispatcher) de la Interactivity API de Slack. Endpoint: /slack-actions\n// (configurado como Interactivity Request URL del Slack App de Miles).\n//\n// A diferencia de la Events API, Slack envia las interacciones como\n// application/x-www-form-urlencoded con un campo `payload` que es un JSON\n// stringificado. Hay que JSON.parse(decodeURIComponent(payload)) para leerlo.\n//\n// RESPONSABILIDAD UNICA: leer el discriminador y rutear. NO procesa negocio.\n// El payload crudo se reenvia tal cual al handler que corresponda (passthrough),\n// para que el parseo existente de cada handler siga funcionando sin cambios.\n//\n// Discriminadores soportados:\n//   callback_id.startsWith('req_approval')  -> 'approval'  (formato legacy attachments)\n//   (todo lo demas)                         -> 'unknown'   -> noOp\n//\n// A medida que Miles sume interacciones (modales, otros botones), se agregan\n// ramas nuevas aca + en el Switch, sin tocar los handlers existentes.\n// ============================================================================\n\nconst body = $json.body || {};\n\n// El payload puede venir como string (form field `payload`) o ya como objeto.\nconst raw = body.payload || body || '';\nlet payload;\ntry {\n  payload = typeof raw === 'string' ? JSON.parse(decodeURIComponent(raw)) : raw;\n} catch (e) {\n  // Si no parsea, no rompemos: clasificamos como unknown y dejamos traza.\n  return [{ json: { action_type: 'unknown', _reason: 'parse_error', _raw: String(raw).slice(0, 500) } }];\n}\n\nconst payloadType = payload.type || '';                 // 'interactive_message' (legacy) | 'block_actions' | 'view_submission' ...\nconst callbackId  = payload.callback_id || '';          // legacy attachments\nconst actionId    = (payload.actions && payload.actions[0] && payload.actions[0].action_id) || ''; // block kit moderno\n\n// --- Clasificacion ----------------------------------------------------------\n// Aprobacion de REQ: callback_id `req_approval_*` (legacy). Tambien contemplamos\n// un eventual action_id `req_approval*` por si se migra a Block Kit en el futuro.\nconst isApproval = callbackId.startsWith('req_approval') || actionId.startsWith('req_approval');\n\nif (isApproval) {\n  // Passthrough: reenviamos el payload CRUDO (string original) para que el\n  // approval-handler lo parsee como siempre. Si vino como string lo mandamos\n  // tal cual; si vino objeto, lo re-stringificamos.\n  const rawPayloadString = typeof raw === 'string' ? raw : JSON.stringify(raw);\n  return [{ json: {\n    action_type: 'approval',\n    raw_payload: rawPayloadString,\n    callback_id: callbackId,\n  }}];\n}\n\n// --- Sin match -> unknown (noOp). No hacemos nada, pero dejamos traza. -------\nreturn [{ json: {\n  action_type: 'unknown',\n  _reason: 'no_match',\n  payload_type: payloadType,\n  callback_id: callbackId,\n  action_id: actionId,\n}}];"
+        "jsCode": "\n// ============================================================================\n// miles-slack-actions-router · Parse & Classify Action  (hardened)\n// ----------------------------------------------------------------------------\n// Slack manda interacciones como application/x-www-form-urlencoded con un campo\n// `payload` = JSON stringificado. Tolera: (a) body={payload:'<json>'},\n// (b) body='payload=<urlencoded>', (c) body={payload:{obj}}.\n// ============================================================================\n// 🧪 TESTING — Impersonar el usuario que toma. null en produccion.\n const IMPERSONATE = null;\n// const IMPERSONATE = 'D0AEU6S8ES0';\n\nconst body = $json.body !== undefined ? $json.body : $json;\n\nlet payloadRaw;\nif (body && typeof body === 'object' && 'payload' in body) {\n  payloadRaw = body.payload;\n} else if (typeof body === 'string') {\n  const m = body.match(/(?:^|&)payload=([^&]*)/);\n  payloadRaw = m ? decodeURIComponent(m[1].replace(/\\+/g, ' ')) : body;\n} else {\n  payloadRaw = body;\n}\n\nlet payload;\nif (payloadRaw && typeof payloadRaw === 'object') {\n  payload = payloadRaw;\n} else if (typeof payloadRaw === 'string') {\n  try { payload = JSON.parse(payloadRaw); }\n  catch (e1) {\n    try { payload = JSON.parse(decodeURIComponent(payloadRaw.replace(/\\+/g, ' '))); }\n    catch (e2) {\n      return [{ json: { action_type:'unknown', _reason:'parse_error',\n        _bodyType: typeof body, _rawType: typeof payloadRaw,\n        _raw: String(payloadRaw).slice(0, 400) } }];\n    }\n  }\n} else {\n  return [{ json: { action_type:'unknown', _reason:'no_payload',\n    _bodyType: typeof body, _bodyKeys: (body && typeof body==='object') ? Object.keys(body) : null } }];\n}\n\nconst payloadType = payload.type || '';\nconst callbackId  = payload.callback_id || '';\nconst action      = (payload.actions && payload.actions[0]) || {};\nconst actionId    = action.action_id || '';\nconst userId      = (payload.user && payload.user.id) || '';\nconst triggerId   = payload.trigger_id || '';\nconst responseUrl = payload.response_url || '';\n\n// --- Approval (legacy passthrough) ---\nif (callbackId.startsWith('req_approval') || actionId.startsWith('req_approval')) {\n  const rawPayloadString = typeof payloadRaw === 'string' ? payloadRaw : JSON.stringify(payloadRaw);\n  return [{ json: { action_type:'approval', raw_payload:rawPayloadString, callback_id:callbackId } }];\n}\n\n// --- view_submission del modal de asignacion ---\nif (payloadType === 'view_submission' && (payload.view && payload.view.callback_id === 'assign_modal')) {\n  const view = payload.view || {};\n  let issueKey = '';\n  try { issueKey = JSON.parse(view.private_metadata || '{}').issueKey || ''; } catch (e) {}\n  let jiraId = '';\n  try { jiraId = view.state.values.assignee_block.assignee_select.selected_option.value || ''; } catch (e) {}\n  return [{ json: { action_type:'assign_submit', userId, issueKey, jiraId } }];\n}\n\n// --- block_actions ---\nif (payloadType === 'block_actions') {\n  // Pseudo-tab de las vistas tecnicas: home_tab_<fase> -> refresca el Home con esa fase.\n  if (/^home_tab_/.test(actionId)) {\n    const tab = (action.value || actionId.replace(/^home_tab_/, '') || '').toLowerCase();\n    return [{ json: { action_type:'home_tab', userId: IMPERSONATE || userId, tab } }];\n  }\n  if (/^self_assign_/.test(actionId)) {\n    return [{ json: { action_type:'self_assign', userId: IMPERSONATE || userId, issueKey: action.value || actionId.replace(/^self_assign_/,''), responseUrl } }];\n  }\n  if (/^open_assign_/.test(actionId)) {\n    return [{ json: { action_type:'open_assign', userId, issueKey: action.value || actionId.replace(/^open_assign_/,''), triggerId } }];\n  }\n}\n\nreturn [{ json: { action_type:'unknown', _reason:'no_match', payload_type:payloadType, callback_id:callbackId, action_id:actionId } }];\n"
       },
-      "id": "604bbf25-1175-4f7b-a19a-d65bdd87ffbe",
       "name": "Parse & Classify Action",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -464,
-        80
-      ]
+        576,
+        768
+      ],
+      "id": "9e216879-3777-45bb-8d13-c9065325879c"
     },
     {
       "parameters": {
-        "dataType": "string",
-        "value1": "={{ $json.action_type }}",
         "rules": {
-          "rules": [
+          "values": [
             {
-              "value2": "approval"
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action_type }}",
+                    "rightValue": "approval",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "approval"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action_type }}",
+                    "rightValue": "self_assign",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "self_assign"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action_type }}",
+                    "rightValue": "open_assign",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "open_assign"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action_type }}",
+                    "rightValue": "assign_submit",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "assign_submit"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action_type }}",
+                    "rightValue": "home_tab",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "home_tab"
             }
           ]
         },
-        "fallbackOutput": 1
+        "options": {
+          "fallbackOutput": "extra"
+        }
       },
-      "id": "e5dc5100-cd32-41c0-a19b-69ae064a4c75",
       "name": "Switch — Action Type",
       "type": "n8n-nodes-base.switch",
-      "typeVersion": 1,
+      "typeVersion": 3.2,
       "position": [
-        -240,
-        80
-      ]
+        800,
+        768
+      ],
+      "id": "f2cf78cc-c49c-446f-91bd-f35cee173ca3"
     },
     {
       "parameters": {
@@ -76,25 +188,383 @@
         "jsonBody": "={{ JSON.stringify({ payload: $json.raw_payload }) }}",
         "options": {}
       },
-      "id": "b5f43d45-eda5-4c41-a501-9d7e41633b03",
       "name": "Forward — Approval",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -16,
-        -64
-      ]
+        1120,
+        528
+      ],
+      "id": "d147226b-adda-40f1-b30d-0f3a21677e3d"
     },
     {
       "parameters": {},
-      "id": "42a1cd85-ed10-4b52-818c-b02af4ac6726",
       "name": "Ignore",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        16,
-        176
-      ]
+        1136,
+        1344
+      ],
+      "id": "34fe7ef4-2d99-4a2c-b729-ec40f68b0aa8"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/databases/376e8880-def6-805c-bd88-fc5b2c6765f0/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Notion-Version",
+              "value": "2022-06-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ filter: { property: 'Slack ID', rich_text: { equals: $json.userId } }, page_size: 1 }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "name": "Resolve Jira ID",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1120,
+        736
+      ],
+      "id": "5e9d591b-8753-4bf5-9549-c72125eb38fd",
+      "credentials": {
+        "notionApi": {
+          "id": "aldMlehkPJEZ6AqY",
+          "name": "Notion-API-Miles"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const notion = $json || {};\nconst page = (notion.results || [])[0];\nlet jiraId = '';\ntry { jiraId = page.properties['Jira ID'].rich_text[0].plain_text.trim(); } catch (e) { jiraId=''; }\nconst p = $('Parse & Classify Action').first().json;\nconst issueKey = p.issueKey || '';\nconst userId = p.userId || '';\nconst responseUrl = p.responseUrl || '';\nif (!jiraId) return [{ json:{ _ok:false, _reason:'sin Jira ID en Stakeholders', userId, issueKey, responseUrl } }];\nif (!issueKey) return [{ json:{ _ok:false, _reason:'sin issueKey', userId, responseUrl } }];\nreturn [{ json:{ _ok:true, userId, issueKey, jiraId, responseUrl,\n  workitems_body:{ operation:'update', issueKey, fields:{ assignee:{ accountId: jiraId } } } } }];\n"
+      },
+      "name": "Build Assign Call",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        736
+      ],
+      "id": "77452522-4240-4115-b784-bc39ff6ce835"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.arduasolutions.com/webhook/jira-work-items",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.workitems_body) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "name": "Assign in Jira",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1568,
+        736
+      ],
+      "id": "5afa6643-d7ff-4daa-9374-f3db479ceda8",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Refresh FINAL: republica el Home sin 'taking' (reacomoda el ticket).\nconst IMPERSONATE = null;\nconst PUBLISH_AS = null;\nconst p = $('Parse & Classify Action').first().json;\nconst user = IMPERSONATE || p.userId || '';\nconst ev = { type:'app_home_opened', user };\nif (PUBLISH_AS) ev.publish_as = PUBLISH_AS;\nreturn [{ json:{ synthetic:{ event: ev } } }];\n"
+      },
+      "name": "Build Refresh (Self)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2224,
+        736
+      ],
+      "id": "40ed0df2-5a80-4e6a-af37-8e981c42fb88"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.arduasolutions.com/webhook/slack-events",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.synthetic) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "name": "Refresh Home (Self)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2448,
+        736
+      ],
+      "id": "56d0168c-9765-4805-89c8-42abf49aa058",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/databases/376e8880-def6-805c-bd88-fc5b2c6765f0/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Notion-Version",
+              "value": "2022-06-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ filter: { property: 'Jira ID', rich_text: { is_not_empty: true } }, page_size: 100 }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "name": "Fetch Stakeholders",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1120,
+        928
+      ],
+      "id": "ad3b0d2a-0e72-498d-b615-a38033178f10",
+      "credentials": {
+        "notionApi": {
+          "id": "aldMlehkPJEZ6AqY",
+          "name": "Notion-API-Miles"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const p = $('Parse & Classify Action').first().json;\nconst issueKey = p.issueKey || '';\nconst triggerId = p.triggerId || '';\nconst results = ($json && $json.results) || [];\nconst options = [];\nfor (const page of results) {\n  try {\n    const pr = page.properties || {};\n    const name = pr['Name'].title[0].plain_text;\n    const jiraId = pr['Jira ID'].rich_text[0].plain_text;\n    if (name && jiraId) options.push({ text:{ type:'plain_text', text:name.slice(0,75) }, value:jiraId });\n  } catch (e) {}\n}\nconst opts = options.slice(0,100);\nconst view = {\n  type:'modal', callback_id:'assign_modal', private_metadata: JSON.stringify({ issueKey }),\n  title:{ type:'plain_text', text:('Asignar '+issueKey).slice(0,24) },\n  submit:{ type:'plain_text', text:'Guardar' }, close:{ type:'plain_text', text:'Cancelar' },\n  blocks:[{ type:'input', block_id:'assignee_block', label:{ type:'plain_text', text:'Responsable' },\n    element:{ type:'static_select', action_id:'assignee_select',\n      placeholder:{ type:'plain_text', text:'Elegí a quién asignar' },\n      options: opts.length ? opts : [{ text:{type:'plain_text',text:'(sin candidatos con Jira ID)'}, value:'none' }] } }]\n};\nreturn [{ json:{ trigger_id:triggerId, view } }];\n"
+      },
+      "name": "Build Modal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        928
+      ],
+      "id": "2ad040c7-4c74-43ab-8cc2-965702d111da"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/views.open",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ trigger_id: $json.trigger_id, view: $json.view }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "name": "Open Modal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1568,
+        928
+      ],
+      "id": "4ceb271c-f1e6-434a-9a32-0c839023ecd5",
+      "credentials": {
+        "slackApi": {
+          "id": "BCycvSbTaX6nUIo1",
+          "name": "Slack-API-Miles"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $json;\nconst jiraId = j.jiraId || '';\nconst issueKey = j.issueKey || '';\nconst userId = j.userId || '';\nif (!jiraId || jiraId==='none' || !issueKey) return [{ json:{ _ok:false, _reason:'falta jiraId/issueKey', userId, issueKey } }];\nreturn [{ json:{ _ok:true, userId, issueKey, jiraId,\n  workitems_body:{ operation:'update', issueKey, fields:{ assignee:{ accountId: jiraId } } } } }];\n"
+      },
+      "name": "Build Assign (Modal)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        1136
+      ],
+      "id": "43f3da4f-6592-45fd-81c4-9a4fb8a4da98"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.arduasolutions.com/webhook/jira-work-items",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.workitems_body) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "name": "Assign in Jira (Modal)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1344,
+        1136
+      ],
+      "id": "bed8ca12-3e19-4a6a-a8e1-9a79923f60d3",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const userId=$('Parse & Classify Action').first().json.userId||'';\nreturn [{ json:{ synthetic:{ event:{ type:'app_home_opened', user:userId } } } }];\n"
+      },
+      "name": "Build Refresh (Modal)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        1136
+      ],
+      "id": "38d8d208-4926-4a6d-9a03-24cd915f76cf"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.arduasolutions.com/webhook/slack-events",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.synthetic) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "name": "Refresh Home (Modal)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1792,
+        1136
+      ],
+      "id": "f3d2579d-218e-41d3-8c69-48006e4a7170",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Refresh OPTIMISTA: republica el Home con la card en 'Tomando…'.\nconst IMPERSONATE = null;\nconst PUBLISH_AS = null\nconst p = $('Parse & Classify Action').first().json;\nconst user = IMPERSONATE || p.userId || '';\nconst issueKey = p.issueKey || '';\nconst ev = { type:'app_home_opened', user, taking: issueKey };\nif (PUBLISH_AS) ev.publish_as = PUBLISH_AS;\nreturn [{ json: { synthetic: { event: ev } } }];\n"
+      },
+      "name": "Build Refresh (Taking)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1136,
+        288
+      ],
+      "id": "c179dc35-71ae-4d3c-94b6-0273f2e87647"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.arduasolutions.com/webhook/slack-events",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.synthetic) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "name": "Refresh Home (Taking)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1344,
+        528
+      ],
+      "id": "f0a8fb3b-b2cd-4a68-bb2b-297b6fa81f58",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Refresh por pseudo-tab: republica el Home tecnico con la fase elegida.\n// Sin persistencia: el tab viaja en el evento sintetico, no se guarda en ningun lado.\nconst IMPERSONATE = null;\nconst PUBLISH_AS = null;\nconst p = $('Parse & Classify Action').first().json;\nconst user = IMPERSONATE || p.userId || '';\nconst tab = p.tab || '';\nconst ev = { type:'app_home_opened', user, tab };\nif (PUBLISH_AS) ev.publish_as = PUBLISH_AS;\nreturn [{ json: { synthetic: { event: ev } } }];\n"
+      },
+      "name": "Build Refresh (Tab)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        1520
+      ],
+      "id": "c686d4e0-5215-4458-b5a9-2eb59dc16d90"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.arduasolutions.com/webhook/slack-events",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.synthetic) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "name": "Refresh Home (Tab)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1568,
+        1520
+      ],
+      "id": "d194961c-3093-4d2f-81f9-352e034c38c1",
+      "onError": "continueRegularOutput"
     }
   ],
   "pinData": {},
@@ -143,7 +613,161 @@
         ],
         [
           {
+            "node": "Resolve Jira ID",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Build Refresh (Taking)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Stakeholders",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Assign (Modal)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Refresh (Tab)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "Ignore",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Jira ID": {
+      "main": [
+        [
+          {
+            "node": "Build Assign Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Assign Call": {
+      "main": [
+        [
+          {
+            "node": "Assign in Jira",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assign in Jira": {
+      "main": [
+        [
+          {
+            "node": "Build Refresh (Self)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Refresh (Self)": {
+      "main": [
+        [
+          {
+            "node": "Refresh Home (Self)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Stakeholders": {
+      "main": [
+        [
+          {
+            "node": "Build Modal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Modal": {
+      "main": [
+        [
+          {
+            "node": "Open Modal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Assign (Modal)": {
+      "main": [
+        [
+          {
+            "node": "Assign in Jira (Modal)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assign in Jira (Modal)": {
+      "main": [
+        [
+          {
+            "node": "Build Refresh (Modal)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Refresh (Modal)": {
+      "main": [
+        [
+          {
+            "node": "Refresh Home (Modal)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Refresh (Taking)": {
+      "main": [
+        [
+          {
+            "node": "Refresh Home (Taking)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Refresh (Tab)": {
+      "main": [
+        [
+          {
+            "node": "Refresh Home (Tab)",
             "type": "main",
             "index": 0
           }
@@ -158,7 +782,7 @@
     "timeSavedMode": "fixed",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "05fc4071-3cba-4dc6-b01b-5c7c0b411705",
+  "versionId": "b7608a1d-621c-4aa8-9bc3-9b7acc6e9b8d",
   "meta": {
     "instanceId": "95944be45d5aa5e5565d656a14e718ed8b92e30102ad1bd3fcad4cf1b1c2f383"
   },

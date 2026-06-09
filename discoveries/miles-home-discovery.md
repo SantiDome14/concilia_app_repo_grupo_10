@@ -4,7 +4,7 @@ features: []
 status: En investigación
 owner: Yasmani Rodriguez
 created_at: 2026-06-05
-updated_at: 2026-06-08
+updated_at: 2026-06-09
 propagates_to:
   - workflows/miles-slack-event-router.json
   - workflows/miles-jira-work-items-handler.json
@@ -38,6 +38,15 @@ necesita del ciclo de vida de requerimientos que Miles acompaña.
 > con datos reales. Quedan hipótesis abiertas (carousel) y pendientes de proceso
 > (estado de aprobación, prioridades globales).
 
+> **Estado al 2026-06-09:** se formalizó la **arquitectura de información de 4
+> niveles** transversal a todas las vistas (ver H8). El ruteo pasó de 5 a **7
+> perfiles**: se separaron los 3 perfiles técnicos (`tecnico` dev común /
+> `tech_lead` / `it_lead`) y se agregó el perfil `externo` (corrige un bug de
+> ruteo donde los External caían en la vista de PM por el fallback). Capacity del
+> equipo (Nivel 2) se construyó como carousel de cards con CTA a Jira por persona
+> (cierra parte de H5). Se reordenaron y renombraron las secciones de Work Items
+> según la jerarquía de niveles. Validado en vivo, salvo lo señalado como pendiente.
+
 ## Hipótesis
 
 ### H1 — La identidad de la persona vive en Notion, no se deduce de Slack — VALIDADA
@@ -66,57 +75,129 @@ El campo crítico para el ruteo NO es un único "rol" sino la combinación
 > `challenges-interactivos-discovery.md` (mapping Slack user → identidad interna
 > para validar quién responde un challenge). Se consumen desde ambos.
 
-### H2 — El contenido se ramifica en 5 perfiles, con precedencia Role > Group > Capability — VALIDADA
-La hipótesis original de "3 perfiles como capas aditivas" evolucionó a **5
-perfiles resueltos por un árbol de precedencia**. El `Group` por sí solo no
+### H2 — El contenido se ramifica en perfiles, con precedencia Role/Área > Group > Capability — VALIDADA (evolucionó a 7 perfiles, 2026-06-09)
+La hipótesis original de "3 perfiles como capas aditivas" evolucionó primero a **5
+perfiles** y luego (2026-06-09) a **7 perfiles**. El `Group` por sí solo no
 alcanza: dos personas con `Group = Manager` pueden ser un PM o un Technical Lead,
 y un `Group = Head` puede ser un líder de área de negocio o el Head of Product.
 
-**Árbol de decisión final del `Resolve Profile` (orden de precedencia):**
+**Cambios 2026-06-09 (que llevaron de 5 a 7 perfiles):**
+1. **Separación de los 3 perfiles técnicos.** Antes el Technical Lead era un flag
+   `is_tech_lead` dentro del perfil `tecnico`. Ahora son **tres perfiles distintos**
+   con builder y salida de Switch propios: `tecnico` (dev común), `tech_lead`
+   (Technical Lead) e `it_lead` (Head/CTO de Tecnología). Identificación del TL:
+   `Business Area = Technology` + `Role` que matchea `/technical lead/i`. Se mantiene
+   `is_tech_lead` en el output por compatibilidad (true solo para `tech_lead`).
+2. **Nuevo perfil `externo`.** `Group = External` no estaba capturado por ninguna
+   regla y caía en el fallback `producto` — los externos veían la vista de PM (bug
+   detectado con Juan Saladino, `Group:['External']`, `Role:'Legal Advisor'`,
+   Slack `U0B3HPF0KGW`). Se agregó una regla `External` **al tope del árbol**
+   (precede a todo: un externo es externo aunque tenga un Business Area asignada).
 
-1. **`Role` contiene "Product"** → perfil `producto` (precede a TODO). Cubre al
-   Head of Product, que es `Group = Head` pero debe ver la vista de Producto, no
-   la de líder de área de negocio.
-2. **`Group` Head / C-Level** → `lider`
-3. **`Group` Analyst** → `stakeholder`
-4. **`Group` Manager / Specialist** → si tiene capability `req.ticket.take` →
-   `tecnico`; si no → `producto`
-5. **Fallback** (sin match en Stakeholders, o sin Group) → `producto`
+**Árbol de decisión final del `Resolve Profile` (v4, orden de precedencia):**
 
-**Flag adicional:** dentro del perfil `tecnico`, si `Role == "Technical Lead"` se
-activa `is_tech_lead`, que suma una sección de Refinamiento al Home (ver más
-abajo).
+0. **`Group` External** → `externo` (precede a TODO). Vista mínima: solo Prioridades
+   globales (Nivel 4).
+1. **Head/C-Level + Area Technology** → `it_lead` (Santiago, Mati).
+2. **Head/C-Level + Area Product** → `producto` (Head of Product opera como PM).
+3. **Head / C-Level (otras áreas)** → `lider`.
+4. **Area Technology + Role "Technical Lead"** → `tech_lead`.
+5. **Area Technology (resto)** → `tecnico` (dev común).
+6. **Area Product** → `producto`.
+7. **Group Analyst** → `stakeholder`.
+8. **Group Manager / Specialist** → `stakeholder`.
+9. **Fallback** → `producto`.
 
-Los 5 perfiles y su contenido (todos en patrón tabla — ver H4):
+Los 7 perfiles y su contenido (alineados a la arquitectura de 4 niveles — ver H8):
 
-**`stakeholder`** (Analyst) — filtra por Business Area
-- Requerimientos activos de su área (PWIs, `status NOT IN (Done, DEPRECATED)`).
-- CTAs: "Nuevo requerimiento", "Pedir informe".
+**`externo`** (Group External) — vista de Invitado
+- Solo **Prioridades globales** (Nivel 4), todas las áreas, modo lectura.
+- Sin CTA de nuevo requerimiento, sin secciones de Work Items.
+
+**`stakeholder`** (Analyst / Manager / Specialist no técnico) — filtra por Business Area
+- Secciones de Work Items (Nivel 3) en este orden: Bloqueados · Análisis funcional ·
+  Análisis técnico · En desarrollo (denominaciones nuevas — ver H8).
+- Prioridades globales (Nivel 4). CTA "Nuevo requerimiento".
 
 **`lider`** (Head / C-Level de área de negocio) — filtra por Business Area
-- En espera de tu aprobación → card operativa (resuelto 2026-06-07, ver H7). Lista
-  los REQ del área que esperan la aprobación de ESTA persona, desde el REQ Approval
-  Tracker de Notion + el hilo de Slack. No usa Jira.
-- Todos los requerimientos del área, con columna Owner (vista agregada).
-- Prioridades globales → "Próximamente" (ver D1).
+- En espera de tu aprobación (Nivel 1, card operativa — ver H7) → arriba de todo.
+- Mismas secciones de Work Items que el stakeholder (Nivel 3) + Prioridades (Nivel 4).
 
-**`producto`** (PM; o cualquiera con Role "Product") — filtra por su Jira ID, sobre PWIs
-- En curso → `IN ANALYSIS` + `IN PROGRESS`, asignados a la persona.
-- Por enriquecer → `To Do`, asignados a la persona.
-- Disponibles → `To Do` sin assignee (todas las áreas — el PM es transversal).
-- Bloqueados → `BLOCKED`, asignados a la persona.
-- Prioridades globales → "Próximamente" (Producto es quien las gestiona).
+**`producto`** (PM; o Head of Product) — filtra por su Jira ID, sobre PWIs
+- En curso · Por enriquecer · Disponibles · Bloqueados (Nivel 3) + Prioridades (Nivel 4).
 
-**`tecnico`** (Specialist/Manager + `req.ticket.take`) — filtra por su Jira ID, sobre EWIs
-- En curso → `IN PROGRESS` + `CODE REVIEW`, asignados a la persona.
-- Disponibles → `READY FOR DEV` sin asignar.
-- Bloqueados → `BLOCKED`, asignados a la persona.
-- CTA: "Informar bloqueante".
+**`tecnico`** (dev común: Technology sin Role Technical Lead) — filtra por su Jira ID, sobre EWIs
+- Pipeline personal de desarrollo (Nivel 3): Bloqueados · En curso · Míos·Sin empezar ·
+  Sin asignar·Listos para tomar. SIN Capacity, SIN pseudo-tabs. + Prioridades (Nivel 4).
+- CTA: "Informar bloqueante". Botón "Tomar" en los disponibles (self-assign).
 
-**`technical lead`** (perfil `tecnico` + `Role == "Technical Lead"`) — dos secciones sobre EWIs
-- SECCIÓN REFINAMIENTO: Disponibles (`TO REFINEMENT` sin asignar) · Para hacer
-  (`TO REFINEMENT` asignado) · En curso (`IN REFINEMENT`) · Bloqueados (`BLOCKED`).
-- SECCIÓN DESARROLLO: idéntica al perfil `tecnico`.
+**`tech_lead`** (Technology + Role "Technical Lead") — vista de liderazgo técnico
+- **Capacity del equipo** (Nivel 2, carousel — ver H8/H5).
+- **Work Items** (Nivel 3) con pseudo-tabs Refinamiento ⇄ Desarrollo, partición por
+  TIPO (ver H8): Refinamiento = Épicas; Desarrollo = no-Épicas (Stories). Filtro del TL:
+  asignado a mí + sin asignar. Botón "Asignar".
+- Prioridades globales (Nivel 4).
+
+**`it_lead`** (Head/CTO de Tecnología: Santiago, Mati) — vista global de IT
+- **Capacity del equipo** (Nivel 2, carousel).
+- **SIN Nivel 3** (decisión 2026-06-09): por definición no tienen EWIs asignados;
+  mostrarles secciones de reparto era ruido. Su vista es Capacity + Prioridades.
+- Prioridades globales (Nivel 4).
+
+### H8 — Arquitectura de información de 4 niveles, transversal a todas las vistas — VALIDADA (2026-06-09)
+Independientemente del perfil, toda vista del Home se organiza segun una **jerarquia
+fija de 4 niveles**, ordenados de mayor a menor urgencia de accion. No todos los
+perfiles tienen todos los niveles, pero el ORDEN entre los niveles que sí tienen es
+siempre el mismo. Esta norma reemplaza el ordenamiento ad-hoc por vista que había antes.
+
+**Nivel 1 · Acción Inmediata** — lo que requiere acción de la persona YA para
+desbloquear algo. Va arriba de todo.
+- Hoy: "En espera de tu aprobación" (solo `lider`, ver H7).
+- Próximamente: "En espera de tu acción" (cualquiera de quien se necesite algo para
+  destrabar un REQ o Tarea).
+
+**Nivel 2 · Gestión de la Capacidad** — solo `tech_lead` e `it_lead`.
+- Sección "Capacity del equipo": una card por persona de Tecnología (excluyendo
+  liderazgo — Head/C-Level no son ejecutores), con conteos en curso / bloqueados /
+  sin empezar / refinamiento y la carga total. Indicador de carga por emoji en el
+  subtitle (⚪/🟢/🟠/🔴). **CTA "Ver en Jira"** por card: link al board EWI (174)
+  filtrado por esa persona, `?assignee=<jiraId>` (el `:` del jiraId URL-encoded a
+  `%3A` vía `encodeURIComponent`). Si la persona no tiene jiraId, card sin botón.
+  Render: carousel de cards (ver H5). El roster sale de Notion Stakeholders filtrado
+  por `Business Area = Technology`, excluyendo `Group` Head/C-Level.
+
+**Nivel 3 · Gestión de Work Items** — el contenido cambia por perfil:
+- **Stakeholder** (no técnico): estado de los PWIs de su área. Secciones (en este
+  orden, con denominaciones nuevas): **Bloqueados · Algo nos impide avanzar** →
+  **En análisis y validación funcional · Producto** → **En análisis y validación
+  técnica · Tecnología** → **En proceso de desarrollo**. Bloqueados va primero (es
+  lo que requiere acción para destrabar).
+- **Lider**: mismas secciones que el stakeholder (debajo del Nivel 1).
+- **Producto**: PWIs asignados a él + los sin asignar.
+- **`tech_lead`**: 2 subsecciones (pseudo-tabs Refinamiento ⇄ Desarrollo). La
+  partición es por **TIPO** del work item, NO por estado (validado con datos reales
+  de Jira, 2026-06-09): **Refinamiento = Épicas** (cualquier estado activo:
+  TO/IN REFINEMENT, BLOCKED); **Desarrollo = todo lo que NO es Épica** (Stories;
+  desde READY FOR DEV en adelante). Esto corrige el bug de filtrar por estado: había
+  3 Épicas BLOCKED que caían mal en Desarrollo. Las **subtareas NO se muestran como
+  cards** (`ewiRows` las excluye con `!isSubtask`); solo alimentan el conteo
+  "tareas completadas" del card padre vía `byParent`. Filtro del TL en ambas
+  subsecciones: **asignado a mí + sin asignar** (cola personal + lo tomable), NO
+  todo el equipo. (Capacity —Nivel 2— sí usa todo el equipo: son dos recortes
+  distintos de la misma data.)
+- **IT Heads** (`it_lead`, Head + CTO): **SIN Nivel 3** (decisión 2026-06-09). Por
+  definición no tienen EWIs asignados (si los tuvieran, sería raro). Antes se les
+  mostraban secciones con datos que no les correspondían (Santiago, Mati). Se les
+  sacó la sección entera: su vista es Capacity (Nivel 2) + Prioridades (Nivel 4).
+
+**Nivel 4 · Prioridades globales** — todos los perfiles lo ven (ver H6).
+
+**Denominaciones de secciones (Nivel 3, no técnicos).** Se actualizaron para llevar
+un sufijo de contexto en el header (todo en el mismo header, no como subtítulo):
+`Bloqueados · Algo nos impide avanzar`, `En análisis y validación funcional · Producto`,
+`En análisis y validación técnica · Tecnología`, `En proceso de desarrollo`. El
+`Bloqueados` del dev común también lleva `· Algo nos impide avanzar` por consistencia
+transversal; las otras dos denominaciones son específicas del flujo de stakeholder.
 
 ### H3 — El CTA "Nuevo requerimiento" abre un chat nuevo de Claude — EN INVESTIGACIÓN
 El flujo de alta arranca en Claude (skill `ardua-req-definition`), que estructura
@@ -197,13 +278,28 @@ espera. Botón "Ir a conversación" (estilo neutro, sin primary) que abre el pan
 hilo vía permalink con `?thread_ts=<ts>&cid=<channel>`. (No se muestra avatar del
 solicitante — ver el aprendizaje de Block Kit sobre `slack_icon`/`hero_image`.)
 
-### H5 — Algunas secciones se verían mejor como carousel de cards — ABIERTA (próximo paso)
+### H5 — Algunas secciones se verían mejor como carousel de cards — PARCIALMENTE VALIDADA (2026-06-09)
 Hipótesis nueva (2026-06-06): secciones como "Disponibles" o "En curso" podrían
 mostrarse como un **carousel de cards** en vez de tabla, para un look más rico y
 navegable. El bloque `carousel` existe en Slack (lanzado abril 2026, junto con
-card/alert) y renderiza en App Home. No construido aún — queda como próximo
-experimento visual. Riesgo a validar: cómo se comporta el carousel en mobile
-(misma precaución que el data_table en H4).
+card/alert) y renderiza en App Home.
+
+**Resolución parcial (2026-06-09):** el carousel de cards se ADOPTÓ y renderiza
+bien en App Home desktop — todas las secciones de Work Items (Bloqueados, En curso,
+etc.) y la sección **Capacity del equipo** usan `carousel` con cap de 10 cards.
+Funciona. Queda pendiente validar el comportamiento en **mobile** (misma precaución
+que el data_table en H4) antes de cerrar la hipótesis del todo.
+
+**Aprendizaje crítico — `slack_icon.name` es un enum CERRADO (refuerza H7-icon).**
+Al intentar diferenciar las cards de Capacity por nivel de carga con íconos distintos
+(`white_check_mark`, `hourglass`, `warning`), Slack **rechazó el `views.publish`
+ENTERO** con `must be a valid enum value [/view/blocks/N/elements/M/slack_icon/name]`.
+Un solo `name` inválido tumba todo el publish y el Home no se actualiza (síntoma:
+"el botón nuevo no aparece" — en realidad NADA se actualiza). **`rocket` es el único
+name validado.** Decisión: las 4 cards de carga usan `rocket`; la señal de carga va
+en el **emoji del subtitle** (⚪ sin carga · 🟢 con margen · 🟠 ok · 🔴 alta), no en el
+ícono del card. Si en el futuro se quieren íconos diferenciados: usar `image_url` (no
+`name`) o probar nombres del enum de a uno con `rocket` como fallback.
 
 ### H6 — "Prioridades globales" = dos tablas (What's next / What's going on), particionadas por el tipo del EWI espejo — VALIDADA
 La sección "Prioridades globales" estaba inconsistente entre perfiles: los
@@ -287,6 +383,48 @@ partir del PWI igual que el resto.
 - Footer del Home: desglose `${next} en cola · ${going} en curso` en vez del conteo
   total de PWI activos (que incluía tipos no mostrados y generaba ruido). Los conteos
   se exponen desde `buildPrioridadesGlobales` vía `opts.counts`.
+
+## Hallazgos técnicos de la sesión (2026-06-09)
+
+### Pseudo-tabs en App Home (Refinamiento ⇄ Desarrollo) — no hay tabs nativos
+El App Home no soporta tabs nativos dentro de la superficie Home. Se simulan con dos
+botones (`home_tab_refinamiento` / `home_tab_desarrollo`) que disparan `block_actions`
+→ el actions-router postea un evento sintético `app_home_opened` con un campo `tab` →
+el router reconstruye el Home con esa pestaña activa. El campo `tab` es **efímero**
+(sin persistencia): viaja en el evento sintético y se propaga `Classify Event` →
+`Build JQL` → builder. Default: `refinamiento`. El botón-tab inactivo usa
+`style: undefined` (al serializar el JSON desaparece la key; Slack lo acepta). Los
+headers de fase `▸ REFINAMIENTO`/`▸ DESARROLLO` se eliminaron por redundantes con los
+botones. Solo `tech_lead` tiene pseudo-tabs (el `it_lead` ya no tiene Nivel 3).
+
+### Bug de ruteo de External — el fallback `producto` capturaba a los externos
+Síntoma: Juan Saladino (`Group:['External']`) entraba por la vista de Product Manager.
+Causa: `Resolve Profile` no tenía regla para `External`, y el fallback final es
+`producto`. Cualquier Group no contemplado caía en la vista de PM. Resolución: regla
+`if (group.includes('External')) → 'externo'` al TOPE del árbol (antes que todo).
+Lección general: un fallback a un perfil con privilegios (PM ve todo) es peligroso;
+los Groups del enum de Notion (incluido External) deben tener todos una regla explícita
+antes del fallback. Verificación de identidad siempre contra el registro real de Notion
+(`notion-fetch` de la página del stakeholder) antes de codear la regla.
+
+### Trabajar SIEMPRE sobre el estado vivo de n8n, no sobre el repo
+Reincidencia del patrón ya conocido: el repo en disco puede estar desfasado de
+producción. En esta sesión, los builders no-técnicos del repo tenían versiones VIEJAS
+(con el botón deprecado "Pedir informe" / `request_report` y `action_id:'new_requirement'`).
+Un ensamblaje que partió del repo reintrodujo esas versiones viejas (el "bug del botón
+Pedir informe"). Corrección: traer los builders de la versión VIVA vía
+`get_workflow_details`, no del repo, y aplicar mutaciones quirúrgicas sobre esa base.
+Verificar siempre el estado vivo con `get_workflow_details` + `execute_workflow` con
+payload real antes de asumir qué hay en producción.
+
+### El usuario importa los JSON manualmente — "no veo el cambio" suele ser "no importé aún"
+Varias veces en la sesión el síntoma "no aparece el botón / el cambio" se debió a que
+el JSON entregado todavía no había sido importado a n8n (el archivo vive en el workspace
+de Claude; el vivo sigue con la versión anterior hasta el import manual). Antes de
+diagnosticar un bug de código, confirmar que el workflow vivo efectivamente tiene los
+cambios (vía `get_workflow_details`). En un caso el CTA de Capacity SÍ estaba en el
+vivo y generaba el botón en la salida del `execute_workflow` — el no-render real era el
+bug de los íconos inválidos (ver H5), no la ausencia del CTA.
 
 ## Hallazgos técnicos de la sesión (2026-06-08)
 
@@ -509,7 +647,7 @@ Slack ID` (Notion) → `Query Capability — ticket.take` (Notion, resuelve page
 Code en runtime) → `Resolve Profile` (calcula perfil con precedencia Role>Group>
 Capability) → `Resolve Area Name` (Notion, pageId área → Name) → `Build JQL` (arma
 el JQL por perfil) → `Query Jira (via handler)` (POST al webhook del handler con
-`operation: search`) → `Switch — Profile` (4 salidas) → `Build Home — [perfil]`
+`operation: search`) → `Switch — Profile` (7 salidas) → `Build Home — [perfil]`
 (reparte issues en secciones, arma Block Kit) → `Publish App Home` (views.publish).
 
 Arquitectura de queries: **una query JQL amplia por perfil**, el reparto en
@@ -555,7 +693,8 @@ y mantenible.
    going on), partición por tipo del EWI espejo, perspectiva única PWI (ver H6).
 
 ## Pendientes / próximos pasos
-- **Carousel de cards** (H5): experimentar con secciones en formato carousel.
+- ~~**Carousel de cards** (H5): experimentar con secciones en formato carousel.~~ →
+  ADOPTADO (2026-06-09, ver H5). Pendiente solo validación en mobile.
 - **Botones con handler** (D3): cablear la interactividad de los CTAs.
 - ~~**Prioridades globales** (D1)~~ → RESUELTO (H6). Pendiente: aplicar el criterio
   en los 5 builders del router (próximo paso de esta sesión).
@@ -584,6 +723,13 @@ y mantenible.
       Jira que impida mover una EWI a Done con child abiertos — elimina de raíz la
       inconsistencia "Story Done con child no-Done", reforzando que mandan los child.
   Es el primer caso del App Home que requiere el segundo salto a EWI.
+- **Validar carousel + secciones en mobile** (2026-06-09): el carousel de cards y las
+  secciones de Work Items están validados en App Home desktop; falta confirmar el
+  render en mobile (misma precaución que el data_table en H4). Cierra H5 del todo.
+- **CTA feedback UX para el botón Tomar/Asignar** (2026-06-09): revisar con perspectiva
+  fresca el feedback del self-assign para usuarios ansiosos (estado intermedio
+  "⏳ Tomando…" vía takingKey; el `views.publish` colapsa estados intermedios si las
+  llamadas son <~1.3s, limitación de plataforma confirmada). Pendiente.
 - **Secciones personales mezclan tipos de PWI** (hallazgo 2026-06-07): las secciones
   En curso / Por enriquecer / Disponibles de los perfiles producto/stakeholder/lider
   filtran `rows` por estado SIN filtrar por `issueType = Requirement`. Como la query
