@@ -2,7 +2,7 @@
 
 > Catálogo navegable de los discoveries existentes. Para entender la convención de naming, los estados y el ciclo de vida, ver [`README.md`](./README.md).
 >
-> Última actualización: **2026-06-08** · **33 discoveries** + **4 artefactos de soporte**
+> Última actualización: **2026-06-09** · **33 discoveries** + **4 artefactos de soporte**
 
 ---
 
@@ -29,6 +29,7 @@ Hipótesis focalizadas en un módulo específico dentro de una aplicación.
 
 | Archivo | Nombre | Estado | Owner | Última act. | Propaga a |
 |---|---|---|---|---|---|
+| [`ops-whitelist-cbu-discovery.md`](./ops-whitelist-cbu-discovery.md) | OPS — Whitelist CBU/CVU: identificación de banco y etiquetas | Concluida | Santino Domeniconi | 2026-06-09 | `features/ops/ops-whitelist-cbu-cvu.md` |
 | [`lex-auditoria-operativa-discovery.md`](./lex-auditoria-operativa-discovery.md) | LEX — Auditoría operativa de trades confirmados (TRD → LEX) | En investigación | Santino Domeniconi | 2026-06-05 | _—_ |
 | [`ops-deposit-instructions-discovery.md`](./ops-deposit-instructions-discovery.md) | OPS — Deposit Instructions · Variables automáticas | Concluida | Santino Domeniconi | 2026-06-04 | `features/ops/ops-deposit-instructions.md` |
 | [`trd-clientes-discovery.md`](./trd-clientes-discovery.md) | TRD — Módulo Clientes · Visualización de saldos y límites | En investigación | Santino Domeniconi | 2026-06-04 | `features/trd/trd-clientes.md` |
