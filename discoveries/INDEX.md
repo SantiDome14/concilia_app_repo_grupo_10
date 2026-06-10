@@ -2,7 +2,7 @@
 
 > Catálogo navegable de los discoveries existentes. Para entender la convención de naming, los estados y el ciclo de vida, ver [`README.md`](./README.md).
 >
-> Última actualización: **2026-06-10** · **34 discoveries** + **3 artefactos de soporte**
+> Última actualización: **2026-06-10** · **35 discoveries** + **3 artefactos de soporte**
 
 ---
 
@@ -47,6 +47,7 @@ Hipótesis sobre una funcionalidad específica dentro de un módulo.
 
 | Archivo | Nombre | Estado | Owner | Última act. | Propaga a |
 |---|---|---|---|---|---|
+| [`trd-controles-tc-discovery.md`](./trd-controles-tc-discovery.md) | TRD — Control de desvío de TC en Quotes y Proveedores de Liquidez | Concluida | Santino Domeniconi | 2026-06-10 | `features/trd/trd-quotes.md` · `features/trd/trd-proveedores-de-liquidez.md` |
 | [`lex-clientes-informacion-contacto-discovery.md`](./lex-clientes-informacion-contacto-discovery.md) | LEX — Información de Contacto del Legajo (Clientes) · Discovery Document | En investigación | Yasmani Rodriguez | 2026-06-02 | `features/lex/lex-clientes-informacion-contacto.md` · `features/lex/README.md` |
 | [`lex-operatoria-documentacion-discovery.md`](./lex-operatoria-documentacion-discovery.md) | LEX — Gestión documental de clientes en el detalle de cliente | En investigación | Santino Domeniconi | 2026-06-03 | _—_ |
 | [`lex-operatoria-rulo-quotes-discovery.md`](./lex-operatoria-rulo-quotes-discovery.md) | LEX — Visibilidad de quotes del rulo en el detalle de cliente | Concluida | Santino Domeniconi | 2026-06-03 | `features/lex/README.md` · `features/lex/lex-operatoria-quotes.md` |

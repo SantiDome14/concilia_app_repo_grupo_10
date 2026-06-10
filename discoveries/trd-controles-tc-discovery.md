@@ -1,7 +1,7 @@
 ---
 name: TRD — Control de desvio de TC en Quotes y Proveedores de Liquidez
 features: [TRD]
-status: En investigación
+status: Concluida
 owner: Santino Domeniconi
 created_at: 2026-06-05
 updated_at: 2026-06-10
@@ -159,11 +159,11 @@ Esta decision aplica tanto a Quotes como a Proveedores de Liquidez.
 
 ### C8 — Layout del campo TC en Proveedores
 
-**Decision (wireframe v2, 2026-06-10 — pendiente validacion Facu):** en Proveedores de Liquidez el campo TC ocupa una fila propia de ancho completo dentro de la seccion INSTRUMENTO, por debajo del grid Par+Plazo. No comparte fila con ningun otro campo. Este layout le da al TC el mismo peso visual que el campo Rate en Quotes y deja espacio suficiente para el bloque FX Pantalla que se incorpora debajo.
+**Decision (wireframe v2, validado Facu 10/06/2026):** en Proveedores de Liquidez el campo TC ocupa una fila propia de ancho completo dentro de la seccion INSTRUMENTO, por debajo del grid Par+Plazo. No comparte fila con ningun otro campo. Este layout le da al TC el mismo peso visual que el campo Rate en Quotes y deja espacio suficiente para el bloque FX Pantalla que se incorpora debajo.
 
 ### C9 — Estructura interna del bloque FX Pantalla
 
-**Decision (wireframe v2, 2026-06-10 — pendiente validacion Facu):** el bloque FX Pantalla tiene cuatro filas internas con reglas de visibilidad propias:
+**Decision (wireframe v2, validado Facu 10/06/2026):** el bloque FX Pantalla tiene cuatro filas internas con reglas de visibilidad propias:
 
 - **Info row** (siempre visible cuando el bloque esta activo): label `FX PANTALLA` + precio en JetBrains Mono + badge del par seleccionado (ej. `USDC/ARS`, `USD/ARS`) + badge de desvio (`ok` verde o `warn` ambar). El badge del par contextualiza el precio sin requerir que el trader lea el selector de par por separado.
 - **Range row** (visible solo en estados amber — desvio activo): muestra el rango aceptable en formato `Rango aceptable: $X – $Y`. No aparece en estado 1 (sin desvio).
@@ -174,11 +174,11 @@ El bloque completo adopta borde y fondo ambar en estados 2 y 3 (desvio activo). 
 
 ### C10 — Campo computado recibe tratamiento ambar al detectar desvio
 
-**Decision (wireframe v2, 2026-06-10 — pendiente validacion Facu):** cuando el TC esta fuera del rango aceptable (estados 2 y 3), el campo computado — Monto a entregar en Quotes, Contravalor en Proveedores — muestra borde ambar y texto ambar ademas del valor calculado. Refuerza la señal de desvio sobre el monto resultante de la operacion y hace visible que el importe a liquidar fue calculado sobre un TC fuera del rango.
+**Decision (wireframe v2, validado Facu 10/06/2026):** cuando el TC esta fuera del rango aceptable (estados 2 y 3), el campo computado — Monto a entregar en Quotes, Contravalor en Proveedores — muestra borde ambar y texto ambar ademas del valor calculado. Refuerza la señal de desvio sobre el monto resultante de la operacion y hace visible que el importe a liquidar fue calculado sobre un TC fuera del rango.
 
 ### C11 — Wording exacto por modulo
 
-**Decision (wireframe v2, 2026-06-10 — pendiente validacion Facu):** los textos de alerta, modal y CTA son especificos por modulo para mantener coherencia con la terminologia del formulario:
+**Decision (wireframe v2, validado Facu 10/06/2026):** los textos de alerta, modal y CTA son especificos por modulo para mantener coherencia con la terminologia del formulario:
 
 | Elemento | Quotes | Proveedores |
 |---|---|---|
@@ -222,5 +222,5 @@ P-01, P-02 y P-04 se cierran en refinement tecnico con Tecnologia.
 ## Relación con otros discoveries y requerimientos activos
 
 - **`trd-quotes-discovery.md`** — discovery del módulo Quotes (En investigación). El ciclo de vida del quote y el estado del formulario de creación deben documentarse allí; este discovery aporta el contexto de infraestructura de precios que Quotes ya usa.
-- **`trd-proveedores-de-liquidez-discovery.md`** — discovery concluido del módulo Proveedores. El feature file `features/trd/trd-proveedores-de-liquidez.md` refleja el estado actual; la extensión con FX Pantalla y control de TC se propagará al mismo archivo al concluir este discovery.
-- **PWI-74** — requerimiento origen. El enriquecimiento del PWI puede avanzar sobre la base de los hallazgos actuales; las P-01 a P-03 se cierran en refinement técnico con Tecnología.
+- **`trd-proveedores-de-liquidez-discovery.md`** — discovery concluido del módulo Proveedores. El feature file `features/trd/trd-proveedores-de-liquidez.md` refleja el estado actual; la extensión con FX Pantalla y control de TC fue propagada al mismo archivo al concluir este discovery.
+- **PWI-74** — requerimiento origen. Enriquecimiento completo y validado por Facundo Vasques (10/06/2026). Las preguntas P-01 y P-02 se cierran en refinement técnico con Tecnología.

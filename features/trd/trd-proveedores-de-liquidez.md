@@ -1,6 +1,6 @@
 # TRD — Proveedores de Liquidez
 
-> Última actualización: 2026-05-26
+> Última actualización: 2026-06-10
 > Estado: En producción — iteración activa
 > Discovery de referencia: `discoveries/trd-proveedores-de-liquidez-discovery.md`
 
@@ -54,6 +54,65 @@ Campos: Tipo (BUY/SELL), Proveedor, Empresa Ardua, Par de monedas, TC, Plazo, Mo
 
 ---
 
+## Control de desvío de TC (PWI-74 — IN ANALYSIS)
+
+Extensión incorporada por PWI-74. Agrega FX Pantalla como referencia de mercado en el formulario y un control de desvío sobre el campo TC.
+
+### FX Pantalla en Proveedores
+
+Al seleccionar el par de monedas, el sistema obtiene el precio de referencia de mercado desde `GET /fx-rate?pair_id={id}` y lo incorpora como campo FX Pantalla dentro de la sección INSTRUMENTO, por debajo del grid Par+Plazo.
+
+- El campo es editable. Se auto-pobla con el precio del proveedor activo al seleccionar el par.
+- Chips de proveedor (Binance, Matriz): muestran los precios disponibles. Click en un chip copia ese precio al campo FX Pantalla. El chip activo (`.on`) queda visualmente resaltado.
+- El precio se refresca automáticamente cada 5 segundos mientras el formulario esté abierto. Cada chip muestra su propia barra de progreso con el tiempo restante.
+- Si el feed no devuelve precio para el par seleccionado (estado 4), el campo aparece vacío y editable. El trader puede ingresar un valor de referencia manualmente.
+
+**Campo TC:** pasa a ocupar una fila de ancho completo dentro de INSTRUMENTO, por debajo del bloque FX Pantalla.
+
+**Pares cripto/ARS:** el sistema intenta obtener el precio directamente del endpoint. Si no está disponible como par directo, calcula el cross en el frontend: BTC/ARS = BTC/USDT × USD/ARS. Confirmar en refinement técnico si el endpoint cubre BTC/ARS directamente (P-02 — ver `discoveries/trd-controles-tc-discovery.md`).
+
+### Comportamiento del control
+
+Al abandonar el campo TC (on blur), el sistema compara el valor ingresado contra el FX Pantalla disponible. Si el desvío supera el 3% en cualquier dirección, se muestra una alerta que requiere confirmación explícita para proceder. La operación no se bloquea si el trader confirma.
+
+Si el campo FX Pantalla está vacío, el sistema informa al usuario y permite continuar sin el control.
+
+### Estados del formulario
+
+| Estado | Descripción | Cambios visuales |
+|---|---|---|
+| 1 — Sin desvío | TC dentro del rango ±3% | Sin alerta. CTA verde normal ("Guardar operación"). |
+| 2 — TC desviado | Desvío supera el ±3% | Alerta ámbar inline. Borde ámbar en TC, bloque FX y Contravalor. CTA ámbar ("Guardar con desvío" + `ti-alert-triangle`). |
+| 3 — Confirmación | Trader clickeó CTA con desvío activo | Modal con overlay oscuro y tabla resumen (Par, Tipo, FX referencia, Rango aceptable, TC con desvío en ámbar, Proveedor). |
+| 4 — Sin referencia | FX Pantalla vacío (feed no disponible) | Aviso ámbar dentro del bloque FX Pantalla. Campo visible y editable (vacío). TC y CTA en estado normal. |
+
+### Wording
+
+| Elemento | Texto |
+|---|---|
+| Alerta inline | "TC [X] supera el rango aceptable de ±3% en [Y]%" |
+| CTA con desvío | "Guardar con desvío" + icono `ti-alert-triangle` |
+| Modal — título | "Confirmar operación con TC fuera del rango" |
+| Modal — descripción | "Revisá los datos antes de confirmar. El TC registra un desvío significativo respecto al precio de referencia." |
+| Modal — botón confirmar | "Confirmar operación" |
+| Estado 4 — aviso | "Sin referencia disponible para este par. Podés ingresar un valor de referencia manualmente." |
+
+### Decisiones de diseño validadas (Facundo Vasques)
+
+| Decisión | Resolución | Fecha |
+|---|---|---|
+| La operación aprobada con desvío queda marcada con badge? | No. Se registra sin marca adicional. | 08/06/2026 |
+| El modal requiere campo de justificación? | No. Solo confirmación explícita via CTA. | 08/06/2026 |
+| Cuándo se dispara el control? | On blur. Al abandonar el campo TC. | 08/06/2026 |
+| El campo FX Pantalla es editable? | Sí. Auto-poblado, sobreescribible, chips como atajos. | 10/06/2026 |
+| El campo TC ocupa fila propia? | Sí. Fila de ancho completo dentro de INSTRUMENTO, debajo del grid Par+Plazo. | 10/06/2026 |
+| El rango aceptable se muestra siempre en el bloque FX? | No. Solo en estados 2 y 3 (desvío activo). | 10/06/2026 |
+| El estado 4 reemplaza el bloque FX Pantalla? | No. El aviso aparece dentro del bloque; el campo permanece visible y editable (vacío). | 10/06/2026 |
+
+**Wireframe de referencia:** `discoveries/wireframe_PWI-74.html`
+
+---
+
 ## Ciclo de vida de una operación
 
 ```
@@ -88,6 +147,11 @@ V1 no incluye edición ni cancelación de operaciones registradas.
 - Exportación a CSV / Excel
 - Vinculación de operaciones con Quotes de clientes
 - Soporte para múltiples pares en los cards de resumen (el formulario sí soporta pares dinámicos)
+- Configuración del umbral de desvío desde la interfaz (3% fijo en v1)
+- Configuración de la frecuencia de refresh del FX Pantalla (5 segundos fijo en v1)
+- Registro histórico de controles de desvío activados o ignorados
+- Badge o marcador en operaciones registradas con desvío confirmado
+- Campo de justificación en el modal de confirmación
 
 ---
 
@@ -97,6 +161,7 @@ V1 no incluye edición ni cancelación de operaciones registradas.
 |---|---|---|
 | REQ-35 | Contravalor ARS en cards de resumen | In Review |
 | REQ-112 | Separador de miles en campos numéricos de carga | BACKLOG |
+| PWI-74 | Control de desvío de TC — FX Pantalla + alerta ±3% en Quotes y Proveedores | IN ANALYSIS |
 
 ---
 
@@ -118,4 +183,5 @@ V1 no incluye edición ni cancelación de operaciones registradas.
 - **Home + Exposición Agregada** — la dependencia principal (este módulo) está cumplida. Pendiente de iniciar discovery y REQ.
 - **REQ-35** — Contravalor ARS en cards, en revisión.
 - **REQ-112** — Separador de miles en campos numéricos, en backlog.
+- **PWI-74 (IN ANALYSIS)** — extensión con FX Pantalla + control de desvío de TC. Dependencia técnica abierta: confirmar en refinement si `/fx-rate` devuelve BTC/ARS directo o requiere cross en frontend (P-02).
 - **v2** — Edición y cancelación de operaciones: pendiente de evaluar con la Mesa.
