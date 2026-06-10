@@ -4,7 +4,7 @@ features: []
 status: En investigación
 owner: Yasmani Rodriguez
 created_at: 2026-06-09
-updated_at: 2026-06-09
+updated_at: 2026-06-10
 propagates_to: []
 ---
 
@@ -65,97 +65,138 @@ Esto es un **cambio de taxonomía del core** que excede el alcance de este disco
 
 ---
 
-## Inventario crudo del roadmap IT 2026
+## Inventario del roadmap IT 2026 — relevamiento contra PWI
 
-Transcripción estructurada del roadmap de Notion, con cada ítem mapeado a su app del core según la tabla de arriba. **El estado de cada ítem está pendiente de relevar** (la fuente no lo trae explícito) — se completará la columna `Estado` durante el relevamiento ítem por ítem.
+Transcripción estructurada del roadmap de Notion, con cada ítem mapeado a su app del core y **cruzado contra el universo de PWI** (76 issues relevados el 2026-06-10 vía JQL `project = PWI ORDER BY key ASC`).
 
-### Q1
+Leyenda de estado:
+- **Hecho** — PWI en `DONE`.
+- **En dev** — PWI en `SENT TO DEV`, `READY FOR DEV`, `IN DEVELOPMENT`, `IN ANALYSIS`.
+- **Bloqueado** — PWI en `BLOCKED`.
+- **Parcial** — existe PWI que cubre una parte del ítem, pero no su alcance completo.
+- **Sin PWI** — no se encontró ticket; candidato a trabajo nuevo (o ejecutado fuera de Producto — validar con Tecnología).
 
-| Ítem (roadmap IT) | Etiqueta original | App core | Estado |
+> Nota: el cruce se hizo por *summary* de los PWI. Un "Parcial" o "Sin PWI" no afirma que la capacidad no exista en el producto real — afirma que **no hay un PWI que la trackee con ese alcance**. Los casos marcados *validar* requieren confirmación con Tecnología / Facundo.
+
+### Q1 — prácticamente cerrado
+
+| Ítem (roadmap IT) | App core | PWI | Estado |
 |---|---|---|---|
-| Instrucciones de depósito | OPS/APP | OPS | _por relevar_ |
-| Integración TRD–OPS | OPS/APP | OPS | _por relevar_ |
-| PSP lista | OPS/APP | OPS (PSP) | _por relevar_ |
-| Movimientos internos automáticos (hazpagos a circuit) | OPS/APP | OPS | _por relevar_ |
-| Límites transaccionales operativos | LEX | LEX | _por relevar_ |
-| Integración TRD–OPS | TRD | TRD | _por relevar_ |
-| Snapshot de mercado por operación (FX pantalla en ARS) | TRD | TRD | _por relevar_ |
-| Documentación automática (letter of client, conf letter, crypto exch receipt) | OPS/APP | OPS | _por relevar_ |
-| Matriz de riesgo | LEX | LEX | _por relevar_ |
-| Proveedores de liquidez | TRD | TRD | _por relevar_ |
-| Remuneración de saldos ARS | OPS/APP | OPS | _por relevar_ |
+| Instrucciones de depósito | OPS | PWI-44 | En dev (READY FOR DEV) |
+| Integración TRD–OPS | OPS / TRD | — | Sin PWI explícito · validar |
+| PSP lista | OPS (PSP) | PWI-12 | En dev (IN DEVELOPMENT) |
+| Movimientos internos automáticos (hazpagos→circuit) | OPS | — | Sin PWI · validar |
+| Límites transaccionales operativos | LEX | PWI-20, PWI-41 | En dev |
+| Snapshot de mercado / FX pantalla ARS | TRD | — | **Sin PWI · validar con Facundo** |
+| Documentación automática (letters, receipts) | OPS | PWI-38 | Hecho (parcial) |
+| Matriz de riesgo | LEX | — | Sin PWI · validar |
+| Proveedores de liquidez | TRD | PWI-29, PWI-36, PWI-40 | Hecho / En dev |
+| Remuneración de saldos ARS | OPS | — | Sin PWI (reaparece en Q3/Q4) |
+
+**Veredicto Q1:** el grueso está hecho o en dev. Quedan 3 ítems sin rastro claro (integración TRD–OPS, movimientos internos automáticos, matriz de riesgo, snapshot FX) — probablemente ejecutados fuera de Producto o nunca iniciados. Requieren confirmación de Tecnología/Facundo, no trabajo de Producto inmediato.
 
 **Fuera de scope Q1 (declarado en el roadmap):** Migración de región · TRD: currencies dinámicas (seleccionar de a pares) · SFTP para teso · LEX todo en nube, totalizador, gestión de archivos mejorada · SWIFT · Statements · Vulnerabilidades.
 
-### Q2
+### Q2 — mayormente tracked; pendientes reales acotados
 
-**Pendientes arrastrados de Q1:**
-
-| Ítem | Etiqueta original | App core | Estado |
+| Ítem (roadmap IT) | App core | PWI | Estado |
 |---|---|---|---|
-| Matriz de riesgo | LEX | LEX | _por relevar_ |
-| Proveedores de liquidez | TRD | TRD | _por relevar_ |
-| Remuneración de saldos ARS | OPS | OPS | _por relevar_ |
+| Agrupadores | OPS / LEX | PWI-27 | En dev (READY FOR DEV) |
+| RFP / RFQ API | OPS | PWI-11, PWI-26 | Bloqueado / En dev |
+| Integración Banco de Comercio | OPS (PSP) | — | **Sin PWI** |
+| Integración BIND | OPS (PSP) | PWI-12 | En dev (IN DEVELOPMENT) |
+| Blacklist | LEX | PWI-17 | En dev |
+| RFQ en front portal (USDC/USDT-ARS) | OPS / CLP | PWI-31 | Bloqueado |
+| Debitar 0.6% de impuestos | OPS | — | **Sin PWI** |
+| Bancos | CTF / OPS | — | Sin PWI · bloqueado por FIN→CTF |
+| Gestión cuentas nostro / rebalanceo | CTF / OPS | — | **Sin PWI** · bloqueado por FIN→CTF |
+| Bridge virtual accounts | OPS | — | Sin PWI explícito · validar |
+| Bridge onboarding | LEX | — | Sin PWI explícito · validar |
+| Monitoreo transaccional (Worldcheck/OFAC/Elliptic) | OPS / LEX | PWI-33 | Parcial (solo screening de contrapartes) |
+| Posición de mesa unificada | TRD | PWI-30 | Parcial (Panel de Gestión Mesa) |
+| Integración COELSA: central de fraude | LEX | — | **Sin PWI** |
+| Integración Convera | OPS | — | **Sin PWI** (solo bandejas en PWI-15) |
+| Integración Bitgo | OPS | — | **Sin PWI** |
+| Reportes regulatorios (UIF/ARCA) | LEX | PWI-22, PWI-32 | En dev |
+| Earnings | OPS | PWI-24 | TO DO (Earn FCI / AdCap) |
+| Motor de precios (APE) básico | TRD | PWI-26, PWI-80 | En dev |
+| Comandas (bandejas) | OPS | PWI-15 | Parcial (framework de acciones) |
+| Sección de trades | OPS | PWI-19 | Parcial (export de operaciones) |
+| Payment details (comprobantes) | OPS | PWI-38 | Hecho |
+| Transfer out ARS autogestionado | OPS | PWI-59 | Parcial / Bloqueado (controles de ejecución) |
+| Dashboard de agrupadores (low) | OPS | — | Sin PWI |
+| Fees por cliente (low) | OPS | — | Sin PWI |
 
-**Nuevos Q2:**
+**Veredicto Q2:** más fragmentado de lo esperado. No son 3 pendientes — son ~10 sin ticket más varios "parciales" (un PWI cubre parte del ítem del roadmap pero no su alcance completo). Los pendientes más limpios y accionables: **Debitar 0.6% impuestos**, **Convera**, **Bitgo**, **COELSA**, **Banco de Comercio**, **Dashboard de agrupadores**, **Fees por cliente**.
 
-| Ítem | Etiqueta original | App core | Estado |
+### Q3 + Q4 — terreno virgen (foco principal de la migración)
+
+| Ítem (roadmap IT) | App core | PWI | Estado |
 |---|---|---|---|
-| Agrupadores | OPS, LEX | OPS / LEX | _por relevar_ |
-| RFP / RFQ API | OPS | OPS | _por relevar_ |
-| Integración Banco de Comercio | PSP | OPS (PSP) | _por relevar_ |
-| Integración BIND (en nueva PSP) | PSP | OPS (PSP) | _por relevar_ |
-| Blacklist | LEX, PSP | LEX / OPS | _por relevar_ |
-| RFQ en front portal (USDC-ARS y USDT-ARS) | APP | OPS | _por relevar_ |
-| Debitar el 0.6% de impuestos | OPS | OPS | _por relevar_ |
-| Bancos | TES/OPS | CTF / OPS | _por relevar_ |
-| Gestión de cuentas nostro (movimientos y rebalanceo de saldos) | TES/OPS | CTF / OPS | _por relevar_ |
-| Bridge virtual accounts | OPS | OPS | _por relevar_ |
-| Bridge onboarding | LEX | LEX | _por relevar_ |
-| Monitoreo transaccional ingresos/egresos (Worldcheck / OFAC; ELLIPTIC) | OPS, LEX | OPS / LEX | _por relevar_ |
-| Posición de mesa unificada | TRD | TRD | _por relevar_ |
-| Integración COELSA: Central de fraude | LEX | LEX | _por relevar_ |
-| Integración Convera | OPS | OPS | _por relevar_ |
-| Integración Bitgo | OPS | OPS | _por relevar_ |
-| Reportes regulatorios automáticos (UIF / ARCA) | LEX | LEX | _por relevar_ |
-| Earnings | APP | OPS | _por relevar_ |
-| Motor de precios (APE) versión básica | TRD | TRD | _por relevar_ |
-| Comandas (bandeja pre-asignación ingresos Bridge/Convera; bandeja ejecución de retiros) | OPS | OPS | _por relevar_ |
-| Sección de trades | APP | OPS | _por relevar_ |
-| Payment details (sección de comprobantes) | APP | OPS | _por relevar_ |
-| Transfer out ARS autogestionado (límites por monto/tiempo) | OPS/APP | OPS | _por relevar_ |
-| Dashboard de agrupadores (low) | APP | OPS | _por relevar_ |
-| Fees por cliente (low) | OPS/APP | OPS | _por relevar_ |
+| Integración NetSuite | OPS / CTF | — | Sin PWI · bloqueado por FIN→CTF |
+| Lógica de swaps automática (Deduction/Addition) | OPS | — | **Sin PWI** |
+| Control de costos por contraparte | OPS | — | **Sin PWI** |
+| Infraestructura API básica (CVU collect, carga de pagos) | OPS | — | **Sin PWI** |
+| Segmentación por clusters | LEX | — | **Sin PWI** |
+| API de onboarding | LEX | PWI-69, PWI-70 | Parcial / Bloqueado (Centaurus) |
+| Revalidación periódica (AiPrise) | LEX | PWI-67 | Parcial / En dev |
+| Motor de precios ARS (base) | TRD | PWI-26 | En dev (relacionado) |
+| RFQ API | TRD | PWI-11 | Bloqueado |
+| Bots con stock dinámico | TRD | — | **Sin PWI** |
+| Integraciones Zenus, FV Bank | transversal (MISC) | — | **Sin PWI** |
+| Bandeja de asignación de depósitos | OPS | PWI-15 | Parcial |
+| Remuneración de saldos crypto | OPS | — | **Sin PWI** |
+| Retiros cripto autogestión con bandeja | OPS | PWI-59 | Parcial / Bloqueado |
+| Pago de servicios | OPS | — | **Sin PWI** |
+| Earnings | OPS | PWI-24 | Parcial (TO DO) |
+| Status / Health del sistema | OPS | PWI-60 | Parcial (Observabilidad) |
+| Autogestión de documentación y datos | OPS | — | **Sin PWI** |
+| QR interoperable | OPS | — | **Sin PWI** |
+| Wallets por cliente | OPS | — | **Sin PWI** |
+| Automatización de contratos (DocuSign) | LEX | — | **Sin PWI** |
+| Actualización automática de T&C | LEX | — | **Sin PWI** |
+| Onboardings automáticos en partners | LEX | — | **Sin PWI** |
+| Comando y monitoreo avanzado de bots | TRD | — | **Sin PWI** |
+| Power BI + HubSpot | transversal (MISC) | PWI-54 | Parcial (solo HubSpot Integration Hub) |
 
-### Q3 + Q4
+**Veredicto Q3/Q4:** ~18 ítems sin ningún tracking. Este es el roadmap real a construir y el foco de la migración hacia adelante.
 
-| Ítem | Etiqueta original | App core | Estado |
+### Síntesis del relevamiento
+
+- **Q1:** cerrado salvo 3-4 ítems sin rastro que requieren validación con Tecnología (no trabajo de Producto inmediato).
+- **Q2:** mayormente en dev; pendientes acotados (~7 sin PWI claro, ~5 parciales).
+- **Q3/Q4:** terreno virgen (~18 sin PWI). **Foco principal.**
+- **Lección estructural:** un ítem del roadmap ≠ un requerimiento. Varias capacidades grandes (motor de precios, infra API, wallets por cliente, RFQ API) se descompondrán en múltiples PWI. La agrupación natural es por **iniciativa/tema**, no por trimestre (los Q del roadmap IT perdieron sentido al pasar a Producto).
+
+### Nueva taxonomía de iniciativas — orientada a funcionalidad
+
+> **Decisión del HoP (2026-06-10):** las iniciativas actuales del tablero PWI (Epics PWI-1 a PWI-5, etc.) **no se toman como base**. Estaban orientadas a *idea* (Ardua Analytics, Ardua Growth, Ardua 4x...). El nuevo roadmap exige iniciativas orientadas a **funcionalidad**. Los Epics existentes se **refactorizan** para adecuarse a esta nueva taxonomía — ese refactor es trabajo aparte (ver Próximos pasos).
+
+Set de iniciativas definido por el HoP para alojar los ítems pendientes del roadmap (Q2 residual + Q3/Q4):
+
+| # | Iniciativa | Ítems del roadmap que absorbe (tentativo) | Notas / dudas |
 |---|---|---|---|
-| Integración con NetSuite (Q3) | OPS/APP | OPS / CTF | _por relevar_ |
-| Lógica de swaps automática (Deduction / Addition) | OPS/APP | OPS | _por relevar_ |
-| Control de costos por contraparte | OPS/APP | OPS | _por relevar_ |
-| Infraestructura API básica (CVU collect, carga de pagos) | OPS/APP | OPS | _por relevar_ |
-| Segmentación por clusters | LEX | LEX | _por relevar_ |
-| API de onboarding | LEX | LEX | _por relevar_ |
-| Revalidación periódica (AIPrise) | LEX | LEX | _por relevar_ |
-| Motor de precios ARS (base / inicial) | TRD | TRD | _por relevar_ |
-| RFQ API | TRD | TRD | _por relevar_ |
-| Bots con stock dinámico | TRD | TRD | _por relevar_ |
-| Integraciones: Zenus, FV Bank | MISC | transversal | _por relevar_ |
-| Bandeja de asignación de depósitos | OPS/APP | OPS | _por relevar_ |
-| Remuneración de saldos crypto | OPS/APP | OPS | _por relevar_ |
-| Retiros cripto autogestión con bandeja | OPS/APP | OPS | _por relevar_ |
-| Pago de servicios | OPS/APP | OPS | _por relevar_ |
-| Earnings | OPS/APP | OPS | _por relevar_ |
-| Status / Health del sistema | OPS/APP | OPS | _por relevar_ |
-| Autogestión de documentación y datos | OPS/APP | OPS | _por relevar_ |
-| QR interoperable | OPS/APP | OPS | _por relevar_ |
-| Wallets por cliente | OPS/APP | OPS | _por relevar_ |
-| Automatización de contratos (DocuSign) | LEX | LEX | _por relevar_ |
-| Actualización automática de T&C | LEX | LEX | _por relevar_ |
-| Onboardings automáticos en partners | LEX | LEX | _por relevar_ |
-| Comando y monitoreo avanzado de bots | TRD | TRD | _por relevar_ |
-| Power BI + Integración y HubSpot | MISC | transversal | _por relevar_ |
+| 1 | **RFQ Gateway** | RFP/RFQ API · RFQ portal (USDC/USDT-ARS) · Motor de precios APE · Motor de precios ARS · RFQ API | Absorbe la familia Prime Desk RFQ ya existente (PWI-11, 26, 30, 31, 34, 80) |
+| 2 | **Infraestructura Transversal** | Alertas · Dashboard · Acciones · Vistas · Inbox · Reportes · Observabilidad / Status-Health · Infra API básica (CVU collect) | El set transversal del core (PWI-47–52, 60) |
+| 3 | **Integraciones** | HubSpot · Bridge (virtual accounts + onboarding) · Bitgo · Convera · COELSA · NetSuite | ¿Zenus / FV Bank también acá? ¿AiPrise (revalidación)? — _por aclarar_ |
+| 4 | **PSP** | Integración BIND · Banco de Comercio · Impuesto a los Débitos y Créditos (ex "0.6% impuestos") | ¿Bancos va acá o a CTF? — _por aclarar_ |
+| 5 | **CTF** | Disponibilidades · Movimientos Nostro | Bloqueado por migración FIN→CTF. ¿Remuneración de saldos / Bancos? — _por aclarar_ |
+| 6 | **CLP (Web App)** | Home · Trades (Quotes) · Transactions (Fondos) · Deposits/Withdrawals · Earnings | Refactor CLP (ex PWI-77) |
+| 7 | **Mobile App** | _(sin ítems directos del roadmap IT)_ | Iniciativa nueva — alcance a definir |
+| 8 | **Posición Unificada de la Mesa** | Posición de mesa unificada (PWI-30 parcial) | ¿Bots (stock dinámico, comando avanzado) van acá o a RFQ Gateway? — _por aclarar_ |
+| 9 | **Dashboard del Agrupador** | Dashboard de agrupadores · Registro de TC del agrupador (PWI-13) | Agrupadores (PWI-27) ¿acá o transversal? — _por aclarar_ |
+| 10 | **Reportes Regulatorios (UIF/ARCA)** | Reportes regulatorios automáticos (PWI-22, 32) | **Gated por los módulos transversales** (depende de Infraestructura Transversal) |
+| 11 | **Monitoreo Transaccional** | Worldcheck/OFAC/Elliptic · Screening de contrapartes (PWI-33) | ¿Blacklist (PWI-17) va acá o a LEX? — _por aclarar_ |
+
+### Ítems del roadmap sin iniciativa asignada todavía — parking de temas a definir
+
+> Anotados acá para no perderlos de vista. El HoP los ubica **ítem por ítem** en sesiones siguientes. No se asume destino.
+
+- **OPS sueltos:** Lógica de swaps automática · Control de costos por contraparte · QR interoperable · Wallets por cliente · Pago de servicios · Autogestión de documentación y datos · Remuneración de saldos (ARS/crypto) · Retiros cripto autogestión con bandeja · Bandeja de asignación de depósitos · Fees por cliente · Transfer out ARS autogestionado · Comandas.
+- **LEX sueltos:** Segmentación por clusters · API de onboarding · Automatización de contratos (DocuSign) · Actualización automática de T&C · Onboardings automáticos en partners · Revalidación periódica AiPrise.
+- **Otros:** Zenus / FV Bank · Power BI · Bots (stock dinámico, comando avanzado) · Bancos.
+
+> **Pendiente de definición del HoP:** la lista de 11 iniciativas no cubre el grueso de los ítems OPS y LEX de Q3/Q4. Falta decidir si se declaran iniciativas **OPS** y **LEX** propias, o si esos ítems se reparten entre las 11 existentes (p. ej. varios OPS a Infraestructura Transversal). El HoP lo aclara ítem por ítem en sesiones siguientes.
 
 ---
 
@@ -178,10 +219,11 @@ Transcripción estructurada del roadmap de Notion, con cada ítem mapeado a su a
 
 ## Próximos pasos
 
-1. **Relevamiento de estado ítem por ítem** — cruzar cada fila del inventario contra `features/`, `discoveries/` y Jira (PWI/EWI), y donde no haya evidencia, validar con Tecnología. Completar la columna `Estado`.
-2. **Clasificación por artefacto** — para cada ítem no-hecho, asignar el artefacto de Producto destino (iniciativa / discovery / requerimiento) según el criterio del punto 2 de hipótesis.
-3. **Resolver la migración FIN → CTF** con el HoP como paso bloqueante para los ítems de Tesorería.
-4. **Generar las iniciativas y discoveries** derivados, propagando este discovery hacia ellos.
+1. **Aclarar la asignación de ítems huérfanos** — el HoP ubica ítem por ítem los OPS/LEX sueltos y decide si se declaran iniciativas OPS y LEX propias.
+2. **Refactor de los Epics PWI existentes** — adecuar los Epics actuales (PWI-1 a PWI-5, etc., orientados a idea) a la nueva taxonomía de iniciativas orientada a funcionalidad. Trabajo de Jira aparte.
+3. **Resolver la migración FIN → CTF** con el HoP como paso bloqueante para los ítems de la iniciativa CTF (Disponibilidades, Nostro).
+4. **Clasificación por artefacto** — para cada ítem no-hecho ya asignado a una iniciativa, decidir el artefacto destino (discovery / requerimiento) según el criterio discovery-first.
+5. **Generar las iniciativas y discoveries** derivados, propagando este discovery hacia ellos.
 
 ---
 
