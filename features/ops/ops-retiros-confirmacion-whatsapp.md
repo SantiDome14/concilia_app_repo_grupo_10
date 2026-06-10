@@ -1,7 +1,7 @@
 # ops-confirmacion-retiros
 
-> Última actualización: 2026-05-08
-> REQ: REQ-80
+> Última actualización: 2026-06-10
+> REQ: PWI-61 — DEPRECATED
 
 ---
 
@@ -13,7 +13,7 @@ Capa de confirmación explícita de solicitudes de retiro vía WhatsApp Business
 
 ## Estado actual
 
-En definición. REQ-80 enriquecido y pendiente de handoff a Tecnología. Dos prerequisitos bloqueantes antes de poder iniciar desarrollo.
+Deprecado. PWI-61 fue deprecado el 2026-06-10. La investigación sobre el mecanismo de confirmación queda preservada en `discoveries/ops-withdraw-confirmation-discovery.md` para referencia futura.
 
 ---
 
@@ -26,8 +26,10 @@ En definición. REQ-80 enriquecido y pendiente de handoff a Tecnología. Dos pre
 
 ## Flujo
 
-1. Cliente envía mensaje de retiro en lenguaje libre en el grupo de WhatsApp
-2. Miles detecta la intención via NLP
+> ⚠️ El paso 2 está bajo revisión. La detección automática vía NLP fue descartada por Mati Sragowicz. Ver sección Revisión del alcance para las alternativas en evaluación.
+
+1. Cliente envía mensaje de retiro en el grupo de WhatsApp
+2. **[EN REVISIÓN]** Sistema detecta la intención — mecanismo de trigger pendiente de definir
 3. En paralelo:
    - Envía utility template `ardua_confirmacion_retiro` al número personal del cliente desde el número de WhatsApp Business de Ardua
    - Notifica al canal de Slack de retiros que se creó una nueva solicitud
@@ -71,6 +73,25 @@ Documentación de referencia: https://developers.facebook.com/documentation/busi
 - Integración con Comanda de Retiros (iteración futura)
 
 ---
+
+## Revisión del alcance
+
+Mati Sragowicz confirmó que la detección automática de intención de retiro en lenguaje libre vía NLP no es implementable. El trigger del flujo está sin resolver. Los pasos 3, 4 y 5 permanecen válidos. Dos alternativas en evaluación:
+
+**Opción A — Trigger manual por Operations (viable, sin dependencia de grupos)**
+Operations recibe el pedido en el grupo de WhatsApp como hoy. En lugar de ejecutar directamente, va al panel en la app de OPS, carga el número de teléfono del cliente y los datos del retiro. El sistema llama a la WhatsApp Business Cloud API y el cliente recibe el utility template directamente desde el número oficial de Ardua en una conversación 1:1 — los grupos no intervienen en ningún punto del flujo técnico.
+- Preserva la capa de confirmación al 100% / no depende de los grupos ni del webhook de entrada / Operations suma un paso / complejidad: baja-media
+- Único requisito técnico: Ardua debe tener activa la Cloud API de Meta (número verificado + token de acceso)
+
+**Opción B — Comando estructurado del cliente (descartada)**
+Dependia de que el webhook pueda leer mensajes del grupo. La WhatsApp Business Cloud API no soporta grupos — opción descartada.
+
+**Hallazgo técnico — WhatsApp Business API y grupos**
+La Cloud API de Meta no soporta grupos. El webhook recibe eventos de conversaciones 1:1 únicamente. Los grupos de Ardua (uno por cliente) probablemente corren sobre WhatsApp Business App, que es un producto distinto. El trigger del flujo debe ser siempre iniciado desde el panel de OPS, no desde los grupos.
+
+**Única pregunta abierta con Mati:** confirmar si Ardua tiene activa la Cloud API de Meta (número de negocio verificado + token de acceso). Si está activo, la Opción A no tiene bloqueantes técnicos adicionales.
+
+**Próximo paso:** confirmar con Mati el estado de la Cloud API y avanzar con la Opción A como camino definitivo.
 
 ## Decisiones clave
 

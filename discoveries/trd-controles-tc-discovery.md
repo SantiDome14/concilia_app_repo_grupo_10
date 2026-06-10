@@ -4,7 +4,7 @@ features: [TRD]
 status: En investigación
 owner: Santino Domeniconi
 created_at: 2026-06-08
-updated_at: 2026-06-08
+updated_at: 2026-06-10
 validated_with: Facundo Vasques (Head of Trading) — 08/06/2026
 propagates_to:
   - features/trd/trd-quotes.md
@@ -121,6 +121,53 @@ Se activa al hacer click en el CTA cuando hay desvío activo.
 | D-1 | ¿El quote / operación aprobada con desvío queda marcada con un badge en el listado? | **No.** Sin badge ni marcador en el listado. La operación se registra igual que cualquier otra. |
 | D-2 | ¿El modal de confirmación requiere un campo de justificación libre antes de confirmar? | **No.** Solo confirmación explícita via CTA. Sin campo de texto libre. |
 | D-3 | ¿El CTA cambia de texto y color al detectar desvío, o mantiene su aspecto original? | **Sí, cambia.** El botón pasa a ámbar con texto diferenciado al activarse el desvío. |
+
+### C8 — Layout del campo TC en Proveedores
+
+**Decision (wireframe v2, 2026-06-10 — pendiente validacion Facu):** en Proveedores de Liquidez el campo TC ocupa una fila propia de ancho completo dentro de la seccion INSTRUMENTO, por debajo del grid Par+Plazo. No comparte fila con ningun otro campo. Este layout le da al TC el mismo peso visual que el campo Rate en Quotes y deja espacio suficiente para el bloque FX Pantalla que se incorpora debajo.
+
+### C9 — Estructura interna del bloque FX Pantalla
+
+**Decision (wireframe v2, 2026-06-10 — pendiente validacion Facu):** el bloque FX Pantalla tiene cuatro filas internas con reglas de visibilidad propias:
+
+- **Info row** (siempre visible cuando el bloque esta activo): label `FX PANTALLA` + precio en JetBrains Mono + badge del par seleccionado (ej. `USDC/ARS`, `USD/ARS`) + badge de desvio (`ok` verde o `warn` ambar). El badge del par contextualiza el precio sin requerir que el trader lea el selector de par por separado.
+- **Range row** (visible solo en estados amber — desvio activo): muestra el rango aceptable en formato `Rango aceptable: $X – $Y`. No aparece en estado 1 (sin desvio).
+- **Chips row** (siempre visible cuando el bloque esta activo): un chip por proveedor disponible (Binance, Matriz) con nombre + precio + icono de copia (`ti-copy`). El chip activo (`.on`) representa el precio actualmente seleccionado como referencia. Click en un chip mueve el `.on` a ese chip y emite un flash visual de confirmacion. En estado normal el chip activo es azul; en estado amber el chip activo es ambar.
+- **Bottom row** (siempre visible cuando el bloque esta activo): barra de progreso y contador numerico (ej. `5s`) sincronizados entre si. La barra se vacia linealmente de derecha a izquierda en 5 segundos y se resetea sola. El contador desciende de 5 a 1 y vuelve a 5.
+
+El bloque completo adopta borde y fondo ambar en estados 2 y 3 (desvio activo). En estado 4 (sin referencia), el bloque es reemplazado en su totalidad por el aviso de sin referencia (ver C11).
+
+### C10 — Campo computado recibe tratamiento ambar al detectar desvio
+
+**Decision (wireframe v2, 2026-06-10 — pendiente validacion Facu):** cuando el TC esta fuera del rango aceptable (estados 2 y 3), el campo computado — Monto a entregar en Quotes, Contravalor en Proveedores — muestra borde ambar y texto ambar ademas del valor calculado. Refuerza la señal de desvio sobre el monto resultante de la operacion y hace visible que el importe a liquidar fue calculado sobre un TC fuera del rango.
+
+### C11 — Wording exacto por modulo
+
+**Decision (wireframe v2, 2026-06-10 — pendiente validacion Facu):** los textos de alerta, modal y CTA son especificos por modulo para mantener coherencia con la terminologia del formulario:
+
+| Elemento | Quotes | Proveedores |
+|---|---|---|
+| Alerta inline — cuerpo | "Rate [X] supera el rango aceptable de ±3% en [Y]%" | "TC [X] supera el rango aceptable de ±3% en [Y]%" |
+| CTA normal | "Crear quote →" (sin icono) | "Guardar operacion" (con icono `ti-check`) |
+| CTA desviado | "Crear quote con desvio →" (con icono `ti-alert-triangle`) | "Guardar con desvio" (con icono `ti-alert-triangle`) |
+| Modal — titulo | "Confirmar Quote con TC fuera del rango" | "Confirmar operacion con TC fuera del rango" |
+| Modal — descripcion | "Revisa los datos antes de confirmar. El Rate supera el rango aceptable de mercado." | "Revisa los datos antes de confirmar. El TC registra un desvio significativo respecto al precio de referencia." |
+| Modal — ultima fila tabla | "Cliente" | "Proveedor" |
+| Modal — boton confirmar | "Confirmar quote" | "Confirmar operacion" |
+| Estado 4 — aviso | "Sin referencia disponible para este par" con icono `ti-alert-triangle` | idem |
+
+En estado 4, el bloque FX Pantalla es reemplazado por una fila ambar con el aviso. El campo Rate/TC y el CTA permanecen en estado normal (sin borde ambar, CTA verde).
+
+### C12 — FX Pantalla como campo editable en ambos modulos
+
+**Decision (Facundo Vasques, 2026-06-10):** el valor del FX Pantalla es siempre editable por el trader, independientemente de si el endpoint `/fx-rate` devuelve un precio para el par seleccionado:
+
+- **Cuando la API devuelve precios:** el campo se pre-pobla con el precio del proveedor activo (chip `.on`). Los chips funcionan como referencias — hacer click en un chip copia ese precio al campo editable. El trader puede sobreescribir el valor libremente.
+- **Cuando la API no devuelve precio (estado 4):** el campo aparece vacio y editable. El trader puede ingresar manualmente un precio de referencia. Si ingresa un valor y abandona el campo (on blur), el control de desvio se activa normalmente contra ese valor manual.
+
+La validacion del desvio corre siempre contra el valor que esta en el campo FX Pantalla en ese momento — ya sea auto-poblado por la API o ingresado manualmente por el trader.
+
+**Impacto sobre el estado 4 (revision del wireframe pendiente):** el estado 4 no desactiva el control de desvio — lo deja en manos del trader. El aviso "Sin referencia disponible para este par" informa que el sistema no pudo obtener el precio automaticamente, pero el campo FX Pantalla permanece visible y editable (vacio). Si el trader lo deja vacio y abandona el campo TC, el control no se dispara — no hay referencia contra la que comparar. Si el trader ingresa un valor manual en FX Pantalla y luego ingresa un TC que desvie, el control se activa con normalidad. El wireframe actual (estado 4) oculta el bloque FX completo — requiere revision para mostrar el campo editable vacio en lugar del bloque con precios.
 
 ---
 
