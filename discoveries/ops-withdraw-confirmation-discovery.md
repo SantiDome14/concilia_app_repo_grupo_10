@@ -4,7 +4,8 @@ features: [OPS]
 status: En investigacion
 owner: Santino Domeniconi
 created_at: 2026-05-06
-updated_at: 2026-05-06
+updated_at: 2026-06-10
+deprecated_at: 2026-06-10
 ---
 
 # OPS — Confirmacion de Withdrawals
@@ -81,6 +82,50 @@ El cliente hace click para confirmar. Operations ve la confirmacion y ejecuta.
       → Pendiente: reunion con CTO (Matias) — 2026-05-06
 - [ ] ¿Que tan rapido podria estar algo en produccion?
       → Pendiente: reunion con CTO (Matias) — 2026-05-06
+
+## Bloqueo tecnico — Deteccion por NLP (2026-06-10)
+
+Mati Sragowicz confirmo que la deteccion automatica de intencion de retiro en lenguaje libre
+via NLP no es implementable. Esto afecta el disparador de todo el flujo. Los puntos 2, 3 y 4
+del alcance funcional (utility template, notificaciones a Slack, expiracion) permanecen validos.
+Se identificaron dos alternativas para resolver el trigger. El ticket PWI-61 fue deprecado
+el 2026-06-10. El conocimiento generado en esta investigacion queda preservado en este
+discovery como referencia para una eventual re-apertura.
+
+**Hallazgo tecnico — WhatsApp Business API y grupos**
+
+La WhatsApp Business Cloud API oficial de Meta no soporta grupos. El webhook recibe
+eventos de conversaciones 1:1 unicamente. Los grupos de Ardua (un grupo por cliente)
+probablemente corren sobre WhatsApp Business App, que es un producto distinto a la API.
+Esto significa que el webhook no puede leer mensajes de los grupos, independientemente
+del mecanismo de deteccion. La Opcion B cae por esta razon.
+
+**Opcion A — Trigger manual por Operations (viable, sin dependencia de grupos)**
+
+Operations recibe el pedido en el grupo de WhatsApp como hoy. En lugar de ejecutar
+directamente, va al panel en la app de OPS, carga el numero de telefono del cliente
+y los datos del retiro (monto, activo, destino). El sistema llama a la WhatsApp Business
+Cloud API y el cliente recibe el utility template directamente desde el numero oficial
+de Ardua en una conversacion 1:1 — sin que los grupos intervengan en ningun punto
+del flujo tecnico.
+
+- Preserva la capa de confirmacion al 100%
+- No tiene dependencia de los grupos ni del webhook de entrada
+- Requiere que Ardua tenga activa la Cloud API de Meta (numero verificado + token de acceso)
+- Operations suma un paso al proceso actual (trigger manual desde el panel)
+- Complejidad tecnica: baja-media
+
+**Opcion B — Comando estructurado del cliente (descartada)**
+
+Dependia de que el webhook pueda leer mensajes del grupo de WhatsApp.
+La WhatsApp Business Cloud API no soporta grupos — opcion descartada.
+
+**Unica pregunta abierta con Mati:** confirmar si Ardua tiene activo el acceso a la
+Cloud API de Meta (numero de negocio verificado + token de acceso configurado).
+Si esta activo, la Opcion A no tiene bloqueantes tecnicos adicionales.
+
+**Proximo paso:** confirmar con Mati el estado de la Cloud API de Meta y avanzar
+con la Opcion A como camino definitivo.
 
 ## Propagacion esperada
 Cuando se concluya esta investigacion, los hallazgos deben propagarse a:
