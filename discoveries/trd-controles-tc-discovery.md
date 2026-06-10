@@ -151,7 +151,7 @@ Esta decision aplica tanto a Quotes como a Proveedores de Liquidez.
 
 ### C6 — Refresh automatico del FX Pantalla y barra de progreso
 
-**Decision (2026-06-09):** el precio de referencia se refresca automaticamente cada 5 segundos en ambos modulos (Quotes y Proveedores) mientras el formulario esta abierto. Se muestra mediante chips de proveedor con una barra de progreso unica que indica el tiempo restante hasta el proximo refresh. El timestamp fue descartado — la barra de progreso cubre la necesidad de visibilidad sobre la frescura del dato sin requerir una marca de tiempo estatica. La frecuencia de 5 segundos es fija en v1.
+**Decision (2026-06-09, actualizada 2026-06-10):** el precio de referencia se refresca automaticamente cada 5 segundos en ambos modulos (Quotes y Proveedores) mientras el formulario esta abierto. Cada chip muestra su propia barra de progreso con el tiempo restante hasta el proximo refresh — una barra por chip, no una barra compartida por modulo. El timestamp fue descartado — la barra de progreso cubre la necesidad de visibilidad sobre la frescura del dato sin requerir una marca de tiempo estatica. La frecuencia de 5 segundos es fija en v1.
 
 ### C7 — Objetivo del control: errores de tipeo, no proteccion de margen
 
@@ -182,16 +182,16 @@ El bloque completo adopta borde y fondo ambar en estados 2 y 3 (desvio activo). 
 
 | Elemento | Quotes | Proveedores |
 |---|---|---|
-| Alerta inline — cuerpo | "Rate [X] supera el rango aceptable de ±3% en [Y]%" | "TC [X] supera el rango aceptable de ±3% en [Y]%" |
-| CTA normal | "Crear quote →" (sin icono) | "Guardar operacion" (con icono `ti-check`) |
-| CTA desviado | "Crear quote con desvio →" (con icono `ti-alert-triangle`) | "Guardar con desvio" (con icono `ti-alert-triangle`) |
-| Modal — titulo | "Confirmar Quote con TC fuera del rango" | "Confirmar operacion con TC fuera del rango" |
+| Alerta inline — cuerpo | "Rate [X] supera el rango aceptable de ±3% en [Y]%" — [X] muestra el valor con el par (ej. 1.508,65 USDC/ARS); formato exacto a revisar en implementacion. [Y] es el desvio calculado en porcentaje | "TC [X] supera el rango aceptable de ±3% en [Y]%" — mismo criterio |
+| CTA normal | "Crear quote" + icono `ti-arrow-right` | "Guardar operacion" + icono `ti-check` |
+| CTA desviado | "Crear quote con desvio" + icono `ti-alert-triangle` | "Guardar con desvio" + icono `ti-alert-triangle` |
+| Modal — titulo | "Confirmar Quote con Rate fuera del rango" | "Confirmar operacion con TC fuera del rango" |
 | Modal — descripcion | "Revisa los datos antes de confirmar. El Rate supera el rango aceptable de mercado." | "Revisa los datos antes de confirmar. El TC registra un desvio significativo respecto al precio de referencia." |
 | Modal — ultima fila tabla | "Cliente" | "Proveedor" |
 | Modal — boton confirmar | "Confirmar quote" | "Confirmar operacion" |
-| Estado 4 — aviso | "Sin referencia disponible para este par" con icono `ti-alert-triangle` | idem |
+| Estado 4 — aviso | "Sin referencia disponible para este par. Podes ingresar un valor de referencia manualmente." con icono `ti-alert-triangle` | idem |
 
-En estado 4, el bloque FX Pantalla es reemplazado por una fila ambar con el aviso. El campo Rate/TC y el CTA permanecen en estado normal (sin borde ambar, CTA verde).
+En estado 4, el aviso aparece dentro del bloque FX Pantalla — el bloque no desaparece. El campo FX Pantalla permanece visible y editable (vacio). El campo Rate/TC y el CTA permanecen en estado normal (sin borde ambar, CTA verde).
 
 ### C12 — FX Pantalla como campo editable en ambos modulos
 
@@ -202,7 +202,7 @@ En estado 4, el bloque FX Pantalla es reemplazado por una fila ambar con el avis
 
 La validacion del desvio corre siempre contra el valor que esta en el campo FX Pantalla en ese momento — ya sea auto-poblado por la API o ingresado manualmente por el trader.
 
-**Impacto sobre el estado 4 (revision del wireframe pendiente):** el estado 4 no desactiva el control de desvio — lo deja en manos del trader. El aviso "Sin referencia disponible para este par" informa que el sistema no pudo obtener el precio automaticamente, pero el campo FX Pantalla permanece visible y editable (vacio). Si el trader lo deja vacio y abandona el campo TC, el control no se dispara — no hay referencia contra la que comparar. Si el trader ingresa un valor manual en FX Pantalla y luego ingresa un TC que desvie, el control se activa con normalidad. El wireframe actual (estado 4) oculta el bloque FX completo — requiere revision para mostrar el campo editable vacio en lugar del bloque con precios.
+**Impacto sobre el estado 4 (resuelto 2026-06-10):** el estado 4 no desactiva el control — lo deja en manos del trader. El aviso aparece dentro del bloque FX Pantalla; el bloque no se reemplaza. El campo FX Pantalla permanece visible y editable (vacio). Si el trader lo deja vacio y abandona el campo Rate/TC, el control no se dispara. Si ingresa un valor manual y luego ingresa un Rate/TC que desvie, el control se activa con normalidad.
 
 ---
 
@@ -211,7 +211,7 @@ La validacion del desvio corre siempre contra el valor que esta en el campo FX P
 | # | Pregunta | Por que importa | Estado |
 |---|---|---|---|
 | P-01 | Que proveedores (ademas de "matriz") devuelve el endpoint `/fx-rate` y que pares cubre cada uno? | Define si hay cobertura nativa para pares como USD/ARS, BTC/USDT, ETH/USDT, o si el cross-rate necesita componentes de pares adicionales | Abierta — confirmar en refinement con Tecnologia |
-| P-02 | El endpoint `/fx-rate` soporta BTC/USDT y USD/ARS como pares independientes? | Necesario para computar el cross BTC/ARS = BTC/USDT x USD/ARS | **Abierta con evidencia actualizada.** Verificacion en QA indicaba "No disponible" para BTC/ARS — confirmado como problema de ambiente QA, no de cobertura real. Binance tiene BTC/ARS disponible en produccion. Scope de v1 confirmado. Confirmar en refinement si el endpoint devuelve el par directo o requiere implementar el cross BTC/USDT x USD/ARS. |
+| P-02 | El endpoint `/fx-rate` devuelve BTC/ARS como par directo, o hay que calcular el cross BTC/USDT x USD/ARS en el frontend? | Define donde vive el calculo. Logica definida: API primero; si no devuelve precio directo para el par cripto/ARS, el frontend calcula el cross. | **Abierta — confirmar en refinement tecnico.** Verificacion en QA indicaba "No disponible" para BTC/ARS — confirmado como problema de ambiente QA, no de cobertura real. Binance tiene BTC/ARS disponible en produccion. Definir en refinement si el endpoint cubre el par directo o si se implementa el cross en el frontend. |
 | P-03 | El control de desvio se computa en el frontend o en el backend? | Determina donde vive la logica de comparacion | **Cerrada.** Inspeccion de `QuoteForm.tsx` confirma que la comparacion es local en el frontend: `exchangeRate` vs `fxPantalla` (state). No hay flag de alerta en la respuesta del backend. |
 | P-04 | El FX Pantalla se refresca mientras el formulario esta abierto, o es un fetch puntual que puede volverse stale? | Si el trader deja el formulario abierto varios minutos, el precio de referencia puede ser viejo. Impacta la confiabilidad del control. | **Cerrada (2026-06-09):** se adopta polling de 5 segundos con barra de progreso unica. El precio se refresca automaticamente en ambos modulos mientras el formulario esta abierto. El control de desvio evalua on blur contra el precio disponible en ese momento — sin re-evaluacion automatica cuando el precio se refresca (ver C6). |
 
