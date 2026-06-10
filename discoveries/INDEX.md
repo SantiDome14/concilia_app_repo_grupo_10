@@ -2,7 +2,7 @@
 
 > Catálogo navegable de los discoveries existentes. Para entender la convención de naming, los estados y el ciclo de vida, ver [`README.md`](./README.md).
 >
-> Última actualización: **2026-06-09** · **34 discoveries** + **4 artefactos de soporte**
+> Última actualización: **2026-06-10** · **35 discoveries** + **3 artefactos de soporte**
 
 ---
 
@@ -31,6 +31,7 @@ Hipótesis focalizadas en un módulo específico dentro de una aplicación.
 |---|---|---|---|---|---|
 | [`ops-whitelist-cbu-discovery.md`](./ops-whitelist-cbu-discovery.md) | OPS — Whitelist CBU/CVU: identificación de banco y etiquetas | Concluida | Santino Domeniconi | 2026-06-09 | `features/ops/ops-whitelist-cbu-cvu.md` |
 | [`lex-auditoria-operativa-discovery.md`](./lex-auditoria-operativa-discovery.md) | LEX — Auditoría operativa de trades confirmados (TRD → LEX) | En investigación | Santino Domeniconi | 2026-06-05 | _—_ |
+| [`clp-retiros-discovery.md`](./clp-retiros-discovery.md) | CLP — Módulo de Retiros (Self-service desde el portal) | En investigación | Santino Domeniconi | 2026-06-10 | `features/clp/clp-retiros.md` · `features/clp/README.md` · `features/ops/README.md` |
 | [`ops-deposit-instructions-discovery.md`](./ops-deposit-instructions-discovery.md) | OPS — Deposit Instructions · Variables automáticas | Concluida | Santino Domeniconi | 2026-06-04 | `features/ops/ops-deposit-instructions.md` |
 | [`trd-clientes-discovery.md`](./trd-clientes-discovery.md) | TRD — Módulo Clientes · Visualización de saldos y límites | En investigación | Santino Domeniconi | 2026-06-04 | `features/trd/trd-clientes.md` |
 | [`trd-controles-tc-discovery.md`](./trd-controles-tc-discovery.md) | TRD — Controles de desvío de TC en Quotes y Proveedores de Liquidez | En investigación | Santino Domeniconi | 2026-06-08 | `features/trd/trd-quotes.md` · `features/trd/trd-proveedores-de-liquidez.md` |
@@ -48,6 +49,7 @@ Hipótesis sobre una funcionalidad específica dentro de un módulo.
 
 | Archivo | Nombre | Estado | Owner | Última act. | Propaga a |
 |---|---|---|---|---|---|
+| [`trd-controles-tc-discovery.md`](./trd-controles-tc-discovery.md) | TRD — Control de desvío de TC en Quotes y Proveedores de Liquidez | Concluida | Santino Domeniconi | 2026-06-10 | `features/trd/trd-quotes.md` · `features/trd/trd-proveedores-de-liquidez.md` |
 | [`lex-clientes-informacion-contacto-discovery.md`](./lex-clientes-informacion-contacto-discovery.md) | LEX — Información de Contacto del Legajo (Clientes) · Discovery Document | En investigación | Yasmani Rodriguez | 2026-06-02 | `features/lex/lex-clientes-informacion-contacto.md` · `features/lex/README.md` |
 | [`lex-operatoria-documentacion-discovery.md`](./lex-operatoria-documentacion-discovery.md) | LEX — Gestión documental de clientes en el detalle de cliente | En investigación | Santino Domeniconi | 2026-06-03 | _—_ |
 | [`lex-operatoria-rulo-quotes-discovery.md`](./lex-operatoria-rulo-quotes-discovery.md) | LEX — Visibilidad de quotes del rulo en el detalle de cliente | Concluida | Santino Domeniconi | 2026-06-03 | `features/lex/README.md` · `features/lex/lex-operatoria-quotes.md` |
