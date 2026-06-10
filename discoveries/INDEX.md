@@ -2,7 +2,7 @@
 
 > Catálogo navegable de los discoveries existentes. Para entender la convención de naming, los estados y el ciclo de vida, ver [`README.md`](./README.md).
 >
-> Última actualización: **2026-06-07** · **33 discoveries** + **3 artefactos de soporte**
+> Última actualización: **2026-06-10** · **34 discoveries** + **3 artefactos de soporte**
 
 ---
 
@@ -30,6 +30,7 @@ Hipótesis focalizadas en un módulo específico dentro de una aplicación.
 | Archivo | Nombre | Estado | Owner | Última act. | Propaga a |
 |---|---|---|---|---|---|
 | [`lex-auditoria-operativa-discovery.md`](./lex-auditoria-operativa-discovery.md) | LEX — Auditoría operativa de trades confirmados (TRD → LEX) | En investigación | Santino Domeniconi | 2026-06-05 | _—_ |
+| [`clp-retiros-discovery.md`](./clp-retiros-discovery.md) | CLP — Módulo de Retiros (Self-service desde el portal) | En investigación | Santino Domeniconi | 2026-06-10 | `features/clp/clp-retiros.md` · `features/clp/README.md` · `features/ops/README.md` |
 | [`ops-deposit-instructions-discovery.md`](./ops-deposit-instructions-discovery.md) | OPS — Deposit Instructions · Variables automáticas | Concluida | Santino Domeniconi | 2026-06-04 | `features/ops/ops-deposit-instructions.md` |
 | [`trd-clientes-discovery.md`](./trd-clientes-discovery.md) | TRD — Módulo Clientes · Visualización de saldos y límites | En investigación | Santino Domeniconi | 2026-06-04 | `features/trd/trd-clientes.md` |
 | [`trd-quotes-discovery.md`](./trd-quotes-discovery.md) | TRD — Módulo Quotes | En investigación | Santino Domeniconi | 2026-05-26 | `features/trd/trd-quotes.md` |
