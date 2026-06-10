@@ -2,7 +2,7 @@
 
 > Catálogo navegable de los discoveries existentes. Para entender la convención de naming, los estados y el ciclo de vida, ver [`README.md`](./README.md).
 >
-> Última actualización: **2026-06-09** · **33 discoveries** + **4 artefactos de soporte**
+> Última actualización: **2026-06-09** · **34 discoveries** + **4 artefactos de soporte**
 
 ---
 
@@ -101,6 +101,7 @@ Hipótesis sobre cómo trabajamos: automatizaciones de gestión, SLAs, herramien
 
 | Archivo | Nombre | Estado | Owner | Última act. |
 |---|---|---|---|---|
+| [`roadmap-migracion-tecnologia-discovery.md`](./roadmap-migracion-tecnologia-discovery.md) | Migración del Roadmap de Tecnología — Levantamiento y traducción al modelo de Producto | En investigación | Yasmani Rodriguez | 2026-06-09 |
 | [`miles-home-discovery.md`](./miles-home-discovery.md) | Home de Miles — contenido ramificado por perfil y fuente de identidad | En investigación | Yasmani Rodriguez | 2026-06-07 |
 | [`ask-ardua-gmail-bandejas-compartidas-discovery.md`](./ask-ardua-gmail-bandejas-compartidas-discovery.md) | Ask Ardua — Acceso de Claude a bandejas de Gmail compartidas por área | En investigación | Santino Domeniconi | 2026-05-26 |
 | [`jira-automations-discovery.md`](./jira-automations-discovery.md) | Jira Automations — Session Context | En investigación | Yasmani Rodriguez | 2026-05-11 |
