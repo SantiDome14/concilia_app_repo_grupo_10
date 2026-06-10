@@ -4,7 +4,7 @@ features: [FIN]
 status: En investigación
 owner: Yasmani Rodriguez
 created_at: 2026-05-19
-updated_at: 2026-05-20
+updated_at: 2026-06-10
 propagates_to:
   - features/fin/fin-tesoreria-disponibilidades.md
 ---
@@ -59,6 +59,52 @@ Una intuición frecuente es pensar que cada cuenta física debería poder descom
 - **Auditabilidad**: ningún custodio externo, contador, ni regulador validaría una asignación cliente-cuenta que no surge de un hecho económico verificable.
 
 El módulo expresa correctamente esta separación: muestra **saldo físico por cuenta** (un solo número, sin desglose) y **obligaciones por cliente y por moneda** (en otra superficie, agregado por sociedad). La conciliación entre las dos vistas se hace en el agregado, no en el detalle.
+
+## Dos mecanismos de atribución: FBO (custodia) vs cuentas espejo (intercompany)
+
+> **Iteración 2026-06-10.** Esta sección incorpora el marco conceptual que da fundamento al tratamiento de la atribución de fondos. No reemplaza el principio omnibus (anclaje #2, #38) — lo precisa. La clave es que **"¿de quién es esta plata?" tiene dos respuestas según el tipo de titular**, y cada una usa un mecanismo distinto que nunca se mezcla con el otro.
+
+### El plano físico no atribuye; el subledger sí
+
+La plata vive físicamente mezclada en cuentas pool reales (BITGO, COINBASE, COINAG). El custodio reporta **un solo número** por cuenta: no sabe de quién es cada porción, y no puede saberlo, porque el dinero es fungible. La atribución —de quién es cada parte del pool— **no se lee del custodio, se asienta en el subledger del core**. Es un acto de registro construido por acumulación de eventos económicos, no una medición del saldo físico.
+
+Caso canónico (producción, junio 2026): en la cuenta BITGO de Ardua hay USD 1.500.000 físicos, de los cuales USD 500.000 son de Circuit Pay. Mirando BITGO es imposible distinguirlos. Se sabe porque en el core, en la entidad Ardua, **Circuit Pay tiene una cuenta corriente** cuyo saldo es la posición intercompany acumulada. La frase exacta: la atribución **se asienta, no se observa**.
+
+Consecuencia directa: la igualdad `Σ atribuido (core) = saldo físico (custodio)` **no está garantizada por construcción** — a diferencia del esquema PSP de COINAG, donde `saldo CBU padre = Σ saldos CVUs hijas` se cumple solo porque el sistema no permite plata huérfana. En el pool general la igualdad se sostiene únicamente con **disciplina de conciliación**. La diferencia entre lo físico y lo atribuido en cualquier momento es la **card Pendientes** (plata que llegó pero todavía no se asentó a un titular). Pendientes es el termómetro del cierre: cuando es cero, se logró el cierre PSP-like en todo el esquema. Es un estado legítimo y permanente del pool abierto, no un error. Esto es exactamente la lección Synapse (2024): la quiebra se desató por subledgers opacos y mal conciliados contra el físico — la pregunta regulatoria post-Synapse es "¿quién mantiene el sistema de registro con visibilidad de saldos, ubicación y prueba de propiedad?", que es la pregunta base de este módulo.
+
+### Generalizar el PSP: el patrón FBO
+
+El esquema PSP (CBU madre + CVUs hijas por cliente) es un caso particular del patrón estándar de industria **FBO (For Benefit Of)**: una cuenta pooled que el operador gestiona, donde los fondos pertenecen legalmente a los titulares, con un subledger que atribuye cada porción. "Replicar el PSP en todo Ardua" = generalizar FBO como **capa lógica de atribución** sobre el pool físico (no como cuentas bancarias reales segregadas, que es operativamente inviable). El opuesto de FBO por propiedad es la **cuenta operativa propia** (capital propio, libre de operar); por estructura es la cuenta named/segregated. Para el modelo importa el eje de propiedad: FBO ↔ propio se corresponde con Obligaciones ↔ Capital Propio.
+
+Ardua se aparta del FBO de manual en dos puntos, ambos legítimos para su negocio: (a) **opera con la liquidez del pool** (pool activo, no custodia pasiva como un neobank), por eso la pregunta "¿cuánto puedo usar?" es central; (b) **el beneficiario puede ser otra sociedad del grupo** (intercompany), no solo un cliente externo.
+
+### Los dos mecanismos disjuntos
+
+La atribución usa **dos mecanismos que nunca se mezclan**, según el tipo de titular:
+
+| Mecanismo | Titular | Comportamiento | Signo | Consolidación | Responde |
+|---|---|---|---|---|---|
+| **FBO / custodia** | Cliente externo | Pasivo (Obligación) | Nunca negativo | No se elimina | "¿de quién es esta plata de tercero?" |
+| **Cuenta espejo intercompany** | Sociedad del grupo | Crédito/deuda mutua | Cualquier signo | Se elimina al consolidar | "¿cuánto se deben las entidades entre sí?" |
+
+El saldo propio de Ardua es el tercer caso: ni FBO ni espejo — es **Capital Propio** directo.
+
+### Por qué NO se modela con "legajos de clientes recíprocos"
+
+Una alternativa considerada fue modelar a cada sociedad como un cliente legajado dentro de las otras (Haz Pagos como cliente de Ardua, Ardua como cliente de Haz Pagos, etc.). **Se descarta**, por tres razones:
+
+- **Modela contención cuando la relación es vínculo.** Un cliente está *dentro* de una entidad (jerárquico). Dos sociedades del grupo están *al lado* (vínculo entre pares). Forzar legajos recíprocos crea un grafo recursivo (A contiene B y B contiene A) que rompe la consolidación, que asume árbol.
+- **Genera saldos negativos espurios.** Un cliente de custodia nunca debería ir negativo (no se retira lo que no se depositó). Si un "legajo-sociedad" aparece negativo, es el modelo gritando que esa relación no es de custodia sino de crédito mutuo — precisamente lo que la cuenta espejo captura y el legajo no.
+- **Mezcla dos mecanismos en uno.** El legajo recíproco intenta que una sola estructura haga el trabajo de custodia y el de crédito intercompany. Separándolos, cada uno se comporta bien.
+
+La cuenta espejo intercompany es la respuesta de producto a los pendientes contables **C-13, C-14 y C-15** del marco-contable (asientos intercompany del acuerdo de recaudación Haz Pagos↔Ardua, giro al descubierto Circuit↔Ardua, y conciliación intercompany). No es teoría nueva: activa algo que el framework ya tenía anotado como pendiente.
+
+### Reconciliación con el principio omnibus
+
+Esta sección **no contradice** el anclaje #38 ("los fondos físicos no se asocian a clientes individualmente"). Son preguntas distintas que sonaban iguales:
+
+- "¿De qué **cliente externo** es la plata de esta cuenta?" → sigue mal formulada. Su saldo es pasivo agregado por sociedad-moneda (omnibus puro). El anclaje #38 sigue plenamente vigente.
+- "¿Qué **sociedad del grupo** tiene posición en este pool?" → válida, y se responde por la cuenta Intercompany (anclaje #37, ya existente). No es desglose cliente↔cuenta; es una relación entre entidades legales.
 
 ## Las tres perspectivas del sistema
 
@@ -171,6 +217,8 @@ Esta matriz es el **contrato cerrado del sistema** entre Operaciones, Tesorería
 | SWAP_IN (cliente) | — | — | Sí | — | 1 (soc. ejecutora) | Db Cuenta puente FX · Cr Oblig cliente M2 |
 | SPREAD (SWAP) | — | — | — | — | 1 (soc. ejecutora) | Db Cuenta puente FX · Cr Ingresos por spread |
 | Solicitud de retiro (PENDING) | — | — | Sí | — | 0 | — (solo reserva, sin asiento) |
+| **Operación propia FX — compra (contra proveedor de liquidez)** | — | — | — | Pactada (liquida aparte) | 1 (soc. ejecutora) | Db Posición FX comprada · Cr Cta corriente proveedor de liquidez |
+| **Operación propia FX — venta (cierre de posición)** | — | — | — | Pactada (liquida aparte) | 1 (soc. ejecutora) | Db Cta corriente proveedor de liquidez · Cr Posición FX comprada · Cr Ingresos por diferencia de cambio (op. propia) |
 | Pendiente de asignar | — | Sí | NO IDENT. | Ingreso | 1 (soc. cuenta) | Db Disp · Cr Pendientes asignación |
 | Asignación de pendiente | — | — | Sí | — | 1 (soc. cuenta original) | Db Pendientes asignación · Cr Oblig cliente |
 | Ajuste de Crédito | — | — | Sí | — | 1 (soc. del saldo) | Db Ingresos o Egresos · Cr Oblig cliente |
@@ -203,6 +251,14 @@ Ambos son fuentes de fondeo de Ardua a una de sus sociedades, pero son **concept
 
 A nivel consolidado, los préstamos intercompany se cancelan (la Cta a cobrar de una sociedad neteea con la Cta a pagar de la otra) y no cambian la Capacidad Operativa del grupo. **Los aportes de capital propio sí cambian la Capacidad Operativa del consolidado** — son la única vía exógena de aumentarla además del Resultado del período.
 
+### Operación propia FX contra proveedor de liquidez
+
+> **Iteración 2026-06-10.** Tipo nuevo. Captura el caso "Ardua compra un activo a un TC y lo vende a otro para ganar la diferencia", operando con **capital propio** (sin cliente) y teniendo como contraparte a un **proveedor de liquidez** (ALyC, exchange).
+
+A diferencia del SWAP de cliente —que toca la obligación del cliente y deja a Ardua un spread sobre la operación del cliente—, la operación propia mueve capital propio y su resultado (la diferencia de cambio entre la punta de compra y la de venta) cae directamente en **Ingresos por diferencia de cambio** → sube el Capital Propio del grupo. Las obligaciones con clientes **no cambian** porque no hay cliente involucrado.
+
+Punto clave que distingue pactar de liquidar: **cerrar el quote con el proveedor no es lo mismo que mover la plata.** La operación se pacta (ambas puntas, compra y venta, quedan acordadas y el resultado queda ganado) en un momento, y la liquidación física —la plata entrando o saliendo de la cuenta de Ardua en el proveedor— puede ocurrir en otro. La **cuenta corriente con el proveedor de liquidez** captura ese desacople: es estructuralmente el mismo mecanismo que la cuenta espejo intercompany (una relación de crédito de saldo variable contra un tercero), con la diferencia de que el proveedor es externo y por lo tanto **no se elimina** al consolidar el grupo. "Cerrar un Quote en una ALyC no implica que haya o no plata en esa ALyC" — exactamente lo que esta cuenta modela.
+
 ### Ajustes de Crédito y Débito (corrección de errores)
 
 Los Ajustes de Crédito y Débito son la **válvula de corrección canónica** del sistema. Operaciones nunca edita ni elimina un movimiento previo (principio de inmutabilidad, anclaje #14). Cuando se detecta un error en un movimiento previo, se registra un movimiento compensatorio del tipo correspondiente:
@@ -213,6 +269,8 @@ Los Ajustes de Crédito y Débito son la **válvula de corrección canónica** d
 Ambos tipos pueden tocar cuentas de Ingresos o Egresos según la naturaleza del error que corrigen. La trazabilidad se mantiene porque el movimiento de ajuste referencia al movimiento original que corrige. El asiento de ajuste se registra en la **misma sociedad** que el movimiento original que está corrigiendo.
 
 ## Simulación de referencia
+
+> **Iteración 2026-06-10.** T3 y T4 fueron reescritos para ilustrar una **operación propia FX contra proveedor de liquidez** (Ardua compra a 0.92 y vende a 0.93 con capital propio, ganando la diferencia de cambio) en lugar del SWAP de cliente + solicitud de retiro originales. Se eliminó el item `spread` embebido en T3 — el resultado ahora surge del par compra-venta, no de un spread sobre operación de cliente. El caso de **retiro PENDING** (dos fases PENDING→EXECUTED) sigue documentado en la matriz de tipos y en el anclaje #10 + #41; conviene reincorporarlo como evento de simulación en una próxima iteración para que la vista de gestión de caja tenga su disparador visible.
 
 El modelo se validó con una simulación canónica de 16 eventos (T0 a T15) sobre un setup de cuatro sociedades (Haz Pagos, Circuit Pay, Ardua Solutions Corp, Astra Ventures), ocho cuentas activas en tres monedas (ARS, USDC, EURC) y seis clientes con obligaciones multimoneda.
 
@@ -225,8 +283,8 @@ Los saldos iniciales fueron dimensionados para que la **Capacidad Operativa sea 
 | T0 | Estado inicial con saldos de apertura (4 sociedades · 8 cuentas · 6 clientes) | — | — | — |
 | T1 | Depósito 18.500.000 ARS a CBU COINAG | ✓ | 1 (HP) | Operaciones |
 | T2 | Fee 12.500 ARS a cli-tecno-sa | — | 1 (HP) | Operaciones |
-| T3 | SWAP 100.000 USDC → 91.500 EURC + spread 500 | — | 3 (CP) | Operaciones |
-| T4 | Solicitud retiro 9.200.000 ARS (PENDING) | — | 0 | Operaciones |
+| T3 | Operación propia FX: Ardua compra 100.000 USDC a TC 0.92 contra proveedor de liquidez | Pactada | 1 (CP) | Operaciones (Trading) |
+| T4 | Operación propia FX: Ardua vende esos 100.000 a TC 0.93 — resultado por diferencia de cambio a Capital Propio | Pactada | 1 (CP) | Operaciones (Trading) |
 | T5 | Ejecución del retiro desde COINAG CBU | ✓ | 1 (HP) | Operaciones |
 | T6 | Pendiente: llegan 250.000 USDC a BITGO Pool | ✓ | 1 (CP) | Operaciones |
 | T7 | Asignación: 250.000 USDC son de cli-flynet-llc | — | 1 (CP) | Operaciones |
@@ -282,6 +340,8 @@ Estos son los 38 anclajes acumulados durante la discovery, ordenados por dimensi
 16. Conciliación agregada por moneda y sociedad como unidad primaria, no por cuenta ni por cliente.
 17. Breaks con workflow propio — se documentan, se asignan, no se ocultan.
 18. Sweeping del patrimonio operable de Ardua a cuentas operativas cuando supera umbral en pools mixtas (dentro de una misma sociedad).
+39. **La atribución de fondos opera con dos mecanismos disjuntos según el tipo de titular.** (a) Clientes externos: omnibus puro, sin atribución cliente↔cuenta (anclaje #38 vigente) — pasivo agregado por sociedad-moneda. (b) Sociedades del grupo: cuentas espejo intercompany, vinculadas de a pares, que sí atribuyen una porción del pool a la sociedad titular. El caso BITGO (USD 500.000 de Circuit Pay dentro del pool de Ardua, identificables porque Circuit tiene cuenta corriente intercompany en el core) es canónico: la atribución **se asienta en el subledger, no se observa del custodio**. No contradice #38 — son preguntas distintas. La igualdad `Σ atribuido = físico` no está garantizada por construcción (a diferencia del PSP de COINAG); se sostiene con disciplina de conciliación, y su brecha en cualquier momento es la card Pendientes.
+40. **Las cuentas espejo intercompany forman un grafo completo, no radial.** Cualquier sociedad puede tener posición contra cualquier otra (no solo contra la entidad ancla Ardua Corp). Con N sociedades hay N×(N−1)/2 pares espejo (4 sociedades → 6 pares; escala cuadrático). El motor de consolidación debe barrer **todas** las aristas del grafo para eliminar intercompany, no solo las que tocan a Ardua. Cada par mantiene la propiedad de auto-consistencia (activo de una = obligación de la otra, mismo número signo opuesto) por construcción, por lo que un par no puede descuadrar.
 
 ### Modelo de movimientos
 
@@ -301,6 +361,7 @@ Estos son los 38 anclajes acumulados durante la discovery, ordenados por dimensi
 29. Posición principal con cuatro columnas por moneda — Físico, Obligaciones, Pendientes, Capacidad Operativa (residual).
 30. Capacidad Operativa como métrica nativa del módulo, derivada como residual de la ecuación maestra. Responde la pregunta del Objetivo: "¿cuánto puede operar Ardua sin tocar fondos de clientes?". Es equivalente al saldo del grupo contable Patrimonio operativo — las dos representaciones cuadran simultáneamente en todo momento.
 31. Sociedad como eje primario de navegación, no solo filtro — cada Sociedad tiene su propia ecuación maestra por moneda además del consolidado del grupo.
+41. **Gestión de flujo de caja como vista derivada, sin tocar el pasivo.** La obligación con clientes es un stock contable que no se fragmenta ni se reduce al recibir una solicitud de retiro (el tipo `Solicitud de retiro PENDING` sigue con 0 asientos — anclaje #10). Sobre ese stock se monta una **vista de gestión de caja** que lee qué porción de las obligaciones ya está comprometida —`Retiros Pendientes` (saldo de cliente con solicitud de retiro) + `Operaciones Pendientes` (compromisos operativos)— para responder "¿cuánto tengo que pagar pronto?" y contrastarlo contra la capacidad líquida. Es una lectura, no un asiento: la suma de las vistas sigue siendo el pasivo completo, y la ecuación maestra no cambia. El asiento que reduce la obligación recién ocurre al ejecutar el pago (tipo `Retiro EXECUTED`). Esto preserva la verdad contable (el pasivo está siempre completo y conciliable) mientras habilita la gestión de cashflow.
 
 ### Contabilidad
 
@@ -381,6 +442,11 @@ V2 no recarga movimientos — los lee del catálogo existente de V1 y los traduc
 | **H-16** | **El aporte de capital propio se modela como Db Disp · Cr Patrimonio operativo (cuenta técnica agregada sin subtipos en V1). Validar con contador externo si esta cuenta debe tener subtipos desde V1 (Capital social, Reservas, Aportes irrevocables) o si V2 los introduce y V1 solo registra el agregado** | **Belén Gallo · contador externo** |
 | **H-17** | **El enum cerrado de 15 rails canónicos (`WIRE / VCURRENCY USDT / VCURRENCY USDC / VCURRENCY / SWIFT / SPEI / SPE / SEPA / PIX / INTERNAL / FX / FEDWIRE / Faster Payments / ARDUA / ACH`) cubre todos los flujos reales en producción. Validar con Operaciones que no falta ningún rail material — si aparece uno nuevo, su incorporación requiere un cambio formal del modelo** | **Belén Gallo · Operaciones** |
 | **H-18** | **La supervisión de cargas manuales (dual control creador ≠ supervisor) fue diferida fuera de V1 para que el área valide los flujos primero con carga directa. Validar con Tesorería + Compliance la urgencia de la reintroducción — si es regulatoriamente exigible debe entrar en V1.1; si es buena práctica operativa puede esperar a V2. Decidir las capabilities involucradas (`cargar_con_supervision`, `supervisar_carga`) y los tipos que la requieren** | **Belén Gallo · Compliance · Tesorería** |
+| **H-19** | **La cuenta corriente intercompany (ej. Circuit↔Ardua sobre el pool BITGO) ¿se mantiene hoy de forma manual (Tesorería asienta cada evento) o existe algún automatismo que la mueve cuando entra/sale plata del pool? La respuesta define si el módulo debe ofrecer carga manual + alerta de descuadre, o enganchar el evento que dispara el asiento.** | **Tesorería · Santiago Ahmed** |
+| **H-20** | **El marco FBO (For Benefit Of) como formalización del omnibus de custodia aplica al caso Ardua considerando que (a) Ardua opera con la liquidez del pool —pool activo, no custodia pasiva— y (b) el beneficiario puede ser otra sociedad del grupo. Validar implicancia regulatoria de esta desviación del FBO de manual, en conexión con el gap O-08 del marco-operativo (separación wallets operativas / custodia de clientes).** | **Juan Gonzalez · Belén Gallo** |
+| **H-21** | **El concepto "CMO" mencionado junto a FBO requiere definición — no aparece como estructura de cuenta reconocida en la industria (FBO / Omnibus / OBO son el trío estándar). Confirmar qué se entiende por CMO en Ardua antes de incorporarlo al modelo.** | **Yasmani Rodriguez (origen del término)** |
+| **H-22** | **La operación propia FX contra proveedor de liquidez se modela con dos asientos (compra: Db Posición FX · Cr Cta corriente proveedor; venta: Db Cta corriente proveedor · Cr Posición FX · Cr Ingresos por diferencia de cambio). Validar el tratamiento contable del resultado propio y de la cuenta de posición FX con el contador externo, y si la cuenta corriente con proveedor se modela por proveedor × moneda (análoga a la Intercompany).** | **Belén Gallo · Facundo Vasques · contador externo** |
+| **H-23** | **El desacople pactar-vs-liquidar de la operación con proveedor de liquidez ("cerrar un Quote en una ALyC no implica plata en esa ALyC") se captura íntegramente con la cuenta corriente del proveedor, o requiere un estado/etapa explícito (pactado → liquidado) análogo al PENDING→EXECUTED del retiro.** | **Facundo Vasques · Belén Gallo** |
 
 ## Decisiones pendientes
 
@@ -410,6 +476,9 @@ V2 no recarga movimientos — los lee del catálogo existente de V1 y los traduc
 4. Resolver las 15 decisiones pendientes y reflejarlas en la matriz de tipos definitiva.
 5. Coordinar con Tecnología (Santiago Ahmed) la traducción del modelo a entidades y endpoints, manteniendo la separación entre lo que define Producto (qué y por qué) y cómo se implementa. Puntos especiales: (a) modelado de la cuenta Intercompany (decisión #11); (b) campo `sociedad` como atributo top-level del asiento contable (anclaje #37); (c) modelado del Patrimonio operativo como cuenta técnica agregada por sociedad y moneda; (d) workflow de carga de saldos de apertura.
 6. Iterar sobre el prototipo formal del módulo en `prototypes/fin/`, alineándolo con la matriz de tipos y con las cuatro vistas mínimas definidas. El artefacto de validación queda como referencia conceptual congelada del discovery, no se itera junto con el prototipo.
+7. Validar con Belén Gallo y el contador externo que el tratamiento de **cuentas espejo intercompany en grafo completo** (cualquier sociedad con cualquier otra, N×(N−1)/2 pares) es viable contablemente, y conectarlo explícitamente con los pendientes **C-13, C-14 y C-15** del marco-contable (asientos del acuerdo de recaudación Haz Pagos↔Ardua, giro al descubierto Circuit↔Ardua, conciliación intercompany). Las cuentas espejo son la respuesta de producto a esos tres pendientes.
+8. Averiguar con Tesorería y Santiago Ahmed **cómo se mantiene hoy** la cuenta corriente intercompany sobre los pools (manual vs automatismo) — H-19 — porque define si el módulo ofrece carga + alerta de descuadre o engancha el evento disparador.
+9. Validar con Facundo Vasques y el contador externo el tratamiento de la **operación propia FX contra proveedor de liquidez** (H-22, H-23) y el desacople pactar-vs-liquidar capturado por la cuenta corriente del proveedor.
 
 ## Referencias
 

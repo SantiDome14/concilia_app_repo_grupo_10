@@ -1233,30 +1233,31 @@ const EVENTS = [
     con: [{ sociedad: 'HP', db: 'Obligaciones — cli-tecno-sa ARS', cr: 'Ingresos por fees — depósito (ARS)', monto: 12500, moneda: 'ARS' }]
   },
   {
-    id: 'T3', label: 'T3 · SWAP USDC/EURC', title: 'cli-inversiones-norte vende 100.000 USDC contra EURC a TC 0.92',
-    desc: 'Tres asientos atómicos sin flujo físico. SWAP cruza dos stablecoins. Spread de 500 EURC para Ardua. Lo ejecuta Operaciones a través de Circuit Pay — todos los asientos se registran en CP (decisión pendiente con Finanzas).',
+    id: 'T3', label: 'T3 · Operación propia FX — compra', title: 'Ardua compra 100.000 USDC a TC 0.92 contra un proveedor de liquidez',
+    desc: 'Operación propietaria con capital propio (sin cliente). Se PACTA la compra contra un proveedor de liquidez (ALyC/exchange); la liquidación física ocurre aparte. No toca obligaciones ni físico todavía: queda registrada como posición FX comprada contra la cuenta corriente del proveedor. Cerrar el quote no implica que ya haya entrado o salido plata.',
     ops: [
-      { tipo: 'SWAP_OUT', cuenta: '—', cliente: 'cli-inversiones-norte', monto: 100000, moneda: 'USDC', signo: '−', registra: 'OPS' },
-      { tipo: 'SWAP_IN', cuenta: '—', cliente: 'cli-inversiones-norte', monto: 91500, moneda: 'EURC', signo: '+', registra: 'OPS' },
-      { tipo: 'SPREAD', cuenta: '—', cliente: '—', monto: 500, moneda: 'EURC', signo: '+', registra: 'OPS' }
+      { tipo: 'OP_PROPIA_FX_COMPRA', cuenta: '—', cliente: '—', monto: 100000, moneda: 'USDC', signo: '+', registra: 'OPS' }
     ],
     tes: { fisico: [] },
     con: [
-      { sociedad: 'CP', db: 'Obligaciones — cli-inversiones-norte USDC', cr: 'Cuenta puente FX USDC/EURC', monto: 100000, moneda: 'USDC' },
-      { sociedad: 'CP', db: 'Cuenta puente FX USDC/EURC', cr: 'Obligaciones — cli-inversiones-norte EURC', monto: 91500, moneda: 'EURC' },
-      { sociedad: 'CP', db: 'Cuenta puente FX USDC/EURC', cr: 'Ingresos por spread — SWAP USDC/EURC', monto: 500, moneda: 'EURC' }
+      { sociedad: 'CP', db: 'Posición FX comprada USDC', cr: 'Cuenta corriente proveedor de liquidez USDC', monto: 100000, moneda: 'USDC' }
     ]
   },
   {
-    id: 'T4', label: 'T4 · Solicitud de retiro', title: 'cli-tecno-sa solicita retiro de 9.200.000 ARS — PENDING',
-    desc: 'Solo reserva contra capacidad. No hay asiento ni movimiento físico hasta que Operaciones ejecute.',
-    ops: { tipo: 'SOLICITUD_RETIRO', cuenta: 'Por asignar', cliente: 'cli-tecno-sa', monto: 9200000, moneda: 'ARS', signo: '−', registra: 'OPS', estado: 'PENDING' },
+    id: 'T4', label: 'T4 · Operación propia FX — venta', title: 'Ardua vende esos 100.000 a TC 0.93 — cierra la posición y realiza el resultado',
+    desc: 'Cierre de la posición propia abierta en T3. Vendida a 0.93 lo que se compró a 0.92: la diferencia de cambio (1.000 sobre el nominal) se realiza como Ingreso por diferencia de cambio → sube el Capital Propio del grupo. Las obligaciones con clientes no cambian (no hay cliente). El resultado vive contra la cuenta corriente del proveedor hasta la liquidación física.',
+    ops: [
+      { tipo: 'OP_PROPIA_FX_VENTA', cuenta: '—', cliente: '—', monto: 100000, moneda: 'USDC', signo: '−', registra: 'OPS' }
+    ],
     tes: { fisico: [] },
-    con: []
+    con: [
+      { sociedad: 'CP', db: 'Cuenta corriente proveedor de liquidez USDC', cr: 'Posición FX comprada USDC', monto: 100000, moneda: 'USDC' },
+      { sociedad: 'CP', db: 'Cuenta corriente proveedor de liquidez USDC', cr: 'Ingresos por diferencia de cambio — operación propia USDC', monto: 1000, moneda: 'USDC' }
+    ]
   },
   {
-    id: 'T5', label: 'T5 · Ejecución del retiro', title: 'Operaciones ejecuta el retiro desde COINAG CBU de Haz Pagos',
-    desc: 'Tesorería elige cuenta origen. La solicitud pasa a EXECUTED. Sale plata real.',
+    id: 'T5', label: 'T5 · Retiro de cliente', title: 'cli-tecno-sa retira 9.200.000 ARS desde COINAG CBU de Haz Pagos',
+    desc: 'Retiro de cliente ejecutado. Tesorería elige la cuenta origen. Baja la obligación con el cliente y sale plata física real del pool.',
     ops: { tipo: 'RETIRO', cuenta: 'hp-coinag-cbu', cliente: 'cli-tecno-sa', monto: 9200000, moneda: 'ARS', signo: '−', registra: 'OPS', estado: 'EXECUTED' },
     tes: { fisico: [{ cuenta: 'hp-coinag-cbu', delta: -9200000 }] },
     con: [{ sociedad: 'HP', db: 'Obligaciones — cli-tecno-sa ARS', cr: 'Disponibilidades — COINAG CBU ARS', monto: 9200000, moneda: 'ARS' }]
@@ -1479,7 +1480,7 @@ function renderDimensionCards() {
     { key: 'fisico', label: 'Bancos',              cssClass: 'dim-fisico', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"></rect><circle cx="12" cy="12.5" r="2.5"></circle><path d="M3 10h18"></path></svg>' },
     { key: 'oblig',  label: 'Obligaciones',        cssClass: 'dim-oblig',  icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>' },
     { key: 'pend',   label: 'Pendientes',          cssClass: 'dim-pend',   icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>' },
-    { key: 'capop',  label: 'Capacidad operativa', cssClass: 'dim-capop',  icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>' }
+    { key: 'capop',  label: 'Capital propio', cssClass: 'dim-capop',  icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>' }
   ];
   let html = '';
   dims.forEach(d => {
