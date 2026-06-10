@@ -1,5 +1,5 @@
 ---
-name: TRD — Controles de TC en carga de trades
+name: TRD — Control de desvio de TC en Quotes y Proveedores de Liquidez
 features: [TRD]
 status: En investigación
 owner: Santino Domeniconi
@@ -19,6 +19,12 @@ Documentar la infraestructura de datos de mercado disponible en TRD y validar el
 ## Contexto
 
 **Requerimiento asociado:** PWI-74 — Al cargar trades en Quotes y Proveedores de Liquidez, no existe un control que compare el TC ingresado contra el precio de mercado.
+
+### Terminologia clave
+
+- **Rate (Quotes):** el precio al que Ardua le vende o compra al cliente. Es el campo que el trader carga en el formulario de creacion de quotes.
+- **TC (Proveedores de Liquidez):** el precio de mercado al que Ardua se hace de liquidez — lo que Ardua le paga al proveedor. Es el campo que el trader carga en el formulario de Proveedores de Liquidez.
+- **FX Pantalla:** precio de referencia de mercado obtenido en tiempo real desde los proveedores (Binance, Matriz). No es un precio operativo — es la referencia contra la cual se valida el Rate en Quotes y el TC en Proveedores.
 
 El ticket solicita:
 - En Quotes: agregar la alerta de desvío (el FX Pantalla ya existe en el módulo)
