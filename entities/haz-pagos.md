@@ -1,6 +1,6 @@
 # Haz Pagos
 
-> Última actualización: 2026-05-21
+> Última actualización: 2026-06-11
 > Tipo: Propia
 > Jurisdicción(es): Argentina
 > Estado de la relación: Activa
@@ -42,6 +42,16 @@ Haz Pagos S.A. es la entidad argentina del grupo Ardua registrada como PSP (Prov
 - **Sujeto Obligado ante UIF**: debe solicitar documentación de origen de fondos a clientes. Límite transaccional obligatorio con fecha de vencimiento. Obligaciones de reporte mensual ante UIF y BCRA.
 - **Límite transaccional con vencimiento**: todo límite tiene fecha de vencimiento (típicamente 1 año). Al vencer, el cliente queda bloqueado hasta renovación con nueva documentación.
 - **[A completar]**: límites operativos (volumen máximo mensual, montos máximos por operación), costos bancarios, SLAs.
+
+---
+
+## Sitio web publico (haz-pagos.com)
+
+`haz-pagos.com` es un sitio institucional de existencia regulatoria. Existe para cumplir con los requisitos de transparencia del Regimen Informativo del BCRA aplicables a los PSPCP — en particular, la obligacion de publicar comisiones, cargos y condiciones de servicio, coincidentes con la informacion remitida al regulador.
+
+**No es un canal comercial activo.** Los prospectos no ingresan por esa web. El pipeline comercial de Haz Pagos opera 100% por relaciones directas (outbound, referidos, gestiones de Sales). Confirmado por Mauro Pascuccio (Head of Sales) en junio 2026.
+
+El mantenimiento y la calidad del contenido del sitio son responsabilidad de la identidad corporativa del grupo, no del area de Producto. Ver `discoveries/haz-pagos-sitio-web-discovery.md` para el detalle de la investigacion regulatoria.
 
 ---
 
