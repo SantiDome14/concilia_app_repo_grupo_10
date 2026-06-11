@@ -4,7 +4,7 @@ features: []
 status: En investigacion
 owner: Santino Domeniconi
 created_at: 2026-06-02
-updated_at: 2026-06-09
+updated_at: 2026-06-11
 propagates_to:
   - entities/centaurus.md
   - features/clp/README.md
@@ -114,7 +114,7 @@ _Persona Juridica_: EECC legalizados o, en su defecto, facturas emitidas 12 mese
 
 Este gap no tiene resolucion tecnica via API — el cliente debe proveer estos documentos por fuera del flujo de integracion con Centaurus. Implica que la Etapa 1 solo puede habilitar el alta en Ardua Solutions Corp de forma automatizada; Haz Pagos y Circuit Pay requieren un paso manual adicional.
 
-**Para empresas**: Centaurus no tiene onboarding digital para juridicas (confirmado — OBPH es exclusivo PF). Etapa 1 para PJ sin API disponible.
+**Para empresas**: Centaurus tiene onboarding digital para personas juridicas. Esta preparando la documentacion de integracion equivalente al OBPH para compartirla con Ardua (fuente: Santi Ahmed, 2026-06-11). PJ no esta fuera de scope — esta pendiente de documentacion. Cuando Centaurus entregue el documento, se retoma el analisis de gap para PJ en ambas etapas.
 
 ### Etapa 2 — Ardua manda clientes a Centaurus
 
@@ -155,7 +155,7 @@ El OBPH (Onboarding Persona Humana) es el proceso de alta de personas fisicas pa
 - Cuentas unipersonales (un TITULAR)
 - Cuentas conjuntas (TITULAR + uno o mas COTITULARES)
 
-**Personas juridicas: fuera de scope.** El OBPH no cubre onboarding de empresas. Confirmado — PJ sin API disponible en esta fase para ambas etapas.
+**Personas juridicas: pendiente documentacion.** Centaurus tiene onboarding digital para PJ y esta preparando el documento de integracion equivalente al OBPH para compartir con Ardua (fuente: Santi Ahmed, 2026-06-11). Cuando se reciba, se retoma el analisis de gap para PJ en ambas etapas.
 
 ### Flujo principal (4 etapas)
 
@@ -191,6 +191,54 @@ Sincronizacion de datos → finalizacion del onboarding → firma digital via Do
 `IN_PROGRESS` → `SIGNATURE_PENDING` → `APPROVAL_PENDING` → `APPROVED`
 
 La aprobacion final (APPROVAL_PENDING → APPROVED) es interna de Centaurus. No requiere accion del integrador.
+
+### Referencia completa de endpoints
+
+| Metodo | Endpoint | Proposito | Auth |
+|---|---|---|---|
+| POST | /public/account-applications/register-persona-fisica | Crear solicitud | Publico + Rate Limit |
+| GET | /public/persons/verification-email/opened | Hub verificacion email | Publico (JWT query) |
+| POST | /public/persons/:personId/finalize-onboarding | Finalizar onboarding | Publico |
+| POST | /public/persons/:personDocument/resume-onboarding | Reanudar onboarding | Publico + Rate Limit |
+| POST | /public/persons/sync-onboarding/:sessionId | Sincronizar datos del Wizard | WizardSessionGuard |
+| POST | /public/wizard-registration/generate-session | Generar sesion del Wizard | x-one-time-token |
+| GET | /public/wizard-registration/:sessionId/documents/:stepNumber | Obtener datos de un paso | WizardSessionGuard |
+| POST | /public/wizard-registration/:sessionId/documents/seed | Inicializar documentos | WizardSessionGuard |
+| POST | /public/wizard-registration/:sessionId/documents/step-one/override | Paso 1 | WizardSessionGuard |
+| POST | /public/wizard-registration/:sessionId/documents/step-two/override | Paso 2 | WizardSessionGuard |
+| POST | /public/wizard-registration/:sessionId/documents/step-three/override | Paso 3 | WizardSessionGuard |
+| POST | /public/wizard-registration/:sessionId/documents/step-four/override | Paso 4 | WizardSessionGuard |
+| POST | /public/wizard-registration/:sessionId/documents/step-five/override | Paso 5 | WizardSessionGuard |
+| POST | /public/wizard-registration/:sessionId/documents/step-six/override | Paso 6 (multipart) | WizardSessionGuard |
+| POST | /public/persons/verification-webhook | Webhook KYC Motor Biometrico | HMAC-SHA256 |
+| POST | /webhooks/docusign/envelope-completed | Webhook DocuSign | DocuSign |
+
+### Codigos de error
+
+| Codigo | Clave | Descripcion |
+|---|---|---|
+| OB_001 | ALREADY_HAS_UNIPERSONAL_ACCOUNT_APPLICATION | La persona ya tiene una solicitud de cuenta unipersonal |
+| OB_002 | MORE_THAN_ONE_ACCOUNT_TITULAR | No puede haber mas de un titular en una cuenta conjunta |
+| OB_003 | MISSING_ACCOUNT_TITULAR | La cuenta debe tener al menos un titular |
+| OB_004 | DUPLICATED_DOCUMENT_ON_ACCOUNT_APPLICATION | Hay DNIs duplicados en la solicitud |
+| OB_005 | SIMILAR_CONJUNTO_ACCOUNT_APPLICATION | Ya existe una solicitud con los mismos titulares |
+| OB_007 | MISSING_ONBOARDING_STEPS_TO_SYNC_DATA | No se completaron todos los pasos del Wizard |
+| OB_008 | ALREADY_DONE_ONBOARDING | El onboarding ya fue finalizado |
+| OB_009 | MISSING_REQUIRED_DATA_TO_FINALIZE_ONBOARDING | Faltan datos requeridos para finalizar |
+| OB_011 | ALREADY_HAS_APPROVED_UNIPERSONAL_ACCOUNT_APPLICATION | Ya tiene cuenta aprobada |
+| OB_014 | ALREADY_HAS_MISSING_SIGNATURE_UNIPERSONAL_ACCOUNT_APPLICATION | Ya tiene solicitud en firma pendiente |
+| OB_015 | ALREADY_HAS_MISSING_APPROVAL_UNIPERSONAL_ACCOUNT_APPLICATION | Ya tiene solicitud en aprobacion pendiente |
+| OB_016 | ALREADY_HAS_IN_PROGRESS_UNIPERSONAL_ACCOUNT_APPLICATION | Ya tiene solicitud en progreso |
+| OB_017 | SINGLE_HOLDER_CONJUNTO_ACCOUNT_APPLICATION | Cuenta conjunta requiere al menos 2 titulares |
+| OB_018 | CANNOT_RESUME_ONBOARDING | No se puede reanudar el onboarding |
+| OB_019 | WIZARD_REGISTRATION_SESSION_EXPIRED | La sesion del Wizard expiro |
+| OB_100 | DUPLICATED_EMAIL_ON_ACCOUNT_APPLICATION | Hay emails duplicados en la solicitud |
+
+### Validaciones de documento de identidad
+
+- DNI: numero numerico sin puntos, 7 u 8 digitos.
+- CUIL / CUIT: formato XX-XXXXXXXX-X.
+- Si se ingresa un CUIL como numero de documento, se convierte automaticamente a DNI para busqueda y almacenamiento.
 
 ---
 
@@ -249,12 +297,14 @@ La integracion con Centaurus implicaria un tercer canal o la extension de uno de
 | 2026-06-02 | REQs formalizados en Jira: PWI-69 (Etapa 1) y PWI-70 (Etapa 2) | Primera formalizacion del scope en Jira |
 | 2026-06-09 | Documentacion tecnica OBPH recibida de Centaurus. El proceso de onboarding PF consta de 4 etapas: Solicitud de Cuenta, Compliance (email + KYC + Checkone + OFAC), Wizard (6 pasos), Finalizacion + DocuSign | Bloqueante de documentacion API para PWI-70 (Etapa 2) parcialmente resuelto |
 | 2026-06-09 | Centaurus ejecuta KYC biometrico propio (Motor Biometrico) + Checkone + OFAC como parte de su flujo de compliance. Resultado disponible via webhook | Abre P-10: sub-hipotesis de identidad portable. Podria eliminar el gap de imagenes de ID en Etapa 1 si Legal y IT validan |
-| 2026-06-09 | El OBPH es exclusivo para personas fisicas. Personas juridicas sin onboarding digital en Centaurus — confirmado | Scope de ambas etapas limitado a PF en esta fase. PJ queda fuera de la integracion API |
+| 2026-06-09 | El OBPH recibido es exclusivo para personas fisicas | Scope inicial de la integracion API limitado a PF — pendiente documentacion PJ de Centaurus |
 | 2026-06-09 | Gap Etapa 2 confirmado: `economicActivityId` usa IDs numericos AFIP. Ardua captura profesion en texto libre | Requiere tabla de mapeo o flujo hibrido de completado. Pendiente validacion IT |
 | 2026-06-09 | Gap Etapa 2 confirmado: `regulations` (perfil inversor CNV) es el paso 4 del wizard — obligatorio por normativa CNV para ALyC. Ardua no captura este dato en ningun template | Gap normativo sin resolucion actual. Solucion probable: flujo hibrido donde el cliente completa este paso en Centaurus (P-12) |
 | 2026-06-09 | Gap Etapa 2 confirmado: `civilStatus`, `taxes` (IDs numericos), `notificationSources` — campos del wizard que Ardua no captura o captura con diferente granularidad | Afectan la completitud del payload que Ardua puede enviar en Etapa 2 |
 | 2026-06-09 | Documentacion patrimonial Ardua recibida (PF y PJ). Confirmado: Centaurus no captura esta documentacion en su OBPH | Gap de Etapa 1 para onboarding en Haz Pagos / Circuit Pay. El cliente debe proveer estos docs por fuera del flujo API — sin solucion tecnica via integracion |
 | 2026-06-09 | La aprobacion final en Centaurus (APPROVAL_PENDING → APPROVED) es interna. El integrador no la controla — solo puede observar el estado via la API | Para Etapa 2 Ardua necesita poder consultar el estado del cliente en Centaurus (P-13) |
+| 2026-06-11 | Centaurus tiene onboarding digital para personas juridicas. Esta preparando la documentacion de integracion equivalente al OBPH para enviarnos (fuente: Santi Ahmed) | PJ no esta fuera de scope — esta pendiente de documentacion. PWI-69 y PWI-70 deberan ampliar scope cuando llegue la doc |
+| 2026-06-11 | La aceptacion de TyC se almacena en AiPrise. Ardua no tiene copia propia en su infraestructura. El modelo a seguir es el mismo de PWI-67 (videos y selfies). Los TyC los redacta Legal cuando corresponda — no bloqueante para IT. Ver `aiprise-tyc-discovery.md` | PRE-01 ajustado: el gap es de propiedad del dato, no de captura |
 
 ---
 
@@ -264,7 +314,7 @@ Condiciones que deben estar resueltas antes de que la API pueda operar a escala.
 
 | # | Prerequisito | Estado | Área responsable |
 |---|---|---|---|
-| PRE-01 | T&C de Ardua redactados con clause explícito de datos con terceros (qué datos, con quién, con qué fin) | ❌ Bloqueante — T&C no redactados | Legal |
+| PRE-01 | Aceptacion de TyC replicada a infraestructura propia de Ardua (S3). La captura existe en AiPrise — Ardua no tiene copia propia. Modelo: PWI-67. Redaccion de los TyC a cargo de Legal cuando corresponda — no bloqueante para IT. Ver `aiprise-tyc-discovery.md` | ⏳ Pendiente requerimiento tecnico (modelo PWI-67) | IT |
 | PRE-02 | Contrato firmado entre Ardua y Centaurus | ❌ Bloqueante — no hay contrato al 2026-06-02 | Legal / Comercial |
 | PRE-03 | Entidad de Ardua contraparte confirmada (P-03) | ⏳ Pendiente confirmación formal | Legal / CTO |
 | PRE-04 | LEX con capacidad de exponer datos del legajo vía API | ⏳ Pendiente evaluación técnica (Mati) | Tecnología |

@@ -4,7 +4,7 @@ features: []
 status: En investigación
 owner: Santino Domeniconi
 created_at: 2026-06-10
-updated_at: 2026-06-10
+updated_at: 2026-06-11
 propagates_to: []
 ---
 
@@ -22,9 +22,9 @@ El punto de partida correcto es verificar con IT si dicha base de datos ya exist
 
 ## Hipotesis activa
 
-Ardua no cuenta hoy con una base de datos propia que almacene el registro de aceptacion de TyC por usuario. AiPrise captura la aceptacion en su plataforma, pero Ardua no reingesta ni persiste ese evento en su propio sistema.
+AiPrise registra la aceptacion de TyC por usuario. Ardua no tiene copia propia de ese registro en su infraestructura (S3 o equivalente). El gap no es de captura sino de propiedad del dato — Ardua depende de AiPrise para acceder al registro. El patron ya fue resuelto en PWI-67 para videos y selfies del KYC.
 
-Si la hipotesis se confirma, el paso siguiente es emitir un requerimiento para construir esa capacidad.
+El flujo exacto de aceptacion actual (rol de Legal, documento fisico con checkbox) esta siendo relevado en reunion con el area Legal. Lo que se aprenda puede afinar el scope del requerimiento tecnico.
 
 ## Preguntas abiertas
 
@@ -36,9 +36,17 @@ Si la hipotesis se confirma, el paso siguiente es emitir un requerimiento para c
 
 ## Proximos pasos
 
-1. Consultar a IT (Santi Ahmed): ¿existe una tabla o entidad que registre la aceptacion de TyC por usuario?
-2. Si existe → mapear estructura y evaluar si satisface los requerimientos de la integracion con Centaurus.
-3. Si no existe → emitir requerimiento para construir la capacidad de almacenamiento propio de TyC.
+1. Reunion con Legal: entender el flujo exacto de aceptacion actual (documento fisico, checkbox, quien lo gestiona, si queda copia en algun archivo).
+2. Con esa info, definir scope del requerimiento tecnico para replicar el registro de AiPrise a S3 de Ardua (modelo PWI-67).
+3. Emitir requerimiento.
+
+## Hallazgos
+
+| Fecha | Hallazgo | Impacto |
+|---|---|---|
+| 2026-06-11 | AiPrise almacena la aceptacion de TyC por usuario. Ardua no tiene copia propia en su infraestructura (fuente: Santi Ahmed) | El gap no es de captura sino de propiedad del dato |
+| 2026-06-11 | El patron de traer datos de AiPrise a infraestructura propia ya fue resuelto en PWI-67 (videos y selfies del KYC) | El requerimiento para TyC sigue el mismo modelo arquitectonico. No hay que inventar solucion nueva |
+| 2026-06-11 | Los TyC los redacta Legal cuando corresponda — no es un prerequisito para el requerimiento tecnico de almacenamiento | No bloqueante para IT |
 
 ## Iniciativas relacionadas
 
