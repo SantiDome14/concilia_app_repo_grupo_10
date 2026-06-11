@@ -1,0 +1,3768 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador-Comparador · Disponibilidades · FIN · Tesorería</title>
+<style>
+  :root {
+    --bg-page: #fafaf7;
+    --bg-surface: #ffffff;
+    --bg-secondary: #f4f3ed;
+    --bg-tertiary: #edebe2;
+    --bg-info: #e6f1fb;
+    --bg-success: #eaf3de;
+    --bg-warning: #faeeda;
+    --bg-danger: #fcebeb;
+    --bg-intercompany: #f1eafc;
+    --bg-patrimonio: #fdf3d8;
+    --bg-given: #e9f4ee;
+    --bg-derived: #fbf0e6;
+
+    --text-primary: #1a1a17;
+    --text-secondary: #5f5e5a;
+    --text-tertiary: #888780;
+    --text-quaternary: #aaa9a3;
+    --text-info: #185fa5;
+    --text-success: #3b6d11;
+    --text-warning: #854f0b;
+    --text-danger: #a32d2d;
+    --text-intercompany: #5b3a8a;
+    --text-patrimonio: #8a5a0b;
+    --text-given: #2a6644;
+    --text-derived: #a3590e;
+
+    --border-tertiary: rgba(0, 0, 0, 0.08);
+    --border-secondary: rgba(0, 0, 0, 0.18);
+    --border-given: #57a07d;
+    --border-derived: #d1923d;
+
+    --accent: #1d9e75;
+    --accent-dark: #0f6e56;
+    --accent-soft: rgba(29, 158, 117, 0.08);
+
+    --soc-hp: #4a7fc7;   --soc-hp-bg: #e6efff;
+    --soc-cp: #c77a4a;   --soc-cp-bg: #ffeede;
+    --soc-asc: #4ac79e;  --soc-asc-bg: #def7ed;
+    --soc-av: #9e4ac7;   --soc-av-bg: #f0deff;
+
+    --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.03);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08);
+    --shadow-glow: 0 0 0 3px rgba(29, 158, 117, 0.12);
+
+    --radius-xs: 4px;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 20px;
+    --radius-full: 9999px;
+
+    --transition: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-page: #0f0f0e;
+      --bg-surface: #1a1a17;
+      --bg-secondary: #232320;
+      --bg-tertiary: #2c2c29;
+      --bg-info: #0c447c;
+      --bg-success: #27500a;
+      --bg-warning: #633806;
+      --bg-danger: #791f1f;
+      --bg-intercompany: #3a2a5e;
+      --bg-patrimonio: #4d3a0a;
+      --bg-given: #1b3b2a;
+      --bg-derived: #4a2e10;
+
+      --text-primary: #f4f3ed;
+      --text-secondary: #b4b2a9;
+      --text-tertiary: #888780;
+      --text-quaternary: #5f5e5a;
+      --text-info: #85b7eb;
+      --text-success: #97c459;
+      --text-warning: #fac775;
+      --text-danger: #f09595;
+      --text-intercompany: #c8b4ec;
+      --text-patrimonio: #f0c970;
+      --text-given: #82c79f;
+      --text-derived: #efb678;
+
+      --border-tertiary: rgba(255, 255, 255, 0.1);
+      --border-secondary: rgba(255, 255, 255, 0.2);
+      --border-given: #3d8460;
+      --border-derived: #a37038;
+
+      --accent-soft: rgba(29, 158, 117, 0.15);
+      --soc-hp-bg: #1a2944;
+      --soc-cp-bg: #3d2812;
+      --soc-asc-bg: #143329;
+      --soc-av-bg: #2f1a44;
+      --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.25);
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg-page);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  body {
+    background-image:
+      radial-gradient(at 20% 0%, rgba(29, 158, 117, 0.04) 0%, transparent 50%),
+      radial-gradient(at 80% 100%, rgba(55, 138, 221, 0.04) 0%, transparent 50%);
+  }
+  .num, .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+  .app-shell { max-width: 1320px; margin: 0 auto; padding: var(--space-6) var(--space-5); }
+
+  /* === HEADER === */
+  .app-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: var(--space-6); padding-bottom: var(--space-5);
+    border-bottom: 1px solid var(--border-tertiary);
+    gap: var(--space-6); flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: center; gap: var(--space-3); }
+  .brand-mark {
+    width: 40px; height: 40px;
+    border-radius: var(--radius-md);
+    background: var(--accent); color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 16px;
+    letter-spacing: -0.02em;
+    box-shadow: var(--shadow-sm);
+  }
+  .brand-meta { display: flex; flex-direction: column; gap: 2px; }
+  .brand-title { font-size: 15px; font-weight: 500; letter-spacing: -0.01em; }
+  .brand-sub { font-size: 12px; color: var(--text-secondary); }
+  .breadcrumb { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; color: var(--text-secondary); }
+  .breadcrumb-arrow { opacity: 0.4; }
+  .breadcrumb-current { color: var(--text-primary); font-weight: 500; }
+
+  .page-title-section {
+    margin-bottom: var(--space-5);
+  }
+  .page-title {
+    font-size: 26px; font-weight: 600;
+    letter-spacing: -0.02em; line-height: 1.2;
+    margin-bottom: var(--space-1);
+    background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-dark) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .page-subtitle { font-size: 13px; color: var(--text-secondary); max-width: 760px; }
+
+  /* === DADO/DERIVADO LEGEND === */
+  .legend-bar {
+    display: flex; gap: var(--space-3); flex-wrap: wrap;
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-5);
+    box-shadow: var(--shadow-sm);
+    align-items: center;
+  }
+  .legend-title {
+    font-size: 11px; color: var(--text-tertiary);
+    letter-spacing: 0.08em; text-transform: uppercase;
+    font-weight: 700; margin-right: var(--space-2);
+  }
+  .legend-chip {
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid transparent;
+  }
+  .legend-chip.given {
+    background: var(--bg-given); color: var(--text-given);
+    border-color: var(--border-given);
+  }
+  .legend-chip.derived {
+    background: var(--bg-derived); color: var(--text-derived);
+    border-color: var(--border-derived);
+  }
+  .legend-chip-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .legend-chip.given .legend-chip-dot { background: var(--text-given); }
+  .legend-chip.derived .legend-chip-dot { background: var(--text-derived); }
+  .legend-desc { font-size: 12px; color: var(--text-secondary); margin-left: var(--space-2); }
+
+  /* === KNOBS PANEL === */
+  .knobs-panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-5);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+  }
+  .knobs-header {
+    padding: var(--space-3) var(--space-5);
+    border-bottom: 1px solid var(--border-tertiary);
+    background: linear-gradient(180deg, var(--bg-surface) 0%, var(--bg-secondary) 100%);
+    display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer; user-select: none;
+  }
+  .knobs-header-left { display: flex; align-items: center; gap: var(--space-3); }
+  .knobs-title {
+    font-size: 13px; font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .knobs-sub { font-size: 11px; color: var(--text-secondary); }
+  .knobs-toggle {
+    width: 22px; height: 22px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    transition: transform 0.3s var(--transition);
+  }
+  .knobs-panel.collapsed .knobs-toggle { transform: rotate(-90deg); }
+  .knobs-body {
+    padding: var(--space-4) var(--space-5);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-3);
+    transition: all 0.3s var(--transition);
+  }
+  .knobs-panel.collapsed .knobs-body { display: none; }
+
+  .knob {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+    transition: border-color 0.2s var(--transition);
+  }
+  .knob.active-event {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-glow);
+  }
+  .knob-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 2px;
+  }
+  .knob-code {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text-tertiary);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  .knob-status {
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+  }
+  .knob-status.product {
+    background: var(--bg-success); color: var(--text-success);
+  }
+  .knob-status.open {
+    background: var(--bg-warning); color: var(--text-warning);
+  }
+  .knob-label {
+    font-size: 13px; font-weight: 600;
+    margin-bottom: var(--space-1);
+    line-height: 1.35;
+  }
+  .knob-desc {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-2);
+    line-height: 1.4;
+  }
+  .knob-opts { display: flex; flex-direction: column; gap: 4px; }
+  .knob-opt {
+    display: flex; align-items: flex-start; gap: var(--space-2);
+    padding: 6px 8px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 11.5px;
+    line-height: 1.35;
+    color: var(--text-secondary);
+    transition: all 0.15s var(--transition);
+  }
+  .knob-opt:hover {
+    border-color: var(--border-secondary);
+    color: var(--text-primary);
+  }
+  .knob-opt.selected {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+  .knob-opt.disabled { opacity: 0.4; cursor: not-allowed; }
+  .knob-opt-letter {
+    font-weight: 700;
+    font-size: 10px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    background: var(--bg-tertiary);
+    color: var(--text-tertiary);
+    padding: 1px 5px;
+    border-radius: var(--radius-xs);
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .knob-opt.selected .knob-opt-letter {
+    background: var(--accent);
+    color: white;
+  }
+  .knob-product-tag {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
+    margin-left: auto;
+    padding: 1px 5px;
+    background: var(--bg-success);
+    color: var(--text-success);
+    border-radius: var(--radius-xs);
+  }
+
+  /* === CONSOLIDATION SELECTOR === */
+  .consol-bar {
+    display: flex; align-items: center; gap: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-5);
+    box-shadow: var(--shadow-md);
+    flex-wrap: wrap;
+  }
+  .consol-label {
+    display: flex; align-items: center; gap: var(--space-2);
+    flex-shrink: 0;
+  }
+  .consol-label-code {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text-tertiary);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  .consol-label-text {
+    font-size: 13px; font-weight: 600;
+  }
+  .consol-segments {
+    display: flex; gap: 4px;
+    padding: 4px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+  }
+  .consol-segment {
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s var(--transition);
+    border: 1px solid transparent;
+  }
+  .consol-segment:hover:not(.disabled):not(.selected) {
+    color: var(--text-primary);
+    background: var(--bg-surface);
+  }
+  .consol-segment.selected {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-sm);
+    border-color: var(--border-tertiary);
+    font-weight: 600;
+  }
+  .consol-segment.disabled { opacity: 0.4; cursor: not-allowed; }
+  .consol-hint {
+    font-size: 11px; color: var(--text-tertiary);
+    margin-left: auto;
+    font-style: italic;
+  }
+
+  /* === TIMELINE / CONTROLS === */
+  .timeline-bar {
+    display: flex; align-items: center; gap: var(--space-3);
+    margin-bottom: var(--space-3); flex-wrap: wrap;
+  }
+  .btn {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    color: var(--text-primary);
+    padding: 7px 13px;
+    border-radius: var(--radius-md);
+    font-size: 13px; font-family: inherit; font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s var(--transition);
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    box-shadow: var(--shadow-sm);
+  }
+  .btn:hover:not(:disabled) {
+    background: var(--bg-secondary);
+    border-color: var(--border-secondary);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); color: white; border-color: var(--accent); }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-dark); border-color: var(--accent-dark); }
+  .btn-ghost { background: transparent; box-shadow: none; }
+  .btn-icon { width: 14px; height: 14px; }
+
+  .step-indicator {
+    margin-left: auto;
+    display: flex; align-items: center; gap: var(--space-3);
+    padding: 7px 13px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-md);
+    font-size: 12px; color: var(--text-secondary);
+    box-shadow: var(--shadow-sm);
+  }
+  .step-pill {
+    background: var(--accent); color: white;
+    padding: 2px 8px; border-radius: 10px;
+    font-weight: 600; font-size: 11px;
+    letter-spacing: 0.02em;
+  }
+
+  .progress-track {
+    display: flex; gap: 3px; margin-bottom: var(--space-4);
+  }
+  .progress-dot {
+    flex: 1; height: 4px;
+    background: var(--bg-tertiary);
+    border-radius: 2px;
+    transition: background 0.3s var(--transition);
+    cursor: pointer;
+  }
+  .progress-dot.done { background: var(--accent); }
+  .progress-dot.current {
+    background: var(--accent);
+    box-shadow: var(--shadow-glow);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.15); }
+    50% { box-shadow: 0 0 0 5px rgba(29, 158, 117, 0.05); }
+  }
+
+  /* === EVENT CARD === */
+  .event-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4) var(--space-5);
+    margin-bottom: var(--space-5);
+    box-shadow: var(--shadow-md);
+    position: relative; overflow: hidden;
+  }
+  .event-card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--accent) 0%, var(--accent-dark) 100%);
+  }
+  .event-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: var(--space-2); gap: var(--space-4); flex-wrap: wrap;
+  }
+  .event-meta { flex: 1; min-width: 280px; }
+  .event-label {
+    font-size: 10px; color: var(--text-tertiary);
+    letter-spacing: 0.08em; text-transform: uppercase;
+    margin-bottom: 2px; font-weight: 700;
+  }
+  .event-title {
+    font-size: 17px; font-weight: 600;
+    letter-spacing: -0.01em; line-height: 1.3;
+    margin-bottom: var(--space-1);
+  }
+  .event-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.55; }
+  .event-tags {
+    display: flex; gap: var(--space-2); flex-wrap: wrap;
+    margin-top: var(--space-3);
+  }
+  .event-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+  }
+  .event-tag.layer-0 { background: var(--bg-secondary); color: var(--text-primary); }
+  .event-tag.layer-1 { background: var(--bg-info); color: var(--text-info); }
+  .event-tag.layer-2 { background: var(--bg-success); color: var(--text-success); }
+  .event-tag.knob-tag {
+    background: var(--accent-soft); color: var(--accent-dark);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    border: 1px dashed var(--accent);
+  }
+
+  /* === MASTER EQUATION === */
+  .equation-bar {
+    display: flex; align-items: center; gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-5);
+    box-shadow: var(--shadow-sm);
+    flex-wrap: wrap;
+  }
+  .equation-bar.balanced {
+    border-color: var(--border-given);
+    background: linear-gradient(90deg, var(--bg-given) 0%, var(--bg-surface) 60%);
+  }
+  .equation-bar.unbalanced {
+    border-color: var(--border-derived);
+    background: linear-gradient(90deg, var(--bg-derived) 0%, var(--bg-surface) 60%);
+  }
+  .equation-icon {
+    width: 28px; height: 28px;
+    border-radius: var(--radius-md);
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-weight: 700;
+  }
+  .balanced .equation-icon { background: var(--text-given); color: white; }
+  .unbalanced .equation-icon { background: var(--text-derived); color: white; }
+  .equation-text {
+    font-size: 13px; font-weight: 500;
+  }
+  .equation-formula {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    padding: 3px 8px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+  }
+  .equation-info { font-size: 12px; color: var(--text-secondary); margin-left: auto; }
+
+  /* === LAYERS GRID (legacy, kept for compat) === */
+  .layers-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-4);
+    margin-bottom: var(--space-5);
+  }
+  @media (max-width: 980px) {
+    .layers-grid { grid-template-columns: 1fr; }
+  }
+
+  /* === DIM CARDS GRID (4 cards: Bancos / Obligaciones / Pendientes / Disponibilidad) === */
+  .dim-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+  }
+  @media (max-width: 980px) {
+    .dim-cards-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .dim-cards-grid { grid-template-columns: 1fr; }
+  }
+  .dim-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3) var(--space-4) var(--space-4);
+    box-shadow: var(--shadow-sm);
+    position: relative; overflow: hidden;
+    transition: all 0.3s var(--transition);
+    display: flex; flex-direction: column;
+  }
+  .dim-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+  .dim-card::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px;
+  }
+  .dim-card.dim-bancos::before        { background: var(--text-primary); }
+  .dim-card.dim-obligaciones::before  { background: var(--text-info); }
+  .dim-card.dim-pendientes::before    { background: var(--text-warning); }
+  .dim-card.dim-disponibilidad::before { background: var(--accent); }
+
+  .dim-card-header {
+    display: flex; align-items: center; gap: var(--space-2);
+    margin-bottom: var(--space-3);
+  }
+  .dim-card-icon {
+    width: 28px; height: 28px;
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .dim-card.dim-bancos        .dim-card-icon { background: var(--bg-secondary); color: var(--text-primary); }
+  .dim-card.dim-obligaciones  .dim-card-icon { background: var(--bg-info); color: var(--text-info); }
+  .dim-card.dim-pendientes    .dim-card-icon { background: var(--bg-warning); color: var(--text-warning); }
+  .dim-card.dim-disponibilidad .dim-card-icon { background: var(--bg-success); color: var(--accent-dark); }
+
+  .dim-card-label {
+    font-size: 13px; font-weight: 600;
+    letter-spacing: -0.01em;
+    flex: 1; min-width: 0;
+  }
+  .dim-card-layer {
+    font-size: 9px;
+    color: var(--text-tertiary);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    display: block;
+    line-height: 1.1;
+  }
+  .dim-card-badge {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 2px 6px;
+    border-radius: var(--radius-xs);
+    text-transform: uppercase;
+  }
+  .dim-card-badge.given { background: var(--bg-given); color: var(--text-given); }
+  .dim-card-badge.derived { background: var(--bg-derived); color: var(--text-derived); }
+
+  .dim-rows {
+    display: flex; flex-direction: column;
+    flex: 1;
+    min-height: 100px;
+  }
+  .dim-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 4px 0;
+    font-size: 12.5px;
+    border-bottom: 1px dashed var(--border-tertiary);
+    gap: var(--space-3);
+  }
+  .dim-row:last-child { border-bottom: none; }
+  .dim-row.affected {
+    background: linear-gradient(90deg, var(--accent-soft) 0%, transparent 80%);
+    margin: 0 -8px;
+    padding-left: 8px;
+    padding-right: 8px;
+    border-left: 2px solid var(--accent);
+  }
+  .dim-mon {
+    color: var(--text-tertiary);
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+  .dim-val-wrap {
+    display: flex; flex-direction: column;
+    align-items: flex-end; gap: 2px;
+  }
+  .dim-val {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .dim-row-empty {
+    text-align: center;
+    padding: var(--space-3) 0;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-style: italic;
+    border: 1px dashed var(--border-tertiary);
+    border-radius: var(--radius-sm);
+    margin: var(--space-2) 0;
+  }
+  .dim-card-foot {
+    padding-top: var(--space-2);
+    margin-top: var(--space-2);
+    border-top: 1px solid var(--border-tertiary);
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .dim-card-foot-label {
+    font-size: 10px; color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700;
+  }
+  .dim-card-foot-val {
+    font-variant-numeric: tabular-nums;
+    font-size: 15px; font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .dim-card-foot-val .ccy-suffix {
+    font-size: 10px; color: var(--text-tertiary);
+    font-weight: 500; margin-left: 4px;
+  }
+
+  /* Mini-tabs dentro de las dim-cards (Obligaciones, Pendientes) */
+  .dim-mini-tabs {
+    display: flex;
+    gap: 2px;
+    padding: 3px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--space-2);
+  }
+  .dim-mini-tab {
+    flex: 1;
+    padding: 4px 6px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-xs);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s var(--transition);
+    text-align: center;
+    font-family: inherit;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+  .dim-mini-tab:hover:not(.selected) {
+    color: var(--text-primary);
+    background: var(--bg-surface);
+  }
+  .dim-mini-tab.selected {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-xs);
+    font-weight: 700;
+  }
+  .dim-mini-tab-count {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 4px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-xs);
+    font-variant-numeric: tabular-nums;
+    min-width: 14px;
+  }
+  .dim-mini-tab.selected .dim-mini-tab-count {
+    background: var(--accent);
+    color: white;
+  }
+  .dim-mini-tab.zero-count .dim-mini-tab-count {
+    opacity: 0.4;
+  }
+
+  /* Disponibilidad bajo P-DISP1=b: muestra componentes lado a lado, sin veredicto */
+  .dim-card.no-verdict .dim-card-foot {
+    background: var(--bg-warning);
+    color: var(--text-warning);
+    margin: var(--space-3) -16px -16px -16px;
+    padding: var(--space-2) var(--space-4);
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    border-top: 1px solid var(--text-warning);
+    font-size: 11px;
+    font-weight: 600;
+    display: block;
+    text-align: center;
+  }
+  .dim-disp-mode {
+    font-size: 9px;
+    background: var(--accent-soft);
+    color: var(--accent-dark);
+    padding: 2px 6px;
+    border-radius: var(--radius-xs);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-left: 4px;
+  }
+  .layer-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: all 0.3s var(--transition);
+    display: flex; flex-direction: column;
+  }
+  .layer-card-head {
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border-tertiary);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .layer-card.layer-0 .layer-card-head {
+    background: var(--bg-given);
+  }
+  .layer-card.layer-1 .layer-card-head {
+    background: linear-gradient(90deg, var(--bg-given) 0%, var(--bg-derived) 100%);
+  }
+  .layer-card.layer-2 .layer-card-head {
+    background: var(--bg-derived);
+  }
+  .layer-card-title {
+    font-size: 14px; font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .layer-card-sub {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+  .layer-badge {
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 3px 7px;
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+  }
+  .layer-badge.given {
+    background: var(--text-given); color: white;
+  }
+  .layer-badge.derived {
+    background: var(--text-derived); color: white;
+  }
+  .layer-badge.mixed {
+    background: linear-gradient(90deg, var(--text-given) 50%, var(--text-derived) 50%);
+    color: white;
+  }
+  .layer-card-body {
+    padding: var(--space-3) var(--space-4);
+    flex: 1;
+    display: flex; flex-direction: column; gap: var(--space-2);
+  }
+  .layer-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--border-tertiary);
+    gap: var(--space-3);
+  }
+  .layer-row:last-child { border-bottom: none; }
+  .layer-row-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    display: flex; align-items: center; gap: var(--space-2);
+  }
+  .layer-row-tag {
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 1px 5px;
+    border-radius: var(--radius-xs);
+  }
+  .layer-row-tag.given { background: var(--bg-given); color: var(--text-given); }
+  .layer-row-tag.derived { background: var(--bg-derived); color: var(--text-derived); }
+  .layer-row-val {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    font-size: 13px;
+    text-align: right;
+  }
+  .layer-row-val .ccy {
+    font-size: 10px; color: var(--text-tertiary);
+    font-weight: 500; margin-left: 4px;
+  }
+  .layer-row-multi {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+  }
+  .layer-row-multi .layer-row-val { font-size: 12px; }
+  .layer-card-foot {
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-tertiary);
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .layer-card-foot-label {
+    font-size: 11px; color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700;
+  }
+  .layer-card-foot-val {
+    font-variant-numeric: tabular-nums;
+    font-size: 16px; font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  /* Disp components panel (P-DISP1=b) */
+  .disp-components {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--space-2);
+    padding: var(--space-3);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-3);
+  }
+  .disp-comp {
+    background: var(--bg-surface);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-tertiary);
+  }
+  .disp-comp-label {
+    font-size: 10px; color: var(--text-tertiary);
+    letter-spacing: 0.06em; text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .disp-comp-val {
+    font-size: 14px; font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .disp-comp-ccy { font-size: 10px; color: var(--text-tertiary); margin-left: 4px; font-weight: 500; }
+
+  .disp-no-verdict {
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-warning);
+    color: var(--text-warning);
+    border-radius: var(--radius-md);
+    font-size: 12px;
+    margin-top: var(--space-3);
+    border-left: 3px solid var(--text-warning);
+  }
+  .disp-resta-verdict {
+    padding: var(--space-3) var(--space-4);
+    background: var(--accent-soft);
+    border-radius: var(--radius-md);
+    border-left: 3px solid var(--accent);
+    margin-top: var(--space-3);
+  }
+  .disp-resta-verdict-label {
+    font-size: 10px; color: var(--text-tertiary);
+    letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .disp-resta-verdict-val {
+    font-size: 22px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent-dark);
+  }
+
+  /* === PENDING PHYSICAL BLOCK === */
+  .pending-block {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-5);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  .pending-head {
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border-tertiary);
+    background: var(--bg-warning);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .pending-title {
+    font-size: 13px; font-weight: 700;
+    color: var(--text-warning);
+    display: flex; align-items: center; gap: var(--space-2);
+  }
+  .pending-est-tag {
+    background: var(--text-warning); color: white;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
+  }
+  .pending-body {
+    padding: var(--space-3) var(--space-4);
+  }
+  .pending-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--border-tertiary);
+    gap: var(--space-4);
+  }
+  .pending-row:last-child { border-bottom: none; }
+  .pending-row-meta {
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .pending-row-soc { font-size: 12px; font-weight: 600; }
+  .pending-row-acct { font-size: 11px; color: var(--text-tertiary); }
+  .pending-row-real {
+    font-size: 14px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-warning);
+  }
+  .pending-valuations {
+    display: flex; gap: var(--space-4);
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .pending-val {
+    display: flex; flex-direction: column; align-items: flex-end;
+    font-size: 11px;
+    color: var(--text-tertiary);
+  }
+  .pending-val-num {
+    font-size: 12px; font-weight: 600;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+  .pending-val-num.approx::before { content: '≈ '; opacity: 0.6; }
+  .pending-empty {
+    padding: var(--space-3);
+    font-size: 12px; color: var(--text-tertiary);
+    font-style: italic;
+    text-align: center;
+  }
+
+  /* === PERSPECTIVE TABS === */
+  .perspective-section {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-5);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+  }
+  .perspective-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-tertiary);
+    background: var(--bg-secondary);
+  }
+  .perspective-tab {
+    padding: var(--space-3) var(--space-5);
+    font-size: 13px; font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s var(--transition);
+    background: transparent;
+    border-top: none; border-left: none; border-right: none;
+    font-family: inherit;
+    display: flex; align-items: center; gap: var(--space-2);
+  }
+  .perspective-tab:hover { color: var(--text-primary); }
+  .perspective-tab.active {
+    color: var(--text-primary);
+    background: var(--bg-surface);
+    border-bottom-color: var(--accent);
+  }
+  .perspective-tab-tag {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
+    padding: 1px 5px;
+    border-radius: var(--radius-xs);
+    text-transform: uppercase;
+  }
+  .perspective-content {
+    padding: var(--space-4) var(--space-5);
+  }
+
+  /* Tables */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  .data-table thead th {
+    text-align: left;
+    padding: 8px 10px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border-tertiary);
+    background: var(--bg-secondary);
+  }
+  .data-table tbody td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-tertiary);
+    vertical-align: middle;
+  }
+  .data-table tbody tr:last-child td { border-bottom: none; }
+  .data-table tbody tr:hover { background: var(--bg-secondary); }
+  .data-table td.num, .data-table th.num {
+    text-align: right;
+    font-feature-settings: "tnum";
+  }
+  .data-table td.ccy {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    letter-spacing: 0.04em;
+    font-weight: 600;
+  }
+  .ccy-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border-radius: var(--radius-xs);
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+  .ccy-badge.usdc { background: #e2f0ec; color: #1d6e56; }
+  .ccy-badge.eurc { background: #ecdef7; color: #5b3a8a; }
+  .ccy-badge.ars { background: #fff0d8; color: #8a5a0b; }
+  .ccy-badge.brl { background: #e0f4dd; color: #3b6d11; }
+  .ccy-badge.usd { background: #d9e8f2; color: #185fa5; }
+
+  @media (prefers-color-scheme: dark) {
+    .ccy-badge.usdc { background: #143329; color: #97c4af; }
+    .ccy-badge.eurc { background: #2f1a44; color: #c8b4ec; }
+    .ccy-badge.ars { background: #4d3a0a; color: #f0c970; }
+    .ccy-badge.brl { background: #1b3b2a; color: #97c459; }
+    .ccy-badge.usd { background: #1a2944; color: #85b7eb; }
+  }
+
+  .soc-chip {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  .soc-chip.HP { background: var(--soc-hp-bg); color: var(--soc-hp); }
+  .soc-chip.CP { background: var(--soc-cp-bg); color: var(--soc-cp); }
+  .soc-chip.ASC { background: var(--soc-asc-bg); color: var(--soc-asc); }
+  .soc-chip.AV { background: var(--soc-av-bg); color: var(--soc-av); }
+  .soc-chip.ARDUA { background: var(--bg-patrimonio); color: var(--text-patrimonio); }
+
+  /* Operaciones — clients table */
+  .ops-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-3);
+  }
+  .ops-card-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: var(--space-2);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--border-tertiary);
+  }
+  .ops-card-name {
+    font-size: 13px; font-weight: 600;
+    display: flex; align-items: center; gap: var(--space-2);
+  }
+  .ops-card-id {
+    font-size: 10px; color: var(--text-tertiary);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  .ops-card-tag {
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 2px 6px;
+    border-radius: var(--radius-xs);
+    text-transform: uppercase;
+  }
+  .ops-card-tag.cliente { background: var(--bg-info); color: var(--text-info); }
+  .ops-card-tag.ardua { background: var(--bg-patrimonio); color: var(--text-patrimonio); }
+  .ops-rows {
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .ops-row {
+    display: grid;
+    grid-template-columns: 70px 1fr 110px;
+    gap: var(--space-3);
+    align-items: center;
+    padding: 4px 0;
+    font-size: 12px;
+  }
+  .ops-row-soc { font-size: 10px; }
+  .ops-row-detail { color: var(--text-secondary); font-size: 11.5px; }
+  .ops-row-val {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+  .ops-row-val .ccy {
+    font-size: 10px; color: var(--text-tertiary); margin-left: 4px;
+  }
+
+  /* Tesorería — physical accounts (collapsible groups) */
+  .treasury-soc {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-3);
+    overflow: hidden;
+    transition: border-color 0.2s var(--transition);
+  }
+  .treasury-soc:hover { border-color: var(--border-secondary); }
+  .treasury-soc-head {
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-surface);
+    border-bottom: 1px solid transparent;
+    display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s var(--transition);
+  }
+  .treasury-soc-head:hover { background: var(--bg-secondary); }
+  .treasury-soc.expanded .treasury-soc-head {
+    border-bottom-color: var(--border-tertiary);
+    background: var(--bg-secondary);
+  }
+  .treasury-soc-name {
+    font-size: 14px; font-weight: 600;
+    display: flex; align-items: center; gap: var(--space-2);
+  }
+  .treasury-soc-chevron {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px;
+    color: var(--text-tertiary);
+    transition: transform 0.25s var(--ease-spring);
+    flex-shrink: 0;
+    margin-right: var(--space-1);
+  }
+  .treasury-soc.expanded .treasury-soc-chevron { transform: rotate(90deg); }
+  .treasury-soc-juris {
+    font-size: 11px; color: var(--text-tertiary);
+    font-weight: 500;
+  }
+  .treasury-soc-totals {
+    display: flex; gap: var(--space-2); align-items: center;
+    flex-wrap: wrap; justify-content: flex-end;
+  }
+  .treasury-soc-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 8px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+  .treasury-soc.expanded .treasury-soc-pill {
+    background: var(--bg-surface);
+  }
+  .treasury-soc-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s var(--ease-spring);
+  }
+  .treasury-soc.expanded .treasury-soc-body {
+    max-height: 2000px;
+  }
+  .treasury-estructura-group {
+    border-bottom: 1px solid var(--border-tertiary);
+  }
+  .treasury-estructura-group:last-child { border-bottom: none; }
+  .treasury-estructura-head {
+    padding: var(--space-2) var(--space-4);
+    background: var(--bg-tertiary);
+    font-size: 10px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .treasury-estructura-count {
+    font-size: 9px;
+    color: var(--text-tertiary);
+    font-weight: 600;
+  }
+  .treasury-acct-row {
+    display: grid;
+    grid-template-columns: 1fr 60px 130px 130px 110px;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-4);
+    align-items: center;
+    border-bottom: 1px solid var(--border-tertiary);
+    font-size: 12.5px;
+    transition: background 0.15s var(--transition);
+  }
+  .treasury-acct-row:last-child { border-bottom: none; }
+  .treasury-acct-row:hover { background: var(--bg-secondary); }
+  .treasury-acct-row.row-affected {
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
+    padding-left: calc(var(--space-4) - 3px);
+  }
+  .treasury-acct-name {
+    display: flex; align-items: center; gap: var(--space-2);
+    min-width: 0;
+  }
+  .treasury-acct-id {
+    font-size: 9px;
+    color: var(--text-tertiary);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    flex-shrink: 0;
+  }
+  .treasury-acct-saldo {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+  .treasury-acct-usdc {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-size: 11px;
+    color: var(--text-tertiary);
+  }
+  @media (max-width: 720px) {
+    .treasury-acct-row {
+      grid-template-columns: 1fr 50px 100px;
+      font-size: 11px;
+    }
+    .treasury-acct-row .treasury-acct-delta-cell,
+    .treasury-acct-row .treasury-acct-usdc { display: none; }
+  }
+
+  /* Contabilidad — journal entries */
+  .journal-entry {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-tertiary);
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-2);
+  }
+  .journal-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: var(--space-2);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px dashed var(--border-tertiary);
+  }
+  .journal-soc {
+    display: flex; align-items: center; gap: var(--space-2);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .journal-evt {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  .journal-lines {
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .journal-line {
+    display: grid;
+    grid-template-columns: 30px 1fr 100px 100px;
+    gap: var(--space-2);
+    font-size: 12px;
+    padding: 3px 0;
+    align-items: center;
+  }
+  .journal-side {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+    color: var(--text-tertiary);
+    text-align: center;
+    padding: 1px 4px;
+    border-radius: var(--radius-xs);
+    background: var(--bg-secondary);
+  }
+  .journal-acct { color: var(--text-secondary); font-size: 11.5px; }
+  .journal-debit, .journal-credit {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    text-align: right;
+  }
+  .journal-debit { color: var(--text-info); }
+  .journal-credit { color: var(--text-success); }
+  .journal-debit.empty, .journal-credit.empty { color: transparent; }
+  .journal-note {
+    font-size: 11px; color: var(--text-tertiary);
+    font-style: italic;
+    margin-top: var(--space-2);
+    padding-top: var(--space-2);
+    border-top: 1px dashed var(--border-tertiary);
+  }
+
+  /* Empty states */
+  .empty-state {
+    padding: var(--space-5);
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: 12px;
+    font-style: italic;
+  }
+
+  /* Subtle pulse for changes */
+  @keyframes flash {
+    0% { background-color: var(--accent-soft); }
+    100% { background-color: transparent; }
+  }
+  .flash { animation: flash 0.8s var(--transition); }
+
+  /* === DELTAS (cambio respecto al evento anterior) === */
+  .delta {
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    margin-left: var(--space-1);
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+  .delta.pos { color: var(--text-success); }
+  .delta.neg { color: var(--text-danger); }
+  .delta.zero { color: var(--text-quaternary); opacity: 0.6; }
+  .delta-block {
+    display: flex; flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+  }
+  .delta-inline {
+    display: inline-block;
+    padding: 1px 5px;
+    border-radius: var(--radius-xs);
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .delta-inline.pos { background: var(--bg-success); color: var(--text-success); }
+  .delta-inline.neg { background: var(--bg-danger); color: var(--text-danger); }
+
+  /* Affected highlight */
+  .affected {
+    background: linear-gradient(90deg, var(--accent-soft) 0%, transparent 60%);
+    border-left: 3px solid var(--accent) !important;
+    padding-left: var(--space-2);
+  }
+  .row-affected td { background: var(--accent-soft); }
+  .row-affected .ccy-badge { box-shadow: 0 0 0 2px var(--accent-soft); }
+  .affected-pulse {
+    position: relative;
+  }
+  .affected-pulse::before {
+    content: '';
+    position: absolute;
+    left: -2px; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    border-radius: 2px;
+    animation: avatarDotPulse 2s infinite;
+  }
+  @keyframes avatarDotPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Footnote */
+  .foot {
+    margin-top: var(--space-8);
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--border-tertiary);
+    font-size: 11px;
+    color: var(--text-tertiary);
+    text-align: center;
+  }
+
+  /* Responsive */
+  @media (max-width: 720px) {
+    .knobs-body { grid-template-columns: 1fr; }
+    .perspective-tab { padding: var(--space-3); font-size: 12px; }
+    .ops-row { grid-template-columns: 60px 1fr 90px; }
+    .journal-line { grid-template-columns: 26px 1fr 80px 80px; font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-mark">A</div>
+      <div class="brand-meta">
+        <div class="brand-title">Ardua Solutions</div>
+        <div class="brand-sub">Plataforma operativa interna</div>
+      </div>
+    </div>
+    <nav class="breadcrumb">
+      <span>FIN</span>
+      <span class="breadcrumb-arrow">›</span>
+      <span>Tesorería</span>
+      <span class="breadcrumb-arrow">›</span>
+      <span class="breadcrumb-current">Simulador-Comparador</span>
+    </nav>
+  </header>
+
+  <!-- TITLE -->
+  <section class="page-title-section">
+    <h1 class="page-title">Simulador-Comparador de Disponibilidades</h1>
+    <p class="page-subtitle">
+      El patrimonio y la disponibilidad no son hechos: son <strong>resultados de una fórmula</strong>. Movés perillas, recorrés los mismos eventos, y el plano <em>derivado</em> cambia mientras el plano <em>dado</em> queda igual. Lo que ves abajo es la diferencia entre <em>lo que es</em> y <em>lo que cuenta como</em>.
+    </p>
+  </section>
+
+  <!-- LEGEND DADO/DERIVADO -->
+  <div class="legend-bar">
+    <span class="legend-title">Dos planos</span>
+    <span class="legend-chip given"><span class="legend-chip-dot"></span> DADO · no cambia con perillas</span>
+    <span class="legend-chip derived"><span class="legend-chip-dot"></span> DERIVADO · depende de la fórmula activa</span>
+    <span class="legend-desc">Físico real y obligaciones con clientes son hechos. Patrimonio, intercompany, disponibilidad: se calculan.</span>
+  </div>
+
+  <!-- KNOBS -->
+  <section class="knobs-panel" id="knobs-panel">
+    <header class="knobs-header" onclick="toggleKnobs()">
+      <div class="knobs-header-left">
+        <span class="knobs-title">Perillas de la fórmula</span>
+        <span class="knobs-sub">Cambiá una y recalculo en vivo solo lo derivado.</span>
+      </div>
+      <span class="knobs-toggle">▼</span>
+    </header>
+    <div class="knobs-body" id="knobs-body"></div>
+  </section>
+
+  <!-- CONSOLIDATION SELECTOR -->
+  <div class="consol-bar">
+    <div class="consol-label">
+      <span class="consol-label-code">P-CON1</span>
+      <span class="consol-label-text">Unidad de consolidación</span>
+    </div>
+    <div class="consol-segments" id="consol-segments">
+      <button class="consol-segment" data-val="a">Por sociedad</button>
+      <button class="consol-segment" data-val="b">Grupo consolidado</button>
+      <button class="consol-segment disabled" data-val="c" disabled>Sub-grupo · próximamente</button>
+    </div>
+    <div class="consol-hint">Ninguna cifra se muestra sin declarar bajo qué unidad está medida.</div>
+  </div>
+
+  <!-- TIMELINE -->
+  <div class="timeline-bar">
+    <button class="btn" id="btn-reset" onclick="resetTimeline()">⟲ Reiniciar</button>
+    <button class="btn" id="btn-prev" onclick="step(-1)">‹ Anterior</button>
+    <button class="btn btn-primary" id="btn-next" onclick="step(1)">Siguiente ›</button>
+    <div class="step-indicator">
+      <span>Evento</span>
+      <span class="step-pill" id="step-pill">E0</span>
+      <span>de <span id="step-max">13</span></span>
+    </div>
+  </div>
+  <div class="progress-track" id="progress-track"></div>
+
+  <!-- EVENT CARD -->
+  <div class="event-card" id="event-card">
+    <div class="event-header">
+      <div class="event-meta">
+        <div class="event-label" id="event-label">EVENTO E0</div>
+        <h2 class="event-title" id="event-title">Estado inicial</h2>
+        <p class="event-desc" id="event-desc">—</p>
+      </div>
+    </div>
+    <div class="event-tags" id="event-tags"></div>
+  </div>
+
+  <!-- MASTER EQUATION -->
+  <div class="equation-bar" id="equation-bar">
+    <span class="equation-icon" id="equation-icon">=</span>
+    <span class="equation-text" id="equation-text">Cuadre: <strong>Capa 1 (propiedad) = Capa 0 (físico)</strong>, post-FX.</span>
+    <span class="equation-formula" id="equation-formula">— / —</span>
+    <span class="equation-info" id="equation-info"></span>
+  </div>
+
+  <!-- DIM CARDS — 4 piezas del modelo: Bancos / Obligaciones / Pendientes / Disponibilidad -->
+  <section class="dim-cards-grid" id="dim-cards-grid"></section>
+
+  <!-- PENDING PHYSICAL (BRL) -->
+  <div class="pending-block" id="pending-block" style="display:none;">
+    <div class="pending-head">
+      <div class="pending-title">⚠ Físico pendiente de aplicación · BRL exótico</div>
+      <span class="pending-est-tag">Estimación</span>
+    </div>
+    <div class="pending-body" id="pending-body"></div>
+  </div>
+
+  <!-- PERSPECTIVES -->
+  <section class="perspective-section">
+    <nav class="perspective-tabs">
+      <button class="perspective-tab active" data-tab="ops" onclick="setTab('ops')">
+        Operaciones <span class="perspective-tab-tag layer-row-tag given">Dadas + Derivadas</span>
+      </button>
+      <button class="perspective-tab" data-tab="treasury" onclick="setTab('treasury')">
+        Tesorería <span class="perspective-tab-tag layer-row-tag given">Dado</span>
+      </button>
+      <button class="perspective-tab" data-tab="accounting" onclick="setTab('accounting')">
+        Contabilidad <span class="perspective-tab-tag layer-row-tag derived">Derivada</span>
+      </button>
+    </nav>
+    <div class="perspective-content" id="perspective-content"></div>
+  </section>
+
+  <div class="foot">
+    Prototipo conceptual de Producto · Cifras ficticias · Diseñado para iterar la fórmula, no para implementar todavía.
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   SIMULADOR-COMPARADOR DE DISPONIBILIDADES
+   ----------------------------------------------------------
+   Modelo de 3 capas:
+   - CAPA 0 (Físico):   DADO. Saldos reales en bancos por
+                        Sociedad → Cuenta → Moneda.
+   - CAPA 1 (Propiedad): MIXTA. Obligaciones con clientes (DADO),
+                         patrimonio + intercompany (DERIVADO).
+   - CAPA 2 (Disponibilidad): DERIVADO. "Cuánto puedo usar".
+
+   Lo DADO es la columna fija. Lo DERIVADO se recalcula con
+   cada cambio de perilla.
+   ============================================================ */
+
+// === KNOB DEFINITIONS ====================================
+// Each knob carries: code, label, desc, options (a/b/c),
+// productLean (the inclination that Producto today suggests),
+// status: 'product' (Producto se inclina) | 'open' (abierta).
+const KNOBS = [
+  {
+    code: 'P-FX1',
+    label: 'Tratamiento del físico exótico (BRL)',
+    desc: 'Cómo se ve un físico que NO se custodia (entra como BRL pero se acredita en custodia).',
+    status: 'product',
+    productLean: 'b',
+    activeOnEvents: [3],
+    options: [
+      { letter: 'a', text: 'Limbo · no cuenta como disponibilidad hasta convertirse; se muestra aparte.' },
+      { letter: 'b', text: 'Valuado a referencia · multi-columna (≈USDC / ≈EURC / ≈ARS), etiquetado ESTIMACIÓN.' },
+    ],
+  },
+  {
+    code: 'P-FX2',
+    label: 'Destino del resultado de conversión (spread FX)',
+    desc: 'Cuando hay un FX en un evento, ¿quién se queda con el beneficio (o la pérdida)?',
+    status: 'product',
+    productLean: 'a',
+    activeOnEvents: [3, 4, 11],
+    options: [
+      { letter: 'a', text: 'Del titular de la moneda de denominación de la obligación.' },
+      { letter: 'b', text: 'Pass-through · Ardua queda neutra, el cliente absorbe el spread.' },
+    ],
+  },
+  {
+    code: 'P-IC1',
+    label: 'Moneda de denominación de la recaudación intercompany',
+    desc: 'Cuando una sociedad recauda a c/o de otra, ¿en qué moneda está denominada la obligación?',
+    status: 'open',
+    productLean: null,
+    activeOnEvents: [4],
+    options: [
+      { letter: 'a', text: 'Moneda física recaudada (ej. ARS) → resultado FX al recaudador.' },
+      { letter: 'b', text: 'Moneda de custodia objetivo (ej. USDC) → resultado FX al mandante.' },
+    ],
+  },
+  {
+    code: 'P-IC2',
+    label: 'Tipado del legajo de recaudación',
+    desc: 'Cuando una sociedad opera como cliente de otra, ¿qué tipo de legajo se le abre?',
+    status: 'open',
+    productLean: null,
+    activeOnEvents: [4, 6],
+    options: [
+      { letter: 'a', text: 'Sub-tipo de custodia con atributo `origen` (2 tipos totales: custodia + cuenta corriente).' },
+      { letter: 'b', text: 'Tipo propio separado (3+ tipos totales).' },
+    ],
+  },
+  {
+    code: 'P-DISP1',
+    label: '¿Cómo se responde "cuánto puedo usar"?',
+    desc: 'La respuesta a la pregunta de disponibilidad operativa.',
+    status: 'product',
+    productLean: 'b',
+    activeOnEvents: [],
+    options: [
+      { letter: 'a', text: 'Resta impuesta · el sistema calcula Físico − Obligaciones − Pendientes y emite veredicto.' },
+      { letter: 'b', text: 'Solo componentes · lado a lado, sin veredicto; el humano decide.' },
+    ],
+  },
+];
+
+// === FX RATES (constantes para todas las fórmulas) ===
+const FX = {
+  USDC_USDC: 1,
+  EURC_USDC: 1.08,
+  ARS_USDC: 1/1100,
+  USD_USDC: 1.00,        // paridad asumida on-ramp
+  BRL_USDC: 0.20,        // referencia mid
+  BRL_EURC: 0.185,
+  BRL_ARS: 220,
+  EURC_EURC: 1,
+  ARS_ARS: 1,
+  BRL_BRL: 1,
+  // Quote rates (lo que la mesa cotiza al cliente — generan spread)
+  BRL_USDC_QUOTE: 0.198, // mesa cotiza un poco abajo del mid → mesa gana 0.002 por BRL
+  ARS_USDC_QUOTE: 1/1110,// mesa cotiza ARS un poco más caro → mesa gana
+};
+
+function toUSDC(amount, ccy) {
+  const k = (ccy + '_USDC').toUpperCase();
+  return amount * (FX[k] || 0);
+}
+
+// === SOCIEDADES ===
+const SOCIEDADES = {
+  HP:  { id: 'HP',  name: 'Haz Pagos',           juris: 'AR · PSP',  base: 'ARS'  },
+  CP:  { id: 'CP',  name: 'Circuit Pay',         juris: 'AR · PSAV', base: 'USDC' },
+  ASC: { id: 'ASC', name: 'Ardua Solutions Corp', juris: 'CA · MSB',  base: 'USDC' },
+  AV:  { id: 'AV',  name: 'Astra Ventures',      juris: 'PL · VASP', base: 'EURC' },
+};
+
+// === STATE BASE — el "estado de mundo" antes de eventos ===
+// Esta función produce LO DADO inicial (E0). Los eventos van sumando hechos.
+function makeInitialState() {
+  return {
+    step: 0,
+    knobs: {
+      fx1: 'b',
+      fx2: 'a',
+      ic1: 'a',
+      ic2: 'a',
+      con1: 'a',
+      disp1: 'b',
+    },
+    tab: 'ops',
+    // UI: estado de los collapsibles en Tesorería (sociedades expandidas)
+    treasuryExpanded: { HP: true, CP: true, ASC: true, AV: true },
+    // UI: sub-tab seleccionado dentro de las dim-cards
+    obligTab: 'clientes',   // 'clientes' | 'sociedades'
+    pendTab:  'depositos',  // 'depositos' | 'retiros' | 'otras'
+
+    // CAPA 0 — Físico real: cuentas bancarias / wallets a nombre de cada
+    // sociedad. SIEMPRE DADO. Estructura: sociedad → estructura (banco/wallet
+    // provider) → cuenta (identificador) → moneda → saldo.
+    physical: {
+      HP: [
+        { id: 'hp-coinag-cbu',     estructura: 'COINAG',  acct: 'CBU Cta 10.049',         ccy: 'ARS',  amount: 18_500_000 },
+        { id: 'hp-coinag-cvu',     estructura: 'COINAG',  acct: 'CVU Cliente Pool',       ccy: 'ARS',  amount: 14_250_000 },
+        { id: 'hp-brubank',        estructura: 'BRUBANK', acct: 'Cta 2504679505001',      ccy: 'ARS',  amount:  9_500_000 },
+        { id: 'hp-bind',           estructura: 'BIND',    acct: 'Cta 4403443/1',          ccy: 'ARS',  amount:  7_750_000 },
+        { id: 'hp-bitgo-treasury', estructura: 'BITGO',   acct: 'Wallet 0xBG..HP91',      ccy: 'USDC', amount:     12_000 },
+      ],
+      CP: [
+        { id: 'cp-bitgo-main',     estructura: 'BITGO',    acct: 'Wallet 0xBG..A8C2',     ccy: 'USDC', amount: 62_000 },
+        { id: 'cp-bitgo-ops',      estructura: 'BITGO',    acct: 'Wallet 0xBG..F119',     ccy: 'USDC', amount: 18_000 },
+      ],
+      ASC: [
+        { id: 'asc-coinbase',      estructura: 'COINBASE', acct: 'Wallet 0xCBA..D827',    ccy: 'USDC', amount: 250_000 },
+        { id: 'asc-brex',          estructura: 'BREX',     acct: 'Cta business 9101-2231', ccy: 'USD', amount:  30_000 },
+      ],
+      AV: [
+        { id: 'av-revolut',        estructura: 'REVOLUT',  acct: 'EURC-PL-4421',           ccy: 'EURC', amount: 56_000 },
+        { id: 'av-kraken',         estructura: 'KRAKEN',   acct: 'Wallet KRK-EURC',        ccy: 'EURC', amount: 34_000 },
+      ],
+    },
+
+    // CAPA 1 — DADO: obligaciones con clientes (compromisos firmes con titulares externos)
+    obligations: [
+      // soc, cliente (id, nombre, role), ccy, amount, note
+      { soc: 'CP',  cli: 'C001', name: 'TechCorp SA',         role: 'cliente', ccy: 'USDC', amount: 40_000 },
+      { soc: 'HP',  cli: 'C002', name: 'Industrias del Plata', role: 'cliente', ccy: 'ARS',  amount: 28_000_000 },
+      { soc: 'CP',  cli: 'C003', name: 'Latam Trader',         role: 'cliente', ccy: 'USDC', amount: 15_000 },
+      { soc: 'AV',  cli: 'C003', name: 'Latam Trader',         role: 'cliente', ccy: 'EURC', amount: 12_000 },
+      { soc: 'HP',  cli: 'C004', name: 'Pampa Exports',        role: 'cliente', ccy: 'ARS',  amount: 8_000_000 },
+      { soc: 'AV',  cli: 'C005', name: 'EU Connect',           role: 'cliente', ccy: 'EURC', amount: 35_000 },
+      { soc: 'HP',  cli: 'C006', name: 'Nueva Era',            role: 'cliente', ccy: 'ARS',  amount: 4_500_000 },
+    ],
+
+    // CAPA 1 — DADO: pendientes de asignar (físico que entró sin cliente)
+    pendings: [],
+
+    // CAPA 1 — DADO: físico pendiente de aplicación (BRL exótico esperando ser convertido)
+    physicalPending: [],
+
+    // CAPA 1 — DERIVADO (depende de perillas): cuentas corrientes intercompany.
+    // Las almacenamos como hechos (transferencias), pero su INTERPRETACIÓN
+    // (¿se elimina al consolidar?) la maneja P-CON1 al renderizar.
+    intercompany: [
+      // { from: 'HP', to: 'CP', ccy: 'USDC', amount: 0, kind: 'cta-cte' | 'recaudacion' }
+    ],
+
+    // CAPA 1 — DERIVADO: el resultado FX de cada conversión (depende de P-FX2/P-IC1).
+    // Se almacenan los hechos del FX (qué se convirtió y cuánto fue el spread),
+    // y al renderizar decidimos a quién atribuirlo según las perillas.
+    fxResults: [
+      // { soc, baseCcy, baseAmt, targetCcy, targetAmt, spreadUsdc, eventCode, kind: 'onramp'|'ic'|'fee' }
+    ],
+
+    // CAPA 1 — Patrimonio del grupo (sub-legajos del titular AS000000)
+    // Seed inicial: cuadra el físico inicial con las obligaciones a clientes.
+    // (Físico ≈ 514.654 USDC; obligaciones ≈ 142.578 USDC; gap ≈ 372.076).
+    ardua: {
+      gastos:   { USDC: 0,       EURC: 0, ARS: 0 },
+      arduapay: { USDC: 0,       EURC: 0, ARS: 0 },
+      fees:     { USDC: 60_000,  EURC: 0, ARS: 0 },
+      loans:    { USDC: 12_076,  EURC: 0, ARS: 0 },
+      capital:  { USDC: 300_000, EURC: 0, ARS: 0 },
+    },
+
+    // CAPA 2 — DADO (entrada) → DERIVADO (cálculo): compromisos con fecha
+    compromisos: [
+      // { fecha, cli, soc, ccy, amount, status: 'pendiente'|'ejecutado' }
+    ],
+
+    // Asientos contables (DERIVADOS por evento, según perillas)
+    journal: [
+      // generados al aplicar eventos
+    ],
+  };
+}
+
+// Helper: find a physical account by its stable id across sociedades.
+function acct(s, id) {
+  for (const accts of Object.values(s.physical)) {
+    const found = accts.find(a => a.id === id);
+    if (found) return found;
+  }
+  throw new Error('acct id not found: ' + id);
+}
+
+// === EVENTOS · 13 ===
+// Cada evento describe lo que pasa y MUTA estado dado.
+// Lo derivado (patrimonio, IC visible, disponibilidad) NO se persiste:
+// se recalcula al renderizar según las perillas activas.
+const EVENTS = [
+  {
+    code: 'E0',
+    title: 'Estado inicial',
+    desc: '4 sociedades operativas (HP/AR, CP/AR, ASC/CA, AV/PL), cuentas físicas con saldo, ~6 clientes externos con obligaciones multimoneda, y el titular Ardua (AS000000) con sus 4 sub-legajos de propósito (gastos, ardua-pay, fees, loans).',
+    layers: [0, 1],
+    knobs: [],
+    apply: (s) => { /* nothing — baseline */ },
+  },
+
+  {
+    code: 'E1',
+    title: 'Depósito en moneda de custodia',
+    desc: 'TechCorp deposita 50.000 USDC en la wallet de custodia principal de Circuit Pay (BITGO · 0xBG..A8C2). Se acredita 1:1, no hay FX. Ninguna perilla altera el cálculo: lo dado y lo derivado coinciden.',
+    layers: [0, 1],
+    knobs: [],
+    apply: (s) => {
+      acct(s, 'cp-bitgo-main').amount += 50_000;
+      const idx = s.obligations.findIndex(o => o.cli === 'C001' && o.soc === 'CP' && o.ccy === 'USDC');
+      s.obligations[idx].amount += 50_000;
+      s.journal.push({
+        evt: 'E1', soc: 'CP',
+        lines: [
+          { side: 'D', acct: 'BITGO · Wallet 0xBG..A8C2', debit: 50_000, credit: 0, ccy: 'USDC' },
+          { side: 'H', acct: 'Obligación con C001 · TechCorp', debit: 0, credit: 50_000, ccy: 'USDC' },
+        ],
+        note: 'Custodia simple. Sin FX, sin spread, sin perillas.',
+      });
+    },
+  },
+
+  {
+    code: 'E2',
+    title: 'Depósito USD fiat con paridad asumida',
+    desc: 'TechCorp deposita 25.000 USD fiat en la cuenta BREX de ASC. Se le acredita 25.000 USDC al cliente (paridad asumida 1:1 on-ramp). El físico queda como USD (distinto de USDC); la obligación viaja a CP vía IC.',
+    layers: [0, 1],
+    knobs: [],
+    apply: (s) => {
+      acct(s, 'asc-brex').amount += 25_000;
+      const idx = s.obligations.findIndex(o => o.cli === 'C001' && o.soc === 'CP' && o.ccy === 'USDC');
+      s.obligations[idx].amount += 25_000;
+      s.fxResults.push({
+        soc: 'ASC', baseCcy: 'USD', baseAmt: 25_000,
+        targetCcy: 'USDC', targetAmt: 25_000,
+        spreadUsdc: 0, eventCode: 'E2', kind: 'onramp',
+      });
+      s.intercompany.push({
+        from: 'ASC', to: 'CP', ccy: 'USDC', amount: 25_000,
+        eventCode: 'E2', kind: 'recaudacion',
+      });
+      s.journal.push({
+        evt: 'E2', soc: 'ASC',
+        lines: [
+          { side: 'D', acct: 'BREX · Cta business 9101-2231', debit: 25_000, credit: 0, ccy: 'USD' },
+          { side: 'H', acct: 'IC Recaudación → CP', debit: 0, credit: 25_000, ccy: 'USDC' },
+        ],
+        note: 'On-ramp con paridad asumida USD:USDC = 1:1. Físico queda en USD en BREX; obligación se acredita en CP en USDC.',
+      });
+      s.journal.push({
+        evt: 'E2', soc: 'CP',
+        lines: [
+          { side: 'D', acct: 'IC Recaudación ← ASC', debit: 25_000, credit: 0, ccy: 'USDC' },
+          { side: 'H', acct: 'Obligación con C001 · TechCorp', debit: 0, credit: 25_000, ccy: 'USDC' },
+        ],
+        note: 'Contraparte: CP reconoce la acreditación al cliente final.',
+      });
+    },
+  },
+
+  {
+    code: 'E3',
+    title: 'Depósito en moneda exótica (BRL) con Quote',
+    desc: 'Pampa Exports deposita 200.000 BRL en una cuenta BIND BRL de HP (cuenta exótica, no es moneda de custodia). La mesa cotiza BRL/USDC = 0,198 (mid 0,20). Se acredita al cliente en USDC; el spread (0,002 · 200.000 = 400 USDC) tiene destino según P-FX2. El BRL físico se queda; si P-FX1=b se muestra valuado multi-columna.',
+    layers: [0, 1],
+    knobs: ['P-FX1', 'P-FX2'],
+    apply: (s) => {
+      s.physicalPending.push({
+        soc: 'HP', estructura: 'BIND', acct: 'BRL exótico · Cta 4403443/2',
+        ccy: 'BRL', amount: 200_000,
+        eventCode: 'E3',
+      });
+      // Acreditación al cliente C004 en USDC (denominación de su obligación de custodia)
+      // Existing obligation C004 está en ARS — abrimos USDC nueva
+      s.obligations.push({
+        soc: 'CP', cli: 'C004', name: 'Pampa Exports',
+        role: 'cliente', ccy: 'USDC',
+        amount: 200_000 * FX.BRL_USDC_QUOTE, // 39.600 USDC al cliente
+      });
+      // El FX result — quién se lo lleva depende de P-FX2
+      s.fxResults.push({
+        soc: 'HP', baseCcy: 'BRL', baseAmt: 200_000,
+        targetCcy: 'USDC', targetAmt: 200_000 * FX.BRL_USDC_QUOTE,
+        spreadUsdc: 200_000 * (FX.BRL_USDC - FX.BRL_USDC_QUOTE), // 400 USDC
+        eventCode: 'E3', kind: 'onramp',
+        titularDenominacion: 'cliente',
+      });
+      s.intercompany.push({
+        from: 'HP', to: 'CP', ccy: 'USDC',
+        amount: 200_000 * FX.BRL_USDC_QUOTE, // 39.600 USDC
+        eventCode: 'E3', kind: 'recaudacion',
+      });
+      s.journal.push({
+        evt: 'E3', soc: 'HP',
+        lines: [
+          { side: 'D', acct: 'BIND · BRL exótico Cta 4403443/2', debit: 200_000, credit: 0, ccy: 'BRL' },
+          { side: 'H', acct: 'IC Recaudación → CP', debit: 0, credit: 39_600, ccy: 'USDC' },
+          { side: 'H', acct: 'Resultado FX (titular: depende P-FX2)', debit: 0, credit: 400, ccy: 'USDC' },
+        ],
+        note: 'BRL no es moneda de custodia. P-FX1 decide si se ignora o se valúa multi-columna. P-FX2 decide a quién se imputa el spread (400 USDC).',
+      });
+    },
+  },
+
+  {
+    code: 'E4',
+    title: 'Recaudación intercompany con FX y beneficio',
+    desc: 'Haz Pagos recauda 30.000.000 ARS a cuenta y orden de Circuit Pay. La mesa cotiza ARS/USDC al cliente final. HP convierte y transfiere a CP la obligación. P-IC1 decide en qué moneda está denominada la obligación intercompany (ARS o USDC) — esa misma decisión define quién se queda el beneficio del FX. P-IC2 tipa el legajo.',
+    layers: [0, 1],
+    knobs: ['P-IC1', 'P-IC2', 'P-FX2'],
+    apply: (s) => {
+      acct(s, 'hp-coinag-cbu').amount += 30_000_000;
+      const arsRecaudados = 30_000_000;
+      const targetUSDC_mid = arsRecaudados * FX.ARS_USDC;       // 27.272,72
+      const targetUSDC_quote = arsRecaudados * FX.ARS_USDC_QUOTE; // 27.027,02
+      const spread = targetUSDC_mid - targetUSDC_quote;          // ~245 USDC
+      // Obligación con C002 (Industrias del Plata) en CP en USDC
+      const targetUsdcParaCliente = targetUSDC_quote;
+      s.obligations.push({
+        soc: 'CP', cli: 'C002', name: 'Industrias del Plata',
+        role: 'cliente', ccy: 'USDC',
+        amount: targetUsdcParaCliente,
+      });
+      // IC: HP debe entregarle USDC a CP. Pero HP no tiene USDC — tiene ARS.
+      // La forma en que se modela la deuda IC depende de P-IC1.
+      // Aquí guardamos los HECHOS: 30M ARS recaudados a c/o CP.
+      s.intercompany.push({
+        from: 'HP', to: 'CP', ccy: 'ARS', amount: arsRecaudados,
+        eventCode: 'E4', kind: 'recaudacion',
+        // P-IC1 cambia interpretación: si 'a' → denominada ARS; si 'b' → denominada USDC
+      });
+      s.fxResults.push({
+        soc: 'HP', baseCcy: 'ARS', baseAmt: arsRecaudados,
+        targetCcy: 'USDC', targetAmt: targetUSDC_quote,
+        spreadUsdc: spread, eventCode: 'E4', kind: 'ic',
+        titularDenominacion: 'depende_p_ic1',
+      });
+      s.journal.push({
+        evt: 'E4', soc: 'HP',
+        lines: [
+          { side: 'D', acct: 'COINAG · CBU Cta 10.049', debit: 30_000_000, credit: 0, ccy: 'ARS' },
+          { side: 'H', acct: 'IC Recaudación → CP (denominación según P-IC1)', debit: 0, credit: 30_000_000, ccy: 'ARS' },
+        ],
+        note: 'HP es solo recaudador. La denominación de la deuda IC (ARS o USDC) la define P-IC1.',
+      });
+      s.journal.push({
+        evt: 'E4', soc: 'CP',
+        lines: [
+          { side: 'D', acct: 'IC Recaudación ← HP (denom. según P-IC1)', debit: arsRecaudados, credit: 0, ccy: 'ARS' },
+          { side: 'H', acct: 'Obligación con C002 · Ind. del Plata', debit: 0, credit: targetUsdcParaCliente, ccy: 'USDC' },
+        ],
+        note: 'Spread FX (~$' + Math.round(spread) + ' USDC) se imputa según P-IC1/P-FX2. Misma decisión: si la obligación IC está en ARS, el spread es de HP. Si está en USDC, es de CP.',
+      });
+    },
+  },
+
+  {
+    code: 'E5',
+    title: 'Cuenta corriente intercompany (sin interés)',
+    desc: 'HP transfiere 12.000 USDC desde su wallet de tesorería (BITGO · 0xBG..HP91) hacia la wallet operativa de CP (BITGO · 0xBG..F119), sin interés ni plazo. Físicamente la plata se mueve; al grupo le sigue perteneciendo. P-CON1 decide si esa cta. cte. queda visible (por sociedad) o se elimina (grupo).',
+    layers: [0, 1],
+    knobs: ['P-CON1'],
+    intraGroupTransfer: true, // bajo P-CON1=b, este asiento desaparece al consolidar
+    apply: (s) => {
+      acct(s, 'hp-bitgo-treasury').amount -= 12_000;
+      acct(s, 'cp-bitgo-ops').amount += 12_000;
+      s.intercompany.push({
+        from: 'HP', to: 'CP', ccy: 'USDC', amount: 12_000,
+        eventCode: 'E5', kind: 'cta-cte',
+      });
+      s.journal.push({
+        evt: 'E5', soc: 'HP',
+        lines: [
+          { side: 'D', acct: 'IC Cta. Cte. → CP', debit: 12_000, credit: 0, ccy: 'USDC' },
+          { side: 'H', acct: 'BITGO · Wallet 0xBG..HP91', debit: 0, credit: 12_000, ccy: 'USDC' },
+        ],
+        note: 'Préstamo informal entre hermanas. Físico se mueve dentro del grupo.',
+      });
+      s.journal.push({
+        evt: 'E5', soc: 'CP',
+        lines: [
+          { side: 'D', acct: 'BITGO · Wallet 0xBG..F119', debit: 12_000, credit: 0, ccy: 'USDC' },
+          { side: 'H', acct: 'IC Cta. Cte. ← HP', debit: 0, credit: 12_000, ccy: 'USDC' },
+        ],
+        note: 'Contraparte. Bajo P-CON1=Grupo, ambos asientos se eliminan: a nivel grupo el USDC total no cambia.',
+      });
+    },
+  },
+
+  {
+    code: 'E6',
+    title: 'Sociedad operando como cliente de otra',
+    desc: 'Astra Ventures opera como cliente de Haz Pagos: deposita 18.000 EURC en HP y recibe acreditación de custodia. El legajo de AV en HP es tipado según P-IC2 (sub-tipo de custodia con origen=hermana, o tipo propio separado).',
+    layers: [0, 1],
+    knobs: ['P-IC2', 'P-CON1'],
+    apply: (s) => {
+      // HP recibe EURC físicamente — abrimos cuenta nueva en BITGO para custody EURC
+      s.physical.HP.push({
+        id: 'hp-bitgo-eurc-ic',
+        estructura: 'BITGO', acct: 'Wallet 0xBG..HP-EU · custody IC',
+        ccy: 'EURC', amount: 18_000,
+      });
+      s.obligations.push({
+        soc: 'HP', cli: 'AV', name: 'Astra Ventures (intra-grupo)',
+        role: 'soc-cliente', ccy: 'EURC', amount: 18_000,
+      });
+      s.journal.push({
+        evt: 'E6', soc: 'HP',
+        lines: [
+          { side: 'D', acct: 'BITGO · Wallet 0xBG..HP-EU custody IC', debit: 18_000, credit: 0, ccy: 'EURC' },
+          { side: 'H', acct: 'Obligación con AV (legajo: depende P-IC2)', debit: 0, credit: 18_000, ccy: 'EURC' },
+        ],
+        note: 'AV es sociedad hermana, pero acá actúa como cliente. P-IC2 decide si el legajo se tipa como custodia + atributo o como tipo nuevo.',
+      });
+    },
+  },
+
+  {
+    code: 'E7',
+    title: 'Depósito sin titular identificado (pendiente)',
+    desc: 'Entran 12.000 USDC a la wallet de COINBASE de ASC sin cliente identificado. El físico sube, pero no se acredita a ninguna obligación: se imputa transitoriamente a la cuenta técnica "Pendientes de asignar". El físico existe, pero todavía no sabemos de quién es.',
+    layers: [0, 1],
+    knobs: [],
+    apply: (s) => {
+      acct(s, 'asc-coinbase').amount += 12_000;
+      s.pendings.push({
+        soc: 'ASC', ccy: 'USDC', amount: 12_000, eventCode: 'E7',
+      });
+      s.journal.push({
+        evt: 'E7', soc: 'ASC',
+        lines: [
+          { side: 'D', acct: 'COINBASE · Wallet 0xCBA..D827', debit: 12_000, credit: 0, ccy: 'USDC' },
+          { side: 'H', acct: 'Cta. técnica · Pendientes de asignar', debit: 0, credit: 12_000, ccy: 'USDC' },
+        ],
+        note: 'Físico entra a la wallet de COINBASE, pero todavía no hay titular identificado.',
+      });
+    },
+  },
+
+  {
+    code: 'E8',
+    title: 'Asignación del pendiente al cliente final',
+    desc: 'Se identifica al cliente (EU Connect, C005) y los 12.000 USDC pendientes se reclasifican como obligación con C005 en CP. La wallet física no se toca: solo cambia el titular de esos USDC en los libros. ASC pasa la obligación a CP vía IC.',
+    layers: [1],
+    knobs: [],
+    apply: (s) => {
+      const pIdx = s.pendings.findIndex(p => p.soc === 'ASC' && p.ccy === 'USDC' && p.amount === 12_000);
+      if (pIdx >= 0) s.pendings.splice(pIdx, 1);
+      s.obligations.push({
+        soc: 'CP', cli: 'C005', name: 'EU Connect',
+        role: 'cliente', ccy: 'USDC', amount: 12_000,
+      });
+      s.intercompany.push({
+        from: 'ASC', to: 'CP', ccy: 'USDC', amount: 12_000,
+        eventCode: 'E8', kind: 'recaudacion',
+      });
+      s.journal.push({
+        evt: 'E8', soc: 'ASC',
+        lines: [
+          { side: 'D', acct: 'Cta. técnica · Pendientes de asignar', debit: 12_000, credit: 0, ccy: 'USDC' },
+          { side: 'H', acct: 'IC Recaudación → CP', debit: 0, credit: 12_000, ccy: 'USDC' },
+        ],
+        note: 'Reclasificación: el pendiente baja, ASC reconoce IC con CP.',
+      });
+      s.journal.push({
+        evt: 'E8', soc: 'CP',
+        lines: [
+          { side: 'D', acct: 'IC Recaudación ← ASC', debit: 12_000, credit: 0, ccy: 'USDC' },
+          { side: 'H', acct: 'Obligación con C005 · EU Connect', debit: 0, credit: 12_000, ccy: 'USDC' },
+        ],
+        note: 'CP recibe la obligación con el cliente final.',
+      });
+    },
+  },
+
+  {
+    code: 'E9',
+    title: 'Movimiento entre cuentas propias · misma sociedad',
+    desc: 'ASC mueve 20.000 USDC desde su wallet de custodia (COINBASE · 0xCBA..D827) hacia una nueva wallet operativa (FIREBLOCKS · 0xFB..ASC-OP). Cambia la composición del físico dentro de ASC; no hay cliente, no hay otra sociedad, no hay perilla activa.',
+    layers: [0],
+    knobs: [],
+    apply: (s) => {
+      acct(s, 'asc-coinbase').amount -= 20_000;
+      s.physical.ASC.push({
+        id: 'asc-fireblocks-ops',
+        estructura: 'FIREBLOCKS', acct: 'Wallet 0xFB..ASC-OP · operativa',
+        ccy: 'USDC', amount: 20_000,
+      });
+      s.journal.push({
+        evt: 'E9', soc: 'ASC',
+        lines: [
+          { side: 'D', acct: 'FIREBLOCKS · Wallet 0xFB..ASC-OP', debit: 20_000, credit: 0, ccy: 'USDC' },
+          { side: 'H', acct: 'COINBASE · Wallet 0xCBA..D827', debit: 0, credit: 20_000, ccy: 'USDC' },
+        ],
+        note: 'Reubicación física dentro de la misma sociedad. Solo cambia el casillero, no la propiedad.',
+      });
+    },
+  },
+
+  {
+    code: 'E10',
+    title: 'Solicitud de retiro programado',
+    desc: 'TechCorp confirma un retiro de 30.000 USDC para mañana. El físico todavía NO se mueve; la obligación todavía NO baja. Solo nace un compromiso firme con fecha. Bajo P-DISP1=a el sistema YA descuenta este compromiso de la capacidad operativa; bajo P-DISP1=b lo muestra lado a lado sin restar.',
+    layers: [2],
+    knobs: ['P-DISP1'],
+    apply: (s) => {
+      s.compromisos.push({
+        fecha: 'T+1', cli: 'C001', cliName: 'TechCorp SA', soc: 'CP',
+        ccy: 'USDC', amount: 30_000, status: 'pendiente',
+        eventCode: 'E10',
+      });
+      s.journal.push({
+        evt: 'E10', soc: 'CP',
+        lines: [
+          { side: 'D', acct: 'Obligación con C001 · TechCorp (compromiso T+1)', debit: 30_000, credit: 0, ccy: 'USDC' },
+          { side: 'H', acct: 'Compromiso pendiente · retiro programado', debit: 0, credit: 30_000, ccy: 'USDC' },
+        ],
+        note: 'Solicitud confirmada. Físico no cambió. El compromiso queda firme con fecha T+1.',
+      });
+    },
+  },
+
+  {
+    code: 'E11',
+    title: 'Ejecución del retiro programado',
+    desc: 'Llega T+1. El compromiso se ejecuta: el físico sale de la wallet de custodia de CP (BITGO · 0xBG..A8C2) y la obligación con TechCorp baja en 30.000 USDC. El compromiso pendiente queda cerrado.',
+    layers: [0, 1],
+    knobs: [],
+    apply: (s) => {
+      const cIdx = s.compromisos.findIndex(c => c.eventCode === 'E10' && c.status === 'pendiente');
+      if (cIdx >= 0) s.compromisos[cIdx].status = 'ejecutado';
+      acct(s, 'cp-bitgo-main').amount -= 30_000;
+      const idx = s.obligations.findIndex(o => o.cli === 'C001' && o.soc === 'CP' && o.ccy === 'USDC');
+      s.obligations[idx].amount -= 30_000;
+      s.journal.push({
+        evt: 'E11', soc: 'CP',
+        lines: [
+          { side: 'D', acct: 'Compromiso pendiente · retiro programado', debit: 30_000, credit: 0, ccy: 'USDC' },
+          { side: 'H', acct: 'BITGO · Wallet 0xBG..A8C2', debit: 0, credit: 30_000, ccy: 'USDC' },
+        ],
+        note: 'Ejecución: el físico sale de la wallet de custodia. Bajo P-DISP1=a, la capacidad operativa vuelve a su nivel (porque obligación y físico bajaron juntos).',
+      });
+    },
+  },
+
+  {
+    code: 'E12',
+    title: 'Egresos de patrimonio propio',
+    desc: 'Ardua paga 8.000 USDC a un proveedor (sub-legajo "operativa-gastos") y 22.000 USDC en sueldos (sub-legajo "ardua-pay") desde ASC. El físico baja; el patrimonio propio baja en los sub-legajos correspondientes.',
+    layers: [0, 1],
+    knobs: [],
+    apply: (s) => {
+      acct(s, 'asc-coinbase').amount -= (8_000 + 22_000);
+      s.ardua.gastos.USDC -= 8_000;
+      s.ardua.arduapay.USDC -= 22_000;
+      s.journal.push({
+        evt: 'E12-prov', soc: 'ASC',
+        lines: [
+          { side: 'D', acct: 'Ardua · sub-legajo operativa-gastos', debit: 8_000, credit: 0, ccy: 'USDC' },
+          { side: 'H', acct: 'COINBASE · Wallet 0xCBA..D827', debit: 0, credit: 8_000, ccy: 'USDC' },
+        ],
+        note: 'Pago a proveedor imputado al sub-legajo de gastos.',
+      });
+      s.journal.push({
+        evt: 'E12-sueldos', soc: 'ASC',
+        lines: [
+          { side: 'D', acct: 'Ardua · sub-legajo ardua-pay', debit: 22_000, credit: 0, ccy: 'USDC' },
+          { side: 'H', acct: 'COINBASE · Wallet 0xCBA..D827', debit: 0, credit: 22_000, ccy: 'USDC' },
+        ],
+        note: 'Sueldos imputados al sub-legajo ardua-pay.',
+      });
+    },
+  },
+
+  {
+    code: 'E13',
+    title: 'Fee cobrado a cliente',
+    desc: 'Se cobra un fee de servicio de 800 USDC a TechCorp, que aterriza en el sub-legajo "fees" del titular Ardua. Conecta la cadena: los spreads de E3/E4 también aterrizan acá (o en el cliente, según P-FX2/P-IC1).',
+    layers: [1],
+    knobs: ['P-FX2'],
+    apply: (s) => {
+      const idx = s.obligations.findIndex(o => o.cli === 'C001' && o.soc === 'CP' && o.ccy === 'USDC');
+      s.obligations[idx].amount -= 800;
+      s.ardua.fees.USDC += 800;
+      s.journal.push({
+        evt: 'E13', soc: 'CP',
+        lines: [
+          { side: 'D', acct: 'Obligación con C001 · TechCorp', debit: 800, credit: 0, ccy: 'USDC' },
+          { side: 'H', acct: 'Ardua · sub-legajo fees', debit: 0, credit: 800, ccy: 'USDC' },
+        ],
+        note: 'No mueve físico. Reasigna propiedad: 800 USDC pasan de obligación con cliente a patrimonio propio (fees).',
+      });
+    },
+  },
+
+  {
+    code: 'E14',
+    title: 'Aporte de capital propio',
+    desc: 'Los socios de Ardua inyectan 100.000 USDC en ASC desde una cuenta externa al grupo. Sube el físico y sube el patrimonio propio (sub-legajo "capital"). No genera obligación con clientes ni IC.',
+    layers: [0, 1],
+    knobs: [],
+    apply: (s) => {
+      acct(s, 'asc-coinbase').amount += 100_000;
+      s.ardua.capital.USDC += 100_000;
+      s.journal.push({
+        evt: 'E14', soc: 'ASC',
+        lines: [
+          { side: 'D', acct: 'COINBASE · Wallet 0xCBA..D827', debit: 100_000, credit: 0, ccy: 'USDC' },
+          { side: 'H', acct: 'Ardua · sub-legajo capital', debit: 0, credit: 100_000, ccy: 'USDC' },
+        ],
+        note: 'Aporte de capital · físico sube, patrimonio sube, nada más.',
+      });
+    },
+  },
+];
+
+// === FORMATTERS ===
+function fmt(n, decimals=0) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  const sign = n < 0 ? '-' : '';
+  const abs = Math.abs(n);
+  if (abs >= 1_000_000) return sign + (abs/1_000_000).toFixed(2).replace(/\.?0+$/, '') + 'M';
+  if (abs >= 10_000) return sign + (abs/1_000).toFixed(1).replace(/\.?0+$/, '') + 'K';
+  if (abs >= 1_000) return sign + abs.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  return sign + abs.toLocaleString('en-US', { maximumFractionDigits: decimals });
+}
+
+function fmtFull(n) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+}
+
+// Delta formatter — devuelve HTML de un chip con +/-
+function fmtDelta(n, opts = {}) {
+  const round = opts.round !== false;
+  const v = round ? Math.round(n) : n;
+  if (!v || Math.abs(v) < (opts.threshold || 1)) {
+    return opts.showZero ? `<span class="delta zero">±0</span>` : '';
+  }
+  const sign = v > 0 ? '+' : '−';
+  const cls = v > 0 ? 'pos' : 'neg';
+  const style = opts.inline ? 'delta-inline' : 'delta';
+  const suffix = opts.ccy ? ` <span style="opacity:0.7;font-weight:600;">${opts.ccy}</span>` : '';
+  return `<span class="${style} ${cls}">${sign}${fmt(Math.abs(v))}${suffix}</span>`;
+}
+
+// === Delta helpers (state vs prevState) ===
+function physAcctDelta(id) {
+  if (!prevState) return 0;
+  let curr = 0, prev = 0;
+  for (const accts of Object.values(state.physical)) {
+    const a = accts.find(x => x.id === id);
+    if (a) { curr = a.amount; break; }
+  }
+  for (const accts of Object.values(prevState.physical)) {
+    const a = accts.find(x => x.id === id);
+    if (a) { prev = a.amount; break; }
+  }
+  return curr - prev;
+}
+
+function physByCurrencyDelta(ccy) {
+  if (!prevState) return 0;
+  const c = physicalByCurrency()[ccy] || 0;
+  const p = (function () {
+    const sums = {};
+    for (const [, accts] of Object.entries(prevState.physical)) {
+      for (const a of accts) sums[a.ccy] = (sums[a.ccy] || 0) + a.amount;
+    }
+    return sums[ccy] || 0;
+  })();
+  return c - p;
+}
+
+function obligByClientCcyDelta(cli, soc, ccy) {
+  if (!prevState) return 0;
+  const c = (state.obligations.find(o => o.cli === cli && o.soc === soc && o.ccy === ccy) || { amount: 0 }).amount;
+  const p = (prevState.obligations.find(o => o.cli === cli && o.soc === soc && o.ccy === ccy) || { amount: 0 }).amount;
+  return c - p;
+}
+
+function obligByCurrencyDelta(ccy) {
+  if (!prevState) return 0;
+  const sumCcy = (s) => s.obligations.reduce((a, o) => a + (o.ccy === ccy ? o.amount : 0), 0);
+  return sumCcy(state) - sumCcy(prevState);
+}
+
+function pendByCurrencyDelta(ccy) {
+  if (!prevState) return 0;
+  const sumCcy = (s) => (s.pendings || []).reduce((a, p) => a + (p.ccy === ccy ? p.amount : 0), 0);
+  return sumCcy(state) - sumCcy(prevState);
+}
+
+function physicalTotalUsdcDelta() {
+  if (!prevState) return 0;
+  let prev = 0;
+  for (const [, accts] of Object.entries(prevState.physical)) {
+    for (const a of accts) prev += toUSDC(a.amount, a.ccy);
+  }
+  return physicalTotalUsdc() - prev;
+}
+
+function obligationsTotalUsdcDelta() {
+  if (!prevState) return 0;
+  let prev = 0;
+  for (const o of prevState.obligations) prev += toUSDC(o.amount, o.ccy);
+  return obligationsTotalUsdc() - prev;
+}
+
+function pendingsTotalUsdcDelta() {
+  if (!prevState) return 0;
+  let prev = 0;
+  for (const p of prevState.pendings) prev += toUSDC(p.amount, p.ccy);
+  return pendingsTotalUsdc() - prev;
+}
+
+function physicalPendingTotalUsdcDelta() {
+  if (!prevState) return 0;
+  if (!physicalPendingCountsAsDisponibilidad()) {
+    // Bajo P-FX1=a el físico pendiente no cuenta en la disponibilidad;
+    // mostramos cero porque la cifra mostrada no cambia.
+    return 0;
+  }
+  let prev = 0;
+  for (const p of prevState.physicalPending) prev += toUSDC(p.amount, p.ccy);
+  let curr = 0;
+  for (const p of state.physicalPending) curr += toUSDC(p.amount, p.ccy);
+  return curr - prev;
+}
+
+function patrimonioPorSubLegajoDelta(sub) {
+  if (!prevState) return 0;
+  let prev = 0;
+  for (const ccy of ['USDC', 'EURC', 'ARS']) {
+    prev += toUSDC(prevState.ardua[sub][ccy], ccy);
+  }
+  let curr = 0;
+  for (const ccy of ['USDC', 'EURC', 'ARS']) {
+    curr += toUSDC(state.ardua[sub][ccy], ccy);
+  }
+  if (sub === 'fees') {
+    // Add FX attribution delta
+    const savedState = state;
+    state = prevState;
+    const prevFx = fxResultsAttribution().toArdua;
+    state = savedState;
+    const currFx = fxResultsAttribution().toArdua;
+    prev += prevFx;
+    curr += currFx;
+  }
+  return curr - prev;
+}
+
+function fxAtribClientesDelta() {
+  if (!prevState) return 0;
+  const savedState = state;
+  state = prevState;
+  const prev = fxResultsAttribution().toClientes;
+  state = savedState;
+  const curr = fxResultsAttribution().toClientes;
+  return curr - prev;
+}
+
+// Snapshot a function eval under a given state — usado para componentes
+function evalUnder(snapState, fn) {
+  const saved = state;
+  state = snapState;
+  const out = fn();
+  state = saved;
+  return out;
+}
+
+// Affected check: returns true si la fila tuvo cambio en este step
+function isAffected(deltaValue) {
+  return Math.abs(deltaValue) > 0.5;
+}
+
+// === STATE & RENDERING ===
+let state = makeInitialState();
+let prevState = null; // snapshot del estado en el evento previo (para deltas)
+
+function rerunUpTo(n, knobs) {
+  const s = makeInitialState();
+  if (knobs) s.knobs = { ...knobs };
+  for (let i = 1; i <= n; i++) {
+    EVENTS[i].apply(s);
+    s.step = i;
+  }
+  return s;
+}
+
+function applyAllUpToStep(targetStep) {
+  state = rerunUpTo(targetStep, state ? state.knobs : null);
+  prevState = (targetStep > 0) ? rerunUpTo(targetStep - 1, state.knobs) : null;
+}
+
+function preserveKnobsAndApply(targetStep) {
+  const savedKnobs = { ...state.knobs };
+  const savedTab = state.tab;
+  const savedExpanded = { ...state.treasuryExpanded };
+  const savedObligTab = state.obligTab;
+  const savedPendTab = state.pendTab;
+  state = rerunUpTo(targetStep, savedKnobs);
+  state.tab = savedTab;
+  state.treasuryExpanded = savedExpanded;
+  state.obligTab = savedObligTab;
+  state.pendTab = savedPendTab;
+  prevState = (targetStep > 0) ? rerunUpTo(targetStep - 1, savedKnobs) : null;
+}
+
+function toggleTreasurySoc(socId) {
+  state.treasuryExpanded[socId] = !state.treasuryExpanded[socId];
+  renderPerspective();
+}
+
+function setObligTab(t) {
+  state.obligTab = t;
+  renderDimCards();
+}
+function setPendTab(t) {
+  state.pendTab = t;
+  renderDimCards();
+}
+
+function setKnob(code, val) {
+  const map = { 'P-FX1': 'fx1', 'P-FX2': 'fx2', 'P-IC1': 'ic1', 'P-IC2': 'ic2', 'P-DISP1': 'disp1' };
+  state.knobs[map[code]] = val;
+  renderAll();
+}
+
+function setConsol(val) {
+  if (val === 'c') return; // disabled in V1
+  state.knobs.con1 = val;
+  renderAll();
+}
+
+function setTab(tab) {
+  state.tab = tab;
+  document.querySelectorAll('.perspective-tab').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+  renderPerspective();
+}
+
+function step(delta) {
+  const target = Math.max(0, Math.min(EVENTS.length - 1, state.step + delta));
+  if (target === state.step) return;
+  preserveKnobsAndApply(target);
+  renderAll();
+}
+
+function jumpTo(s) {
+  preserveKnobsAndApply(s);
+  renderAll();
+}
+
+function resetTimeline() {
+  preserveKnobsAndApply(0);
+  renderAll();
+}
+
+function toggleKnobs() {
+  document.getElementById('knobs-panel').classList.toggle('collapsed');
+}
+
+// =================================================================
+// DERIVED CALCULATORS — todo lo que depende de las perillas se
+// computa aquí, NO se persiste en el estado.
+// =================================================================
+
+// Sumar físico por moneda
+function physicalByCurrency(filterSoc = null) {
+  const sums = {};
+  for (const [socId, accts] of Object.entries(state.physical)) {
+    if (filterSoc && socId !== filterSoc) continue;
+    for (const a of accts) {
+      sums[a.ccy] = (sums[a.ccy] || 0) + a.amount;
+    }
+  }
+  return sums;
+}
+
+function physicalTotalUsdc(filterSoc = null) {
+  const sums = physicalByCurrency(filterSoc);
+  let total = 0;
+  for (const [ccy, amt] of Object.entries(sums)) {
+    total += toUSDC(amt, ccy);
+  }
+  return total;
+}
+
+// Obligaciones con clientes (DADAS) — por moneda
+function obligationsByCurrency(filterSoc = null) {
+  const sums = {};
+  for (const o of state.obligations) {
+    if (filterSoc && o.soc !== filterSoc) continue;
+    sums[o.ccy] = (sums[o.ccy] || 0) + o.amount;
+  }
+  return sums;
+}
+
+function obligationsTotalUsdc(filterSoc = null) {
+  const sums = obligationsByCurrency(filterSoc);
+  let total = 0;
+  for (const [ccy, amt] of Object.entries(sums)) {
+    total += toUSDC(amt, ccy);
+  }
+  return total;
+}
+
+// Pendientes de asignar (DADOS) — por moneda
+function pendingsByCurrency(filterSoc = null) {
+  const sums = {};
+  for (const p of state.pendings) {
+    if (filterSoc && p.soc !== filterSoc) continue;
+    sums[p.ccy] = (sums[p.ccy] || 0) + p.amount;
+  }
+  return sums;
+}
+
+function pendingsTotalUsdc(filterSoc = null) {
+  const sums = pendingsByCurrency(filterSoc);
+  let total = 0;
+  for (const [ccy, amt] of Object.entries(sums)) {
+    total += toUSDC(amt, ccy);
+  }
+  return total;
+}
+
+// Intercompany — DERIVADO. Bajo P-CON1='a' los IC son visibles;
+// bajo P-CON1='b' se eliminan.
+function intercompanyNetUsdc(filterSoc = null) {
+  if (state.knobs.con1 === 'b') return 0;
+  let total = 0;
+  for (const ic of state.intercompany) {
+    const sign = (!filterSoc || ic.from === filterSoc) ? 1 : ((!filterSoc || ic.to === filterSoc) ? -1 : 0);
+    if (filterSoc && ic.from !== filterSoc && ic.to !== filterSoc) continue;
+    const usdc = toUSDC(ic.amount, ic.ccy);
+    if (!filterSoc) {
+      // For group view, IC nets to zero (the giver and receiver cancel)
+      // unless P-CON1='a' (por sociedad). Pero P-CON1='a' implica "por sociedad" en cada vista.
+      // En vista global (sin filterSoc), bajo 'a' tampoco lo netteamos como derecho neto.
+    } else {
+      total += sign * usdc;
+    }
+  }
+  return total;
+}
+
+// Pendiente físico de aplicación (BRL etc.) — DADO en BRL,
+// pero VALUADO según P-FX1.
+function physicalPendingValuations() {
+  // Devuelve [{ soc, acct, ccy, amount, valUsdc, valEurc, valArs }]
+  return state.physicalPending.map(p => ({
+    ...p,
+    valUsdc: toUSDC(p.amount, p.ccy),
+    valEurc: p.amount * (FX[(p.ccy + '_EURC').toUpperCase()] || 0),
+    valArs: p.amount * (FX[(p.ccy + '_ARS').toUpperCase()] || 0),
+  }));
+}
+
+function physicalPendingCountsAsDisponibilidad() {
+  return state.knobs.fx1 === 'b';
+}
+
+// FX results — atribución del spread según P-FX2 / P-IC1.
+// Modelo: "titular de la moneda de denominación de la obligación" = la SOCIEDAD
+// del grupo que custodia la obligación. En todos los casos esa sociedad es
+// parte de Ardua, así que P-FX2='a' canaliza el spread al patrimonio de Ardua;
+// P-FX2='b' (pass-through) lo deja al cliente. La obligación con cliente queda
+// fijada al monto cotizado (DADO); el sobrante se atribuye derivadamente.
+function fxResultsAttribution() {
+  let toArdua = 0;     // sub-legajo "fees"
+  let toClientes = 0;  // residual atribuido como mayor obligación con el cliente
+  for (const fxr of state.fxResults) {
+    if (fxr.spreadUsdc === 0) continue;
+    if (state.knobs.fx2 === 'b') {
+      toClientes += fxr.spreadUsdc;
+    } else {
+      toArdua += fxr.spreadUsdc;
+    }
+  }
+  return { toArdua, toClientes };
+}
+
+// Patrimonio derivado total (en USDC)
+// = capital + capitalizacion FX + fees + (gastos, arduapay están en negativo)
+function patrimonioPropioUsdc() {
+  let total = 0;
+  for (const sub of ['capital', 'fees', 'gastos', 'arduapay', 'loans']) {
+    for (const ccy of ['USDC', 'EURC', 'ARS']) {
+      total += toUSDC(state.ardua[sub][ccy], ccy);
+    }
+  }
+  // Sumar atribución FX
+  const fxr = fxResultsAttribution();
+  total += fxr.toArdua;
+  return total;
+}
+
+// Patrimonio propio por sub-legajo (en USDC)
+function patrimonioPorSubLegajo() {
+  const m = { gastos: 0, arduapay: 0, fees: 0, loans: 0, capital: 0 };
+  for (const sub of Object.keys(m)) {
+    for (const ccy of ['USDC', 'EURC', 'ARS']) {
+      m[sub] += toUSDC(state.ardua[sub][ccy], ccy);
+    }
+  }
+  const fxr = fxResultsAttribution();
+  m.fees += fxr.toArdua;
+  return m;
+}
+
+// Disponibilidad (Capa 2)
+function disponibilidadComponentes() {
+  return {
+    fisico: physicalTotalUsdc(),
+    fisicoPendiente: physicalPendingCountsAsDisponibilidad()
+      ? physicalPendingValuations().reduce((acc, p) => acc + p.valUsdc, 0)
+      : 0,
+    obligaciones: obligationsTotalUsdc(),
+    pendientesAsignacion: pendingsTotalUsdc(),
+    compromisos: state.compromisos
+      .filter(c => c.status === 'pendiente')
+      .reduce((acc, c) => acc + toUSDC(c.amount, c.ccy), 0),
+  };
+}
+
+function disponibilidadResta() {
+  const c = disponibilidadComponentes();
+  return c.fisico + c.fisicoPendiente - c.obligaciones - c.pendientesAsignacion - c.compromisos;
+}
+
+// =================================================================
+// RENDERERS
+// =================================================================
+
+function renderKnobs() {
+  const body = document.getElementById('knobs-body');
+  const currentEvent = EVENTS[state.step];
+  const activeKnobCodes = new Set(currentEvent.knobs || []);
+  body.innerHTML = KNOBS.map(k => {
+    const knobKey = { 'P-FX1':'fx1','P-FX2':'fx2','P-IC1':'ic1','P-IC2':'ic2','P-DISP1':'disp1' }[k.code];
+    const currentVal = state.knobs[knobKey];
+    const isActive = activeKnobCodes.has(k.code);
+    return `
+      <div class="knob ${isActive ? 'active-event' : ''}" data-code="${k.code}">
+        <div class="knob-head">
+          <span class="knob-code">${k.code}</span>
+          <span class="knob-status ${k.status}">${k.status === 'product' ? 'Inclinada · Producto' : 'Abierta'}</span>
+        </div>
+        <div class="knob-label">${k.label}</div>
+        <div class="knob-desc">${k.desc}</div>
+        <div class="knob-opts">
+          ${k.options.map(opt => `
+            <button type="button" class="knob-opt ${currentVal === opt.letter ? 'selected' : ''}"
+                    onclick="setKnob('${k.code}', '${opt.letter}')">
+              <span class="knob-opt-letter">${opt.letter.toUpperCase()}</span>
+              <span style="flex:1;">${opt.text}</span>
+              ${k.productLean === opt.letter ? '<span class="knob-product-tag">PROD</span>' : ''}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderConsol() {
+  document.querySelectorAll('#consol-segments .consol-segment').forEach(b => {
+    b.classList.toggle('selected', b.dataset.val === state.knobs.con1);
+  });
+  // Wire (idempotent)
+  document.querySelectorAll('#consol-segments .consol-segment').forEach(b => {
+    b.onclick = () => setConsol(b.dataset.val);
+  });
+}
+
+function renderTimeline() {
+  document.getElementById('step-pill').textContent = EVENTS[state.step].code;
+  document.getElementById('step-max').textContent = EVENTS.length - 1;
+  document.getElementById('btn-prev').disabled = state.step === 0;
+  document.getElementById('btn-next').disabled = state.step === EVENTS.length - 1;
+  const track = document.getElementById('progress-track');
+  track.innerHTML = EVENTS.map((e, i) => {
+    let cls = '';
+    if (i < state.step) cls = 'done';
+    if (i === state.step) cls = 'current';
+    return `<div class="progress-dot ${cls}" title="${e.code} · ${e.title}" onclick="jumpTo(${i})"></div>`;
+  }).join('');
+}
+
+function renderEventCard() {
+  const e = EVENTS[state.step];
+  document.getElementById('event-label').textContent = 'EVENTO ' + e.code;
+  document.getElementById('event-title').textContent = e.title;
+  document.getElementById('event-desc').textContent = e.desc;
+  const tags = document.getElementById('event-tags');
+  const layerTags = (e.layers || []).map(l => `<span class="event-tag layer-${l}">Capa ${l}</span>`).join('');
+  const knobTags = (e.knobs || []).map(k => `<span class="event-tag knob-tag">${k}</span>`).join('');
+  tags.innerHTML = layerTags + knobTags +
+    (!(e.knobs || []).length ? '<span class="event-tag">Sin perillas activas</span>' : '');
+}
+
+function renderEquation() {
+  const fisicoUsdc = physicalTotalUsdc();
+  const obligUsdc = obligationsTotalUsdc();
+  const pendUsdc = pendingsTotalUsdc();
+  const patrimUsdc = patrimonioPropioUsdc();           // ya incluye toArdua
+  const fxr = fxResultsAttribution();
+  const pendingPhysUsdc = physicalPendingCountsAsDisponibilidad()
+    ? physicalPendingValuations().reduce((a, p) => a + p.valUsdc, 0)
+    : 0;
+  // Capa 0 (lo que hay): físico operativo + físico pendiente valuado (si P-FX1=b)
+  const capa0 = fisicoUsdc + pendingPhysUsdc;
+  // Capa 1 (de quién es): obligaciones DADAS + pendientes + patrimonio + spread atribuido a clientes
+  const capa1 = obligUsdc + pendUsdc + patrimUsdc + fxr.toClientes;
+  const diff = Math.round(capa0 - capa1);
+  const balanced = Math.abs(diff) < 1500;
+  const bar = document.getElementById('equation-bar');
+  bar.classList.toggle('balanced', balanced);
+  bar.classList.toggle('unbalanced', !balanced);
+  document.getElementById('equation-icon').textContent = balanced ? '✓' : '!';
+  document.getElementById('equation-formula').textContent =
+    `Capa 0: ${fmt(capa0)} ≈ USDC  ·  Capa 1: ${fmt(capa1)} ≈ USDC`;
+  if (balanced) {
+    document.getElementById('equation-info').textContent =
+      `Cuadra · diff ${fmt(diff)} USDC dentro de tolerancia de redondeo FX.`;
+  } else if (state.physicalPending.length > 0 && state.knobs.fx1 === 'a') {
+    document.getElementById('equation-info').textContent =
+      `Descuadra ${fmt(diff)} USDC · P-FX1=a deja el BRL fuera del cuadre. Es información, no un bug.`;
+  } else {
+    document.getElementById('equation-info').textContent =
+      `Descuadra ${fmt(diff)} USDC · resultado de la combinación de perillas activa.`;
+  }
+}
+
+// === RENDER DIM CARDS (4 cards: Bancos, Obligaciones, Pendientes, Disponibilidad) ===
+function renderDimCards() {
+  const MONEDAS = ['USDC', 'EURC', 'ARS', 'USD', 'BRL'];
+
+  // === Helper: agregadores con filtro ===
+  const sumByCcy = (arr, predicate, ccyField, amountField) => {
+    const out = {};
+    for (const x of arr) {
+      if (predicate && !predicate(x)) continue;
+      const c = x[ccyField], v = x[amountField];
+      out[c] = (out[c] || 0) + v;
+    }
+    return out;
+  };
+  const sumPhysPendByCcy = (snap) => {
+    const out = {};
+    for (const p of (snap.physicalPending || [])) {
+      out[p.ccy] = (out[p.ccy] || 0) + p.amount;
+    }
+    return out;
+  };
+
+  // === Compute per-currency values ===
+  // Bancos (DADO): suma físico operativo.
+  const bancosByCcy = physicalByCurrency();
+
+  // Obligaciones (DADO) — divididas en dos sub-vistas CONCEPTUALMENTE LIMPIAS:
+  // · Clientes:    obligaciones hacia clientes externos (role !== 'soc-cliente'),
+  //                vista por moneda.
+  // · Sociedades:  "de quién es la plata" desde la perspectiva de cada hermana
+  //                del grupo: cada sociedad agrega TODAS sus claims contra el
+  //                resto del grupo (custodia E6 como titular + IC cta. cte. E5
+  //                como prestamista + IC recaudaciones E2/E3/E4/E8 como
+  //                mandante). Descompuesto POR SOCIEDAD, no por moneda.
+  const obligClientesByCcy = sumByCcy(
+    state.obligations,
+    o => o.role !== 'soc-cliente',
+    'ccy', 'amount'
+  );
+  // Helper: armar { socId: { ccy: amount } } con las obligaciones tipo
+  // "soc-cliente" — sociedades hermanas que operan como cliente y son
+  // titulares de la custodia (E6: AV deposita en HP).
+  // Se descompone POR SOCIEDAD TITULAR para responder "de quién es la plata".
+  // IC (recaudaciones y cta. cte.) NO entra acá: vive en Tesorería pills y
+  // Contabilidad para no duplicar conceptos.
+  const buildClaimsBySoc = (snap) => {
+    const claims = {}; // { socId: { USDC, EURC, ARS, USD, BRL } }
+    for (const o of snap.obligations) {
+      if (o.role === 'soc-cliente') {
+        const titular = o.cli;
+        if (!claims[titular]) claims[titular] = {};
+        claims[titular][o.ccy] = (claims[titular][o.ccy] || 0) + o.amount;
+      }
+    }
+    return claims;
+  };
+  const claimsBySoc = buildClaimsBySoc(state);
+  // Mantenemos también el agregado por moneda para soc-cliente, usado SOLO
+  // por la ecuación maestra (los IC cancelan a nivel grupo, no entran).
+  const obligSocClienteByCcy = sumByCcy(
+    state.obligations,
+    o => o.role === 'soc-cliente',
+    'ccy', 'amount'
+  );
+  // Total para la ecuación maestra (clientes + soc-cliente, sin IC)
+  const obligByCcy = {};
+  for (const m of MONEDAS) {
+    obligByCcy[m] = (obligClientesByCcy[m] || 0) + (obligSocClienteByCcy[m] || 0);
+  }
+
+  // Pendientes (DADO/DERIVADO) — divididos en tres sub-vistas:
+  // · Depósitos pendientes: state.pendings (entradas sin titular)
+  // · Retiros pendientes: compromisos con status='pendiente'
+  // · Otras operaciones pendientes: state.physicalPending (BRL esperando conversión)
+  const pendDepositosByCcy = sumByCcy(
+    state.pendings, null, 'ccy', 'amount'
+  );
+  const pendRetirosByCcy = sumByCcy(
+    state.compromisos,
+    c => c.status === 'pendiente',
+    'ccy', 'amount'
+  );
+  const pendOtrasByCcy = sumPhysPendByCcy(state); // BRL pendiente de aplicación
+  // El total "Pendientes" para la ecuación incluye los 3 pero NO los retiros
+  // (los retiros son compromisos, no pendings clásicos; se restan en Capa 2).
+  const pendByCcy = {};
+  for (const m of MONEDAS) {
+    pendByCcy[m] = pendDepositosByCcy[m] || 0;
+  }
+
+  // Compromisos (solo retiros pendientes) — para Capa 2
+  const compromisosByCcy = pendRetirosByCcy;
+
+  // Disponibilidad (DERIVADO):
+  //   P-DISP1=a → Bancos − Obligaciones − Pendientes(depósitos) − Compromisos(retiros) por moneda
+  //   P-DISP1=b → mostramos componentes, sin veredicto
+  const dispByCcy = {};
+  for (const m of MONEDAS) {
+    const b = bancosByCcy[m] || 0;
+    const o = obligByCcy[m] || 0;
+    const p = pendByCcy[m] || 0;
+    const c = compromisosByCcy[m] || 0;
+    dispByCcy[m] = b - o - p - c;
+  }
+
+  // === Deltas (vs prevState) ===
+  const prevBancos = prevState ? evalUnder(prevState, () => physicalByCurrency()) : {};
+  const prevObligClientes = prevState
+    ? sumByCcy(prevState.obligations, o => o.role !== 'soc-cliente', 'ccy', 'amount')
+    : {};
+  const prevClaimsBySoc = prevState ? buildClaimsBySoc(prevState) : {};
+  const prevObligSocCliente = prevState
+    ? sumByCcy(prevState.obligations, o => o.role === 'soc-cliente', 'ccy', 'amount')
+    : {};
+  const prevOblig = {};
+  for (const m of MONEDAS) {
+    prevOblig[m] = (prevObligClientes[m] || 0) + (prevObligSocCliente[m] || 0);
+  }
+  const prevPendDepositos = prevState ? sumByCcy(prevState.pendings, null, 'ccy', 'amount') : {};
+  const prevPendRetiros = prevState
+    ? sumByCcy(prevState.compromisos, c => c.status === 'pendiente', 'ccy', 'amount')
+    : {};
+  const prevPendOtras = prevState ? sumPhysPendByCcy(prevState) : {};
+  const prevPend = prevPendDepositos; // para ecuación
+  const prevCompr = prevPendRetiros;
+  const prevDisp = {};
+  for (const m of MONEDAS) {
+    const b = prevBancos[m] || 0;
+    const o = prevOblig[m] || 0;
+    const p = prevPend[m] || 0;
+    const c = prevCompr[m] || 0;
+    prevDisp[m] = b - o - p - c;
+  }
+
+  // === Helper: row builder ===
+  const rowsHtml = (valByCcy, prevByCcy) => {
+    const present = MONEDAS.filter(m => (valByCcy[m] || 0) !== 0 || (prevByCcy[m] || 0) !== 0);
+    if (present.length === 0) {
+      return '<div class="dim-row-empty">sin movimientos</div>';
+    }
+    return present.map(m => {
+      const v = valByCcy[m] || 0;
+      const d = v - (prevByCcy[m] || 0);
+      const affected = isAffected(d);
+      return `
+        <div class="dim-row ${affected ? 'affected' : ''}">
+          <span class="dim-mon">${m}</span>
+          <span class="dim-val-wrap">
+            <span class="dim-val">${fmt(v)}</span>
+            ${fmtDelta(d) || ''}
+          </span>
+        </div>
+      `;
+    }).join('');
+  };
+
+  // === Totales en USDC (por sub-vista) ===
+  const totUsdc = (byCcy) => Object.entries(byCcy).reduce((a, [m, v]) => a + toUSDC(v, m), 0);
+  const totUsdcClaims = (claims) => {
+    let total = 0;
+    for (const byCcy of Object.values(claims || {})) {
+      total += totUsdc(byCcy);
+    }
+    return total;
+  };
+  const totBancos = totUsdc(bancosByCcy);
+  const totOblig = totUsdc(obligByCcy);
+  const totDisp = totUsdc(dispByCcy);
+  const totObligClientes = totUsdc(obligClientesByCcy);
+  // Sociedades: total = suma de claims de TODAS las sociedades
+  const totObligSociedades = totUsdcClaims(claimsBySoc);
+  // Por sociedad, totales en USDC
+  const totPerSoc = {};
+  for (const [socId, byCcy] of Object.entries(claimsBySoc)) totPerSoc[socId] = totUsdc(byCcy);
+  // Para Pendientes, total por sub-tab:
+  const totPendDepositos = totUsdc(pendDepositosByCcy);
+  const totPendRetiros = totUsdc(pendRetirosByCcy);
+  const totPendOtras = totUsdc(pendOtrasByCcy);
+
+  const prevTotBancos = totUsdc(prevBancos);
+  const prevTotOblig = totUsdc(prevOblig);
+  const prevTotDisp = totUsdc(prevDisp);
+  const prevTotObligClientes = totUsdc(prevObligClientes);
+  const prevTotObligSociedades = totUsdcClaims(prevClaimsBySoc);
+  const prevTotPerSoc = {};
+  for (const [socId, byCcy] of Object.entries(prevClaimsBySoc)) prevTotPerSoc[socId] = totUsdc(byCcy);
+  const prevTotPendDepositos = totUsdc(prevPendDepositos);
+  const prevTotPendRetiros = totUsdc(prevPendRetiros);
+  const prevTotPendOtras = totUsdc(prevPendOtras);
+
+  // === Icons ===
+  const ICONS = {
+    bancos: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><circle cx="12" cy="12.5" r="2.5"/><path d="M3 10h18"/></svg>',
+    obligaciones: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    pendientes: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+    disponibilidad: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
+  };
+
+  // === Disponibilidad card body depends on P-DISP1 ===
+  const noVerdict = state.knobs.disp1 === 'b';
+  let dispBody, dispFoot;
+  if (noVerdict) {
+    // Mostrar los 4 componentes lado a lado, por moneda, SIN computar resta
+    const monedasPresentes = MONEDAS.filter(m =>
+      (bancosByCcy[m] || 0) !== 0 ||
+      (obligByCcy[m] || 0) !== 0 ||
+      (pendByCcy[m] || 0) !== 0 ||
+      (compromisosByCcy[m] || 0) !== 0
+    );
+    if (monedasPresentes.length === 0) {
+      dispBody = '<div class="dim-row-empty">sin movimientos</div>';
+    } else {
+      dispBody = monedasPresentes.map(m => {
+        const b = bancosByCcy[m] || 0;
+        const o = obligByCcy[m] || 0;
+        const p = pendByCcy[m] || 0;
+        const c = compromisosByCcy[m] || 0;
+        return `
+          <div class="dim-row" style="flex-direction:column;align-items:stretch;gap:4px;">
+            <span class="dim-mon">${m}</span>
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px;font-size:10.5px;">
+              <span style="color:var(--text-tertiary);">+ banco: <span style="color:var(--text-primary);font-weight:600;">${fmt(b)}</span></span>
+              <span style="color:var(--text-tertiary);">− oblig: <span style="color:var(--text-info);font-weight:600;">${fmt(o)}</span></span>
+              <span style="color:var(--text-tertiary);">− pend: <span style="color:var(--text-warning);font-weight:600;">${fmt(p)}</span></span>
+              <span style="color:var(--text-tertiary);">− compr: <span style="color:var(--text-danger);font-weight:600;">${fmt(c)}</span></span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    dispFoot = `
+      <div class="dim-card-foot" style="display:block;text-align:center;color:var(--text-warning);background:var(--bg-warning);margin:var(--space-2) -16px -16px -16px;padding:var(--space-2) var(--space-4);border-radius:0 0 var(--radius-lg) var(--radius-lg);border-top:1px solid var(--text-warning);font-size:11px;font-weight:600;">
+        Sin veredicto del sistema · P-DISP1=b
+      </div>
+    `;
+  } else {
+    dispBody = rowsHtml(dispByCcy, prevDisp);
+    dispFoot = `
+      <div class="dim-card-foot">
+        <span class="dim-card-foot-label">Capacidad operativa</span>
+        <span class="dim-card-foot-val">
+          ${fmt(totDisp)}<span class="ccy-suffix">≈ USDC</span>
+          ${fmtDelta(totDisp - prevTotDisp, { inline: true })}
+        </span>
+      </div>
+    `;
+  }
+
+  // === Helper: tab count badge (cuenta no-cero rows, indicador "tiene datos") ===
+  const tabCount = (byCcy) => Object.values(byCcy).filter(v => Math.abs(v) > 0.5).length;
+
+  // === Obligaciones — sub-tab seleccionado decide qué se muestra ===
+  const obligTab = state.obligTab;
+  // Helper: renderizar filas por sociedad (para tab Sociedades)
+  const rowsBySocHtml = (claims, prevClaims) => {
+    const socIds = Object.keys(claims).filter(s => totUsdc(claims[s]) > 0.5);
+    if (socIds.length === 0) {
+      return '<div class="dim-row-empty">sin claims intra-grupo</div>';
+    }
+    // Ordenar por monto USDC descendente
+    socIds.sort((a, b) => totUsdc(claims[b]) - totUsdc(claims[a]));
+    return socIds.map(socId => {
+      const tot = totUsdc(claims[socId]);
+      const prevTot = totUsdc((prevClaims || {})[socId] || {});
+      const d = tot - prevTot;
+      const affected = isAffected(d);
+      // Mini-pills por moneda dentro del row
+      const pills = Object.entries(claims[socId])
+        .filter(([m, v]) => Math.abs(v) > 0.5)
+        .map(([m, v]) => `<span style="display:inline-block;font-size:9px;padding:1px 4px;background:var(--bg-tertiary);border-radius:var(--radius-xs);font-weight:600;font-variant-numeric:tabular-nums;margin-right:3px;"><span style="color:var(--text-tertiary);font-weight:700;">${m}</span> ${fmt(v)}</span>`)
+        .join('');
+      return `
+        <div class="dim-row ${affected ? 'affected' : ''}" style="align-items:center;">
+          <span style="display:flex;align-items:center;gap:4px;min-width:0;flex:1;">
+            <span class="soc-chip ${socId}">${socId}</span>
+            <span style="font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${pills}</span>
+          </span>
+          <span class="dim-val-wrap">
+            <span class="dim-val">${fmt(tot)}<span style="font-size:9px;color:var(--text-tertiary);font-weight:500;margin-left:2px;">USDC</span></span>
+            ${fmtDelta(d) || ''}
+          </span>
+        </div>
+      `;
+    }).join('');
+  };
+
+  const obligTabsHtml = `
+    <div class="dim-mini-tabs">
+      <button class="dim-mini-tab ${obligTab === 'clientes' ? 'selected' : ''} ${tabCount(obligClientesByCcy) === 0 ? 'zero-count' : ''}" onclick="setObligTab('clientes')">
+        Clientes <span class="dim-mini-tab-count">${tabCount(obligClientesByCcy)}</span>
+      </button>
+      <button class="dim-mini-tab ${obligTab === 'sociedades' ? 'selected' : ''} ${Object.keys(claimsBySoc).length === 0 ? 'zero-count' : ''}" onclick="setObligTab('sociedades')">
+        Sociedades <span class="dim-mini-tab-count">${Object.keys(claimsBySoc).length}</span>
+      </button>
+    </div>
+  `;
+
+  // === Pendientes — sub-tab seleccionado decide qué se muestra ===
+  const pendTab = state.pendTab;
+  const pendActiveByCcy = pendTab === 'depositos' ? pendDepositosByCcy
+                       : pendTab === 'retiros'   ? pendRetirosByCcy
+                       : pendOtrasByCcy;
+  const pendActivePrev = pendTab === 'depositos' ? prevPendDepositos
+                      : pendTab === 'retiros'   ? prevPendRetiros
+                      : prevPendOtras;
+  const pendActiveTot = pendTab === 'depositos' ? totPendDepositos
+                     : pendTab === 'retiros'   ? totPendRetiros
+                     : totPendOtras;
+  const pendActivePrevTot = pendTab === 'depositos' ? prevTotPendDepositos
+                         : pendTab === 'retiros'   ? prevTotPendRetiros
+                         : prevTotPendOtras;
+  const pendActiveLabel = pendTab === 'depositos' ? 'Sin titular identificado · DADO'
+                       : pendTab === 'retiros'   ? 'Compromisos confirmados · DADO'
+                       : 'Físico no custodiado (BRL) · DADO';
+  const pendTabsHtml = `
+    <div class="dim-mini-tabs">
+      <button class="dim-mini-tab ${pendTab === 'depositos' ? 'selected' : ''} ${tabCount(pendDepositosByCcy) === 0 ? 'zero-count' : ''}" onclick="setPendTab('depositos')">
+        Depósitos <span class="dim-mini-tab-count">${tabCount(pendDepositosByCcy)}</span>
+      </button>
+      <button class="dim-mini-tab ${pendTab === 'retiros' ? 'selected' : ''} ${tabCount(pendRetirosByCcy) === 0 ? 'zero-count' : ''}" onclick="setPendTab('retiros')">
+        Retiros <span class="dim-mini-tab-count">${tabCount(pendRetirosByCcy)}</span>
+      </button>
+      <button class="dim-mini-tab ${pendTab === 'otras' ? 'selected' : ''} ${tabCount(pendOtrasByCcy) === 0 ? 'zero-count' : ''}" onclick="setPendTab('otras')">
+        Otras <span class="dim-mini-tab-count">${tabCount(pendOtrasByCcy)}</span>
+      </button>
+    </div>
+  `;
+
+  // === Render ===
+  const html = `
+    <div class="dim-card dim-bancos">
+      <div class="dim-card-header">
+        <div class="dim-card-icon">${ICONS.bancos}</div>
+        <div class="dim-card-label">Bancos<span class="dim-card-layer">Capa 0 · físico real</span></div>
+        <span class="dim-card-badge given">Dado</span>
+      </div>
+      <div class="dim-rows">${rowsHtml(bancosByCcy, prevBancos)}</div>
+      <div class="dim-card-foot">
+        <span class="dim-card-foot-label">Total</span>
+        <span class="dim-card-foot-val">
+          ${fmt(totBancos)}<span class="ccy-suffix">≈ USDC</span>
+          ${fmtDelta(totBancos - prevTotBancos, { inline: true })}
+        </span>
+      </div>
+    </div>
+
+    <div class="dim-card dim-obligaciones">
+      <div class="dim-card-header">
+        <div class="dim-card-icon">${ICONS.obligaciones}</div>
+        <div class="dim-card-label">Obligaciones<span class="dim-card-layer">Capa 1 · de quién es la plata</span></div>
+        <span class="dim-card-badge ${obligTab === 'sociedades' ? 'derived' : 'given'}">${obligTab === 'sociedades' ? 'Mixto' : 'Dado'}</span>
+      </div>
+      ${obligTabsHtml}
+      <div class="dim-rows">${
+        obligTab === 'clientes'
+          ? rowsHtml(obligClientesByCcy, prevObligClientes)
+          : rowsBySocHtml(claimsBySoc, prevClaimsBySoc)
+      }</div>
+      <div class="dim-card-foot">
+        <span class="dim-card-foot-label">${obligTab === 'clientes' ? 'Total clientes externos' : 'Total intra-grupo'}</span>
+        <span class="dim-card-foot-val">
+          ${fmt(obligTab === 'clientes' ? totObligClientes : totObligSociedades)}<span class="ccy-suffix">≈ USDC</span>
+          ${fmtDelta(
+            obligTab === 'clientes'
+              ? totObligClientes - prevTotObligClientes
+              : totObligSociedades - prevTotObligSociedades,
+            { inline: true }
+          )}
+        </span>
+      </div>
+    </div>
+
+    <div class="dim-card dim-pendientes">
+      <div class="dim-card-header">
+        <div class="dim-card-icon">${ICONS.pendientes}</div>
+        <div class="dim-card-label">Pendientes<span class="dim-card-layer">${pendActiveLabel}</span></div>
+        <span class="dim-card-badge given">Dado</span>
+      </div>
+      ${pendTabsHtml}
+      <div class="dim-rows">${rowsHtml(pendActiveByCcy, pendActivePrev)}</div>
+      <div class="dim-card-foot">
+        <span class="dim-card-foot-label">Total ${pendTab}</span>
+        <span class="dim-card-foot-val">
+          ${fmt(pendActiveTot)}<span class="ccy-suffix">≈ USDC${pendTab === 'otras' && state.knobs.fx1 === 'b' ? ' est.' : ''}</span>
+          ${fmtDelta(pendActiveTot - pendActivePrevTot, { inline: true })}
+        </span>
+      </div>
+    </div>
+
+    <div class="dim-card dim-disponibilidad ${noVerdict ? 'no-verdict' : ''}">
+      <div class="dim-card-header">
+        <div class="dim-card-icon">${ICONS.disponibilidad}</div>
+        <div class="dim-card-label">Disponibilidad<span class="dim-card-layer">Capa 2 · cuánto puedo usar</span></div>
+        <span class="dim-card-badge derived">Derivado</span>
+      </div>
+      <div class="dim-rows">${dispBody}</div>
+      ${dispFoot}
+    </div>
+  `;
+
+  document.getElementById('dim-cards-grid').innerHTML = html;
+}
+
+// (legacy renderLayers kept un-called for compat; renderAll uses renderDimCards now)
+function renderLayers_LEGACY() {
+  // === CAPA 0 — Físico ===
+  const phys = physicalByCurrency();
+  const physRows = Object.entries(phys).map(([ccy, amt]) => {
+    const d = physByCurrencyDelta(ccy);
+    const affected = isAffected(d);
+    return `
+      <div class="layer-row ${affected ? 'affected-pulse' : ''}">
+        <span class="layer-row-label">
+          <span class="ccy-badge ${ccy.toLowerCase()}">${ccy}</span>
+          En bancos · cuentas operativas
+        </span>
+        <span class="delta-block">
+          <span class="layer-row-val">${fmt(amt)} <span class="ccy">${ccy}</span></span>
+          ${fmtDelta(d, { ccy })}
+        </span>
+      </div>
+    `;
+  }).join('');
+  document.getElementById('layer-0-body').innerHTML = physRows;
+  const phys0Total = physicalTotalUsdc();
+  const phys0Delta = physicalTotalUsdcDelta();
+  document.getElementById('layer-0-total').innerHTML =
+    `${fmt(phys0Total)} ${fmtDelta(phys0Delta, { inline: true })}`;
+
+  // === CAPA 1 — Propiedad ===
+  const obligs = obligationsByCurrency();
+  const pends = pendingsByCurrency();
+  const sub = patrimonioPorSubLegajo();
+  const fxr = fxResultsAttribution();
+
+  const obligRows = Object.entries(obligs).map(([ccy, amt]) => {
+    const d = obligByCurrencyDelta(ccy);
+    const affected = isAffected(d);
+    return `
+      <div class="layer-row ${affected ? 'affected-pulse' : ''}">
+        <span class="layer-row-label">
+          <span class="layer-row-tag given">DADO</span>
+          <span class="ccy-badge ${ccy.toLowerCase()}">${ccy}</span>
+          Obligación con clientes
+        </span>
+        <span class="delta-block">
+          <span class="layer-row-val">${fmt(amt)} <span class="ccy">${ccy}</span></span>
+          ${fmtDelta(d, { ccy })}
+        </span>
+      </div>
+    `;
+  }).join('');
+
+  const pendRows = Object.entries(pends).length === 0 ? '' :
+    Object.entries(pends).map(([ccy, amt]) => {
+      const d = pendByCurrencyDelta(ccy);
+      const affected = isAffected(d);
+      return `
+        <div class="layer-row ${affected ? 'affected-pulse' : ''}">
+          <span class="layer-row-label">
+            <span class="layer-row-tag given">DADO</span>
+            <span class="ccy-badge ${ccy.toLowerCase()}">${ccy}</span>
+            Pendientes de asignar
+          </span>
+          <span class="delta-block">
+            <span class="layer-row-val">${fmt(amt)} <span class="ccy">${ccy}</span></span>
+            ${fmtDelta(d, { ccy })}
+          </span>
+        </div>
+      `;
+    }).join('');
+
+  const subLegajoLabels = {
+    gastos: 'Ardua · operativa-gastos',
+    arduapay: 'Ardua · ardua-pay',
+    fees: 'Ardua · fees',
+    loans: 'Ardua · loans',
+    capital: 'Ardua · capital',
+  };
+  const subRows = Object.entries(sub)
+    .filter(([k, v]) => v !== 0)
+    .map(([k, v]) => {
+      const d = patrimonioPorSubLegajoDelta(k);
+      const affected = isAffected(d);
+      return `
+        <div class="layer-row ${affected ? 'affected-pulse' : ''}">
+          <span class="layer-row-label">
+            <span class="layer-row-tag derived">DERIVADO</span>
+            ${subLegajoLabels[k]}
+            ${k === 'fees' && fxr.toArdua > 0 ? `<span style="font-size:9px;color:var(--text-tertiary);margin-left:6px;">(incl. FX atrib.)</span>` : ''}
+          </span>
+          <span class="delta-block">
+            <span class="layer-row-val">${fmt(v)} <span class="ccy">USDC</span></span>
+            ${fmtDelta(d, { ccy: 'USDC' })}
+          </span>
+        </div>
+      `;
+    }).join('');
+
+  // Intercompany visibility según P-CON1
+  let icRow = '';
+  if (state.knobs.con1 === 'a' && state.intercompany.length > 0) {
+    const icTotal = state.intercompany.reduce((a, ic) => a + toUSDC(ic.amount, ic.ccy), 0);
+    icRow = `
+      <div class="layer-row">
+        <span class="layer-row-label">
+          <span class="layer-row-tag derived">DERIVADO</span>
+          Cuenta corriente intercompany · activa/pasiva
+        </span>
+        <span class="layer-row-val">${fmt(icTotal)} <span class="ccy">USDC</span></span>
+      </div>
+    `;
+  } else if (state.knobs.con1 === 'b' && state.intercompany.length > 0) {
+    icRow = `
+      <div class="layer-row">
+        <span class="layer-row-label" style="font-style:italic;color:var(--text-tertiary);">
+          Cuentas corrientes intercompany eliminadas al consolidar (P-CON1=b).
+        </span>
+        <span class="layer-row-val" style="color:var(--text-tertiary);">— <span class="ccy">USDC</span></span>
+      </div>
+    `;
+  }
+
+  // Spread FX atribuido a clientes (residual) — DERIVADO, depende de P-FX2
+  let fxClientesRow = '';
+  if (fxr.toClientes > 0) {
+    const d = fxAtribClientesDelta();
+    const affected = isAffected(d);
+    fxClientesRow = `
+      <div class="layer-row ${affected ? 'affected-pulse' : ''}">
+        <span class="layer-row-label">
+          <span class="layer-row-tag derived">DERIVADO</span>
+          Spread FX atribuido a clientes
+          <span style="font-size:9px;color:var(--text-tertiary);margin-left:6px;">(P-FX2=b)</span>
+        </span>
+        <span class="delta-block">
+          <span class="layer-row-val">${fmt(fxr.toClientes)} <span class="ccy">USDC</span></span>
+          ${fmtDelta(d, { ccy: 'USDC' })}
+        </span>
+      </div>
+    `;
+  }
+
+  document.getElementById('layer-1-body').innerHTML =
+    (obligRows + pendRows + fxClientesRow + icRow + subRows) ||
+    '<div class="empty-state">Sin movimientos aún.</div>';
+  const layer1Total = obligationsTotalUsdc() + pendingsTotalUsdc() + patrimonioPropioUsdc() + fxr.toClientes;
+  const prevPatrim = prevState ? evalUnder(prevState, patrimonioPropioUsdc) : 0;
+  const prevFxToClientes = prevState ? evalUnder(prevState, () => fxResultsAttribution().toClientes) : 0;
+  const prevLayer1 = prevState
+    ? evalUnder(prevState, obligationsTotalUsdc) + evalUnder(prevState, pendingsTotalUsdc) + prevPatrim + prevFxToClientes
+    : layer1Total;
+  document.getElementById('layer-1-total').innerHTML =
+    `${fmt(layer1Total)} ${fmtDelta(layer1Total - prevLayer1, { inline: true })}`;
+
+  // === CAPA 2 — Disponibilidad ===
+  const c2body = document.getElementById('layer-2-body');
+  const comps = disponibilidadComponentes();
+  const prevComps = prevState ? evalUnder(prevState, disponibilidadComponentes) : null;
+  const dC = {
+    fisico: prevComps ? comps.fisico - prevComps.fisico : 0,
+    fisicoPendiente: prevComps ? comps.fisicoPendiente - prevComps.fisicoPendiente : 0,
+    obligaciones: prevComps ? comps.obligaciones - prevComps.obligaciones : 0,
+    pendientesAsignacion: prevComps ? comps.pendientesAsignacion - prevComps.pendientesAsignacion : 0,
+    compromisos: prevComps ? comps.compromisos - prevComps.compromisos : 0,
+  };
+  const dispCompCard = (label, val, ccy, delta) => `
+    <div class="disp-comp ${isAffected(delta) ? 'affected-pulse' : ''}">
+      <div class="disp-comp-label">${label}</div>
+      <div class="disp-comp-val">${fmt(val)}<span class="disp-comp-ccy">${ccy}</span></div>
+      ${fmtDelta(delta, { inline: true, ccy: 'USDC' }) ? '<div style="margin-top:4px;">' + fmtDelta(delta, { inline: true, ccy: 'USDC' }) + '</div>' : ''}
+    </div>
+  `;
+  if (state.knobs.disp1 === 'b') {
+    c2body.innerHTML = `
+      <div class="disp-components">
+        ${dispCompCard('Físico firme', comps.fisico, '≈ USDC', dC.fisico)}
+        ${comps.fisicoPendiente > 0 ? dispCompCard('Pend. aplicación', comps.fisicoPendiente, '≈ USDC est.', dC.fisicoPendiente) : ''}
+        ${dispCompCard('Oblig. clientes', comps.obligaciones, '≈ USDC', dC.obligaciones)}
+        ${dispCompCard('Pend. asignar', comps.pendientesAsignacion, '≈ USDC', dC.pendientesAsignacion)}
+        ${dispCompCard('Compromisos', comps.compromisos, '≈ USDC', dC.compromisos)}
+      </div>
+      <div class="disp-no-verdict">
+        <strong>Sin veredicto del sistema.</strong> Los 5 componentes se muestran lado a lado. La decisión de qué se puede mover hoy queda al humano que mira la pantalla.
+      </div>
+    `;
+    document.getElementById('layer-2-mode').textContent = '(b) Solo componentes';
+  } else {
+    const resta = disponibilidadResta();
+    const prevResta = prevState ? evalUnder(prevState, disponibilidadResta) : resta;
+    const restaDelta = resta - prevResta;
+    c2body.innerHTML = `
+      <div class="disp-components">
+        ${dispCompCard('+ Físico', comps.fisico, 'USDC', dC.fisico)}
+        ${comps.fisicoPendiente > 0 ? dispCompCard('+ Pend. aplicación', comps.fisicoPendiente, 'USDC est.', dC.fisicoPendiente) : ''}
+        ${dispCompCard('− Oblig. clientes', comps.obligaciones, 'USDC', dC.obligaciones)}
+        ${dispCompCard('− Pend. asignar', comps.pendientesAsignacion, 'USDC', dC.pendientesAsignacion)}
+        ${dispCompCard('− Compromisos', comps.compromisos, 'USDC', dC.compromisos)}
+      </div>
+      <div class="disp-resta-verdict">
+        <div class="disp-resta-verdict-label">Capacidad operativa (resta impuesta)</div>
+        <div class="disp-resta-verdict-val">
+          ${fmt(resta)}
+          <span style="font-size:12px;color:var(--text-tertiary);">≈ USDC</span>
+          ${fmtDelta(restaDelta, { inline: true, ccy: 'USDC' })}
+        </div>
+      </div>
+    `;
+    document.getElementById('layer-2-mode').textContent = '(a) Resta impuesta';
+  }
+}
+
+function renderPendingPhysical() {
+  const block = document.getElementById('pending-block');
+  const body = document.getElementById('pending-body');
+  const items = physicalPendingValuations();
+  if (items.length === 0) {
+    block.style.display = 'none';
+    return;
+  }
+  block.style.display = '';
+  if (state.knobs.fx1 === 'a') {
+    body.innerHTML = `
+      <div class="pending-empty" style="color:var(--text-warning);font-style:normal;font-weight:500;">
+        P-FX1 = (a) Limbo · el BRL físico existe pero NO se valúa ni cuenta como disponibilidad hasta convertirse.
+      </div>
+      ${items.map(p => `
+        <div class="pending-row">
+          <div class="pending-row-meta">
+            <span class="pending-row-soc"><span class="soc-chip ${p.soc}">${p.soc}</span> ${p.acct}</span>
+            <span class="pending-row-acct">Físico real, no valuado bajo P-FX1=a</span>
+          </div>
+          <div class="pending-row-real">${fmt(p.amount)} <span style="font-size:11px;color:var(--text-tertiary);">${p.ccy}</span></div>
+        </div>
+      `).join('')}
+    `;
+  } else {
+    body.innerHTML = items.map(p => `
+      <div class="pending-row">
+        <div class="pending-row-meta">
+          <span class="pending-row-soc"><span class="soc-chip ${p.soc}">${p.soc}</span> ${p.acct}</span>
+          <span class="pending-row-acct">P-FX1=b · multi-columna · valuación referencial</span>
+        </div>
+        <div class="pending-valuations">
+          <div class="pending-val">
+            <span>real</span>
+            <span class="pending-val-num">${fmt(p.amount)} <span style="font-size:9px;">${p.ccy}</span></span>
+          </div>
+          <div class="pending-val">
+            <span>en USDC</span>
+            <span class="pending-val-num approx">${fmt(p.valUsdc)}</span>
+          </div>
+          <div class="pending-val">
+            <span>en EURC</span>
+            <span class="pending-val-num approx">${fmt(p.valEurc)}</span>
+          </div>
+          <div class="pending-val">
+            <span>en ARS</span>
+            <span class="pending-val-num approx">${fmt(p.valArs)}</span>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+}
+
+function renderPerspective() {
+  const c = document.getElementById('perspective-content');
+  if (state.tab === 'ops') {
+    c.innerHTML = renderOperaciones();
+  } else if (state.tab === 'treasury') {
+    c.innerHTML = renderTesoreria();
+  } else if (state.tab === 'accounting') {
+    c.innerHTML = renderContabilidad();
+  }
+}
+
+function renderOperaciones() {
+  // Agrupamos obligaciones por cliente
+  const byClient = {};
+  for (const o of state.obligations) {
+    const key = o.cli;
+    if (!byClient[key]) byClient[key] = { name: o.name, role: o.role, rows: [] };
+    byClient[key].rows.push(o);
+  }
+  // Per-client total previo
+  const prevByClient = {};
+  if (prevState) {
+    for (const o of prevState.obligations) {
+      const key = o.cli;
+      if (!prevByClient[key]) prevByClient[key] = 0;
+      prevByClient[key] += toUSDC(o.amount, o.ccy);
+    }
+  }
+  let html = '<div style="display:flex;flex-direction:column;gap:var(--space-3);">';
+  for (const [cliId, cli] of Object.entries(byClient)) {
+    const total = cli.rows.reduce((a, r) => a + toUSDC(r.amount, r.ccy), 0);
+    const prevTotal = prevByClient[cliId] || 0;
+    const totalDelta = total - prevTotal;
+    const cliAffected = isAffected(totalDelta);
+    html += `
+      <div class="ops-card ${cliAffected ? 'affected-pulse' : ''}">
+        <div class="ops-card-head">
+          <div class="ops-card-name">
+            ${cli.name}
+            <span class="ops-card-id">${cliId}</span>
+            <span class="ops-card-tag ${cli.role === 'soc-cliente' ? 'ardua' : 'cliente'}">${cli.role === 'soc-cliente' ? 'Soc. cliente' : 'Cliente externo'}</span>
+          </div>
+          <div style="font-size:11px;color:var(--text-tertiary);display:flex;align-items:center;gap:6px;">
+            ≈ ${fmt(total)} USDC total
+            ${fmtDelta(totalDelta, { inline: true, ccy: 'USDC' })}
+          </div>
+        </div>
+        <div class="ops-rows">
+          ${cli.rows.map(r => {
+            const d = obligByClientCcyDelta(r.cli, r.soc, r.ccy);
+            return `
+              <div class="ops-row ${isAffected(d) ? 'affected-pulse' : ''}">
+                <span class="ops-row-soc"><span class="soc-chip ${r.soc}">${r.soc}</span></span>
+                <span class="ops-row-detail">Obligación · ${r.ccy === 'USDC' ? 'custodia USDC' : r.ccy === 'EURC' ? 'custodia EURC' : 'cuenta ARS'}</span>
+                <span class="delta-block">
+                  <span class="ops-row-val">${fmt(r.amount)} <span class="ccy">${r.ccy}</span></span>
+                  ${fmtDelta(d, { ccy: r.ccy })}
+                </span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+  // Pendientes
+  if (state.pendings.length > 0) {
+    html += `
+      <div class="ops-card affected-pulse" style="border-color:var(--text-warning);">
+        <div class="ops-card-head">
+          <div class="ops-card-name">
+            Pendientes de asignar
+            <span class="ops-card-tag" style="background:var(--bg-warning);color:var(--text-warning);">Sin titular</span>
+          </div>
+        </div>
+        <div class="ops-rows">
+          ${state.pendings.map(p => {
+            const prevP = prevState ? (prevState.pendings || []).find(x => x.soc === p.soc && x.ccy === p.ccy) : null;
+            const d = p.amount - (prevP ? prevP.amount : 0);
+            return `
+              <div class="ops-row ${isAffected(d) ? 'affected-pulse' : ''}">
+                <span class="ops-row-soc"><span class="soc-chip ${p.soc}">${p.soc}</span></span>
+                <span class="ops-row-detail">Cuenta técnica · pendiente de identificación</span>
+                <span class="delta-block">
+                  <span class="ops-row-val">${fmt(p.amount)} <span class="ccy">${p.ccy}</span></span>
+                  ${fmtDelta(d, { ccy: p.ccy })}
+                </span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+  // Ardua sub-legajos
+  const sub = patrimonioPorSubLegajo();
+  const hasAny = Object.values(sub).some(v => v !== 0);
+  if (hasAny) {
+    const prevPatrim = prevState ? evalUnder(prevState, patrimonioPropioUsdc) : 0;
+    const currPatrim = patrimonioPropioUsdc();
+    html += `
+      <div class="ops-card" style="border-color:var(--text-patrimonio);">
+        <div class="ops-card-head">
+          <div class="ops-card-name">
+            Ardua (titular AS000000)
+            <span class="ops-card-id">AS000000</span>
+            <span class="ops-card-tag ardua">Titular grupo · sub-legajos</span>
+          </div>
+          <div style="font-size:11px;color:var(--text-tertiary);display:flex;align-items:center;gap:6px;">
+            ≈ ${fmt(currPatrim)} USDC patrimonio
+            ${fmtDelta(currPatrim - prevPatrim, { inline: true, ccy: 'USDC' })}
+          </div>
+        </div>
+        <div class="ops-rows">
+          ${['capital', 'fees', 'gastos', 'arduapay', 'loans']
+            .filter(k => sub[k] !== 0)
+            .map(k => {
+              const d = patrimonioPorSubLegajoDelta(k);
+              return `
+                <div class="ops-row ${isAffected(d) ? 'affected-pulse' : ''}">
+                  <span class="ops-row-soc" style="font-size:9px;color:var(--text-tertiary);">SUB</span>
+                  <span class="ops-row-detail">${k}${k === 'fees' ? ' (incl. spreads FX atribuidos)' : ''}</span>
+                  <span class="delta-block">
+                    <span class="ops-row-val">${fmt(sub[k])} <span class="ccy">USDC</span></span>
+                    ${fmtDelta(d, { ccy: 'USDC' })}
+                  </span>
+                </div>
+              `;
+            }).join('')}
+        </div>
+      </div>
+    `;
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderTesoreria() {
+  let html = '';
+  // Compute totals per currency for the soc-pill header
+  for (const [socId, accts] of Object.entries(state.physical)) {
+    const soc = SOCIEDADES[socId];
+    const socTotal = physicalTotalUsdc(socId);
+    const prevSocTotal = prevState ? evalUnder(prevState, () => physicalTotalUsdc(socId)) : 0;
+    const socDelta = socTotal - prevSocTotal;
+    const expanded = state.treasuryExpanded[socId];
+
+    // Per-currency subtotals for the header pills
+    const byCcy = {};
+    for (const a of accts) byCcy[a.ccy] = (byCcy[a.ccy] || 0) + a.amount;
+    const ccyPills = Object.entries(byCcy).map(([ccy, amt]) =>
+      `<span class="treasury-soc-pill"><span class="ccy-badge ${ccy.toLowerCase()}">${ccy}</span> ${fmt(amt)}</span>`
+    ).join('');
+
+    // Group accounts by estructura
+    const byEstructura = {};
+    for (const a of accts) {
+      const key = a.estructura || 'OTROS';
+      if (!byEstructura[key]) byEstructura[key] = [];
+      byEstructura[key].push(a);
+    }
+
+    html += `
+      <div class="treasury-soc ${expanded ? 'expanded' : ''}">
+        <div class="treasury-soc-head" onclick="toggleTreasurySoc('${socId}')">
+          <div class="treasury-soc-name">
+            <span class="treasury-soc-chevron">▶</span>
+            <span class="soc-chip ${socId}">${socId}</span>
+            ${soc.name}
+            <span class="treasury-soc-juris">${soc.juris} · base ${soc.base}</span>
+          </div>
+          <div class="treasury-soc-totals">
+            ${ccyPills}
+            <span class="treasury-soc-pill" style="background:var(--accent-soft);color:var(--accent-dark);">
+              ≈ ${fmt(socTotal)} USDC
+              ${fmtDelta(socDelta, { inline: true, ccy: 'USDC' })}
+            </span>
+          </div>
+        </div>
+        <div class="treasury-soc-body">
+          ${Object.entries(byEstructura).map(([estructura, estAccts]) => `
+            <div class="treasury-estructura-group">
+              <div class="treasury-estructura-head">
+                <span>${estructura}</span>
+                <span class="treasury-estructura-count">${estAccts.length} cuenta${estAccts.length !== 1 ? 's' : ''}</span>
+              </div>
+              ${estAccts.map(a => {
+                const d = physAcctDelta(a.id);
+                return `
+                  <div class="treasury-acct-row ${isAffected(d) ? 'row-affected' : ''}">
+                    <div class="treasury-acct-name">
+                      <span>${a.acct}</span>
+                      <span class="treasury-acct-id">${a.id}</span>
+                    </div>
+                    <div><span class="ccy-badge ${a.ccy.toLowerCase()}">${a.ccy}</span></div>
+                    <div class="treasury-acct-saldo">${fmtFull(a.amount)}</div>
+                    <div class="treasury-acct-delta-cell" style="text-align:right;">${fmtDelta(d, { ccy: a.ccy }) || '<span class="delta zero">±0</span>'}</div>
+                    <div class="treasury-acct-usdc">≈ ${fmt(toUSDC(a.amount, a.ccy))} USDC</div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+  // Físico pendiente bloque separado (con misma estructura visual)
+  if (state.physicalPending.length > 0) {
+    const counts = state.knobs.fx1 === 'b';
+    html += `
+      <div class="treasury-soc expanded" style="border-color:var(--text-warning);">
+        <div class="treasury-soc-head" style="background:var(--bg-warning);cursor:default;">
+          <div class="treasury-soc-name" style="color:var(--text-warning);">
+            ⚠ Físico pendiente de aplicación
+            <span class="treasury-soc-juris" style="color:var(--text-warning);opacity:0.8;">monedas exóticas · separado del cuadre</span>
+          </div>
+          <div class="treasury-soc-totals">
+            <span class="treasury-soc-pill" style="background:white;color:var(--text-warning);">
+              ${counts ? 'P-FX1=b · valuado' : 'P-FX1=a · limbo'}
+            </span>
+          </div>
+        </div>
+        <div class="treasury-soc-body">
+          ${state.physicalPending.map(p => {
+            const prevP = prevState ? (prevState.physicalPending || []).find(x => x.soc === p.soc && x.ccy === p.ccy && x.acct === p.acct) : null;
+            const d = p.amount - (prevP ? prevP.amount : 0);
+            return `
+              <div class="treasury-estructura-group">
+                <div class="treasury-estructura-head">
+                  <span>${p.estructura || 'BIND'} · ${p.soc}</span>
+                  <span class="treasury-estructura-count">exótico</span>
+                </div>
+                <div class="treasury-acct-row ${isAffected(d) ? 'row-affected' : ''}">
+                  <div class="treasury-acct-name">
+                    <span>${p.acct}</span>
+                  </div>
+                  <div><span class="ccy-badge ${p.ccy.toLowerCase()}">${p.ccy}</span></div>
+                  <div class="treasury-acct-saldo">${fmtFull(p.amount)}</div>
+                  <div class="treasury-acct-delta-cell" style="text-align:right;">${fmtDelta(d, { ccy: p.ccy }) || '<span class="delta zero">±0</span>'}</div>
+                  <div class="treasury-acct-usdc" style="color:${counts ? 'var(--text-warning)' : 'var(--text-tertiary)'};">
+                    ${counts ? '≈ ' + fmt(toUSDC(p.amount, p.ccy)) + ' USDC est.' : 'no cuenta'}
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+  return html;
+}
+
+function renderContabilidad() {
+  if (state.journal.length === 0) {
+    return '<div class="empty-state">Sin asientos contables todavía. Avanzá la línea de tiempo para generarlos.</div>';
+  }
+  let html = '';
+  // Filter by consolidation. Bajo P-CON1='b' se eliminan los asientos de
+  // eventos marcados como `intraGroupTransfer` (E5). Los asientos mixtos
+  // (un lado IC, otro lado físico/tercero) se conservan; una consolidación
+  // real reescribiría ese lado IC contra la cuenta del tercero final.
+  let entries = state.journal;
+  if (state.knobs.con1 === 'b') {
+    const intraGroupCodes = new Set(EVENTS.filter(e => e.intraGroupTransfer).map(e => e.code));
+    entries = entries.filter(e => {
+      const baseCode = e.evt.split('-')[0];
+      return !intraGroupCodes.has(baseCode);
+    });
+    html += `<div class="disp-no-verdict" style="background:var(--bg-info);color:var(--text-info);border-left-color:var(--text-info);margin-bottom:var(--space-3);">
+      <strong>P-CON1 = Grupo consolidado.</strong> Los asientos puramente intra-grupo (E5: cta. cte. entre hermanas, físico que se mueve dentro del grupo) se eliminan. Los asientos mixtos (un lado IC, otro lado físico o cliente) se conservan; en una consolidación real ese lado IC se reescribiría contra la cuenta del tercero final.
+    </div>`;
+  }
+  if (entries.length === 0) {
+    html += '<div class="empty-state">A esta altura, sin asientos visibles bajo consolidación de grupo.</div>';
+    return html;
+  }
+  for (const e of entries) {
+    html += `
+      <div class="journal-entry">
+        <div class="journal-head">
+          <div class="journal-soc">
+            <span class="soc-chip ${e.soc}">${e.soc}</span>
+            ${SOCIEDADES[e.soc] ? SOCIEDADES[e.soc].name : e.soc}
+          </div>
+          <span class="journal-evt">${e.evt}</span>
+        </div>
+        <div class="journal-lines">
+          ${e.lines.map(l => `
+            <div class="journal-line">
+              <span class="journal-side">${l.side}</span>
+              <span class="journal-acct">${l.acct}</span>
+              <span class="journal-debit ${l.debit === 0 ? 'empty' : ''}">${l.debit > 0 ? fmtFull(l.debit) + ' ' + l.ccy : '—'}</span>
+              <span class="journal-credit ${l.credit === 0 ? 'empty' : ''}">${l.credit > 0 ? fmtFull(l.credit) + ' ' + l.ccy : '—'}</span>
+            </div>
+          `).join('')}
+        </div>
+        ${e.note ? `<div class="journal-note">${e.note}</div>` : ''}
+      </div>
+    `;
+  }
+  return html;
+}
+
+// =================================================================
+// MAIN RENDER
+// =================================================================
+function renderAll() {
+  renderKnobs();
+  renderConsol();
+  renderTimeline();
+  renderEventCard();
+  renderEquation();
+  renderDimCards();
+  renderPendingPhysical();
+  renderPerspective();
+}
+
+// === BOOT ===
+applyAllUpToStep(0);
+renderAll();
+
+// Keyboard navigation
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 'ArrowRight') { step(1); e.preventDefault(); }
+  if (e.key === 'ArrowLeft')  { step(-1); e.preventDefault(); }
+  if (e.key === 'r' || e.key === 'R') { resetTimeline(); }
+});
+
+</script>
+</body>
+</html>
