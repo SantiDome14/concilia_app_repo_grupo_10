@@ -26,6 +26,8 @@ El punto de partida correcto es verificar con IT si dicha base de datos ya exist
 
 AiPrise registra la aceptacion de TyC por usuario, pero solo como un booleano (acepto / no acepto). No almacena timestamp, version del documento, IP ni ningun otro campo de trazabilidad. Los TyC viven en la web publica de Ardua Solutions. Legal tiene versiones internas del documento, pero no existe trazabilidad de que version acepto cada cliente ni cuando. El gap no es de captura sino de **ausencia total de trazabilidad de aceptacion**. El modelo PWI-67 (replicar datos de AiPrise a S3) no resuelve el problema porque el dato de calidad no existe en AiPrise. La solucion requiere construir un mecanismo propio.
 
+Se suma un segundo gap, de **acceso**: el link que ve el cliente en el ultimo paso del wizard apunta a un documento de Drive (uno PF, uno PJ, TyC combinados Ardua + sociedades) restringido a cuentas @arduasolutions. El cliente no puede leer lo que acepta. La solucion estructural (fuente unica, versionada, distribuida por API y con ledger de aceptacion versionada) se especifica en `lex-tyc-management-discovery.md`. Este discovery queda acotado a la captura/almacenamiento de la aceptacion durante el onboarding de AiPrise.
+
 ## Mecanismo de aceptacion confirmado (fuente: Manual de Onboardings Ardua, nov 2025)
 
 La aceptacion de TyC ocurre en el ultimo paso del wizard de AiPrise, para ambos tipos de cliente:
@@ -67,9 +69,13 @@ Ambos flujos son completamente digitales dentro de AiPrise. No existe un documen
 | 2026-06-11 | Mecanismo confirmado (fuente: Manual de Onboardings Ardua): la aceptacion ocurre en el ultimo paso del wizard de AiPrise, de forma digital. PF: radio button "Acepto" + Enviar. PJ: checkbox + Enviar (paso 7/7). No existe documento fisico de aceptacion de TyC | Aplica a ambos tipos de cliente. La referencia a "documento fisico con checkbox" era incorrecta — ese mecanismo corresponde a la DDJJ de Origen de Fondos (DocuSign, proceso Comercial) |
 | 2026-06-11 | El patron de traer datos de AiPrise a infraestructura propia ya fue resuelto en PWI-67 (videos y selfies del KYC) | El requerimiento para TyC sigue el mismo modelo arquitectonico. No hay que inventar solucion nueva |
 | 2026-06-11 | Los TyC los redacta Legal cuando corresponda — no es un prerequisito para el requerimiento tecnico de almacenamiento | No bloqueante para IT |
+| 2026-06-12 | El link de aceptacion en AiPrise apunta a un doc de Drive restringido a cuentas @arduasolutions (combinado Ardua + sociedades, uno PF y otro PJ). El cliente no puede acceder al contenido que acepta (fuente: Santi / Manual de Onboardings) | Segundo gap ademas de la trazabilidad: el cliente nunca lee los TyC. Conflicto a confirmar con el hallazgo de `arduasolutions.com/terms` (T-01 en el discovery de LEX) |
+| 2026-06-12 | Decision: la solucion de fondo (CMS legal en LEX, versionado inmutable, distribucion por API y ledger de aceptacion versionada) se mueve a un discovery propio: `lex-tyc-management-discovery.md`. Este discovery queda acotado a la captura de la aceptacion en el onboarding | Separa el ciclo de vida de TyC (LEX) de la captura puntual en onboarding (AiPrise) |
+| 2026-06-12 | Requisito transversal: los TyC deben garantizar escalabilidad a servicios, apps y productos presentes y futuros de Ardua (fuente: Santi) | El versionado y la distribucion se disenan multi-consumidor desde v1. Se traslada al discovery de LEX |
 
 ## Iniciativas relacionadas
 
+- **Gestion de TyC en LEX (solucion de fondo)**: [`lex-tyc-management-discovery.md`](./lex-tyc-management-discovery.md) — CMS legal, versionado inmutable, distribucion por API y ledger de aceptacion versionada. Este discovery es la pieza acotada de captura en onboarding.
 - **Centaurus — Epic**: [PWI-68](https://arduasolutions.atlassian.net/browse/PWI-68)
 - **Centaurus — Onboarding API (cliente → Centaurus)**: [PWI-69](https://arduasolutions.atlassian.net/browse/PWI-69)
 - **Centaurus — Onboarding API (Centaurus → Ardua)**: [PWI-70](https://arduasolutions.atlassian.net/browse/PWI-70)

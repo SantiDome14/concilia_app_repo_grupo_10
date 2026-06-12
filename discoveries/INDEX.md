@@ -2,7 +2,7 @@
 
 > Catálogo navegable de los discoveries existentes. Para entender la convención de naming, los estados y el ciclo de vida, ver [`README.md`](./README.md).
 >
-> Última actualización: **2026-06-11** · **36 discoveries** + **3 artefactos de soporte**
+> Última actualización: **2026-06-12** · **37 discoveries** + **3 artefactos de soporte**
 
 ---
 
@@ -29,6 +29,7 @@ Hipótesis focalizadas en un módulo específico dentro de una aplicación.
 
 | Archivo | Nombre | Estado | Owner | Última act. | Propaga a |
 |---|---|---|---|---|---|
+| [`lex-tyc-management-discovery.md`](./lex-tyc-management-discovery.md) | LEX — Módulo de gestión de TyC (CMS legal, versionado y distribución por API) | En investigación | Santino Domeniconi | 2026-06-12 | `features/lex/README.md` · `features/lex/lex-tyc-management.md` |
 | [`ops-whitelist-cbu-discovery.md`](./ops-whitelist-cbu-discovery.md) | OPS — Whitelist CBU/CVU: identificación de banco y etiquetas | Concluida | Santino Domeniconi | 2026-06-09 | `features/ops/ops-whitelist-cbu-cvu.md` |
 | [`lex-auditoria-operativa-discovery.md`](./lex-auditoria-operativa-discovery.md) | LEX — Auditoría operativa de trades confirmados (TRD → LEX) | En investigación | Santino Domeniconi | 2026-06-05 | _—_ |
 | [`clp-retiros-discovery.md`](./clp-retiros-discovery.md) | CLP — Módulo de Retiros (Self-service desde el portal) | En investigación | Santino Domeniconi | 2026-06-10 | `features/clp/clp-retiros.md` · `features/clp/README.md` · `features/ops/README.md` |

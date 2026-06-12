@@ -4,7 +4,7 @@ features: []
 status: En investigacion
 owner: Santino Domeniconi
 created_at: 2026-06-02
-updated_at: 2026-06-11
+updated_at: 2026-06-12
 propagates_to:
   - entities/centaurus.md
   - features/clp/README.md
@@ -305,6 +305,8 @@ La integracion con Centaurus implicaria un tercer canal o la extension de uno de
 | 2026-06-09 | La aprobacion final en Centaurus (APPROVAL_PENDING → APPROVED) es interna. El integrador no la controla — solo puede observar el estado via la API | Para Etapa 2 Ardua necesita poder consultar el estado del cliente en Centaurus (P-13) |
 | 2026-06-11 | Centaurus tiene onboarding digital para personas juridicas. Esta preparando la documentacion de integracion equivalente al OBPH para enviarnos (fuente: Santi Ahmed) | PJ no esta fuera de scope — esta pendiente de documentacion. PWI-69 y PWI-70 deberan ampliar scope cuando llegue la doc |
 | 2026-06-11 | La aceptacion de TyC se almacena en AiPrise. Ardua no tiene copia propia en su infraestructura. El modelo a seguir es el mismo de PWI-67 (videos y selfies). Los TyC los redacta Legal cuando corresponda — no bloqueante para IT. Ver `aiprise-tyc-discovery.md` | PRE-01 ajustado: el gap es de propiedad del dato, no de captura |
+| 2026-06-12 | El cliente no accede a los TyC que acepta: el link del onboarding apunta a un doc de Drive restringido a @arduasolutions (combinado Ardua + sociedades) (fuente: Santi / Manual de Onboardings) | Refuerza el PRE-01: ademas de no tener copia propia, falta una fuente accesible y distribuible. Lo resuelve el CMS de TyC en LEX |
+| 2026-06-12 | La solucion de fondo de TyC pasa a un discovery propio: `lex-tyc-management-discovery.md` (CMS legal en LEX, versionado inmutable, distribucion por API, ledger de aceptacion versionada). Requisito transversal: escalabilidad a servicios, apps y productos presentes y futuros de Ardua (fuente: Santi) | PRE-01 de PWI-69/70 depende de ese modulo. La clausula 6.4 (terceros) se gestiona como contenido versionado del mismo |
 
 ---
 
@@ -314,7 +316,7 @@ Condiciones que deben estar resueltas antes de que la API pueda operar a escala.
 
 | # | Prerequisito | Estado | Área responsable |
 |---|---|---|---|
-| PRE-01 | Aceptacion de TyC replicada a infraestructura propia de Ardua (S3). La captura existe en AiPrise — Ardua no tiene copia propia. Modelo: PWI-67. Redaccion de los TyC a cargo de Legal cuando corresponda — no bloqueante para IT. Ver `aiprise-tyc-discovery.md` | ⏳ Pendiente requerimiento tecnico (modelo PWI-67) | IT |
+| PRE-01 | Aceptacion de TyC replicada a infraestructura propia de Ardua. La captura existe en AiPrise — Ardua no tiene copia propia, y el cliente hoy ni siquiera accede al documento (link a Drive restringido a @arduasolutions). La solucion de fondo (CMS legal en LEX, versionado inmutable, distribucion por API y ledger de aceptacion versionada, con clausula de terceros para Centaurus) se especifica en `lex-tyc-management-discovery.md`. Captura en onboarding: `aiprise-tyc-discovery.md`. Redaccion del contenido a cargo de Legal | ⏳ Pendiente requerimiento tecnico | IT / Legal |
 | PRE-02 | Contrato firmado entre Ardua y Centaurus | ❌ Bloqueante — no hay contrato al 2026-06-02 | Legal / Comercial |
 | PRE-03 | Entidad de Ardua contraparte confirmada (P-03) | ⏳ Pendiente confirmación formal | Legal / CTO |
 | PRE-04 | LEX con capacidad de exponer datos del legajo vía API | ⏳ Pendiente evaluación técnica (Mati) | Tecnología |
@@ -329,3 +331,5 @@ Condiciones que deben estar resueltas antes de que la API pueda operar a escala.
 - **Registro CNV Centaurus**: https://www.cnv.gov.ar/SitioWeb/RegistrosPublicos/DetallesRegistrosPublicos/30794?tipoEntidadId=2
 - **Politica de privacidad Centaurus**: https://files.centaurus.com.ar/privacidad.pdf
 - **Discovery relacionado**: `discoveries/ardua-api-documentation-discovery.md` — contexto de API publica de Ardua
+- **Discovery relacionado**: `discoveries/lex-tyc-management-discovery.md` — gestion de TyC en LEX (resuelve PRE-01: fuente accesible, versionada, distribuida por API y con clausula de terceros)
+- **Discovery relacionado**: `discoveries/aiprise-tyc-discovery.md` — captura/almacenamiento de la aceptacion de TyC en el onboarding
