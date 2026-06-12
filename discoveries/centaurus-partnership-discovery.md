@@ -100,23 +100,53 @@ Esto valida que el modelo es operativamente viable. La API no inventa un flujo n
 - World Check + Nosis
 - DJ Origen de Fondos (al cierre)
 
-**Gap Ardua Solutions Corp:**
-- Imagenes del ID: Centaurus las obtiene via Motor Biometrico. Ardua usa AiPrise. Si el KYC de Centaurus es aceptado por Ardua (P-10), este gap se cierra. Si no, el cliente debe repetir el proceso.
-- Monto estimado en USD: Centaurus no captura este dato. Debe completarse por el cliente o derivarse a un flujo adicional.
-- DJ Origen de Fondos: tampoco esta en el OBPH. Requiere accion adicional.
+**Cruce consolidado Etapa 1 — qué manda Centaurus vs. qué necesita Ardua:**
 
-**Gap adicional para Haz Pagos / Circuit Pay (PSP / PSAV):**
-El onboarding en Haz Pagos o Circuit Pay requiere documentacion patrimonial que el OBPH de Centaurus no captura ni expone:
+| Requisito Ardua (Ardua Solutions Corp) | Lo manda Centaurus | Observación |
+|---|---|---|
+| Nombre, apellido, DNI/CUIL/CUIT | ✅ | Directo desde registro inicial |
+| Email verificado | ✅ | Verificado en Etapa 2 de compliance |
+| Domicilio | ✅ | RESIDENTIAL y FISCAL completos — requiere mapeo de formato a schema de Ardua |
+| phoneNumber | ✅ | Paso 1 del wizard |
+| Profesión / ocupación | ✅ | jobRole + economicActivityId (paso 2) |
+| Imágenes del DNI (frente/dorso) | ⚠️ Condicional | Centaurus las obtiene via Motor Biométrico. Si Ardua acepta el KYC de Centaurus como válido (P-10), el gap se cierra. Si no, el cliente repite AiPrise. |
+| Screening de compliance (equivalente World Check + Nosis) | ⚠️ Parcial | Centaurus corre Checkone + OFAC. Ardua debe correr World Check + Nosis por cuenta propia — no puede delegar ni aceptar el resultado de Centaurus como sustituto. |
+| **Monto estimado a operar (rangos USD)** | ❌ No | Centaurus no captura este dato. Debe completarse por el cliente en un paso adicional o derivarse a un flujo híbrido. |
+| **DJ Origen de Fondos** | ❌ No | No está en el OBPH. Requiere acción adicional fuera del flujo API (al cierre del proceso Comercial). |
 
-_Persona Fisica_: ultimos 3 recibos de sueldo, facturacion 6 meses (si monotributista), DDJJ Ganancias + Acuse, DDJJ REIBP + Acuse, DDJJ Bienes Personales + Acuse, DDJJ Regularizacion + Acuse, ingresos extraordinarios con documentacion de respaldo segun tipo (contratos de mutuos, compraventa de inmueble, donacion, creditos bancarios).
+**Requisitos adicionales para Haz Pagos / Circuit Pay — sin solución vía API:**
 
-_Persona Juridica_: EECC legalizados o, en su defecto, facturas emitidas 12 meses, DDJJ IVA anual + Acuses, Acta de Asamblea con Aumento de Capital, Creditos Bancarios, Contratos de Mutuos, Certificacion Contable legalizada.
+| Requisito patrimonial | Lo manda Centaurus |
+|---|---|
+| PF: últimos 3 recibos de sueldo / facturación 6 meses | ❌ No |
+| PF: DDJJ Ganancias, REIBP, Bienes Personales + Acuses | ❌ No |
+| PJ: EECC legalizados o facturas 12 meses + DDJJ IVA | ❌ No |
+| PJ: Acta de Asamblea, Certificación Contable legalizada | ❌ No |
 
-Este gap no tiene resolucion tecnica via API — el cliente debe proveer estos documentos por fuera del flujo de integracion con Centaurus. Implica que la Etapa 1 solo puede habilitar el alta en Ardua Solutions Corp de forma automatizada; Haz Pagos y Circuit Pay requieren un paso manual adicional.
+Esta documentación patrimonial no tiene resolución técnica vía API. La Etapa 1 solo puede automatizar el alta en **Ardua Solutions Corp**. El alta en Haz Pagos y Circuit Pay siempre requiere un paso manual adicional del cliente.
 
 **Para empresas**: Centaurus tiene onboarding digital para personas juridicas. Esta preparando la documentacion de integracion equivalente al OBPH para compartirla con Ardua (fuente: Santi Ahmed, 2026-06-11). PJ no esta fuera de scope — esta pendiente de documentacion. Cuando Centaurus entregue el documento, se retoma el analisis de gap para PJ en ambas etapas.
 
 ### Etapa 2 — Ardua manda clientes a Centaurus
+
+**Lo que Ardua puede disponibilizar a Centaurus hoy (post confirmación S3, fuente: Santi Ahmed 2026-06-12):**
+
+| Campo OBPH Centaurus | Estado en Ardua | Observación |
+|---|---|---|
+| documentType + documentNumber | ✅ Disponible | En S3 |
+| email | ✅ Disponible | En S3 |
+| Nombre, apellido, fecha de nacimiento | ✅ Disponible | En S3 |
+| Domicilio (RESIDENTIAL + FISCAL) | ✅ Disponible | Requiere transformación de formato al schema de Centaurus |
+| phoneNumber | ✅ Probablemente disponible | Validar con Oriana Letini / Nicolás Gutik |
+| Imágenes del DNI (frente/dorso) | ✅ Disponible en S3 | Requiere mapeo de códigos AiPrise → códigos del paso 6 de Centaurus |
+| **economicActivityId** (ID AFIP numérico) | ❌ Gap | Ardua captura profesión en texto libre — requiere tabla de mapeo a IDs AFIP o flujo híbrido |
+| **civilStatus** | ❌ Gap | No capturado en ningún template de AiPrise |
+| **regulations** (perfil inversor CNV) | ❌ Gap normativo crítico | Obligatorio por normativa CNV para ALyC. No puede omitirse ni delegarse a Ardua. Solución: el cliente lo completa directamente en Centaurus (P-12). |
+| taxes (taxId + conditionId) | ⚠️ Parcial | Ardua tiene condición AFIP pero con granularidad distinta — requiere mapeo |
+| notificationSources | ❌ No capturado | Impacto bajo — puede omitirse o defaultearse |
+| Documentos paso 6 (códigos Centaurus) | ⚠️ Parcial | Ardua tiene docs en S3 — los códigos de Centaurus pueden no coincidir con los de AiPrise. Requiere mapeo. |
+
+**Resumen Etapa 2:** Ardua puede pre-poblar los pasos 1 (domicilio, teléfono), parte del paso 2 (jobRole), y los documentos del paso 6 del wizard de Centaurus. Los pasos 3 (`civilStatus`), 4 (`regulations`) y parte del 2 (`economicActivityId`) requieren que el cliente complete información adicional — ya sea en un flujo híbrido de Ardua antes de enviar, o directamente en Centaurus.
 
 **Lo que Ardua captura y coincide con lo que Centaurus necesita (segun OBPH):**
 - Nombre, apellido, fecha de nacimiento, DNI, CUIT/CUIL (template LOCAL KYC)
@@ -305,6 +335,8 @@ La integracion con Centaurus implicaria un tercer canal o la extension de uno de
 | 2026-06-09 | La aprobacion final en Centaurus (APPROVAL_PENDING → APPROVED) es interna. El integrador no la controla — solo puede observar el estado via la API | Para Etapa 2 Ardua necesita poder consultar el estado del cliente en Centaurus (P-13) |
 | 2026-06-11 | Centaurus tiene onboarding digital para personas juridicas. Esta preparando la documentacion de integracion equivalente al OBPH para enviarnos (fuente: Santi Ahmed) | PJ no esta fuera de scope — esta pendiente de documentacion. PWI-69 y PWI-70 deberan ampliar scope cuando llegue la doc |
 | 2026-06-11 | La aceptacion de TyC se almacena en AiPrise. Ardua no tiene copia propia en su infraestructura. El modelo a seguir es el mismo de PWI-67 (videos y selfies). Los TyC los redacta Legal cuando corresponda — no bloqueante para IT. Ver `aiprise-tyc-discovery.md` | PRE-01 ajustado: el gap es de propiedad del dato, no de captura |
+| 2026-06-12 | **Confirmación S3 (Santi Ahmed, 2026-06-12):** Ardua ya guarda en S3 todos los datos de AiPrise excepto liveness checks y selfies (estos últimos se agregan via PWI emitido). Responsables del dato: Oriana Letini y Nicolás Gutik (IT). | Etapa 2: Ardua puede disponibilizar a Centaurus nombre, DNI, email, domicilio, teléfono, imágenes del ID y documentos del KYC. Los gaps que persisten son estructurales (civilStatus no capturado, economicActivityId en texto libre, regulations imposible de delegar, taxes con granularidad distinta). |
+| 2026-06-12 | **T-01 resuelto (Juani, 2026-06-12):** el link de AiPrise apunta al mismo contenido de las páginas de Haz Pagos y Circuit Pay — acceso no restringido. Gap real: el documento no tiene versión ni fecha. Ver `lex-tyc-management-discovery.md` y `aiprise-tyc-discovery.md`. | PRE-01 ajustado: el problema de acceso no existe. El prereq pendiente es el versionado del documento (T-02) para que el ledger sea trazable. |
 | 2026-06-12 | El cliente no accede a los TyC que acepta: el link del onboarding apunta a un doc de Drive restringido a @arduasolutions (combinado Ardua + sociedades) (fuente: Santi / Manual de Onboardings) | Refuerza el PRE-01: ademas de no tener copia propia, falta una fuente accesible y distribuible. Lo resuelve el CMS de TyC en LEX |
 | 2026-06-12 | La solucion de fondo de TyC pasa a un discovery propio: `lex-tyc-management-discovery.md` (CMS legal en LEX, versionado inmutable, distribucion por API, ledger de aceptacion versionada). Requisito transversal: escalabilidad a servicios, apps y productos presentes y futuros de Ardua (fuente: Santi) | PRE-01 de PWI-69/70 depende de ese modulo. La clausula 6.4 (terceros) se gestiona como contenido versionado del mismo |
 
