@@ -4,7 +4,7 @@ features: []
 status: En investigacion
 owner: Santino Domeniconi
 created_at: 2026-06-02
-updated_at: 2026-06-12
+updated_at: 2026-06-13
 propagates_to:
   - entities/centaurus.md
   - features/clp/README.md
@@ -339,6 +339,9 @@ La integracion con Centaurus implicaria un tercer canal o la extension de uno de
 | 2026-06-12 | **phoneNumber confirmado en DB (Oriana Letini + Nicolás Gutik, 2026-06-12):** el campo existe y está disponible para Etapa 2. Precisión clave: **no está en S3** — está en la base de datos. S3 almacena exclusivamente documentos (imágenes y adjuntos del KYC). Impacta el diseño de la API de Etapa 2: el teléfono se obtiene del DB, no del bucket. | Cierra el único gap "Probablemente capturado — validar con IT" de Etapa 2. Todos los gaps restantes son estructurales (civilStatus, economicActivityId, regulations, taxes). |
 | 2026-06-12 | **T-01 resuelto (Juani, 2026-06-12):** el link de AiPrise apunta al mismo contenido de las páginas de Haz Pagos y Circuit Pay — acceso no restringido. Gap real: el documento no tiene versión ni fecha. Ver `lex-tyc-management-discovery.md` y `aiprise-tyc-discovery.md`. | PRE-01 ajustado: el problema de acceso no existe. El prereq pendiente es el versionado del documento (T-02) para que el ledger sea trazable. |
 | 2026-06-12 | El cliente no accede a los TyC que acepta: el link del onboarding apunta a un doc de Drive restringido a @arduasolutions (combinado Ardua + sociedades) (fuente: Santi / Manual de Onboardings) | Refuerza el PRE-01: ademas de no tener copia propia, falta una fuente accesible y distribuible. Lo resuelve el CMS de TyC en LEX |
+| 2026-06-13 | **Multi-legajo confirmado — CUIL como primary key (fuente: Manual de Onboardings, pág. 9):** el dashboard de Altas de LEX muestra que un mismo cliente puede tener hasta 3 comitentes: AS (Ardua), CP (Circuit Pay) y HAZ (Haz Pagos) en la misma fila. El número AS no es portable como identificador cruzado con Centaurus — solo existe del lado de Ardua. CUIL/CUIT es el único ID estable presente en ambas plataformas. Cierra PRE-05. | El diseño de la API de integración debe usar CUIL/CUIT como clave de matching entre sistemas. |
+| 2026-06-13 | **Trello ya modela el flujo de partners (fuente: Manual de Onboardings, pág. 16):** el tablero de Onboarding tiene una columna "Esperando respuesta del partner" y la tarjeta de Centaurus Securities SA ya estaba en ese board al momento de redactar el manual. La API no inventa un concepto nuevo: automatiza un estado operativo que el proceso manual ya tiene definido. | Refuerza que el MVP de la integración es reemplazar el flujo existente, no construir uno desde cero. |
+| 2026-06-13 | **DJ Origen de Fondos requerida para clientes con CVU (fuente: Manual de Onboardings, pág. 19-20):** todo cliente onboardeado en Haz Pagos y Circuit Pay debe firmar la DJ de Origen de Fondos vía DocuSign al cierre del proceso Comercial. Un cliente de Centaurus referenciado a Ardua que necesite CVU no es una excepción — este requisito aplica igual. La API no elimina este paso: solo automatiza el alta; la DJ queda fuera del scope de la integración. | Impacta el diseño de Etapa 1: el alta vía API deja al cliente activo en Ardua Solutions Corp, pero el acceso a CVU (Haz Pagos) requiere un paso adicional manual. Documentar en el scope de PWI-69 que la DJ queda fuera del flujo API. |
 | 2026-06-12 | La solucion de fondo de TyC pasa a un discovery propio: `lex-tyc-management-discovery.md` (CMS legal en LEX, versionado inmutable, distribucion por API, ledger de aceptacion versionada). Requisito transversal: escalabilidad a servicios, apps y productos presentes y futuros de Ardua (fuente: Santi) | PRE-01 de PWI-69/70 depende de ese modulo. La clausula 6.4 (terceros) se gestiona como contenido versionado del mismo |
 
 ---
@@ -353,7 +356,7 @@ Condiciones que deben estar resueltas antes de que la API pueda operar a escala.
 | PRE-02 | Contrato firmado entre Ardua y Centaurus | ❌ Bloqueante — no hay contrato al 2026-06-02 | Legal / Comercial |
 | PRE-03 | Entidad de Ardua contraparte confirmada (P-03) | ⏳ Pendiente confirmación formal | Legal / CTO |
 | PRE-04 | LEX con capacidad de exponer datos del legajo vía API | ✅ Confirmado (Valen Vila) | Tecnología |
-| PRE-05 | Identificador común entre Ardua y Centaurus para el mismo cliente | ⏳ Pendiente decisión IT + Producto. Candidato: CUIL/CUIT como primary key de identificación cruzada — único, presente en ambas plataformas, nunca se repite entre clientes. | IT + Producto |
+| PRE-05 | Identificador común entre Ardua y Centaurus para el mismo cliente | ✅ Confirmado — CUIL/CUIT. El dashboard de Altas de LEX muestra que un cliente puede tener hasta 3 comitentes distintos (AS / CP / HAZ) en la misma fila (fuente: Manual de Onboardings, pág. 9). El número de legajo AS no es portable como identificador cruzado — solo existe del lado de Ardua. CUIL/CUIT es el único ID estable presente en ambas plataformas y nunca se repite entre clientes. | IT + Producto |
 
 ---
 

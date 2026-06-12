@@ -4,7 +4,7 @@ features: []
 status: En investigación
 owner: Santino Domeniconi
 created_at: 2026-06-10
-updated_at: 2026-06-12
+updated_at: 2026-06-13
 tyc_url: https://www.arduasolutions.com/terms
 privacy_url: https://www.arduasolutions.com/privacy
 propagates_to: []
@@ -30,12 +30,20 @@ Se suma un segundo gap, de **acceso**: investigado y resuelto (Juani, 2026-06-12
 
 ## Mecanismo de aceptacion confirmado (fuente: Manual de Onboardings Ardua, nov 2025)
 
-La aceptacion de TyC ocurre en el ultimo paso del wizard de AiPrise, para ambos tipos de cliente:
+La aceptacion de TyC ocurre en el ultimo paso del wizard de AiPrise. Hay 6 templates activos, cada uno con su propio TyC segun la sociedad de alta y el tipo de cliente:
 
-- **Persona Fisica (Template #2 ARDUA - KYC Analista Legales)**: radio button "Acepto" + boton "Enviar". Texto: "Declaro haber leido los Terminos y Condiciones de Ardua Solutions" con link al documento. Ultimo paso del onboarding.
-- **Persona Juridica (Template #3 ARDUA - KYB)**: checkbox "Declaro haber leido y aceptar los Terminos y Condiciones" + boton "Enviar". Paso 7/7 del wizard.
+| Template | Uso | Canal | Tipo cliente | TyC aplicable |
+|---|---|---|---|---|
+| #1 ARDUA - KYC | Autogesion via referenciadores | Link externo | PF internacional | Ardua Solutions Corp |
+| #2 ARDUA - KYC (ANALISTA LEGALES) | Alta por analista de Legales | Telegram | PF internacional | Ardua Solutions Corp |
+| #3 ARDUA - KYB | Alta de sociedades | Telegram / analista | PJ internacional (no off-shore de inversion) | Ardua Solutions Corp |
+| #4 LOCAL - KYC | Alta via Comercial | Trello | PF local (PSP/PSAV) | Circuit Pay / Haz Pagos |
+| #5 LOCAL - KYC (ANALISTA LEGALES) | Alta por analista de Legales | Trello | PF local (PSP/PSAV) | Circuit Pay / Haz Pagos |
+| #6 LOCAL - KYB | Alta de sociedades locales via Comercial | Trello | PJ local (PSP/PSAV) | Circuit Pay / Haz Pagos |
 
-Ambos flujos son completamente digitales dentro de AiPrise. No existe un documento fisico de aceptacion de TyC — la referencia a "documento fisico con checkbox" corresponde a otro documento (probablemente la DDJJ de Origen de Fondos, que se firma por DocuSign al cierre del proceso Comercial).
+**Implicancia critica:** los templates 1, 2 y 3 firman TyC de Ardua Solutions Corp. Los templates 4, 5 y 6 firman TyC de Circuit Pay y/o Haz Pagos. No es un unico documento — son al menos dos conjuntos normativos distintos (internacional bajo derecho canadiense, locales bajo normativa BCRA/CNV). El CMS de TyC en LEX debe gestionar los tres documentos como entidades independientes y versionadas.
+
+Ambos grupos de flujos son completamente digitales dentro de AiPrise. No existe un documento fisico de aceptacion de TyC — la referencia a "documento fisico con checkbox" corresponde a otro documento (la DDJJ de Origen de Fondos, que se firma por DocuSign al cierre del proceso Comercial).
 
 ## Almacenamiento en S3 — estado real (fuente: Santi Ahmed, 2026-06-12)
 
@@ -78,6 +86,8 @@ Esto reencuadra el gap de este discovery: el problema no es ausencia de almacena
 | 2026-06-12 | El link de aceptacion en AiPrise apunta a un doc de Drive restringido a cuentas @arduasolutions (combinado Ardua + sociedades, uno PF y otro PJ). El cliente no puede acceder al contenido que acepta (fuente: Santi / Manual de Onboardings) | Segundo gap ademas de la trazabilidad: el cliente nunca lee los TyC. Conflicto a confirmar con el hallazgo de `arduasolutions.com/terms` (T-01 en el discovery de LEX) |
 | 2026-06-12 | Decision: la solucion de fondo (CMS legal en LEX, versionado inmutable, distribucion por API y ledger de aceptacion versionada) se mueve a un discovery propio: `lex-tyc-management-discovery.md`. Este discovery queda acotado a la captura de la aceptacion en el onboarding | Separa el ciclo de vida de TyC (LEX) de la captura puntual en onboarding (AiPrise) |
 | 2026-06-12 | Requisito transversal: los TyC deben garantizar escalabilidad a servicios, apps y productos presentes y futuros de Ardua (fuente: Santi) | El versionado y la distribucion se disenan multi-consumidor desde v1. Se traslada al discovery de LEX |
+| 2026-06-13 | **Template usado por cliente ya visible en LEX (fuente: Manual de Onboardings, pág. 7):** el dashboard de Altas de LEX tiene una columna "Template" que muestra para cada cliente qué plantilla de AiPrise usó al onboardearse: `Ardua KYC`, `Ardua KYC (AL)`, `Ardua KYB`, `Local KYC`, `Sin Template`. LEX ya sabe qué conjunto de TyC aplica a cada cliente sin necesidad de inferirlo. | El módulo de TyC en LEX solo necesita ligar ese campo de template al documento vigente en el momento del alta. El dato del vínculo ya existe — no hay que capturarlo desde cero. Impacto directo en el diseño del ledger de aceptación: la columna Template es la clave natural para resolver qué TyC firmó cada cliente. |
+| 2026-06-13 | **Mapa completo de templates confirmado (fuente: Manual de Onboardings Ardua, nov 2025):** hay 6 templates activos en AiPrise. Los templates 1-3 (internacionales) firman TyC de Ardua Solutions Corp. Los templates 4-6 (locales) firman TyC de Circuit Pay / Haz Pagos bajo normativa argentina (BCRA/CNV). El discovery cubria solo templates #2 y #3 — gap corregido. | El CMS de TyC en LEX debe gestionar al menos 3 documentos normativamente distintos: Ardua Solutions Corp, Circuit Pay y Haz Pagos. No es un sistema de un unico documento. Impacto directo sobre el scope de `lex-tyc-management-discovery.md`. |
 
 ## Iniciativas relacionadas
 

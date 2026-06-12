@@ -46,6 +46,28 @@ Opera exclusivamente con residentes o entidades registradas en Argentina.
 
 ---
 
+## Onboarding — Requisitos documentales
+
+Circuit Pay comparte los mismos requisitos documentales que Haz Pagos (PSP/PSAV son una apertura conjunta en el proceso Comercial). Fuente: Manual de Onboardings (Facundo Arce, nov 2025).
+
+### Personas Físicas
+
+Idéntico al set de Haz Pagos. Ver sección homóloga en `entities/haz-pagos.md`.
+
+### Personas Jurídicas
+
+Idéntico al set de Haz Pagos. Ver sección homóloga en `entities/haz-pagos.md`.
+
+### DJ Origen de Fondos
+
+Idem Haz Pagos — requerida para todos los clientes que operen en Circuit Pay. Ver `entities/haz-pagos.md` para el detalle del flujo.
+
+### Documentación de Compliance
+
+Véase sección homóloga en `entities/ardua-solutions-corp.md` — World Check, Nosis e Informe AiPrise son transversales a todas las entidades del grupo.
+
+---
+
 ## Referencias
 
 - **Contrato de recaudación Haz Pagos → Circuit Pay (PSP → PSAV)**: habilita la recepción de títulos desde la ALyC para el tramo crypto del rulo.

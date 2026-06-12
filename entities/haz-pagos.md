@@ -55,6 +55,48 @@ El mantenimiento y la calidad del contenido del sitio son responsabilidad de la 
 
 ---
 
+## Onboarding — Requisitos documentales
+
+Documentación requerida para dar de alta un cliente en Haz Pagos (PSP). Incluye los requisitos de Ardua Solutions Corp más la documentación patrimonial exigida por la normativa UIF. Fuente: Manual de Onboardings (Facundo Arce, nov 2025).
+
+### Personas Físicas
+
+| Documento | Obligatorio | Observación |
+|---|---|---|
+| DNI frente y dorso / Pasaporte frente / Cédula de Ciudadanía frente y dorso | ✅ Sí | Documento vigente |
+| Bank Details | ❌ No obligatorio | Si no viene en PDF, se transcriben a Word y se guarda como PDF |
+| Últimos 3 recibos de sueldo | ✅ Sí (patrimonial) | O facturación de los últimos 3 meses para monotributistas |
+| DJ Ganancias / Bienes Personales / Regularización / IVA + Acuse de presentación | ✅ Sí (patrimonial) | Según situación impositiva del cliente |
+| Ingresos Extraordinarios | ⚠️ Condicional | Contrato de compra/venta, mutuos, venta de vehículo — cuando aplica |
+
+### Personas Jurídicas
+
+| Documento | Obligatorio | Observación |
+|---|---|---|
+| Estatuto / Operating Agreement / Articles of Incorporation | ✅ Sí | Varía según tipo de sociedad |
+| Registro de beneficiarios/accionistas | ✅ Sí | |
+| Acta de designación de autoridades | ✅ Sí | |
+| DNI / Pasaporte / Cédula de TODOS los beneficiarios | ✅ Sí | Formato indistinto |
+| Bank Details | ❌ No obligatorio | |
+| Email del representante legal | ✅ Sí | |
+| Últimos Estados Contables (EECC) | ✅ Sí (patrimonial) | |
+| Facturas emitidas de los últimos 12 meses | ✅ Sí (patrimonial) | |
+| Préstamos / Mutuos | ⚠️ Condicional | Cuando aplica |
+| Certificaciones Contables | ⚠️ Condicional | Cuando aplica |
+| Manual PLAFT | ✅ Sí (solo Sujeto Obligado) | Solo si la sociedad es Sujeto Obligado ante UIF |
+| Constancia de Inscripción ante UIF y CNV | ✅ Sí (solo Sujeto Obligado) | |
+| Acta de Designación del Oficial de Cumplimiento | ✅ Sí (solo Sujeto Obligado) | |
+
+### DJ Origen de Fondos
+
+Todo cliente que opere en Haz Pagos debe firmar la **DJ de Origen de Fondos** al cierre del proceso de onboarding Comercial, vía DocuSign. Hasta que no esté firmada, la tarjeta permanece en la columna “DJ DE ORIGEN DE FONDOS” del tablero Trello. Esta DJ **no se envía por la API** en integraciones con terceros (ej: Centaurus) — es un paso manual adicional que queda fuera del flujo automatizado.
+
+### Documentación de Compliance
+
+Véase sección homóloga en `entities/ardua-solutions-corp.md` — World Check, Nosis e Informe AiPrise son transversales a todas las entidades del grupo.
+
+---
+
 ## Referencias
 
 - **Acuerdo AdCap (FCI)**: habilita la sección Earn · FCI en el CLP.

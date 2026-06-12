@@ -50,6 +50,39 @@ Posicionamiento público: *"Global payment institution and boutique OTC desk ena
 
 ---
 
+## Onboarding — Requisitos documentales
+
+Documentación requerida para dar de alta un cliente en Ardua Solutions Corp. Fuente: Manual de Onboardings (Facundo Arce, nov 2025).
+
+### Personas Físicas
+
+| Documento | Obligatorio | Observación |
+|---|---|---|
+| DNI frente y dorso / Pasaporte frente / Cédula de Ciudadanía frente y dorso | ✅ Sí | Documento vigente. Imágenes nítidas y legibles |
+| POA (Proof of Address) | ⚠️ Condicional | Si el cliente no lo envía, el domicilio se obtiene del dorso del DNI o de Nosis |
+| Bank Details | ❌ No obligatorio | Si no viene en PDF, se transcriben los datos a Word y se guarda como PDF |
+
+### Personas Jurídicas
+
+| Documento | Obligatorio | Observación |
+|---|---|---|
+| Estatuto / Operating Agreement / Articles of Incorporation | ✅ Sí | Varía según país de constitución |
+| Acta de definición de beneficiarios/accionistas | ✅ Sí | Registro formal de representantes |
+| DNI / Pasaporte / Cédula de TODOS los beneficiarios | ✅ Sí | Formato indistinto |
+| Bank Details | ❌ No obligatorio | Mismo criterio que PF |
+
+### Documentación de Compliance (aplica a todas las entidades del grupo)
+
+| Documento | Descripción |
+|---|---|
+| World Check (WC) | Screening de listas de sanciones, noticias negativas y PEP. Se corre para titulares, co-titulares, beneficiarios y sociedades. Se descarga en PDF y se guarda en el legajo con nomenclatura `WC-Nombre` |
+| Nosis | Motor de búsqueda socioeconómico. Informa si el cliente es Sujeto Obligado ante la UIF, situación ante BCRA y datos patrimoniales. Nomenclatura: `NOSIS-Nombre` |
+| Informe AiPrise | Reporte del proceso KYC/KYB completado en AiPrise. Se descarga al finalizar el onboarding y se guarda en el legajo como `Informe AiPrise` |
+
+> **Nota:** World Check y Nosis son responsabilidad del Área de Operaciones. AiPrise es gestionado por el Área de Compliance. Los tres documentos deben estar presentes en el legajo del cliente en LEX antes de activar la cuenta.
+
+---
+
 ## Referencias
 
 - **Licencia MSB**: M23611988 (Canadá).
