@@ -351,8 +351,8 @@ Condiciones que deben estar resueltas antes de que la API pueda operar a escala.
 | PRE-01 | Aceptacion de TyC replicada a infraestructura propia de Ardua. La captura existe en AiPrise — Ardua no tiene copia propia, y el cliente hoy ni siquiera accede al documento (link a Drive restringido a @arduasolutions). La solucion de fondo (CMS legal en LEX, versionado inmutable, distribucion por API y ledger de aceptacion versionada, con clausula de terceros para Centaurus) se especifica en `lex-tyc-management-discovery.md`. Captura en onboarding: `aiprise-tyc-discovery.md`. Redaccion del contenido a cargo de Legal | ⏳ Pendiente requerimiento tecnico | IT / Legal |
 | PRE-02 | Contrato firmado entre Ardua y Centaurus | ❌ Bloqueante — no hay contrato al 2026-06-02 | Legal / Comercial |
 | PRE-03 | Entidad de Ardua contraparte confirmada (P-03) | ⏳ Pendiente confirmación formal | Legal / CTO |
-| PRE-04 | LEX con capacidad de exponer datos del legajo vía API | ⏳ Pendiente evaluación técnica (Mati) | Tecnología |
-| PRE-05 | Identificador común entre sistemas Ardua y Centaurus para el mismo cliente | ⏳ Pendiente evaluación técnica (Mati) | Tecnología |
+| PRE-04 | LEX con capacidad de exponer datos del legajo vía API | ✅ Confirmado (Valen Vila) | Tecnología |
+| PRE-05 | Identificador común entre Ardua y Centaurus para el mismo cliente | ⏳ Pendiente decisión IT + Producto. Candidato: CUIL/CUIT como primary key de identificación cruzada — único, presente en ambas plataformas, nunca se repite entre clientes. | IT + Producto |
 
 ---
 
