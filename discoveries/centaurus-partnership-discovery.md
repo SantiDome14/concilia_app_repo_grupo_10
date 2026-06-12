@@ -356,7 +356,7 @@ Condiciones que deben estar resueltas antes de que la API pueda operar a escala.
 | PRE-02 | Contrato firmado entre Ardua y Centaurus | ❌ Bloqueante — no hay contrato al 2026-06-02 | Legal / Comercial |
 | PRE-03 | Entidad de Ardua contraparte confirmada (P-03) | ⏳ Pendiente confirmación formal | Legal / CTO |
 | PRE-04 | LEX con capacidad de exponer datos del legajo vía API | ✅ Confirmado (Valen Vila) | Tecnología |
-| PRE-05 | Identificador común entre Ardua y Centaurus para el mismo cliente | ✅ Confirmado — CUIL/CUIT. El dashboard de Altas de LEX muestra que un cliente puede tener hasta 3 comitentes distintos (AS / CP / HAZ) en la misma fila (fuente: Manual de Onboardings, pág. 9). El número de legajo AS no es portable como identificador cruzado — solo existe del lado de Ardua. CUIL/CUIT es el único ID estable presente en ambas plataformas y nunca se repite entre clientes. | IT + Producto |
+| PRE-05 | Identificador común entre Ardua y Centaurus para el mismo cliente | ✅ Confirmado — CUIL/CUIT. El dashboard de Altas de LEX muestra que un cliente puede tener hasta 3 comitentes distintos (AS / CP / HAZ) en la misma fila (fuente: Manual de Onboardings, pág. 9). El número de legajo AS no es portable como identificador cruzado — solo existe del lado de Ardua. CUIL/CUIT es el único ID estable presente en ambas plataformas y nunca se repite entre clientes. | debe definir IT + Producto |
 
 ---
 
