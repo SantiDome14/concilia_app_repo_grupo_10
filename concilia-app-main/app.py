@@ -390,7 +390,7 @@ if not st.session_state.get("authentication_status"):
     _l, center, _r = st.columns([1, 1.4, 1])
     with center:
         st.markdown('<div class="logo-center" style="margin-top: 20px; margin-bottom: -15px;">', unsafe_allow_html=True)
-        st.image("LOGO SIN FONDO .png.png", width=250)
+        st.image("LOGO SIN FONDO .png", width=250)
         st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown(f"""
