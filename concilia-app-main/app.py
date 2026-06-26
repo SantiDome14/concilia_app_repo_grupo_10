@@ -23,7 +23,7 @@ from logic import procesar_conciliacion, generar_excel_coloreado
 # ── PAGE CONFIG ───────────────────────────────────────────────
 st.set_page_config(
     page_title="Concilia · Conciliación Bancaria Inteligente",
-    page_icon="LOGO SIN FONDO .png.png",
+    page_icon="LOGO SIN FONDO.png",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -390,7 +390,7 @@ if not st.session_state.get("authentication_status"):
     _l, center, _r = st.columns([1, 1.4, 1])
     with center:
         st.markdown('<div class="logo-center" style="margin-top: 20px; margin-bottom: -15px;">', unsafe_allow_html=True)
-        st.image("LOGO SIN FONDO .png", width=250)
+        st.image("LOGO SIN FONDO.png", width=250)
         st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown(f"""
@@ -441,7 +441,7 @@ name: str     = st.session_state["name"]
 # ── SIDEBAR ───────────────────────────────────────────────────
 with st.sidebar:
     st.markdown('<div class="logo-center" style="padding-top: 20px; flex-direction: column;">', unsafe_allow_html=True)
-    st.image("LOGO SIN FONDO .png.png", width=250)
+    st.image("LOGO SIN FONDO.png", width=250)
     st.markdown(f"""
         <h2 style="margin-top: 10px; color: {TEXT}; font-weight: 800; font-size: 1.5rem; text-align: center;">CONCILIA</h2>
         <div style="color: {MUTED}; font-size: 0.85rem; text-align: center;">Conciliacion Bancaria Automatizada</div>
