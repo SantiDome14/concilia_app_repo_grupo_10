@@ -414,9 +414,9 @@ if not st.session_state.get("authentication_status"):
         with tab_registro:
             with st.form("registro_form"):
                 st.subheader("Nueva Cuenta")
-                new_user = st.text_input("Username", placeholder="ej: santi").strip().lower()
-                new_name = st.text_input("Nombre Completo", placeholder="ej: Santino Domeniconi").strip()
-                new_email = st.text_input("Email (@gmail.com)", placeholder="ej: santi@gmail.com").strip().lower()
+                new_user = st.text_input("Username", placeholder="ej: Diego").strip().lower()
+                new_name = st.text_input("Nombre Completo", placeholder="ej: Diego Peralta").strip()
+                new_email = st.text_input("Email (@gmail.com)", placeholder="ej: diegoperalta@gmail.com").strip().lower()
                 new_pwd = st.text_input("Contrasena", type="password", placeholder="Escribi tu contrasena").strip()
                 submit_reg = st.form_submit_button("Registrarse")
 
