@@ -344,29 +344,6 @@ div[data-testid="stForm"] {{
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 50px rgba(126, 187, 137, 0.05);
     margin-top: 10px;
 }}
-# Buscá esta línea (es la última del bloque CSS, aprox línea 347):
-</style>
-
-# Y dejála así:
-
-/* ─ Centrado de logo en columnas (login) ────────────────── */
-[data-testid="stColumn"] [data-testid="stImage"] {{
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    width: 100% !important;
-}}
-[data-testid="stColumn"] [data-testid="stImage"] img {{
-    display: block !important;
-    margin: 0 auto !important;
-    max-width: 100% !important;
-}}
-
-/* ─ Ocultar "Press Enter to submit form" ────────────────── */
-[data-testid="InputInstructions"] {{
-    display: none !important;
-}}
-</style>
 </style>
 """, unsafe_allow_html=True)
 
