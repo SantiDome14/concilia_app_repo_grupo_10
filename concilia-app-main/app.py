@@ -1,3 +1,4 @@
+import base64
 import time
 from io import BytesIO
 
@@ -47,6 +48,14 @@ MUTED     = "#94a3b8"  # Slate Gray
 COL_PREVIEW = "#19a28d"
 DF_BG     = "#082032"
 DF_TEXT   = "#ffffff"
+
+# ── HELPER LOGO ───────────────────────────────────────────────
+def _img_b64(path: str):
+    try:
+        with open(path, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    except Exception:
+        return None
 
 # ── GLOBAL CSS ────────────────────────────────────────────────
 st.markdown(f"""
@@ -407,9 +416,17 @@ authenticator = stauth.Authenticate(
 if not st.session_state.get("authentication_status"):
     _l, center, _r = st.columns([1, 1.4, 1])
     with center:
-        st.markdown('<div class="logo-center" style="margin-top: 20px; margin-bottom: -15px;">', unsafe_allow_html=True)
-        st.image("LOGO SIN FONDO.png", width=250)
-        st.markdown('</div>', unsafe_allow_html=True)
+        logo_login_b64 = _img_b64("LOGO SIN FONDO.png")
+        if logo_login_b64:
+            st.markdown(
+                f'<div style="display:flex;justify-content:center;align-items:center;'
+                f'margin-top:20px;margin-bottom:-15px;">'
+                f'<img src="data:image/png;base64,{logo_login_b64}" width="250" '
+                f'style="object-fit:contain;"></div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.image("LOGO SIN FONDO.png", width=250)
 
         st.markdown(f"""
         <div style="text-align: center; margin-bottom: 25px;">
